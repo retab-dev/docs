@@ -1,0 +1,220 @@
+## Style Your Form with Tailwind CSS
+
+UiForm allows you to easily style your forms using **Tailwind CSS**. Simply apply your custom styles to the `className` prop.
+
+### Example Code
+
+```javascript
+import jsonSchema from './jsonSchema.json';
+import { UiForm } from '@UiForm';
+
+const MyStyledForm = () => {
+    return (
+        <UiForm
+            schema={jsonSchema}
+            className="bg-white text-gray-900 outline border border-gray-300 rounded-lg   p-4 shadow-md"
+            onSubmit={(data) => console.log("Form Submitted", data)}
+        />
+    );
+};
+
+export default MyStyledForm;
+```
+
+### Explanation
+
+- Use Tailwind CSS classes like `border`, `rounded-lg`, and `bg-gray-50` to customize the form.
+- Add spacing (`p-4`) or shadows (`shadow-md`) to improve form aesthetics.
+
+---
+
+## Customize Form Layout
+
+UiForm enables layout customization using a structured **layout file**. Below is the detailed explanation of the **Layout Data Structure**.
+
+### Layout Data Structure
+
+The layout allows you to organize form fields into rows, columns, and objects. Here's the structure:
+
+### Termination Items
+
+```typescript
+type Field = {
+    type: "field";
+    name: string;       // The field name, must match JSON schema properties
+    size: number;       // Width size relative to parent layout
+};
+
+type Object = {
+    type: "object";
+    size: number;       // Width size relative to parent layout
+    name?: string;      // Optional object name
+    "$ref": string;    // Reference to a definition in "$defs"
+};
+```
+
+### Recursive Items
+
+These items can nest other items:
+
+```typescript
+type Column = {
+    type: "column";     // Represents a column container
+    size: number;       // Width size relative to parent layout
+    items: (Row | Field | Object | RowList)[];  // Child items
+    name?: string;      // Optional column name
+};
+
+type Row = {
+    type: "row";        // Represents a row container
+    name?: string;      // Optional row name
+    items: (Column | Field | Object)[]; // Child items
+};
+
+type RowList = {
+    type: "rowList";    // Represents a list of rows
+    name?: string;      // Optional row list name
+    items: (Column | Field | Object)[]; // Child items
+};
+```
+
+### Root Layout
+
+The root layout combines all the definitions and items:
+
+```typescript
+export type Layout = {
+    "$defs": Record<string, Column>;  // Reusable column definitions
+    type: "column";                   // The root type must be "column"
+    size: number;                      // Width size relative to parent layout
+    items: (Row | RowList | Field | Object)[];  // Main content items
+};
+```
+
+### Example Layout
+
+```json
+// layout.ts
+import {Layout} from @UiForm
+
+
+export const layout: Layout = {
+    "$defs": {
+        "AddressColumn": {
+            "type": "column",
+            "size": 12,
+            "items": [
+                { "type": "field", "name": "street", "size": 6 },
+                { "type": "field", "name": "city", "size": 6 }
+            ]
+        }
+    },
+    "type": "column",
+    "size": 12,
+    "items": [
+        {
+            "type": "row",
+            "items": [
+                { "type": "field", "name": "first_name", "size": 6 },
+                { "type": "field", "name": "last_name", "size": 6 }
+            ]
+        },
+        {
+            "type": "object",
+            "size": 12,
+            "$ref": "AddressColumn"
+        }
+    ]
+};
+```
+
+
+
+### Explanation
+
+1. **Field**: Represents form fields (e.g., `first_name`, `last_name`).
+2. **Object**: References a reusable layout definition from `$defs`.
+3. **Row/RowList**: Organize fields and columns in rows.
+4. **Column**: Defines a vertical container with nested elements.
+5. We use a .ts file to benefit from the syntax highlighting
+
+With this structure, you can precisely control form layout for a clean and responsive design.
+
+---
+
+## Add Additional Constraints
+
+You can enhance the form's behavior by specifying constraints:
+
+- **Required Fields**: Mark fields as required in your JSON Schema using the `required` property.
+
+### Example JSON Schema
+
+```json
+{
+    "type": "object",
+    "properties": {
+        "email": { "type": "string", "format": "email" },
+        "age": { "type": "integer", "minimum": 18 }
+    },
+    "required": ["email", "age"]
+}
+```
+
+In this example:
+
+- `email` and `age` fields are required.
+- The `age` field must be at least 18.
+
+UiForm automatically applies these constraints as client-side validation rules.
+
+---
+
+## Display Descriptions
+
+If a field contains a **description** in the JSON Schema, UiForm will display it as a **tooltip** next to the field with an info button.
+
+### Example Python Code
+
+Here is the corresponding Pydantic `BaseModel` with descriptions for the fields:
+
+```python
+from pydantic import BaseModel, Field
+
+class User(BaseModel):
+      email: str = Field(..., description="Your email address for communication.")
+  
+```
+
+### Explanation
+
+- The `Field` function allows you to add metadata such as `description` for each property.
+- These descriptions appear as tooltips when rendered using UiForm.
+
+
+
+### Example JSON Schema
+
+```json
+{
+  "properties": {
+    "email": {
+      "description": "Your email address for communication.",
+      "title": "Email",
+      "type": "string"
+    }
+  },
+  "required": [
+    "email"
+  ],
+  "title": "User",
+  "type": "object"
+}
+```
+
+### Tooltip Display
+
+- A small **info button** appears next to the `email` field.
+- Hovering over the button displays the description: *"Your email address for communication."*
+
+This improves usability by providing users with contextual information for each field.
