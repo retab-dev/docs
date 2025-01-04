@@ -1,0 +1,282 @@
+---
+title: Walkthrough
+description: 'UiForm'
+---
+
+MUCH LONGER TUTORIAL WHERE WE GO FROM ZERO TO HERO - TODO
+
+UiForm is a **modern**, **flexible**, and **AI-powered** document processing API that helps you:
+
+- Create from JSON schemas and Pydantic models with zero boilerplate
+- Add AI capabilities for automated document processing, that is compatible with any data structure
+- Create annotated datasets to distill or finetune your models
+
+Our goal is to make the process of analyzing documents and unstructured data as **easy** and **transparent** as possible. You come with your own API key from your favorite AI provider, and we handle the rest.
+
+## Quickstart
+
+<Steps>
+  <Step title="Generate JSON Schema">
+    Use **Pydantic** to generate a JSON Schema for your backend data structure.
+  </Step>
+   <Step title="Create prompting instructions">
+    Use UiForm to automatically create prompting instructions from examples
+  </Step>
+  <Step title="Analyze your data">
+    Use UiForm to start analyzing documents
+  </Step>
+</Steps>
+
+
+
+
+
+### Generate a JSON Schema
+
+UiForm is compatible with any JSON Schema following the OpenAPI specification. For example, we can create a JSON Schema using **pydantic** :
+
+
+<CodeGroup>
+```python JSON Schema generation
+from pydantic import BaseModel
+from typing import Literal
+import json
+
+class User(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    age: int
+    status: Literal["active", "inactive", "pending"]
+
+with open('raw_schema.json', 'w') as f:
+    json.dump(User.model_json_schema(), f, indent=2)
+```
+
+```json raw_schema.json
+{
+    "properties": {
+        "first_name": {
+            "title": "First Name",
+            "type": "string"
+        },
+        "last_name": {
+            "title": "Last Name",
+            "type": "string"
+        },
+        "email": {
+            "title": "Email",
+            "type": "string"
+        },
+        "age": {
+            "title": "Age",
+            "type": "integer"
+        },
+        "address": {
+            "title": "Address",
+            "type": "string"
+        }
+    },
+    "required": [
+        "first_name",
+        "last_name",
+        "email",
+        "age",
+        "address"
+    ],
+    "title": "User",
+    "type": "object"
+}
+```
+</CodeGroup>
+
+The schema is saved as `jsonSchema.json`, ready to be imported into your React project.
+
+
+### Use our python SDK
+
+
+To get started, install the `uiform` package using pip:
+
+```bash
+pip install uiform
+```
+
+Then, create a .env file with your API keys:
+
+```bash
+OPENAI_API_KEY=sk_xxxxxxxxx # Your AI provider API key. Compatible with OpenAI, Anthropic, xAI.
+UIFORM_API_KEY=sk_xxxxxxxxx
+```
+
+Use the `promptify` method to enrich the json schema with instructions from examples:
+
+<CodeGroup>
+```python main.py {17-24}
+from pydantic import BaseModel
+from typing import Literal
+from mimelib.io import read_mime_data_from_file
+from uiform.client import UiForm
+import json
+
+class User(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    age: int
+    status: Literal["active", "inactive", "pending"]
+
+with open('raw_schema.json', 'w') as f:
+    json.dump(User.model_json_schema(), f, indent=2)
+
+documents = [read_mime_data_from_file(document_file_path) for document_file_path in ["data/example.PDF"]]
+
+client = UiForm()
+json_schema = client.schema.promptify(raw_schema=User.model_json_schema(), 
+                                      documents=documents)
+
+with open('json_schema.json', 'w') as f:
+    json.dump(json_schema, f, indent=2)
+```
+
+```json json_schema.json
+{
+    "properties": {
+        "first_name": {
+            "title": "First Name",
+            "type": "string"
+        },
+        "last_name": {
+            "title": "Last Name",
+            "type": "string"
+        },
+        "email": {
+            "title": "Email",
+            "type": "string"
+        },
+        "age": {
+            "title": "Age",
+            "type": "integer"
+        },
+        "address": {
+            "title": "Address",
+            "type": "string"
+        }
+    },
+    "required": [
+        "first_name",
+        "last_name",
+        "email",
+        "age",
+        "address"
+    ],
+    "title": "User",
+    "type": "object"
+}
+```
+</CodeGroup>
+
+
+
+### Extract data from documents
+
+Now that you have a JSON Schema, you can use it to extract data from documents.
+
+<CodeGroup>
+```python main.py {26-32}
+from pydantic import BaseModel
+from typing import Literal
+from mimelib.io import read_mime_data_from_file
+from uiform.client import UiForm
+import json
+
+class User(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    age: int
+    status: Literal["active", "inactive", "pending"]
+
+with open('raw_schema.json', 'w') as f:
+    json.dump(User.model_json_schema(), f, indent=2)
+
+
+documents = [read_mime_data_from_file(document_file_path) for document_file_path in ["data/example.PDF"]]
+
+client = UiForm()
+json_schema = client.schema.promptify(raw_schema=User.model_json_schema(), 
+                                      documents=documents)
+
+with open('json_schema.json', 'w') as f:
+    json.dump(json_schema, f, indent=2)
+
+client.documents.extract(
+    json_schema = json_schema,
+    documents = documents,
+    model="gpt-4o-mini",
+    temperature=0
+)
+```
+
+```json json_schema.json
+{
+    "properties": {
+        "first_name": {
+            "title": "First Name",
+            "type": "string"
+        },
+        "last_name": {
+            "title": "Last Name",
+            "type": "string"
+        },
+        "email": {
+            "title": "Email",
+            "type": "string"
+        },
+        "age": {
+            "title": "Age",
+            "type": "integer"
+        },
+        "address": {
+            "title": "Address",
+            "type": "string"
+        }
+    },
+    "required": [
+        "first_name",
+        "last_name",
+        "email",
+        "age",
+        "address"
+    ],
+    "title": "User",
+    "type": "object"
+}
+```
+</CodeGroup>
+
+
+And that's it ! You can start processing documents at scale ! 
+You have 1000 free requests to get started, and you can subscribe to the pro plan to get more.
+
+---
+
+## Go further
+
+- [Additional prompting context](https://docs.uiform.com/document-api/additional-context)
+- [Prompt optimization with Backtesting](https://docs.uiform.com/document-api/prompt-optimization)
+- [Finetuning](https://docs.uiform.com/document-api/finetuning)
+- [Distillation](https://docs.uiform.com/document-api/distillation)
+- Data-Labelling with our AI-powered annotator (coming soon)
+
+---
+
+### Examples
+
+You can view minimal notebooks that demonstrate how to use UiForm to process documents:
+
+TODO
+
+- [Nextjs Quickstart](https://github.com/UiForm/examples/tree/main/nextjs-quickstart)
+- [Remix Quickstart](https://github.com/UiForm/examples/tree/main/remix-quickstart)
+- [React + FastAPI Quickstart](https://github.com/UiForm/examples/tree/main/react-quickstart)
