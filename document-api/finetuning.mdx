@@ -1,0 +1,90 @@
+You can use UiForm to create annotated datasets to distill or finetune your models.
+
+
+If your already have the annotated pairs, you can save them in a jsonl file.
+
+### Setup 
+
+Make sure that your `env` variables are set:
+
+<CodeGroup>
+```python jupyter
+import os
+os.environ["OPENAI_API_KEY"] = "YOUR-API-KEY" # Your AI provider API key. Compatible with OpenAI, Anthropic, xAI.
+os.environ["UIFORM_API_KEY"] = "sk_xxxxxxxxx"
+```
+```bash .env
+OPENAI_API_KEY=YOUR-API-KEY # Your AI provider API key. Compatible with OpenAI, Anthropic, xAI.
+UIFORM_API_KEY=sk_xxxxxxxxx
+```
+</CodeGroup>
+
+### Annotate your data
+
+If you already have the annotated pairs, you can save them in a jsonl file.
+
+We plan to release a tool to annotate your data with our AI-powered annotator very soon. Stay tuned ! 
+
+```python
+jsonl_path = 'training_set.jsonl'
+
+pairs_paths = [
+    {"document_fpath": "data/example_1.pdf", "annotation_fpath": "data/annotation_1.json"},
+    {"document_fpath": "data/example_2.pdf", "annotation_fpath": "data/annotation_2.json"},
+    {"document_fpath": "data/example_3.pdf", "annotation_fpath": "data/annotation_3.json"},
+    {"document_fpath": "data/example_4.pdf", "annotation_fpath": "data/annotation_4.json"},
+    ...
+]
+
+client.datasets.save(json_schema, 
+                     pairs_paths = pairs_paths, 
+                     jsonl_path = jsonl_path, 
+                     additional_context=additional_context)
+```
+
+Else, you can use the annotate functions to create annotated pairs. (which is perfect for model distillation)
+
+```python
+from uiform import UiForm
+
+client = UiForm()
+documents = ["example_1.pdf","example_2.jpg", "example_3.docx"]
+jsonl_path = 'training_set.jsonl'
+
+client.datasets.annotate(json_schema=json_schema, 
+                         documents=documents, 
+                         jsonl_path=jsonl_path,
+                         model="gpt-4o-2024-11-20", 
+                         temperature=0, 
+                         # modality="text"
+)
+```
+
+(Tips: you can use the modality parameter to only have text or image annotations)
+
+### Finetuning
+
+```python
+from uiform.client import UiForm
+import os
+
+jsonl_file_path = "training_set.jsonl"
+
+client = UiForm()
+
+with open(jsonl_file_path, "rb") as file:
+    file_object = client.files.create(
+        file=file,
+        purpose="fine-tune"
+    )
+
+distillation_job = client.fine_tuning.jobs.create(
+    training_file=file_object.id,
+    model="gpt-4o-mini-2024-07-18"
+)
+
+# Eventually, retrieve the state of a fine-tune
+client.fine_tuning.jobs.retrieve(distillation_job.id)
+
+```
+

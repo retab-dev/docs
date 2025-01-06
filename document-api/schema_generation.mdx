@@ -1,0 +1,235 @@
+UiForm works with a JSON Schema that you can create from some Documents or a Pydantic Model.
+
+<Steps>
+  <Step title="Option 1 : Create a JSON Schema from some Documents">
+    Setup your API keys and create a JSON Schema from some Documents.
+  </Step>
+  <Step title="Option 2 : Create a JSON Schema from a Pydantic Model and use Promptify">
+    Setup your API keys and create a JSON Schema from a Pydantic Model and use Promptify.
+  </Step>
+  <Step title="Extract data from your documents with our Python SDK">
+    Use UiForm to extract data from your documents
+  </Step>
+</Steps>
+
+
+### 0 - Setup
+
+
+To get started, install the `uiform` package using pip:
+
+```bash
+pip install uiform
+```
+
+Then, populate your `env` variables with your API keys:
+
+<CodeGroup>
+```python jupyter
+import os
+os.environ["OPENAI_API_KEY"] = "YOUR-API-KEY" # Your AI provider API key. Compatible with OpenAI, Anthropic, xAI.
+os.environ["UIFORM_API_KEY"] = "sk_xxxxxxxxx"
+```
+```bash .env
+OPENAI_API_KEY=YOUR-API-KEY # Your AI provider API key. Compatible with OpenAI, Anthropic, xAI.
+UIFORM_API_KEY=sk_xxxxxxxxx
+```
+</CodeGroup>
+
+### 1 - Create a JSON Schema from some Documents
+
+Use the `UiForm` client to create a JSON Schema from some Documents:
+
+<CodeGroup>
+```python main.py 
+from uiform.client import UiForm
+
+client = UiForm()
+
+documents = ['visa_a_miller.png','visa_g_raymond.webp','visa_m_demonceaux.webp']
+
+generation_response = client.schemas.generate(
+    documents=documents,
+    model="gpt-4o-2024-11-20", 
+    temperature=0
+)
+
+with open("visa_schema.json", "w") as f:
+    json.dump(generation_response.json_schema, f, indent=2)
+```
+```json visa_schema.json
+{
+  "name": "credit_card_images",
+  "type": "object",
+  "properties": {
+    "card_type": {
+      "type": "string",
+      "description": "The type of Visa card displayed, such as Platinum, Prepaid, or Electron."
+    },
+    "card_number": {
+      "type": "string",
+      "description": "The card number visible on the card."
+    },
+    "expiration_date": {
+      "type": "string",
+      "description": "The expiration date of the card."
+    },
+    "cardholder_name": {
+      "type": "string",
+      "description": "The name of the cardholder as printed on the card."
+    }
+  },
+  "required": [
+    "card_type",
+    "card_number",
+    "expiration_date",
+    "cardholder_name"
+  ],
+  "additionalProperties": false
+}
+ ```
+</CodeGroup>
+
+### 2 - Create a JSON Schema from a Pydantic Model and use Promptify
+
+<CodeGroup>
+```python main.py
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import date
+from uiform.client import UiForm
+
+client = UiForm()
+
+class CreditCardInfo(BaseModel):
+    card_number: str 
+    card_type: str
+    cardholder_name: str
+    expiration_date: str 
+    card_network: str 
+    additional_info: Optional[str]
+
+promptify_response = client.schemas.promptify(
+    raw_json_schema=CreditCardInfo.model_json_schema(), 
+    documents=documents
+)
+
+with open("visa_schema_promptified.json", "w") as f:
+    json.dump(promptify_response.json_schema, f, indent=2)
+```
+```json visa_schema_promptified.json
+{
+  "title": "CreditCardInfo",
+  "type": "object",
+  "properties": {
+    "card_number": {
+      "title": "Card Number",
+      "type": "string",
+      "X-LLMDescription": "The 16-digit number found on the front of the card, used for transactions."
+    },
+    "card_type": {
+      "title": "Card Type",
+      "type": "string",
+      "X-LLMDescription": "Specifies the type of card, such as 'Debit', 'Credit', or 'Prepaid'."
+    },
+    "cardholder_name": {
+      "title": "Cardholder Name",
+      "type": "string",
+      "X-LLMDescription": "The name of the person to whom the card is issued, as printed on the card."
+    },
+    "expiration_date": {
+      "title": "Expiration Date",
+      "type": "string",
+      "X-LLMDescription": "The date until which the card is valid, typically formatted as MM/YY."
+    },
+    "card_network": {
+      "title": "Card Network",
+      "type": "string",
+      "X-LLMDescription": "The payment network associated with the card, such as 'Visa' or 'MasterCard'."
+    },
+    "additional_info": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Additional Info",
+      "X-LLMDescription": "Any extra information related to the card, which can be a string or null if not applicable."
+    }
+  },
+  "required": [
+    "card_number",
+    "card_type",
+    "cardholder_name",
+    "expiration_date",
+    "card_network",
+    "additional_info"
+  ]
+}
+```
+</CodeGroup>
+### 3 - Extract data from your documents with our Python SDK
+
+
+<CodeGroup>
+```python main.py
+import json
+from uiform.client import UiForm
+
+with open("visa_schema_promptified.json", "r") as f:
+    json_schema = json.load(f)
+
+document = "visa_a_miller.png"
+
+client = UiForm()
+response = client.documents.extract(
+    json_schema = json_schema,
+    document = document,
+    model="gpt-4o-mini-2024-07-18",
+    temperature=0
+)
+```
+```json response.json
+{
+  "id": "64baa15f-803e-4583-8ed5-2bbf4f3ea13f",
+  "model": "gpt-4o-mini-2024-07-18",
+  "seed": null,
+  "temperature": 0.0,
+  "document": {
+    "id": "6d44400f962ffe7ea550db3892b84590fc764a9002ecdb4ad61481d42ed88b6a",
+    "name": "visa_a_miller.png",
+    "size": 216564,
+    "mime_type": "image/png"
+  },
+  "extraction": {
+    "card_number": "4000123456789010",
+    "card_type": "Credit",
+    "cardholder_name": "A. MILLER",
+    "expiration_date": "12/20",
+    "card_network": "Visa",
+    "additional_info": null
+  },
+  "likelihoods": {
+    "card_number": 0.9626727773451229,
+    "card_type": 0.9998316352049432,
+    "cardholder_name": 0.9889269278230699,
+    "expiration_date": 0.9999998063873687,
+    "card_network": 0.9988304590467317,
+    "additional_info": 0.9999996871837189
+  },
+  "regex_instruction_results": null,
+  "additional_context_message": "",
+  "usage": {
+    "model": "gpt-4o-mini-2024-07-18",
+    "input_tokens": 877,
+    "output_tokens": 43,
+    "cost": 0.00015735
+  },
+  "modality": "native",
+  "ws_identifier": null
+}
+```
+</CodeGroup>
