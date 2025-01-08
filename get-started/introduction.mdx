@@ -1416,9 +1416,109 @@ You have 1000 free requests to get started, and you can subscribe to the pro pla
 But this minimalistic example is not much more useful than the bare openAI API. Continue reading to learn more about how to use UiForm **to its full potential**.
 
 ---
+## What if I want to use my own client?
+
+If you prefer to use your own OpenAI client locally (for example, to have more control over the API calls or to use a specific configuration), you can use the `preprocess` function instead of `extract`. 
+This function returns the messages and schema ready to be used with OpenAI's API.
+
+Here's how to do it:
+
+<CodeGroup>
+```python OPENAI_CLIENT
+import json
+from uiform.client import UiForm
+from openai import OpenAI
+
+with open("freight/booking_confirmation_json_schema.json", "r") as f:
+    uiform_schema = json.load(f)
+
+document = "freight/booking_confirmation.jpg"
+
+model = "gpt-4o-mini"
+
+# Get the preprocessed messages and schema from UiForm
+client = UiForm()
+messages, openai_schema = client.documents.preprocess(
+    json_schema = uiform_schema,
+    document = document,
+    model=model
+)
+
+# Use your own OpenAI client
+openai_client = OpenAI()
+completion = openai_client.chat.completions.create(
+    model=model,
+    messages=messages,
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": f"uiform-schema",
+            "strict": True,
+            "schema": openai_schema  
+        },
+    }
+)
+```
+```python ANTHROPIC_CLIENT
+import json
+from uiform.client import UiForm
+from anthropic import Anthropic
+
+with open("tldr/tldr_email_schema.json", "r") as f:
+    json_schema = json.load(f)
+
+model = "claude-3-5-sonnet-20241022"
+
+document = "tldr/tldr_07_01_25.eml"
+
+uiform_client = UiForm()
+messages, anthropic_schema = uiform_client.documents.preprocess(
+    json_schema = json_schema,
+    document = document,
+    model = model,
+    modality="native"
+)
+
+anthropic_client = Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
+response = anthropic_client.messages.create(
+    model=model,
+    max_tokens=8192,
+    temperature=0,
+    messages=messages
+)
+
+print(message.content)
+
+
+#-------------------------------------------------------------------------------
+# To convert it back to json: 
+
+from uiform.jsonschema.utils import object_format_coercion
+from jiter import from_json
+
+result_json = response.content[0].text  # type: ignore
+result_json = "{" + result_json  # We prefill the assistant with a curly bracket
+
+try:
+    final_object = from_json(bytes(result_json, "utf-8"), partial_mode=False)
+    final_object = object_format_coercion(final_object, anthropic_schema)
+except Exception as e:
+    print(f"Error parsing result: {e}")
+    with_error = True
+    final_object = None
+    uncertainties = {}
+
+print(final_object)
+```
+</CodeGroup>
+
+This approach gives you full control over the OpenAI API call while still benefiting from UiForm's document preprocessing capabilities.
+
+---
 
 ## Go further
 
+- [Prompt Engineering Guide](https://docs.uiform.com/get-started/prompt-engineering-guide)
 - [Additional parameters](https://docs.uiform.com/document-api/additional-parameters)
 - [Finetuning](https://docs.uiform.com/document-api/finetuning)
 - Prompt optimization (coming soon)
