@@ -1,0 +1,173 @@
+---
+title: 'Promptify a Schema'
+openapi: 'POST /api/v1/schemas/promptify'
+---
+
+<RequestExample>
+
+
+
+
+```python python
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import date
+from uiform.client import UiForm
+
+client = UiForm()
+
+class CreditCardInfo(BaseModel):
+    card_number: str 
+    card_type: str
+    cardholder_name: str
+    expiration_date: str 
+    card_network: str 
+    additional_info: Optional[str]
+
+promptify_response = client.schemas.promptify(
+    raw_schema=CreditCardInfo.model_json_schema(), 
+    documents=documents
+)
+
+with open("visa/visa_schema_promptified.json", "w") as f:
+    json.dump(promptify_response.json_schema, f, indent=2)
+```
+
+
+```bash curl
+curl -X 'POST' \
+  'http://localhost:4000/api/v1/schemas/generate' \
+  -H 'accept: application/json' \
+  -H 'OpenAI-Api-Key: YOUR_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "additional_context": {
+    "user_info": {
+      "first_name": "string",
+      "last_name": "string",
+      "email": "string",
+      "organization": "string",
+      "phone": "string",
+      "date": "2025-01-08"
+    },
+    "regex_instructions": [
+      {
+        "name": "string",
+        "pattern": "string",
+        "description": "string"
+      }
+    ],
+    "document_structure": [
+      {
+        "title": "string",
+        "content_summary": "string"
+      }
+    ],
+    "domain_glossary": [
+      {
+        "term": "string",
+        "definition": "string"
+      }
+    ],
+    "other_context": {
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  },
+  "model": "gpt-4o-2024-11-20",
+  "temperature": 0,
+  "modality": "native",
+  "documents": [
+    {
+      "id": "string",
+      "name": "string",
+      "mime_type": "string",
+      "content": "string"
+    }
+  ]
+}'
+```
+
+</RequestExample>
+
+
+<ResponseExample>
+
+```json 200
+{
+    "additional_context": null,
+    "model": "gpt-4o-2024-08-06",
+    "temperature": 0.0,
+    "modality": "native",
+    "json_schema": {
+        "title": "CreditCardInfo",
+        "type": "object",
+        "properties": {
+            "card_number": {
+                "title": "Card Number",
+                "type": "string",
+                "X-LLMDescription": "A 16-digit number uniquely identifying the card."
+            },
+            "card_type": {
+                "title": "Card Type",
+                "type": "string",
+                "X-LLMDescription": "Specifies the type of card, such as \'Debit\', \'Credit\', or \'Prepaid\'."
+            },
+            "cardholder_name": {
+                "title": "Cardholder Name",
+                "type": "string",
+                "X-LLMDescription": "The name of the individual authorized to use the card."
+            },
+            "expiration_date": {
+                "title": "Expiration Date",
+                "type": "string",
+                "X-LLMDescription": "The date when the card expires, typically formatted as MM/YY."
+            },
+            "card_network": {
+                "title": "Card Network",
+                "type": "string",
+                "X-LLMDescription": "The payment network associated with the card, such as \'Visa\' or \'MasterCard\'."
+            },
+            "additional_info": {
+                "anyOf": [
+                    {
+                        "type": "string"
+                    },
+                    {
+                        "type": "null"
+                    }
+                ],
+                "title": "Additional Info",
+                "X-LLMDescription": "Optional field for any extra information related to the card."
+            }
+        },
+        "required": [
+            "card_number",
+            "card_type",
+            "cardholder_name",
+            "expiration_date",
+            "card_network",
+            "additional_info"
+        ]
+    }
+}
+```
+
+```json 422
+{
+  "detail": [
+    {
+      "loc": [
+        "<string>"
+      ],
+      "msg": "<string>",
+      "type": "<string>"
+    }
+  ]
+}
+```
+
+
+</ResponseExample>
+
