@@ -244,3 +244,188 @@ if __name__ == "__main__":
 ```
 
 The content of `path_to_file.json` is actually the schema from [Examples of X-ReasoningDescription](#examples-of-x-reasoningdescription).
+
+
+---
+
+## Prompt Engineering Guide
+
+This guide is designed to help you generate consistent, high-quality structured outputs using JSON schemas with custom annotations for LLMs. By combining effective prompt engineering strategies, custom annotations, and clear schema design, you can significantly improve the performance of large language models (LLMs) in structured data extraction.
+
+---
+
+### Overview of Core Techniques
+
+1. **Crafting a Robust System Prompt**  
+   Use the `X-SystemPrompt` annotation to define a high-level directive that sets the context, tone, and constraints for the LLM. This ensures consistent behavior and high-quality responses.
+   
+2. **Providing Field-Specific Guidance**  
+   Use the `X-LLMDescription` annotation for detailed descriptions of each field. This complements or replaces the standard `description` field, enabling the LLM to better understand the requirements for each data point.
+
+3. **Enabling LLM Reasoning**  
+   The `X-ReasoningDescription` annotation provides the LLM with dedicated "thinking space" in the form of auxiliary fields. By giving the LLM a place to document its analysis and reasoning process before making final decisions, this annotation naturally encourages more thorough consideration of complex scenarios. The LLM can work through ambiguities, validate its interpretations, and explain its extraction choices - ultimately leading to more accurate and reliable outputs. This structured approach to reasoning is particularly valuable for fields requiring nuanced interpretation or where multiple data points need to be synthesized.
+
+---
+
+### Best Practices for Schema Design
+
+#### General Guidelines
+- Use **clear and concise titles** for all properties.  
+- Use the **`required` field** to explicitly mark mandatory properties.  
+- For **nullable fields**, use `anyOf` with `null` and the expected data type.
+
+#### Custom Annotations
+- **`X-SystemPrompt`:** Include overarching instructions for the task, such as expected tone, formatting, or extraction rules.
+- **`X-LLMDescription`:** Provide detailed context for fields requiring nuanced interpretation. Example:  
+  ```json
+  {
+    "type": "string",
+    "X-LLMDescription": "The name of the client as it appears on the official invoice."
+  }
+  ```
+- **`X-ReasoningDescription`:** Use this for fields where reasoning or additional context can clarify ambiguity. Example:  
+  ```json
+  {
+    "type": "string",
+    "X-ReasoningDescription": "Explain how the extracted name matches the format required by the client's database."
+  }
+  ```
+
+---
+
+### Implementing the Three Key Strategies
+
+#### 1. A Good System Prompt (`X-SystemPrompt`)
+The system prompt defines the LLM's overall behavior and is critical for consistent output. Example:
+```json
+{
+  "X-SystemPrompt": "You are an expert data extraction assistant. Extract information based on the schema provided and ensure strict adherence to the JSON format."
+}
+```
+
+Key tips for crafting system prompts:
+- Include a **persona** (e.g., "You are a meticulous data extractor").
+- Specify the **output format** (e.g., "Return only valid JSON objects").
+- Define any **validation rules** (e.g., "All required fields must be populated").
+
+---
+
+#### 2. Field-Specific Instructions (`X-LLMDescription`)
+For each property in the schema, provide field-specific instructions to ensure accurate extraction:
+```json
+{
+  "type": "object",
+  "properties": {
+    "invoice_number": {
+      "type": "string",
+      "X-LLMDescription": "The unique identifier for the invoice, typically alphanumeric."
+    },
+    "date_issued": {
+      "type": "string",
+      "X-LLMDescription": "The date when the invoice was issued, in YYYY-MM-DD format."
+    }
+  },
+  "required": ["invoice_number", "date_issued"]
+}
+```
+
+---
+
+#### 3. Giving the Model Time to Think (`X-ReasoningDescription`)
+Encourage the model to reason before providing a final answer:
+```json
+{
+  "type": "object",
+  "properties": {
+    "client_name": {
+      "type": "string",
+      "X-ReasoningDescription": "Provide reasoning for how this name matches the provided document."
+    },
+    "amount_due": {
+      "type": "number",
+      "X-ReasoningDescription": "Explain how the amount was calculated based on the invoice details."
+    }
+  }
+}
+```
+
+Instruct the LLM to generate intermediate reasoning fields:
+```json
+{
+  "reasoning___client_name": "The name matches the header on page 1 of the document.",
+  "client_name": "Acme Corporation"
+}
+```
+
+---
+
+### Practical Examples
+
+#### Simple Schema with Annotations
+```json
+{
+  "X-SystemPrompt": "Extract invoice details as per the schema. Ensure accurate data and provide reasoning where necessary.",
+  "type": "object",
+  "properties": {
+    "invoice_number": {
+      "type": "string",
+      "X-LLMDescription": "Unique invoice identifier."
+    },
+    "date_issued": {
+      "type": "string",
+      "X-ReasoningDescription": "Explain how the date was identified in the document."
+    }
+  },
+  "required": ["invoice_number", "date_issued"]
+}
+```
+
+Expected Output:
+```json
+{
+  "reasoning___date_issued": "The date '2024-01-01' was found in the header of the document.",
+  "invoice_number": "INV-12345",
+  "date_issued": "2024-01-01"
+}
+```
+
+---
+
+#### Using Python with Pydantic for Schema Generation
+```python
+from pydantic import BaseModel, Field
+
+class InvoiceSchema(BaseModel):
+    invoice_number: str = Field(..., description="Unique identifier for the invoice",
+                                json_schema_extra={"X-LLMDescription": "Unique invoice identifier."})
+    date_issued: str = Field(..., description="Date in YYYY-MM-DD format",
+                             json_schema_extra={"X-ReasoningDescription": "Explain how the date was identified in the document."})
+
+    class Config:
+        json_schema_extra = {
+            "X-SystemPrompt": "Extract invoice details strictly following the schema."
+        }
+
+print(InvoiceSchema.schema_json(indent=4))
+```
+
+---
+
+#### Testing and Evaluation
+
+1. **Simulate Real-world Inputs:** Test with documents containing varying levels of complexity and ambiguity.  
+2. **Evaluate Outputs Systematically:** Use criteria such as field accuracy, reasoning clarity, and JSON validity.  
+3. **Iterate and Optimize:** Continuously refine prompts and schema annotations based on evaluation results.
+
+---
+
+### Conclusion
+
+By leveraging **`X-SystemPrompt`**, **`X-LLMDescription`**, and **`X-ReasoningDescription`**, you can significantly enhance structured data extraction tasks. This guide provides a foundational framework to integrate these strategies into your workflows effectively.
+
+---
+
+### Go further
+
+- [The JSON Schema](https://docs.uiform.com/get-started/the-json-schema)
+- [OpenAI Prompt Engineering Guide](https://platform.openai.com/docs/guides/prompt-engineering)

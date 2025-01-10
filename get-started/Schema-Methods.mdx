@@ -1,0 +1,249 @@
+In this section, we will see how to use the methods of the `schemas` client.
+
+
+## Load Schema from JSON Schema
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+schema_obj = uiclient.schemas.load(
+    json_schema = {
+      'X-SystemPrompt': 'You are a useful assistant.',
+      'properties': {
+          'name': {
+              'X-LLMDescription': 'Provide a descriptive and concise name for the event.',
+              'description': 'The name of the calendar event.',
+              'title': 'Name',
+              'type': 'string'
+          },
+          'date': {
+              'X-LLMDescription': 'Specify the event date in YYYY-MM-DD format.',
+              'description': 'The date of the calendar event in ISO 8601 format.',
+              'title': 'Date',
+              'type': 'string'
+          }
+      },
+      'required': ['name', 'date'],
+      'title': 'CalendarEvent',
+      'type': 'object'
+  }
+)
+```
+```json Response
+{
+    "id": null,
+    "object": "schema",
+    "created": null,
+    "json_schema": {
+        "X-SystemPrompt": "You are a useful assistant.",
+        "properties": {
+            "name": {
+                "X-LLMDescription": "Provide a descriptive and concise name for the event.",
+                "description": "The name of the calendar event.",
+                "title": "Name",
+                "type": "string"
+            },
+            "date": {
+                "X-LLMDescription": "Specify the event date in YYYY-MM-DD format.",
+                "description": "The date of the calendar event in ISO 8601 format.",
+                "title": "Date",
+                "type": "string"
+            }
+        },
+        "required": [
+            "name",
+            "date"
+        ],
+        "title": "CalendarEvent",
+        "type": "object"
+    },
+    "schema_data_version": "d6d04390f2390eab3dc9a017d043b26b95faeb94",
+    "schema_version": "c547dbfaa0cbcb8d646ca7c53af54d8870f2740e"
+}
+```
+
+</CodeGroup>
+
+
+## Load Schema from Pydantic BaseModel
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+from pydantic import BaseModel, Field
+
+uiclient = UiForm()
+
+class CalendarEvent(BaseModel):
+    class Config:
+        json_schema_extra = {"X-SystemPrompt": "You are a useful assistant."}
+
+    name: str = Field(...,
+        description="The name of the calendar event.",
+        json_schema_extra={"X-LLMDescription": "Provide a descriptive and concise name for the event."}
+    )
+    date: str = Field(...,
+        description="The date of the calendar event in ISO 8601 format.",
+        json_schema_extra={
+            "X-LLMDescription": "Specify the event date in YYYY-MM-DD format.",
+        }
+    )
+
+schema_obj = uiclient.schemas.load(
+    pydantic_model = CalendarEvent
+)
+```
+```json Response
+{
+    "id": null,
+    "object": "schema",
+    "created": null,
+    "json_schema": {
+        "X-SystemPrompt": "You are a useful assistant.",
+        "properties": {
+            "name": {
+                "X-LLMDescription": "Provide a descriptive and concise name for the event.",
+                "description": "The name of the calendar event.",
+                "title": "Name",
+                "type": "string"
+            },
+            "date": {
+                "X-LLMDescription": "Specify the event date in YYYY-MM-DD format.",
+                "description": "The date of the calendar event in ISO 8601 format.",
+                "title": "Date",
+                "type": "string"
+            }
+        },
+        "required": [
+            "name",
+            "date"
+        ],
+        "title": "CalendarEvent",
+        "type": "object"
+    },
+    "schema_data_version": "d6d04390f2390eab3dc9a017d043b26b95faeb94",
+    "schema_version": "c547dbfaa0cbcb8d646ca7c53af54d8870f2740e"
+}
+```
+
+</CodeGroup>
+
+
+## Generate Schema
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+schema_obj = uiclient.schemas.generate(
+    documents = [
+        "freight/booking_confirmation_1.jpg",
+        "freight/booking_confirmation_2.jpg"
+    ]
+)
+```
+```json Response
+{
+    "id": null,
+    "object": "schema",
+    "created": null,
+    "json_schema": {
+        "X-SystemPrompt": "You are a useful assistant.",
+        "properties": {
+            "name": {
+                "X-LLMDescription": "Provide a descriptive and concise name for the event.",
+                "description": "The name of the calendar event.",
+                "title": "Name",
+                "type": "string"
+            },
+            "date": {
+                "X-LLMDescription": "Specify the event date in YYYY-MM-DD format.",
+                "description": "The date of the calendar event in ISO 8601 format.",
+                "title": "Date",
+                "type": "string"
+            }
+        },
+        "required": [
+            "name",
+            "date"
+        ],
+        "title": "CalendarEvent",
+        "type": "object"
+    },
+    "schema_data_version": "d6d04390f2390eab3dc9a017d043b26b95faeb94",
+    "schema_version": "c547dbfaa0cbcb8d646ca7c53af54d8870f2740e"
+}
+```
+
+</CodeGroup>
+
+
+## Promptify Schema
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+schema_obj = uiclient.schemas.promptify(
+    json_schema = {
+      'properties': {
+          'name': {
+              'description': 'The name of the calendar event.',
+              'title': 'Name',
+              'type': 'string'
+          },
+          'date': {
+              'description': 'The date of the calendar event in ISO 8601 format.',
+              'title': 'Date',
+              'type': 'string'
+          }
+      },
+      'required': ['name', 'date'],
+      'title': 'CalendarEvent',
+      'type': 'object'
+    },
+    documents = [
+        "freight/booking_confirmation_1.jpg",
+        "freight/booking_confirmation_2.jpg"
+    ]
+)
+```
+```json Response
+{
+    "id": null,
+    "object": "schema",
+    "created": null,
+    "json_schema": {
+        "X-SystemPrompt": "You are a useful assistant.",
+        "properties": {
+            "name": {
+                "X-LLMDescription": "Provide a descriptive and concise name for the event.",
+                "description": "The name of the calendar event.",
+                "title": "Name",
+                "type": "string"
+            },
+            "date": {
+                "X-LLMDescription": "Specify the event date in YYYY-MM-DD format.",
+                "description": "The date of the calendar event in ISO 8601 format.",
+                "title": "Date",
+                "type": "string"
+            }
+        },
+        "required": [
+            "name",
+            "date"
+        ],
+        "title": "CalendarEvent",
+        "type": "object"
+    },
+    "schema_data_version": "d6d04390f2390eab3dc9a017d043b26b95faeb94",
+    "schema_version": "c547dbfaa0cbcb8d646ca7c53af54d8870f2740e"
+}
+```
+
+</CodeGroup>
