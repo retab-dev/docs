@@ -1,15 +1,169 @@
 In this section, we will see how to use the methods of the `schemas` client.
 
+## The Schema Object
+<ResponseField name="Schema Object" type="object">
+  A Schema object represents a JSON schema for structured data extraction.
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      A unique identifier for the document loading.
+    </ResponseField>
+
+    <ResponseField name="object" type="string">
+      The type of object being preprocessed. Always "schema".
+    </ResponseField>
+
+    <ResponseField name="messages" type="array[ChatCompletionUiformMessage]" default="[]">
+      Optional list of previous messages to include. Each message must have:
+      <Expandable title="properties">
+        <ResponseField name="role" type="string">
+          The role of the message sender. Must be one of:
+          - "user"
+          - "system" 
+          - "assistant"
+        </ResponseField>
+        <ResponseField name="content" type="string | array[ChatCompletionContentPartParam]">
+          The content of the message. Can be a string or array of content parts:
+          <Expandable title="ChatCompletionContentPartParam">
+            <ResponseField name="text" type="object">
+              A text content part
+              <Expandable title="properties">
+                <ResponseField name="text" type="string">
+                  The text content
+                </ResponseField>
+                <ResponseField name="type" type="string">
+                  Must be "text"
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+
+            <ResponseField name="image_url" type="object">
+              An image content part
+              <Expandable title="properties">
+                <ResponseField name="image_url" type="object">
+                  <Expandable title="properties">
+                    <ResponseField name="url" type="string">
+                      URL or base64 encoded image data
+                    </ResponseField>
+                    <ResponseField name="detail" type="string">
+                      Detail level: "auto", "low", or "high"
+                    </ResponseField>
+                  </Expandable>
+                </ResponseField>
+                <ResponseField name="type" type="string">
+                  Must be "image_url"
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+
+            <ResponseField name="input_audio" type="object">
+              An audio content part
+              <Expandable title="properties">
+                <ResponseField name="input_audio" type="object">
+                  <Expandable title="properties">
+                    <ResponseField name="data" type="string">
+                      Base64 encoded audio data
+                    </ResponseField>
+                    <ResponseField name="format" type="string">
+                      Must be "wav" or "mp3"
+                    </ResponseField>
+                  </Expandable>
+                </ResponseField>
+                <ResponseField name="type" type="string">
+                  Must be "input_audio"
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="created" type="integer">
+      The Unix timestamp (in seconds) of when the document was loaded.
+    </ResponseField>
+
+    <ResponseField name="json_schema" type="dict[str, Any]">
+      The JSON schema to use for loading.
+    </ResponseField>
+
+    <ResponseField name="pydantic_model" type="type[BaseModel]">
+      The Pydantic model to use for loading.
+    </ResponseField>
+
+    <ResponseField name="response_format_json" type="ResponseFormatJSONSchema">
+      Returns the OpenAI API response format configuration with type "json_schema" and a JSONSchema object containing:
+      <Expandable title="properties">
+        <ResponseField name="type" type="string">
+          Always "json_schema"
+        </ResponseField>
+        <ResponseField name="json_schema" type="JSONSchema">
+          The JSON schema configuration:
+          <Expandable title="properties">
+            <ResponseField name="name" type="string" required>
+              Schema name (must contain only a-z, A-Z, 0-9, underscores and dashes, max 64 chars)
+            </ResponseField>
+            <ResponseField name="description" type="string">
+              Description used by the model to determine how to format the response
+            </ResponseField>
+            <ResponseField name="schema" type="dict[str, object]">
+              The JSON Schema object, enhanced with LLMDescription and ReasoningDescription fields
+            </ResponseField>
+            <ResponseField name="strict" type="boolean">
+              If true, enforces strict schema adherence with a limited subset of JSON Schema features
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="response_format_pydantic" type="type[BaseModel]">
+      Converts the structured output schema to a Pydantic model, with the LLMDescription and ReasoningDescription fields added.
+    </ResponseField>
+
+    <ResponseField name="schema_data_version" type="string">
+      SHA1 hash of the schema data, ignoring prompt/description/default fields.
+    </ResponseField>
+
+    <ResponseField name="schema_version" type="string">
+      SHA1 hash of the complete schema.
+    </ResponseField>
+
+    <ResponseField name="structured_output_object_schema" type="dict[str, Any]">
+      Returns the schema formatted for structured output, with the LLMDescription and ReasoningDescription fields added.
+    </ResponseField>
+
+    <ResponseField name="title" type="string">
+      The title of the schema. Returns "NoTitle" if not specified.
+    </ResponseField>
+
+    <ResponseField name="openai_messages" type="array[ChatCompletionMessageParam]">
+      Returns the messages formatted for OpenAI's API.
+    </ResponseField>
+
+    <ResponseField name="anthropic_system_prompt" type="string | NotGiven">
+      Returns the system message in Anthropic's Claude format.
+    </ResponseField>
+
+    <ResponseField name="anthropic_messages" type="array[MessageParam]">
+      Returns the messages in Anthropic's Claude format.
+    </ResponseField>
+
+    <ResponseField name="gemini_messages" type="ContentsType">
+      Returns the messages formatted for Google's Gemini API.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+
+
 
 ## Load Schema from JSON Schema
 
 <CodeGroup>
 ```python Request
-from uiform import UiForm
+from uiform import Schema
 
-uiclient = UiForm()
-
-schema_obj = uiclient.schemas.load(
+schema_obj = Schema(
     json_schema = {
       'X-SystemPrompt': 'You are a useful assistant.',
       'properties': {
@@ -72,10 +226,8 @@ schema_obj = uiclient.schemas.load(
 
 <CodeGroup>
 ```python Request
-from uiform import UiForm
+from uiform import Schema
 from pydantic import BaseModel, Field
-
-uiclient = UiForm()
 
 class CalendarEvent(BaseModel):
     class Config:
@@ -92,7 +244,7 @@ class CalendarEvent(BaseModel):
         }
     )
 
-schema_obj = uiclient.schemas.load(
+schema_obj = Schema(
     pydantic_model = CalendarEvent
 )
 ```

@@ -1,7 +1,77 @@
 In this section, we will see how to use the methods of the `documents` client.
 
-
 ## Create Messages
+
+<ParamField path="create_messages" type="Function">
+  Creates messages from a document for use with LLM models
+  <Expandable title="parameters">
+    <ParamField path="document" type="Path | str | IO[bytes]">
+      The document to process. Can be a file path, string content, or bytes IO object.
+    </ParamField>
+
+    <ParamField path="modality" type="string" default="native">
+      The modality to use for processing the document. Can be:
+      - "native" (default) - Uses the document's native modality based on file type
+      - "text" - Process as text
+      - "image" - Process as image 
+      - "audio" - Process as audio
+      - "video" - Process as video
+    </ParamField>
+
+    
+  </Expandable>
+</ParamField>
+<ResponseField name="Response" type="DocumentMessage Object">
+A DocumentMessage object with the messages created from the document.
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      A unique identifier for the document loading.
+    </ResponseField>
+
+    <ResponseField name="object" type="string">
+      The type of object being loaded. Always "document.message".
+    </ResponseField>
+
+    <ResponseField name="messages" type="array[ChatCompletionUiformMessage]">
+      A list of messages containing the document content and metadata.
+    </ResponseField>
+
+    <ResponseField name="created" type="integer">
+      The Unix timestamp (in seconds) of when the document was loaded.
+    </ResponseField>
+
+    <ResponseField name="modality" type="string">
+      The modality of the document to load.
+    </ResponseField>
+
+    <ResponseField name="document" type="BaseMIMEData Object">
+      The document being loaded.
+    </ResponseField>
+
+    <ResponseField name="items" type="array">
+      Returns the items in the document as a list of strings or PIL Images.
+    </ResponseField>
+
+    <ResponseField name="openai_messages" type="array[ChatCompletionMessageParam]">
+      Returns the messages in OpenAI's format.
+    </ResponseField>
+
+    <ResponseField name="anthropic_system_prompt" type="string">
+      Returns the system message in Anthropic's Claude format.
+    </ResponseField>
+
+    <ResponseField name="anthropic_messages" type="array[MessageParam]">
+      Returns the messages in Anthropic's Claude format.
+    </ResponseField>
+
+    <ResponseField name="gemini_messages" type="ContentsType">
+      Returns the messages in Google's Gemini format.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+
+
 
 <CodeGroup>
 ```python Request
@@ -42,7 +112,126 @@ doc_msg = uiclient.documents.create_messages(
 </CodeGroup>
 
 
+
+
 ## Extract
+
+<ParamField path="extract" type="function">
+  Extract structured data from a document using a JSON schema
+  <Expandable title="parameters">
+    <ParamField path="json_schema" type="dict[str, Any] | Path | str" required>
+      The JSON schema defining the structure to extract. Can be a dict, file path, or string.
+    </ParamField>
+    
+    <ParamField path="document" type="Path | str | IO[bytes]" required>
+      The document to extract from. Can be a file path, string, or bytes IO object.
+    </ParamField>
+
+    <ParamField path="additional_context" type="AdditionalContext">
+      Optional additional context to provide to the model:
+      <Expandable title="properties">
+        <ParamField path="regex_instructions" type="array[RegexInstruction]">
+          List of regex patterns to identify data in the text
+          <Expandable title="RegexInstruction properties">
+            <ParamField path="name" type="string">Key/label for data (e.g., "VATNumber")</ParamField>
+            <ParamField path="pattern" type="string">Regex pattern to match</ParamField>
+            <ParamField path="description" type="string">Description of what to extract</ParamField>
+          </Expandable>
+        </ParamField>
+      </Expandable>
+    </ParamField>
+
+    <ParamField path="model" type="string" default="gpt-4o-2024-08-06">
+      The model to use for extraction.
+    </ParamField>
+
+    <ParamField path="temperature" type="float" default="0">
+      The sampling temperature to use.
+    </ParamField>
+
+    <ParamField path="messages" type="array[ChatCompletionUiformMessage]" default="[]">
+      Optional list of previous messages to include. Each message must have:
+      <Expandable title="properties">
+        <ParamField path="role" type="string">
+          The role of the message sender. Must be one of:
+          - "user"
+          - "system" 
+          - "assistant"
+        </ParamField>
+        <ParamField path="content" type="string | array[ChatCompletionContentPartParam]">
+          The content of the message. Can be a string or array of content parts:
+          <Expandable title="ChatCompletionContentPartParam">
+            <ParamField path="text" type="object">
+              A text content part
+              <Expandable title="properties">
+                <ParamField path="text" type="string">
+                  The text content
+                </ParamField>
+                <ParamField path="type" type="string">
+                  Must be "text"
+                </ParamField>
+              </Expandable>
+            </ParamField>
+
+            <ParamField path="image_url" type="object">
+              An image content part
+              <Expandable title="properties">
+                <ParamField path="image_url" type="object">
+                  <Expandable title="properties">
+                    <ParamField path="url" type="string">
+                      URL or base64 encoded image data
+                    </ParamField>
+                    <ParamField path="detail" type="string">
+                      Detail level: "auto", "low", or "high"
+                    </ParamField>
+                  </Expandable>
+                </ParamField>
+                <ParamField path="type" type="string">
+                  Must be "image_url"
+                </ParamField>
+              </Expandable>
+            </ParamField>
+
+            <ParamField path="input_audio" type="object">
+              An audio content part
+              <Expandable title="properties">
+                <ParamField path="input_audio" type="object">
+                  <Expandable title="properties">
+                    <ParamField path="data" type="string">
+                      Base64 encoded audio data
+                    </ParamField>
+                    <ParamField path="format" type="string">
+                      Must be "wav" or "mp3"
+                    </ParamField>
+                  </Expandable>
+                </ParamField>
+                <ParamField path="type" type="string">
+                  Must be "input_audio"
+                </ParamField>
+              </Expandable>
+            </ParamField>
+          </Expandable>
+        </ParamField>
+      </Expandable>
+    </ParamField>
+
+   
+    <ParamField path="modality" type="string" default="native">
+      The modality to use for processing the document. Can be:
+      - "native" (default) - Uses the document's native modality based on file type
+      - "text" - Process as text
+      - "image" - Process as image 
+      - "audio" - Process as audio
+      - "video" - Process as video
+    </ParamField>
+
+  </Expandable>
+</ParamField>
+
+<ResponseField name="Response" type="ParsedChatCompletion">
+An OpenAI ParsedChatCompletion object with the extracted data.
+</ResponseField>
+
 
 <CodeGroup>
 ```python Request
