@@ -208,16 +208,15 @@ Here is a minimalistic example with everything you should need:
 
 ```python
 import json
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 # Main Data model
 class BasicBaseModel(BaseModel):
     # Add a json_schema_extra to the root
-    class Config:
-        json_schema_extra = {
-            "X-SystemPrompt": "This is the system prompt",
-            "X-ReasoningPrompt": "This is the root reasoning description"
-        }
+    model_config = ConfigDict(json_schema_extra = {
+        "X-SystemPrompt": "This is the system prompt",
+        "X-ReasoningPrompt": "This is the root reasoning description"
+    })
 
     class SimpleObject(BaseModel):
         object_integer_field: int = Field(..., description="Simple integer field description",
@@ -227,9 +226,7 @@ class BasicBaseModel(BaseModel):
                                          json_schema_extra={"X-ReasoningPrompt": "This is the object string field reasoning description"})
 
     class ArrayItem(BaseModel):
-        class Config:
-            json_schema_extra = {"X-ReasoningPrompt": "This is the Array Item reasoning description"}
-        
+        model_config = ConfigDict(json_schema_extra = {"X-ReasoningPrompt": "This is the Array Item reasoning description"})
         array_item_string_field: str = Field(..., description="Array Item String Field description")
 
     my_string_field: str = Field(..., description="My String Field description")
@@ -393,18 +390,19 @@ Expected Output:
 
 #### Using Python with Pydantic for Schema Generation
 ```python
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class InvoiceSchema(BaseModel):
+    model_config = ConfigDict(json_schema_extra = {
+        "X-SystemPrompt": "Extract invoice details strictly following the schema."
+    })
+
     invoice_number: str = Field(..., description="Unique identifier for the invoice",
                                 json_schema_extra={"X-FieldPrompt": "Unique invoice identifier."})
     date_issued: str = Field(..., description="Date in YYYY-MM-DD format",
                              json_schema_extra={"X-ReasoningPrompt": "Explain how the date was identified in the document."})
 
-    class Config:
-        json_schema_extra = {
-            "X-SystemPrompt": "Extract invoice details strictly following the schema."
-        }
+    
 
 print(InvoiceSchema.schema_json(indent=4))
 ```

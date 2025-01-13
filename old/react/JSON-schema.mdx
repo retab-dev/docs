@@ -191,16 +191,15 @@ Here is a minimalistic example with everything you should need:
 
 ```python
 import json
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 # Main Data model
 class BasicBaseModel(BaseModel):
     # Add a json_schema_extra to the root
-    class Config:
-        json_schema_extra = {
-            "X-SystemPrompt": "This is the system prompt",
-            "X-ReasoningPrompt": "This is the root reasoning description"
-        }
+    model_config = ConfigDict(json_schema_extra = {
+        "X-SystemPrompt": "This is the system prompt",
+        "X-ReasoningPrompt": "This is the root reasoning description"
+    })
 
     class SimpleObject(BaseModel):
         object_integer_field: int = Field(..., description="Simple integer field description",
@@ -208,11 +207,8 @@ class BasicBaseModel(BaseModel):
         object_string_field: str = Field(...,
                                          description="Simple string field description",
                                          json_schema_extra={"X-ReasoningPrompt": "This is the object string field reasoning description"})
-
     class ArrayItem(BaseModel):
-        class Config:
-            json_schema_extra = {"X-ReasoningPrompt": "This is the Array Item reasoning description"}
-        
+        model_config = ConfigDict(json_schema_extra = {"X-ReasoningPrompt": "This is the Array Item reasoning description"})
         array_item_string_field: str = Field(..., description="Array Item String Field description")
 
     my_string_field: str = Field(..., description="My String Field description")
