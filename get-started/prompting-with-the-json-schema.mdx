@@ -5,15 +5,15 @@ We use the standard JSON Schema format to organize all the directives needed to 
 - **`X-SystemPrompt`**  
   A top-level directive that provides general instructions or context for the LLM, ensuring consistent behavior and improving the relevance of its responses during the data extraction process.
 
-- **`X-LLMDescription`**  
+- **`X-FieldPrompt`**  
   An optional annotation that replaces or complements the `description` field for a property. It offers the LLM a more detailed understanding of the field, improving its ability to parse or interpret the data accurately.
 
-- **`X-ReasoningDescription`**  
+- **`X-ReasoningPrompt`**  
   This annotation creates an auxiliary field for generating reasoning or explanatory context about a property. It allows the LLM to provide additional insights or justifications for extracted values, which can be helpful in complex or ambiguous scenarios.
 
 These annotations help ensure structured and precise interactions with LLMs while remaining compatible with standard JSON Schema conventions. 
 
-Our prompt optimization tool (soon to be released) can analyze and refine the directives provided in the schema, such as the X-SystemPrompt and X-LLMDescription, to improve overall performance and response quality. Importantly, this optimization process leaves the extraction parameters, such as the schema’s structure and field definitions, unchanged to ensure consistency in data processing.
+Our prompt optimization tool (soon to be released) can analyze and refine the directives provided in the schema, such as the X-SystemPrompt and X-FieldPrompt, to improve overall performance and response quality. Importantly, this optimization process leaves the extraction parameters, such as the schema’s structure and field definitions, unchanged to ensure consistency in data processing.
 
 
 ## X-Directives
@@ -25,13 +25,13 @@ Here is a full example of a schema with all the X-Directives:
   "X-SystemPrompt": "You are a useful assistant extracting information from documents.",
   "properties": {
     "name": {
-      "X-LLMDescription": "Provide a descriptive and concise name for the event.",
+      "X-FieldPrompt": "Provide a descriptive and concise name for the event.",
       "description": "The name of the calendar event.",
       "title": "Name",
       "type": "string"
     },
     "date": {
-      "X-ReasoningDescription": "The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.",
+      "X-ReasoningPrompt": "The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.",
       "description": "The date of the calendar event in ISO 8601 format.",
       "title": "Date",
       "type": "string"
@@ -58,24 +58,24 @@ A top-level directive that provides general instructions or context for the LLM,
 }
 ```
 
-###  `X-LLMDescription`
+###  `X-FieldPrompt`
 
 An optional annotation that replaces or complements the `description` field for a property. It offers the LLM a more detailed understanding of the field, improving its ability to parse or interpret the data accurately.
 
 ```json
 {
-  "X-LLMDescription": "Provide a descriptive and concise name for the event.",
+  "X-FieldPrompt": "Provide a descriptive and concise name for the event.",
   ...
 }
 ```
 
-###  `X-ReasoningDescription`
+###  `X-ReasoningPrompt`
 
 Generates a reasoning field alongside the data field.
 
 ```json
 {
-  "X-ReasoningDescription": "The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.",
+  "X-ReasoningPrompt": "The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.",
   ...
 }
 ```
@@ -116,12 +116,12 @@ class CalendarEvent(BaseModel):
 
     name: str = Field(...,
         description="The name of the calendar event.",
-        json_schema_extra={"X-LLMDescription": "Provide a descriptive and concise name for the event."}
+        json_schema_extra={"X-FieldPrompt": "Provide a descriptive and concise name for the event."}
     )
     date: str = Field(...,
         description="The date of the calendar event in ISO 8601 format.",
         json_schema_extra={
-            "X-ReasoningDescription": "The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.",
+            "X-ReasoningPrompt": "The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.",
         }
     )
 ```
@@ -137,13 +137,13 @@ CalendarEvent.model_json_schema()
   "X-SystemPrompt": "You are a useful assistant extracting information from documents.",
   "properties": {
     "name": {
-      "X-LLMDescription": "Provide a descriptive and concise name for the event.",
+      "X-FieldPrompt": "Provide a descriptive and concise name for the event.",
       "description": "The name of the calendar event.",
       "title": "Name",
       "type": "string"
     },
     "date": {
-      "X-ReasoningDescription": "The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.",
+      "X-ReasoningPrompt": "The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.",
       "description": "The date of the calendar event in ISO 8601 format.",
       "title": "Date",
       "type": "string"
@@ -176,13 +176,13 @@ json_schema = {
     'X-SystemPrompt': 'You are a useful assistant.',
     'properties': {
         'name': {
-            'X-LLMDescription': 'Provide a descriptive and concise name for the event.',
+            'X-FieldPrompt': 'Provide a descriptive and concise name for the event.',
             'description': 'The name of the calendar event.',
             'title': 'Name',
             'type': 'string'
         },
         'date': {
-            'X-LLMDescription': 'Specify the event date in YYYY-MM-DD format.',
+            'X-FieldPrompt': 'Specify the event date in YYYY-MM-DD format.',
             'description': 'The date of the calendar event in ISO 8601 format.',
             'title': 'Date',
             'type': 'string'
@@ -235,7 +235,7 @@ Here are some best practices to test and evaluate your schema:
 
 ## Conclusion
 
-By leveraging **`X-SystemPrompt`**, **`X-LLMDescription`**, and **`X-ReasoningDescription`**, you can significantly enhance structured data extraction tasks. This guide provides a foundational framework to integrate these strategies into your workflows effectively.
+By leveraging **`X-SystemPrompt`**, **`X-FieldPrompt`**, and **`X-ReasoningPrompt`**, you can significantly enhance structured data extraction tasks. This guide provides a foundational framework to integrate these strategies into your workflows effectively.
 
 ---
 

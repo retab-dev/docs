@@ -5,15 +5,15 @@ We use the standard JSON Schema format to organize all the directives needed to 
 - **`X-SystemPrompt`**  
   A top-level directive that provides general instructions or context for the LLM, ensuring consistent behavior and improving the relevance of its responses during the data extraction process.
 
-- **`X-LLMDescription`**  
+- **`X-FieldPrompt`**  
   An optional annotation that replaces or complements the `description` field for a property. It offers the LLM a more detailed understanding of the field, improving its ability to parse or interpret the data accurately.
 
-- **`X-ReasoningDescription`**  
+- **`X-ReasoningPrompt`**  
   This annotation creates an auxiliary field for generating reasoning or explanatory context about a property. It allows the LLM to provide additional insights or justifications for extracted values, which can be helpful in complex or ambiguous scenarios.
 
 These annotations help ensure structured and precise interactions with LLMs while remaining compatible with standard JSON Schema conventions. 
 
-Our prompt optimization tool (soon to be released) can analyze and refine the directives provided in the schema, such as the X-SystemPrompt and X-LLMDescription, to improve overall performance and response quality. Importantly, this optimization process leaves the extraction parameters, such as the schema’s structure and field definitions, unchanged to ensure consistency in data processing.
+Our prompt optimization tool (soon to be released) can analyze and refine the directives provided in the schema, such as the X-SystemPrompt and X-FieldPrompt, to improve overall performance and response quality. Importantly, this optimization process leaves the extraction parameters, such as the schema’s structure and field definitions, unchanged to ensure consistency in data processing.
 
 The following sections detail the supported data types, best practices for schema design, and implementation examples, including integration with Python’s Pydantic library.
 
@@ -73,10 +73,10 @@ This example is problematic because it allows multiple conflicting types without
 For enhanced precision, we support three special custom annotations in the JSON schema:
 
 1. **`X-SystemPrompt`**: The system prompt that will be sent to the underlying LLM.
-2. **`X-LLMDescription`**: If present, it replaces the current property description with a more detailed one, helping the LLM better understand the property and extract it accurately.
-3. **`X-ReasoningDescription`**: For fields that are harder to extract, this annotation generates a sibling field of type `string` to act as a reasoning sandbox. This helps the LLM provide better outputs since it is a language-based model.
+2. **`X-FieldPrompt`**: If present, it replaces the current property description with a more detailed one, helping the LLM better understand the property and extract it accurately.
+3. **`X-ReasoningPrompt`**: For fields that are harder to extract, this annotation generates a sibling field of type `string` to act as a reasoning sandbox. This helps the LLM provide better outputs since it is a language-based model.
 
-### Examples of `X-ReasoningDescription`
+### Examples of `X-ReasoningPrompt`
 
 This annotation can be tricky if not properly understood, so here’s a complete example:
 
@@ -84,10 +84,10 @@ This annotation can be tricky if not properly understood, so here’s a complete
 {
   "$defs": {
     "ArrayItem": {
-      "X-ReasoningDescription": "This is the Array Item reasoning description",
+      "X-ReasoningPrompt": "This is the Array Item reasoning description",
       "properties": {
         "array_item_string_field": {
-          "X-ReasoningDescription": "This is the array_item_string_field reasoning description",
+          "X-ReasoningPrompt": "This is the array_item_string_field reasoning description",
           "description": "array_item_string_field description",
           "title": "Array Item String Field",
           "type": "string"
@@ -105,7 +105,7 @@ This annotation can be tricky if not properly understood, so here’s a complete
           "type": "integer"
         },
         "object_string_field": {
-          "X-ReasoningDescription": "This is the object_string_field reasoning description",
+          "X-ReasoningPrompt": "This is the object_string_field reasoning description",
           "description": "object_string_field description",
           "title": "Object String Field",
           "type": "string"
@@ -116,22 +116,22 @@ This annotation can be tricky if not properly understood, so here’s a complete
       "type": "object"
     }
   },
-  "X-ReasoningDescription": "This is the root reasoning description",
+  "X-ReasoningPrompt": "This is the root reasoning description",
   "X-SystemPrompt": "This is the system prompt",
   "properties": {
     "my_string_field": {
-      "X-ReasoningDescription": "This is the my_string_field reasoning description",
+      "X-ReasoningPrompt": "This is the my_string_field reasoning description",
       "description": "my_string_field description",
       "title": "My String Field",
       "type": "string"
     },
     "my_simple_object": {
       "$ref": "#/$defs/SimpleObject",
-      "X-ReasoningDescription": "This is the my_simple_object reasoning description",
+      "X-ReasoningPrompt": "This is the my_simple_object reasoning description",
       "description": "my_simple_object description"
     },
     "my_array": {
-      "X-ReasoningDescription": "This is my_array reasoning description",
+      "X-ReasoningPrompt": "This is my_array reasoning description",
       "description": "This is my_array description",
       "items": {
         "$ref": "#/$defs/ArrayItem"
@@ -216,19 +216,19 @@ class BasicBaseModel(BaseModel):
     class Config:
         json_schema_extra = {
             "X-SystemPrompt": "This is the system prompt",
-            "X-ReasoningDescription": "This is the root reasoning description"
+            "X-ReasoningPrompt": "This is the root reasoning description"
         }
 
     class SimpleObject(BaseModel):
         object_integer_field: int = Field(..., description="Simple integer field description",
-                                          json_schema_extra={"X-LLMDescription": "This is the object integer field LLM description"})
+                                          json_schema_extra={"X-FieldPrompt": "This is the object integer field LLM description"})
         object_string_field: str = Field(...,
                                          description="Simple string field description",
-                                         json_schema_extra={"X-ReasoningDescription": "This is the object string field reasoning description"})
+                                         json_schema_extra={"X-ReasoningPrompt": "This is the object string field reasoning description"})
 
     class ArrayItem(BaseModel):
         class Config:
-            json_schema_extra = {"X-ReasoningDescription": "This is the Array Item reasoning description"}
+            json_schema_extra = {"X-ReasoningPrompt": "This is the Array Item reasoning description"}
         
         array_item_string_field: str = Field(..., description="Array Item String Field description")
 
@@ -236,14 +236,14 @@ class BasicBaseModel(BaseModel):
     my_simple_object: SimpleObject = Field(..., description="Simple object description")
     my_array: list[ArrayItem] = Field(...,
                                       description="This is the array description",
-                                      json_schema_extra={"X-ReasoningDescription": "This is the array reasoning description"}
+                                      json_schema_extra={"X-ReasoningPrompt": "This is the array reasoning description"}
                                       )
 if __name__ == "__main__":
     with open("path_to_file.json", "w") as f:
         json.dump(BasicBaseModel.model_json_schema(), f, indent=4)
 ```
 
-The content of `path_to_file.json` is actually the schema from [Examples of X-ReasoningDescription](#examples-of-x-reasoningdescription).
+The content of `path_to_file.json` is actually the schema from [Examples of X-ReasoningPrompt](#examples-of-X-ReasoningPrompt).
 
 
 ---
@@ -260,10 +260,10 @@ This guide is designed to help you generate consistent, high-quality structured 
    Use the `X-SystemPrompt` annotation to define a high-level directive that sets the context, tone, and constraints for the LLM. This ensures consistent behavior and high-quality responses.
    
 2. **Providing Field-Specific Guidance**  
-   Use the `X-LLMDescription` annotation for detailed descriptions of each field. This complements or replaces the standard `description` field, enabling the LLM to better understand the requirements for each data point.
+   Use the `X-FieldPrompt` annotation for detailed descriptions of each field. This complements or replaces the standard `description` field, enabling the LLM to better understand the requirements for each data point.
 
 3. **Enabling LLM Reasoning**  
-   The `X-ReasoningDescription` annotation provides the LLM with dedicated "thinking space" in the form of auxiliary fields. By giving the LLM a place to document its analysis and reasoning process before making final decisions, this annotation naturally encourages more thorough consideration of complex scenarios. The LLM can work through ambiguities, validate its interpretations, and explain its extraction choices - ultimately leading to more accurate and reliable outputs. This structured approach to reasoning is particularly valuable for fields requiring nuanced interpretation or where multiple data points need to be synthesized.
+   The `X-ReasoningPrompt` annotation provides the LLM with dedicated "thinking space" in the form of auxiliary fields. By giving the LLM a place to document its analysis and reasoning process before making final decisions, this annotation naturally encourages more thorough consideration of complex scenarios. The LLM can work through ambiguities, validate its interpretations, and explain its extraction choices - ultimately leading to more accurate and reliable outputs. This structured approach to reasoning is particularly valuable for fields requiring nuanced interpretation or where multiple data points need to be synthesized.
 
 ---
 
@@ -276,18 +276,18 @@ This guide is designed to help you generate consistent, high-quality structured 
 
 #### Custom Annotations
 - **`X-SystemPrompt`:** Include overarching instructions for the task, such as expected tone, formatting, or extraction rules.
-- **`X-LLMDescription`:** Provide detailed context for fields requiring nuanced interpretation. Example:  
+- **`X-FieldPrompt`:** Provide detailed context for fields requiring nuanced interpretation. Example:  
   ```json
   {
     "type": "string",
-    "X-LLMDescription": "The name of the client as it appears on the official invoice."
+    "X-FieldPrompt": "The name of the client as it appears on the official invoice."
   }
   ```
-- **`X-ReasoningDescription`:** Use this for fields where reasoning or additional context can clarify ambiguity. Example:  
+- **`X-ReasoningPrompt`:** Use this for fields where reasoning or additional context can clarify ambiguity. Example:  
   ```json
   {
     "type": "string",
-    "X-ReasoningDescription": "Explain how the extracted name matches the format required by the client's database."
+    "X-ReasoningPrompt": "Explain how the extracted name matches the format required by the client's database."
   }
   ```
 
@@ -310,7 +310,7 @@ Key tips for crafting system prompts:
 
 ---
 
-#### 2. Field-Specific Instructions (`X-LLMDescription`)
+#### 2. Field-Specific Instructions (`X-FieldPrompt`)
 For each property in the schema, provide field-specific instructions to ensure accurate extraction:
 ```json
 {
@@ -318,11 +318,11 @@ For each property in the schema, provide field-specific instructions to ensure a
   "properties": {
     "invoice_number": {
       "type": "string",
-      "X-LLMDescription": "The unique identifier for the invoice, typically alphanumeric."
+      "X-FieldPrompt": "The unique identifier for the invoice, typically alphanumeric."
     },
     "date_issued": {
       "type": "string",
-      "X-LLMDescription": "The date when the invoice was issued, in YYYY-MM-DD format."
+      "X-FieldPrompt": "The date when the invoice was issued, in YYYY-MM-DD format."
     }
   },
   "required": ["invoice_number", "date_issued"]
@@ -331,7 +331,7 @@ For each property in the schema, provide field-specific instructions to ensure a
 
 ---
 
-#### 3. Giving the Model Time to Think (`X-ReasoningDescription`)
+#### 3. Giving the Model Time to Think (`X-ReasoningPrompt`)
 Encourage the model to reason before providing a final answer:
 ```json
 {
@@ -339,11 +339,11 @@ Encourage the model to reason before providing a final answer:
   "properties": {
     "client_name": {
       "type": "string",
-      "X-ReasoningDescription": "Provide reasoning for how this name matches the provided document."
+      "X-ReasoningPrompt": "Provide reasoning for how this name matches the provided document."
     },
     "amount_due": {
       "type": "number",
-      "X-ReasoningDescription": "Explain how the amount was calculated based on the invoice details."
+      "X-ReasoningPrompt": "Explain how the amount was calculated based on the invoice details."
     }
   }
 }
@@ -369,11 +369,11 @@ Instruct the LLM to generate intermediate reasoning fields:
   "properties": {
     "invoice_number": {
       "type": "string",
-      "X-LLMDescription": "Unique invoice identifier."
+      "X-FieldPrompt": "Unique invoice identifier."
     },
     "date_issued": {
       "type": "string",
-      "X-ReasoningDescription": "Explain how the date was identified in the document."
+      "X-ReasoningPrompt": "Explain how the date was identified in the document."
     }
   },
   "required": ["invoice_number", "date_issued"]
@@ -397,9 +397,9 @@ from pydantic import BaseModel, Field
 
 class InvoiceSchema(BaseModel):
     invoice_number: str = Field(..., description="Unique identifier for the invoice",
-                                json_schema_extra={"X-LLMDescription": "Unique invoice identifier."})
+                                json_schema_extra={"X-FieldPrompt": "Unique invoice identifier."})
     date_issued: str = Field(..., description="Date in YYYY-MM-DD format",
-                             json_schema_extra={"X-ReasoningDescription": "Explain how the date was identified in the document."})
+                             json_schema_extra={"X-ReasoningPrompt": "Explain how the date was identified in the document."})
 
     class Config:
         json_schema_extra = {
@@ -421,7 +421,7 @@ print(InvoiceSchema.schema_json(indent=4))
 
 ### Conclusion
 
-By leveraging **`X-SystemPrompt`**, **`X-LLMDescription`**, and **`X-ReasoningDescription`**, you can significantly enhance structured data extraction tasks. This guide provides a foundational framework to integrate these strategies into your workflows effectively.
+By leveraging **`X-SystemPrompt`**, **`X-FieldPrompt`**, and **`X-ReasoningPrompt`**, you can significantly enhance structured data extraction tasks. This guide provides a foundational framework to integrate these strategies into your workflows effectively.
 
 ---
 
