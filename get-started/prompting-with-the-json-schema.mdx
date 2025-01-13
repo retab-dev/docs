@@ -108,11 +108,10 @@ You can define the custom annotations in the `pydantic.Field` class using the `j
 Here is a minimalistic example with everything you should need:
 
 ```python
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class CalendarEvent(BaseModel):
-    class Config:
-        json_schema_extra = {"X-SystemPrompt": "You are a useful assistant."}
+    model_config = ConfigDict(json_schema_extra = {"X-SystemPrompt": "You are a useful assistant."})
 
     name: str = Field(...,
         description="The name of the calendar event.",
@@ -162,62 +161,135 @@ CalendarEvent.model_json_schema()
 ---
 ## Extract informations from a document
 
-You will need to use uiform's `parse` method to leverage the directives in the schema. (a simple OpenAI call works but would integrate them)
-
-```python
-from uiform import UiForm
+You will need to use uiform's `Schema` object to leverage the directives in the schema.
+<CodeGroup>
+```python Pydantic
+from uiform import UiForm, Schema
+from openai import OpenAI
+from pydantic import BaseModel, Field, ConfigDict
 
 uiclient = UiForm()
 doc_msg = uiclient.documents.create_messages(
     document = "document_1.xlsx"
 )
 
-json_schema = {
-    'X-SystemPrompt': 'You are a useful assistant.',
-    'properties': {
-        'name': {
-            'X-FieldPrompt': 'Provide a descriptive and concise name for the event.',
-            'description': 'The name of the calendar event.',
-            'title': 'Name',
-            'type': 'string'
-        },
-        'date': {
-            'X-FieldPrompt': 'Specify the event date in YYYY-MM-DD format.',
-            'description': 'The date of the calendar event in ISO 8601 format.',
-            'title': 'Date',
-            'type': 'string'
+class CalendarEvent(BaseModel):
+    model_config = ConfigDict(json_schema_extra = {"X-SystemPrompt": "You are a useful assistant."})
+
+    name: str = Field(...,
+        description="The name of the calendar event.",
+        json_schema_extra={"X-FieldPrompt": "Provide a descriptive and concise name for the event."}
+    )
+    date: str = Field(...,
+        description="The date of the calendar event in ISO 8601 format.",
+        json_schema_extra={
+            'X-ReasoningPrompt': 'The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.',
         }
-    },
-    'required': ['name', 'date'],
-    'title': 'CalendarEvent',
-    'type': 'object'
-}
+    )
 
-# - A simple OpenAI call will not integrate the X-Directives
-#from openai import OpenAI
-#client = OpenAI()
-#completion = client.chat.completions.create(
-#    model="gpt-4o",
-#    messages=schema_obj.openai_messages + doc_msg.openai_messages,
-#    response_format={
-#        "type": "json_schema",
-#        "json_schema": {
-#            "name": "email_schema",
-#            "schema": json_schema
-#        }
-#    }
-#) 
+schema_obj =Schema(
+    pydantic_model = CalendarEvent
+)
 
-response = uiclient.documents.parse(
+# Now you can use your favorite model to analyze your document
+client = OpenAI()
+completion = client.beta.chat.completions.parse(
+    model="gpt-4o",
+    messages=schema_obj.openai_messages + doc_msg.openai_messages,
+    response_format=schema_obj.response_format_pydantic
+)
+
+# Validate the response against the original schema if you want to remove the reasoning fields
+assert completion.choices[0].message.content is not None
+extraction = schema_obj.pydantic_model.model_validate_json(
+    completion.choices[0].message.content
+)
+
+print("Extraction:",extraction)
+```
+```python JSON Schema
+from uiform import UiForm, Schema
+from openai import OpenAI
+
+uiclient = UiForm()
+doc_msg = uiclient.documents.create_messages(
+    document = "document_1.xlsx"
+)
+schema_obj = Schema(
+    json_schema = {
+        'X-SystemPrompt': 'You are a useful assistant extracting information from documents.',
+        'properties': {
+            'name': {
+                'X-FieldPrompt': 'Provide a descriptive and concise name for the event.',
+                'description': 'The name of the calendar event.',
+                'title': 'Name',
+                'type': 'string'
+            },
+            'date': {
+                'X-ReasoningPrompt': 'The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.',
+                'description': 'The date of the calendar event in ISO 8601 format.',
+                'title': 'Date',
+                'type': 'string'
+            }
+        },
+        'required': ['name', 'date'],
+        'title': 'CalendarEvent',
+        'type': 'object'
+    }
+)
+
+# Now you can use your favorite model to analyze your document
+client = OpenAI()
+completion = client.chat.completions.create(
+    model="gpt-4o", 
+    messages=schema_obj.openai_messages + doc_msg.openai_messages,
+    response_format=schema_obj.response_format_json
+)
+
+# Validate the response against the original schema if you want to remove the reasoning fields
+assert completion.choices[0].message.content is not None
+extraction = schema_obj.pydantic_model.model_validate_json(
+    completion.choices[0].message.content
+)
+
+print("Result:",extraction)
+```
+```python UiForm Client
+from uiform import UiForm
+
+uiclient = UiForm()
+
+# You can also use our all-in-one API
+# We return a standard OpenAI response
+response = uiclient.documents.extractions.parse(
     document = "freight/booking_confirmation.jpg", 
     model="gpt-4o-mini",
-    json_schema = json_schema,
+    json_schema = {
+      'X-SystemPrompt': 'You are a useful assistant.',
+      'properties': {
+          'name': {
+              'X-FieldPrompt': 'Provide a descriptive and concise name for the event.',
+              'description': 'The name of the calendar event.',
+              'title': 'Name',
+              'type': 'string'
+          },
+          'date': {
+              'X-ReasoningPrompt': 'The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.',
+              'description': 'The date of the calendar event in ISO 8601 format.',
+              'title': 'Date',
+              'type': 'string'
+          }
+      },
+      'required': ['name', 'date'],
+      'title': 'CalendarEvent',
+      'type': 'object'
+  },
    modality="text"
 )
 
 print(response.choices[0].message.content)
 ```
-
+</CodeGroup>
 
 ---
 
