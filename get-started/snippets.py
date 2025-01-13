@@ -12,13 +12,13 @@ json_schema = {
   "X-SystemPrompt": "You are a useful assistant extracting information from documents.",
   "properties": {
     "name": {
-      "X-LLMDescription": "Provide a descriptive and concise name for the event.",
+      "X-FieldPrompt": "Provide a descriptive and concise name for the event.",
       "description": "The name of the calendar event.",
       "title": "Name",
       "type": "string"
     },
     "date": {
-      "X-ReasoningDescription": "The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.",
+      "X-ReasoningPrompt": "The user can mention it in any format, like **next week** or **tomorrow**. Infer the right date format from the user input.",
       "description": "The date of the calendar event in ISO 8601 format.",
       "title": "Date",
       "type": "string"

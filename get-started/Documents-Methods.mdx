@@ -114,9 +114,11 @@ doc_msg = uiclient.documents.create_messages(
 
 
 
-## Extract
+## Extractions
 
-<ParamField path="extract" type="function">
+### extractions.parse
+
+<ParamField path="extractions.parse" type="function">
   Extract structured data from a document using a JSON schema
   <Expandable title="parameters">
     <ParamField path="json_schema" type="dict[str, Any] | Path | str" required>
@@ -232,28 +234,178 @@ doc_msg = uiclient.documents.create_messages(
 An OpenAI ParsedChatCompletion object with the extracted data.
 </ResponseField>
 
+### extractions.stream
+
+<ParamField path="extractions.stream" type="function">
+  Extract structured data from a document using a JSON schema
+  <Expandable title="parameters">
+    <ParamField path="json_schema" type="dict[str, Any] | Path | str" required>
+      The JSON schema defining the structure to extract. Can be a dict, file path, or string.
+    </ParamField>
+    
+    <ParamField path="document" type="Path | str | IO[bytes]" required>
+      The document to extract from. Can be a file path, string, or bytes IO object.
+    </ParamField>
+
+    <ParamField path="additional_context" type="AdditionalContext">
+      Optional additional context to provide to the model:
+      <Expandable title="properties">
+        <ParamField path="regex_instructions" type="array[RegexInstruction]">
+          List of regex patterns to identify data in the text
+          <Expandable title="RegexInstruction properties">
+            <ParamField path="name" type="string">Key/label for data (e.g., "VATNumber")</ParamField>
+            <ParamField path="pattern" type="string">Regex pattern to match</ParamField>
+            <ParamField path="description" type="string">Description of what to extract</ParamField>
+          </Expandable>
+        </ParamField>
+      </Expandable>
+    </ParamField>
+
+    <ParamField path="model" type="string" default="gpt-4o-2024-08-06">
+      The model to use for extraction.
+    </ParamField>
+
+    <ParamField path="temperature" type="float" default="0">
+      The sampling temperature to use.
+    </ParamField>
+
+    <ParamField path="messages" type="array[ChatCompletionUiformMessage]" default="[]">
+      Optional list of previous messages to include. Each message must have:
+      <Expandable title="properties">
+        <ParamField path="role" type="string">
+          The role of the message sender. Must be one of:
+          - "user"
+          - "system" 
+          - "assistant"
+        </ParamField>
+        <ParamField path="content" type="string | array[ChatCompletionContentPartParam]">
+          The content of the message. Can be a string or array of content parts:
+          <Expandable title="ChatCompletionContentPartParam">
+            <ParamField path="text" type="object">
+              A text content part
+              <Expandable title="properties">
+                <ParamField path="text" type="string">
+                  The text content
+                </ParamField>
+                <ParamField path="type" type="string">
+                  Must be "text"
+                </ParamField>
+              </Expandable>
+            </ParamField>
+
+            <ParamField path="image_url" type="object">
+              An image content part
+              <Expandable title="properties">
+                <ParamField path="image_url" type="object">
+                  <Expandable title="properties">
+                    <ParamField path="url" type="string">
+                      URL or base64 encoded image data
+                    </ParamField>
+                    <ParamField path="detail" type="string">
+                      Detail level: "auto", "low", or "high"
+                    </ParamField>
+                  </Expandable>
+                </ParamField>
+                <ParamField path="type" type="string">
+                  Must be "image_url"
+                </ParamField>
+              </Expandable>
+            </ParamField>
+
+            <ParamField path="input_audio" type="object">
+              An audio content part
+              <Expandable title="properties">
+                <ParamField path="input_audio" type="object">
+                  <Expandable title="properties">
+                    <ParamField path="data" type="string">
+                      Base64 encoded audio data
+                    </ParamField>
+                    <ParamField path="format" type="string">
+                      Must be "wav" or "mp3"
+                    </ParamField>
+                  </Expandable>
+                </ParamField>
+                <ParamField path="type" type="string">
+                  Must be "input_audio"
+                </ParamField>
+              </Expandable>
+            </ParamField>
+          </Expandable>
+        </ParamField>
+      </Expandable>
+    </ParamField>
+
+   
+    <ParamField path="modality" type="string" default="native">
+      The modality to use for processing the document. Can be:
+      - "native" (default) - Uses the document's native modality based on file type
+      - "text" - Process as text
+      - "image" - Process as image 
+      - "audio" - Process as audio
+      - "video" - Process as video
+    </ParamField>
+
+  </Expandable>
+</ParamField>
+
+<ResponseField name="Response" type="AsyncChatCompletionStreamManager[ResponseFormatT]">
+An OpenAI AsyncChatCompletionStreamManager[ResponseFormatT] object with the extracted data.
+</ResponseField>
+
 
 <CodeGroup>
-```python Request
+```python Request (parse)
 
 from uiform import UiForm
 
 uiclient = UiForm()
 
-doc_msg = uiclient.documents.extract(
+doc_msg = uiclient.documents.extractions.parse(
     document = "freight/booking_confirmation.jpg", 
     model="gpt-4o-mini",
     json_schema = {
       'X-SystemPrompt': 'You are a useful assistant.',
       'properties': {
           'name': {
-              'X-LLMDescription': 'Provide a descriptive and concise name for the event.',
+              'X-FieldPrompt': 'Provide a descriptive and concise name for the event.',
               'description': 'The name of the calendar event.',
               'title': 'Name',
               'type': 'string'
           },
           'date': {
-              'X-LLMDescription': 'Specify the event date in YYYY-MM-DD format.',
+              'X-FieldPrompt': 'Specify the event date in YYYY-MM-DD format.',
+              'description': 'The date of the calendar event in ISO 8601 format.',
+              'title': 'Date',
+              'type': 'string'
+          }
+      },
+      'required': ['name', 'date'],
+      'title': 'CalendarEvent',
+      'type': 'object'
+  },
+   modality="text"
+)
+```
+```python Request (stream)
+
+from uiform import UiForm
+
+uiclient = UiForm()
+
+doc_msg = uiclient.documents.extractions.stream(
+    document = "freight/booking_confirmation.jpg", 
+    model="gpt-4o-mini",
+    json_schema = {
+      'X-SystemPrompt': 'You are a useful assistant.',
+      'properties': {
+          'name': {
+              'X-FieldPrompt': 'Provide a descriptive and concise name for the event.',
+              'description': 'The name of the calendar event.',
+              'title': 'Name',
+              'type': 'string'
+          },
+          'date': {
+              'X-FieldPrompt': 'Specify the event date in YYYY-MM-DD format.',
               'description': 'The date of the calendar event in ISO 8601 format.',
               'title': 'Date',
               'type': 'string'
