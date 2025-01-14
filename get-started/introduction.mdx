@@ -1,13 +1,11 @@
 ---
 title: Introduction
-description: 'UiForm'
 ---
 
-UiForm is a **modern**, **flexible**, and **AI-native** document processing API that helps you:
+UiForm solves two major challenges in document processing with LLMs:
 
-- Add AI-defined document processing capabilities to your app
-- Create prompts from JSON schemas and Pydantic models with zero boilerplate
-- Create annotated datasets to distill or finetune your models
+1. **Universal Document Processing**: Convert any file type (PDFs, Excel, emails, etc.) into LLM-ready format without writing custom parsers
+2. **Structured, Schema-driven Extraction**: Get consistent, reliable outputs using schema-based prompt engineering
 
 We see it as building **Stripe** for document processing.
 
@@ -16,7 +14,6 @@ Our goal is to make the process of analyzing documents and unstructured data as 
 Many people haven't yet realized how powerful LLMs have become at document processing tasks - we're here to help **unlock these capabilities**.
 
 ---
-
 
 We currently support [OpenAI](https://platform.openai.com/docs/overview), [Anthropic](https://www.anthropic.com/api), [Gemini](https://aistudio.google.com/) and [xAI](https://x.ai/api) models.
 
@@ -27,19 +24,15 @@ You come with your own API key from your favorite AI provider, and we handle the
 ## Quickstart
 
 <Steps>
-  <Step title="Setup of the Python SDK">
-    Prepare your environnement
+  <Step title="Setup the Python SDK">
   </Step>
-  <Step title="">
-    Use UiForm to summarize a document
+  <Step title="Process your first document">
   </Step>
-  <Step title="Load a schema and extract data from a document">
-   Load a schema and extract data from a document
+  <Step title="Extract structured data">
   </Step>
 </Steps>
 
-
-### Setup of the Python SDK
+### Setup the Python SDK
 
 To get started, install the `uiform` package using pip:
 
@@ -47,38 +40,74 @@ To get started, install the `uiform` package using pip:
 pip install uiform
 ```
 
-Then, [create your API key on uiform.com](https://www.uiform.com) and populate your `env` variables with your API keys:
+Then, [create your API key on uiform.com](https://www.uiform.com) and populate your `env` variables:
 
 <CodeGroup>
 ```python jupyter
 import os
-os.environ["OPENAI_API_KEY"] = "YOUR-API-KEY" # Your AI provider API key. Compatible with OpenAI, Anthropic, xAI.
+os.environ["OPENAI_API_KEY"] = "YOUR-API-KEY" # Your AI provider API key (OpenAI, Anthropic, etc.)
 os.environ["UIFORM_API_KEY"] = "sk_xxxxxxxxx" # Create your API key on https://www.uiform.com
 ```
 ```bash .env
-OPENAI_API_KEY=YOUR-API-KEY # Your AI provider API key. Compatible with OpenAI, Anthropic, xAI.
+OPENAI_API_KEY=YOUR-API-KEY # Your AI provider API key (OpenAI, Anthropic, etc.)
 UIFORM_API_KEY=sk_xxxxxxxxx # Create your API key on https://www.uiform.com
 ```
 </CodeGroup>
 
-### Summarize a document
+### Process your first document
 
-Use the `UiForm` client to convert your documents into messages and use your favorite model to analyze your document:
+UiForm handles all the document preprocessing - no custom parsers needed. Let's break this down into steps:
+
+1. First, initialize the UiForm client and pre-process your document:
+
+```python
+from uiform import UiForm
+
+# Initialize UiForm client
+uiclient = UiForm()
+
+# Convert any document into LLM-ready format
+doc_msg = uiclient.documents.create_messages(
+    document = "invoice.pdf"  # Works with PDFs, Excel, emails, etc.
+)
+```
+
+2. The `doc_msg` object contains the pre-processed document in a format ready for LLMs. Here's what it looks like:
+
+```json doc_msg.json
+{
+    "id": "doc_dd003f95-81ce-4a55-9180-00c5a58d82ec",
+    "object": "document.message",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "INVOICE\n\nABC Logistics Inc.\n123 Shipping Lane\nPort City, PC 12345\n\nBill To:\nXYZ Corporation\n456 Business Ave\nMetro City, MC 67890\n\nInvoice Number: INV-2024-0123\nInvoice Date: 2024-01-15\nDue Date: 2024-02-14\n\nDescription:\n1. Ocean Freight (20ft Container) - $2,500.00\n2. Documentation Fee - $150.00\n3. Terminal Handling Charges - $350.00\n4. Customs Clearance - $275.00\n\nSubtotal: $3,275.00\nTax (10%): $327.50\nTotal Amount: $3,602.50\n\nPayment Terms: Net 30\nBank Details:\nBank: Global Trade Bank\nAccount: 1234567890\nSwift: GTBKUS12\n\nThank you for your business!\n\nFor questions contact:\naccounts@abclogistics.com\n+1 (555) 123-4567"
+                }
+            ]
+        }
+    ],
+    "created": 1736524416,
+    "modality": "text",
+     "document": {
+        "id": "cf908729402d0796537bb91e63df5e339ce93b4cabdcac2f9a4f90592647e130",
+        "name": "invoice.pdf",
+        "mime_type": "application/pdf",
+    }
+}
+```
+
+3. Now you can use this pre-processed document with your preferred LLM provider:
 
 <CodeGroup>
-```python OPENAI {4-7}
-from uiform import UiForm
+```python OpenAI
 from openai import OpenAI
 
-uiclient = UiForm()
-doc_msg = uiclient.documents.create_messages(
-    document = "freight/booking_confirmation.jpg"
-)
-
-# Now you can use your favorite model to analyze your document
 client = OpenAI()
 completion = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model="gpt-4o-mini-2024-07-18",
     messages=doc_msg.openai_messages + [
         {
             "role": "user",
@@ -87,20 +116,14 @@ completion = client.chat.completions.create(
     ]
 )
 ```
-```python ANTHROPIC {4-7}
-from uiform import UiForm
-from anthropic import Anthropic
 
-uiclient = UiForm()
-doc_msg = uiclient.documents.create_messages(
-    document = "freight/booking_confirmation.jpg"
-)
+```python Anthropic
+from anthropic import Anthropic
 
 client = Anthropic()
 message = client.messages.create(
-    model="claude-3-5-sonnet-20241022",
+    model="claude-3-5-sonnet-latest",
     max_tokens=1000,
-    temperature=0,
     messages=doc_msg.anthropic_messages + [
         {
             "role": "user",
@@ -109,30 +132,19 @@ message = client.messages.create(
     ]
 )
 ```
-```python GEMINI {4-7}
-from uiform import UiForm
+
+```python Gemini
 import google.generativeai as genai
 
-uiclient = UiForm()
-doc_msg = uiclient.documents.create_messages(
-    document = "freight/booking_confirmation.jpg"
-)
-
 genai.configure()
-model = genai.GenerativeModel("gemini-2.0-flash-exp")
+model = genai.GenerativeModel("gemini-pro")
 response = model.generate_content(
-    doc_msg.gemini_messages + ["Summarize the document"]
+    doc_msg.gemini_messages + ["Summarize this invoice"]
 )
-
 ```
-```python xAI {4-7}
-from uiform import UiForm
-from openai import OpenAI
 
-uiclient = UiForm()
-doc_msg = uiclient.documents.create_messages(
-    document = "freight/booking_confirmation.jpg"
-)
+```python xAI
+from openai import OpenAI
 
 client = OpenAI(base_url = "https://api.x.ai/v1")
 completion = client.chat.completions.create(
@@ -145,41 +157,14 @@ completion = client.chat.completions.create(
     ]
 )
 ```
-```json doc_msg.json
-{
-    "id": "doc_dd003f95-81ce-4a55-9180-00c5a58d82ec",
-    "object": "document.message",
-    "messages": [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "text": "/, ACME\n\n4% Corporation\u201d\n\nConfirmation d'affr\u00e9tement\nACME CORPORATION\n\nVAT Number: GB123456789\n\n11/8/2024, 11:41:43 AM\n\naA\n\nD\u00e9tails de la soci\u00e9t\u00e9 Site de: Adresse de facturation:\nContact: Jane Doe 456 Oak Avenue 123 Elm Street\nAcme Corporation Floor 3 Suite 500\nTel: +44 20 7946 0958 Manchester London\nEmail: client@acme.com M1 4WP. WC2N S5DU GB\nUnited Kingdom Tel: +44 20 7946 0958\n\nEmail: client@acme.com\nVAT Number: GB123456789\n\nR\u00e9f\u00e9rence a rappeler sur votre\nfacture\n\nN\u00b0OT : SHIP-001\n\nR\u00e9f.Client : BC-67890\n\nN\u00b0 Cde : SHIP-001\n\nTransporteur :\n\nTRANSPORT EXPRESS.\nAl'attention du Service Logistique\nZone Industrielle Est, Batiment C\n45 rue des Transporteurs\n\n75001 PARIS\n\nFRANCE\n\nT\u00e9l : 0123 45 67 89\n\nFax : 0123 45 67 90\n\nTva : FR12 345 678 901\n\nLe transporteur s'engage :\n\ne a-souscrire une assurance sp\u00e9cifique aux marchandises\nsensibles.\n\n* arespecter les clauses vol de ses polices d'assurance\nmarchandises transport\u00e9es.\n\n\u00a2 a v\u00e9rifier que les marchandises soient bien accompagn\u00e9es des\ndocuments et notamment des documents de douane\ncorrespondants.\n\n\u00a2 ad\u00e9clarer les incidents et notamment contacter imm\u00e9diatement\nnotre bureau d'affr\u00e9tement et le bureau de douanes le plus\nproche en cas de vol attest\u00e9.\n\n\u00a2 a mettre en oeuvre les moyens de pr\u00e9vention visant a la\ns\u00e9curisation de la marchandise dont le stationnement dans des\nendroits clos et gardienn\u00e9s.\n\n \n\nNature des marchandises: Prise en charge le Livraison le\nPoids: 500 T Pallets: 5 Unit\u00e9s: 10 Volume: 1.44 M3 5/2/2023 5/3/2023\nMetres de chargement: 0.4 ML De 08:00 a 12:00 De 10:00 a 16:00\nTemp\u00e9rature: 5\u00b0C - 25\u00b0C (Frais) Acme Corporation Beta Industries\nMarchandises dangereuses: UN1202 Classe 3 - Liquide 123 Elm Street 789 Pine Street\ninflammable Suite 500 Munich, Bavaria\nLondon, Greater London 80331 DE\nWC2N SDU GB +49 89 123456\n\n \n\n \n\n \n\nPrix convenu: 1500 EUR HT PRIX NEGOCIE GASOIL INCLUS R\u00e9f\u00e9rence a rappeler sur votre facture :\n\nBC-67890\n\nConditions de transport et de reglement :\n\nAfin de permettre un reglement conforme aux dispositions, il est rappel\u00e9 au transporteur affr\u00e9t\u00e9 que la facture ne sera admise pour paiement que sous\nla condition stricte de reception des documents l\u00e9gaux requis pour justifier de la r\u00e9alisation de la prestation de transport et notamment : I'original de la\nlettre de voiture accompagn\u00e9 du bon de livraison original r\u00e9gularis\u00e9 et la preuve de l'\u00e9change des palettes consign\u00e9es. II est a noter que le prix\nconvenu a fait l'objet d'une n\u00e9gociation entre les parties et qu'il integre notamment les charges de carburant sur la base de l'indice CNR du mois en\ncours a la date de r\u00e9alisation du transport. Pour les flux belges, le prix convenu comprend la taxe kilom\u00e9trique. Le transporteur affr\u00e9teur s'oblige a\nex\u00e9cuter l'ordre de transport confi\u00e9 par ses propres moyens. Il s'interdit de le sous-traiter a des tiers. Le non respect de cette clause entraine la\nr\u00e9solution imm\u00e9diate et de plein droit du contrat de transport. Il reconnait \u00e9galement que le forfait ci-dessus permet de couvrir l'ensemble des charges\nd\u00e9finies a l'article L3221-1 du Code des Transports. En cons\u00e9quence, il d\u00e9clare \u00e9tre a jour de son obligation de d\u00e9claration, du paiement des charges\nsociales (URSSAF) et du respect de la lutte contre le travail ill\u00e9gal. Il s'engage a respecter les obligations sur le d\u00e9tachement transnational de salari\u00e9s,\naussi il doit \u00e9tre a jour de |'\u00e9tablissement de I'attestation de d\u00e9tachement des salari\u00e9s ainsi que de la nomination d'un repr\u00e9sentant en France. Nous\nvous rappelons la l\u00e9gislation frangaise concernant le cabotage routier de marchandises qui fait l'objet des articles L.3421-3 et suivants du Code des\nTransports modifi\u00e9s par le d\u00e9cret n\u00b0 2016-418 du 7 avril 2016, tout transport doit donc \u00e9tre effectu\u00e9 dans le respect de la loi. Nous vous remercions de\nnous tenir imm\u00e9diatement inform\u00e9s de tout incident rencontr\u00e9 dans |'ex\u00e9cution de ce transport.\n\n \n\nSile transport de marchandises s'effectue sur Retour imp\u00e9ratif par fax avec la mention Bon\ndes palettes Europe, celles-ci doivent \u00e9tre pour accord, votre cachet commercial, vos\n\u00e9chang\u00e9es au chargement ou restitu\u00e9es sous noms et signature. A d\u00e9faut de retour, le\n\n8 jours. Dans le cas contraire, elles vous seront contrat de transport sera r\u00e9put\u00e9 ex\u00e9cut\u00e9 selon\nfactur\u00e9es au prix de 28 \u20ac ht/Palette (14 \u20achtde \u2014_les modalit\u00e9s pr\u00e9cit\u00e9es.Tous les bons de\n\nfrais de dossier non remboursable en cas livraisons devront \u00e9tre retourn\u00e9s sous 8 jours.\nd'avoir).\n\n \n\n \n\n \n\f",
-                    "type": "text"
-                }
-            ]
-        }
-    ],
-    "created": 1736524416,
-    "modality": "text",
-    "document": {
-        "id": "cf908729402d0796537bb91e63df5e339ce93b4cabdcac2f9a4f90592647e130",
-        "name": "booking_confirmation.jpg",
-        "mime_type": "image/jpeg"
-    }
-}
-```
 </CodeGroup>
 
----
-
-### Load a schema and extract data from a document
+### Extract structured data with schema-based prompt engineering
 
 We use a standard JSON Schema with custom annotations (`X-SystemPrompt`, `X-FieldPrompt`, and `X-ReasoningPrompt`) as a prompt-engineering framework for the extraction process.
 
 These annotations help guide the LLM's behavior and improve extraction accuracy. 
 You can learn more about these in our [JSON Schema documentation](https://docs.uiform.com/get-started/prompting-with-the-json-schema).
-
 
 <CodeGroup>
 ```python Pydantic BaseModel
@@ -187,30 +172,37 @@ from uiform import UiForm
 from openai import OpenAI
 from pydantic import BaseModel, Field, ConfigDict
 
-uiclient = UiForm()
-doc_msg = uiclient.documents.create_messages(
-    document = "document_1.xlsx"
-)
-
-class CalendarEvent(BaseModel):
-    model_config = ConfigDict(json_schema_extra = {"X-SystemPrompt": "You are a useful assistant."})
-
-    name: str = Field(...,
-        description="The name of the calendar event.",
-        json_schema_extra={"X-FieldPrompt": "Provide a descriptive and concise name for the event."}
+# Define your extraction schema
+class Invoice(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra = {
+            "X-SystemPrompt": "You are an expert at analyzing invoice documents."
+        }
+    )
+    
+    total_amount: float = Field(...,
+        description="The total invoice amount",
+        json_schema_extra={
+            "X-FieldPrompt": "Find the final total amount including taxes"
+        }
     )
     date: str = Field(...,
-        description="The date of the calendar event in ISO 8601 format.",
+        description="Invoice date in YYYY-MM-DD format",
         json_schema_extra={
-            "X-FieldPrompt": "Specify the event date in YYYY-MM-DD format.",
+            "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
         }
     )
 
+# Process document and extract data
+uiclient = UiForm()
+doc_msg = uiclient.documents.create_messages(
+    document = "invoice.pdf"
+)
 schema_obj = uiclient.schemas.load(
-    pydantic_model = CalendarEvent
+    pydantic_model = Invoice
 )
 
-# Now you can use your favorite model to analyze your document
+# Extract structured data with any LLM
 client = OpenAI()
 completion = client.beta.chat.completions.parse(
     model="gpt-4o",
@@ -218,41 +210,40 @@ completion = client.beta.chat.completions.parse(
     response_format=schema_obj.pydantic_response_format
 )
 
-print("Extraction:", completion.choices[0].message.parsed)
+print("Extracted data:", completion.choices[0].message.parsed)
 ```
-```python JSON Schema 
+```python JSON Schema
 from uiform import UiForm
 from openai import OpenAI
-from pydantic import BaseModel, Field
 
+# Define your extraction schema
+schema = {
+    "X-SystemPrompt": "You are an expert at analyzing invoice documents.",
+    "properties": {
+        "total_amount": {
+            "type": "number",
+            "description": "The total invoice amount",
+            "X-FieldPrompt": "Find the final total amount including taxes"
+        },
+        "date": {
+            "type": "string",
+            "description": "Invoice date in YYYY-MM-DD format",
+            "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
+        }
+    },
+    "required": ["total_amount", "date"]
+}
+
+# Process document and extract data
 uiclient = UiForm()
 doc_msg = uiclient.documents.create_messages(
-    document = "document_1.xlsx"
+    document = "invoice.pdf"
 )
 schema_obj = uiclient.schemas.load(
-    json_schema = {
-      'X-SystemPrompt': 'You are a useful assistant.',
-      'properties': {
-          'name': {
-              'X-FieldPrompt': 'Provide a descriptive and concise name for the event.',
-              'description': 'The name of the calendar event.',
-              'title': 'Name',
-              'type': 'string'
-          },
-          'date': {
-              'X-FieldPrompt': 'Specify the event date in YYYY-MM-DD format.',
-              'description': 'The date of the calendar event in ISO 8601 format.',
-              'title': 'Date',
-              'type': 'string'
-          }
-      },
-      'required': ['name', 'date'],
-      'title': 'CalendarEvent',
-      'type': 'object'
-  }
+    json_schema = schema
 )
 
-# Now you can use your favorite model to analyze your document
+# Extract structured data with any LLM
 client = OpenAI()
 completion = client.chat.completions.create(
     model="gpt-4o",
@@ -260,11 +251,39 @@ completion = client.chat.completions.create(
     response_format=schema_obj.json_response_format
 )
 
-print("Extraction:",completion.choices[0].message.content)
+print("Extracted data:", completion.choices[0].message.content)
+```
+```python UiForm Client
+from uiform import UiForm
+
+# All-in-one extraction API
+uiclient = UiForm()
+response = uiclient.documents.extractions.parse(
+    document = "invoice.pdf",
+    model = "gpt-4o",
+    json_schema = {
+        "X-SystemPrompt": "You are an expert at analyzing invoice documents.",
+        "properties": {
+            "total_amount": {
+                "type": "number",
+                "description": "The total invoice amount",
+                "X-FieldPrompt": "Find the final total amount including taxes"
+            },
+            "date": {
+                "type": "string",
+                "description": "Invoice date in YYYY-MM-DD format",
+                "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
+            }
+        },
+        "required": ["total_amount", "date"]
+    }
+)
+
+print("Extracted data:", response.choices[0].message.content)
 ```
 </CodeGroup>
 
-And that's it ! You can start processing documents at scale ! 
+That's it! You can start processing documents at scale. 
 You have 1000 free requests to get started, and you can [subscribe](https://www.uiform.com) to the pro plan to get more.
 
 But this minimalistic example is just the beginning. Continue reading to learn more about how to use UiForm **to its full potential**.
@@ -273,7 +292,9 @@ But this minimalistic example is just the beginning. Continue reading to learn m
 
 ## Go further
 
-- [Prompt Engineering Guide](https://docs.uiform.com/get-started/prompting-with-the-json-schema)
+Now that you understand the basics, learn how to:
+- [Make any file LLM-ready](https://docs.uiform.com/get-started/making-files-LLM-ready) - Stop writing custom parsers
+- [Create reliable prompts with JSON Schema](https://docs.uiform.com/get-started/prompting-with-the-json-schema) - Get consistent, structured outputs
 - [General Concepts](https://docs.uiform.com/get-started/General-Concepts)
 - Finetuning (coming soon)
 - Prompt optimization (coming soon)
