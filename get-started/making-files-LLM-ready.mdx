@@ -1,0 +1,138 @@
+---
+title: Making Files LLM-Ready
+description: 'Convert any document type into a format suitable for LLMs'
+---
+
+## Introduction
+
+UiForm's document processing pipeline automatically converts various file types into LLM-ready formats, eliminating the need for custom parsers. This guide explains how to process different document types and understand the resulting output format.
+
+## Supported File Types
+
+UiForm supports a wide range of document formats:
+
+- **Text Documents**: PDF, DOC, DOCX, TXT
+- **Spreadsheets**: XLS, XLSX, CSV
+- **Emails**: EML, MSG
+- **Images**: JPG, PNG, TIFF
+- **Presentations**: PPT, PPTX
+- **And more**: HTML, XML, JSON
+
+## Basic Document Processing
+
+Here's how to convert a document into an LLM-ready format:
+
+```python
+from uiform import UiForm
+
+uiclient = UiForm()
+doc_msg = uiclient.documents.create_messages(
+    document = "path/to/your/document.jpg"
+)
+```
+
+The `create_messages` method returns a standardized message format:
+
+```json
+{
+    "id": "doc_dd003f95-81ce-4a55-9180-00c5a58d82ec",
+    "object": "document.message",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Document content here..."
+                }
+            ]
+        }
+    ],
+    "created": 1736524416,
+    "modality": "text",
+    "document": {
+        "id": "cf908729402d0796537bb91e63df5e339ce93b4cabdcac2f9a4f90592647e130",
+        "name": "document.jpg",
+        "mime_type": "image/jpeg"
+    }
+}
+```
+
+## Document Processing Options
+
+### Text Operations
+
+You can provide regex instructions to help identify specific patterns in the text:
+
+```python
+doc_msg = uiclient.documents.create_messages(
+    document = "document.pdf",
+    prompting_context = {
+        "regex_instructions": [
+            {
+                "name": "vat_number",
+                "pattern": r"\b[A-Z]{2}\d{9}\b",
+                "description": "VAT number in the format XX999999999"
+            }
+        ]
+    }
+)
+```
+
+The regex results will be available in the response under `regex_instruction_results`, with each match containing:
+- `instruction`: The original regex instruction (name, pattern, description)
+- `hits`: Array of strings matching the pattern
+
+### Modality Control
+
+You can specify the document processing modality using the `modality` parameter:
+
+```python
+response = uiclient.documents.extract(
+    document = "document.pdf",
+    json_schema = schema,
+    modality = "native"  # or "text"
+)
+```
+
+Available modalities from the endpoints:
+- `native`: Default processing mode
+- `text`: Text-only processing mode
+
+The chosen modality will be reflected in the response under the `modality` field.
+
+## Supported Models
+
+You can use any of these supported models:
+- Claude-3 series (claude-3-5-sonnet-latest, claude-3-opus-20240229, etc.)
+- GPT-4o series (gpt-4o, gpt-4o-mini, etc.)
+- Gemini series (gemini-1.5-pro, gemini-1.5-flash, etc.)
+- Grok-2 series (grok-2-vision-1212, grok-2-1212)
+
+List available models using:
+
+```python
+uiclient = UiForm()
+models = uiclient.models.list()
+```
+
+## Rate Limits
+
+The API has the following rate limits:
+- 300 requests per 60-second window
+- Applies to document processing endpoints (`create_messages` and `extractions`)
+- Returns 429 status code when exceeded
+
+## Best Practices
+
+1. **Rate Limits**: Stay within the 300 requests per minute limit
+2. **Text Operations**: Use regex instructions when specific pattern matching is needed
+3. **Modality**: Specify the desired modality when default processing isn't suitable
+
+---
+
+### Go further
+
+- [Prompting with JSON Schema](/get-started/prompting-with-the-json-schema)
+- [Schema Methods](/get-started/Schema-Methods)
+- [General Concepts](/get-started/General-Concepts)
