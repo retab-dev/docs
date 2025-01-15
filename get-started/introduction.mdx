@@ -209,7 +209,7 @@ client = OpenAI()
 completion = client.beta.chat.completions.parse(
     model="gpt-4o",
     messages=schema_obj.openai_messages + doc_msg.openai_messages,
-    response_format=schema_obj.pydantic_response_format
+    response_format=schema_obj.inference_pydantic_model
 )
 
 print("Extracted data:", completion.choices[0].message.parsed)
@@ -250,7 +250,14 @@ client = OpenAI()
 completion = client.chat.completions.create(
     model="gpt-4o",
     messages=schema_obj.openai_messages + doc_msg.openai_messages,
-    response_format=schema_obj.json_response_format
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": schema_obj.schema_version,
+            "schema": schema_obj.inference_json_schema,
+            "strict": True
+        }
+    }
 )
 
 print("Extracted data with the reasoning fields:", completion.choices[0].message.content) 
