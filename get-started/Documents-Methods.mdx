@@ -5,8 +5,8 @@ In this section, we will see how to use the methods of the `documents` client.
 <ParamField path="create_messages" type="Function">
   Creates messages from a document for use with LLM models
   <Expandable title="parameters">
-    <ParamField path="document" type="Path | str | IO[bytes]">
-      The document to process. Can be a file path, string content, or bytes IO object.
+    <ParamField path="document" type="Path | str | IO[bytes] | PIL.Image.Image">
+      The document to process. Can be a file path, string content, bytes IO object, or PIL Image object.
     </ParamField>
 
     <ParamField path="modality" type="string" default="native">
@@ -85,9 +85,6 @@ A DocumentMessage object with the messages created from the document.
   </Expandable>
 </ResponseField>
 
-
-
-
 <CodeGroup>
 ```python Request
 from uiform import UiForm
@@ -123,9 +120,51 @@ doc_msg = uiclient.documents.create_messages(
     }
 }
 ```
-
 </CodeGroup>
 
+
+## Correct image orientation
+
+<ParamField path="correct_image_orientation" type="function">
+  Corrects the orientation of an image using the UiForm API.
+  <Expandable title="parameters">
+    <ParamField path="image" type="Path | str | IOBase | MIMEData | PIL.Image.Image" required>
+      The input image to correct. Can be:
+      - A file path (Path or str)
+      - A file-like object (IOBase) 
+      - A MIMEData object
+      - A PIL Image object
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="Response" type="PIL.Image.Image">
+  The orientation-corrected image as a PIL Image object
+</ResponseField>
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+from openai import OpenAI
+
+uiclient = UiForm()
+doc_msg = uiclient.documents.correct_image_orientation(
+    image = "freight/booking_confirmation.jpg",
+)
+```
+```json Response
+{
+    "created": 1736524416,
+    "modality": "text",
+    "document": {
+        "id": "cf908729402d0796537bb91e63df5e339ce93b4cabdcac2f9a4f90592647e130",
+        "name": "booking_confirmation.jpg",
+        "mime_type": "image/jpeg",
+        "content": "..."
+    }
+}
+```
+</CodeGroup>
 
 
 
