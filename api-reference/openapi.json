@@ -47,8 +47,8 @@
         "tags": [
           "Documents"
         ],
-        "summary": "Process Documents",
-        "operationId": "process_documents_api_v1_documents_extractions_post",
+        "summary": "Extraction",
+        "operationId": "extraction_api_v1_documents_extractions_post",
         "security": [
           {
             "HTTPBearer": []
@@ -226,6 +226,47 @@
             "API Key": []
           }
         ]
+      }
+    },
+    "/api/v1/documents/correct_image_orientation": {
+      "post": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Correct Image Orientation",
+        "operationId": "correct_image_orientation_api_v1_documents_correct_image_orientation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentCorrectOrientationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentCorrectOrientationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/schemas/promptify": {
@@ -1851,6 +1892,42 @@
               "title": "Page Size"
             },
             "description": "Items per page"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort by field",
+              "title": "Sort By"
+            },
+            "description": "Sort by field"
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort order (asc, desc)",
+              "title": "Sort Order"
+            },
+            "description": "Sort order (asc, desc)"
           }
         ],
         "responses": {
@@ -2352,6 +2429,63 @@
               "title": "Page Size"
             },
             "description": "Items per page"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort by field",
+              "title": "Sort By"
+            },
+            "description": "Sort by field"
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort order (asc, desc)",
+              "title": "Sort Order"
+            },
+            "description": "Sort order (asc, desc)"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "not-annotated",
+                    "in-progress",
+                    "annotated"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
           }
         ],
         "responses": {
@@ -2422,7 +2556,77 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileWithAnnotation"
+                  "$ref": "#/components/schemas/FileWithAnnotationAndSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Update Annotated File",
+        "operationId": "update_annotated_file_api_v1_datasets_annotated_datasets__annotated_dataset_id__files__file_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "annotated_dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Annotated Dataset Id"
+            }
+          },
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAnnotationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotatedFile"
                 }
               }
             }
@@ -2491,6 +2695,130 @@
             }
           }
         }
+      },
+      "put": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Update Annotated Dataset",
+        "operationId": "update_annotated_dataset_api_v1_datasets_annotated_datasets__annotated_dataset_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "annotated_dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Annotated Dataset Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAnnotatedDatasetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotatedDataset"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/datasets/annotated-datasets/{annotated_dataset_id}/bulk-annotate": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Bulk Annotate Files",
+        "operationId": "bulk_annotate_files_api_v1_datasets_annotated_datasets__annotated_dataset_id__bulk_annotate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "annotated_dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Annotated Dataset Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_bulk_annotate_files_api_v1_datasets_annotated_datasets__annotated_dataset_id__bulk_annotate_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkAnnotationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/custom/astre/documents/extractions": {
@@ -2498,8 +2826,8 @@
         "tags": [
           "Custom"
         ],
-        "summary": "Extraction",
-        "operationId": "extraction_api_custom_astre_documents_extractions_post",
+        "summary": "Extractions",
+        "operationId": "extractions_api_custom_astre_documents_extractions_post",
         "security": [
           {
             "HTTPBearer": []
@@ -2609,7 +2937,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UiParsedChatCompletion"
+                  "$ref": "#/components/schemas/AstreDocumentAPIResponse"
                 }
               }
             }
@@ -2800,6 +3128,42 @@
               "title": "Page Size"
             },
             "description": "Items per page"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort by field",
+              "title": "Sort By"
+            },
+            "description": "Sort by field"
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort order (asc, desc)",
+              "title": "Sort Order"
+            },
+            "description": "Sort order (asc, desc)"
           }
         ],
         "responses": {
@@ -3277,6 +3641,63 @@
               "title": "Page Size"
             },
             "description": "Items per page"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort by field",
+              "title": "Sort By"
+            },
+            "description": "Sort by field"
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort order (asc, desc)",
+              "title": "Sort Order"
+            },
+            "description": "Sort order (asc, desc)"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "not-annotated",
+                    "in-progress",
+                    "annotated"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
           }
         ],
         "responses": {
@@ -3344,7 +3765,74 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileWithAnnotation"
+                  "$ref": "#/components/schemas/FileWithAnnotationAndSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Annotated File",
+        "operationId": "update_annotated_file_datasets_annotated_datasets__annotated_dataset_id__files__file_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "annotated_dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Annotated Dataset Id"
+            }
+          },
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAnnotationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotatedFile"
                 }
               }
             }
@@ -3395,6 +3883,124 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AnnotatedDataset"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Annotated Dataset",
+        "operationId": "update_annotated_dataset_datasets_annotated_datasets__annotated_dataset_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "annotated_dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Annotated Dataset Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAnnotatedDatasetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotatedDataset"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/annotated-datasets/{annotated_dataset_id}/bulk-annotate": {
+      "post": {
+        "summary": "Bulk Annotate Files",
+        "operationId": "bulk_annotate_files_datasets_annotated_datasets__annotated_dataset_id__bulk_annotate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "annotated_dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Annotated Dataset Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_bulk_annotate_files_datasets_annotated_datasets__annotated_dataset_id__bulk_annotate_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkAnnotationResponse"
                 }
               }
             }
@@ -3581,6 +4187,17 @@
             "type": "string",
             "title": "Annotated Dataset Id",
             "description": "ID of the annotated dataset"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "not-annotated",
+              "in-progress",
+              "annotated"
+            ],
+            "title": "Status",
+            "description": "Status of the annotation (not-annotated, in-progress, annotated)",
+            "default": "not-annotated"
           }
         },
         "type": "object",
@@ -3665,10 +4282,6 @@
       },
       "AstreDocumentAPIRequest": {
         "properties": {
-          "model": {
-            "type": "string",
-            "title": "Model"
-          },
           "document": {
             "$ref": "#/components/schemas/MIMEData",
             "description": "Document to be analyzed"
@@ -3679,20 +4292,70 @@
             "title": "Document Type",
             "description": "Type of document to be analyzed",
             "default": "BookingConfirmation"
-          },
-          "stream": {
-            "type": "boolean",
-            "title": "Stream",
-            "description": "Whether to stream the response",
-            "default": false
           }
         },
         "type": "object",
         "required": [
-          "model",
           "document"
         ],
         "title": "AstreDocumentAPIRequest"
+      },
+      "AstreDocumentAPIResponse": {
+        "properties": {
+          "extraction": {
+            "type": "object",
+            "title": "Extraction"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "likelihoods": {
+            "title": "Likelihoods"
+          },
+          "regex_instruction_results": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RegexInstructionResult"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regex Instruction Results"
+          },
+          "text_operations_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Operations Message"
+          },
+          "schema_validation_error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "extraction",
+          "created",
+          "likelihoods"
+        ],
+        "title": "AstreDocumentAPIResponse"
       },
       "BaseMIMEData": {
         "properties": {
@@ -3719,6 +4382,39 @@
           "mime_type"
         ],
         "title": "BaseMIMEData"
+      },
+      "BaseModel": {
+        "properties": {},
+        "type": "object",
+        "title": "BaseModel"
+      },
+      "Body_bulk_annotate_files_api_v1_datasets_annotated_datasets__annotated_dataset_id__bulk_annotate_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_bulk_annotate_files_api_v1_datasets_annotated_datasets__annotated_dataset_id__bulk_annotate_post"
+      },
+      "Body_bulk_annotate_files_datasets_annotated_datasets__annotated_dataset_id__bulk_annotate_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_bulk_annotate_files_datasets_annotated_datasets__annotated_dataset_id__bulk_annotate_post"
       },
       "Body_upload_files_api_v1_datasets_upload_files_post": {
         "properties": {
@@ -3753,6 +4449,37 @@
           "files"
         ],
         "title": "Body_upload_files_datasets_upload_files_post"
+      },
+      "BulkAnnotationResponse": {
+        "properties": {
+          "total_processed": {
+            "type": "integer",
+            "title": "Total Processed"
+          },
+          "successful": {
+            "type": "integer",
+            "title": "Successful"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_processed",
+          "successful",
+          "failed",
+          "errors"
+        ],
+        "title": "BulkAnnotationResponse"
       },
       "ChatCompletionAudio": {
         "properties": {
@@ -3838,6 +4565,30 @@
         ],
         "title": "ChatCompletionContentPartTextParam"
       },
+      "ChatCompletionMessageToolCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "function": {
+            "$ref": "#/components/schemas/Function"
+          },
+          "type": {
+            "type": "string",
+            "const": "function",
+            "title": "Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "function",
+          "type"
+        ],
+        "title": "ChatCompletionMessageToolCall"
+      },
       "ChatCompletionTokenLogprob": {
         "properties": {
           "token": {
@@ -3879,7 +4630,50 @@
         ],
         "title": "ChatCompletionTokenLogprob"
       },
-      "ChatCompletionUiformMessage": {
+      "ChatCompletionUiformMessage-Input": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "system",
+              "assistant"
+            ],
+            "title": "Role"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ChatCompletionContentPartTextParam"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ChatCompletionContentPartImageParam"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ChatCompletionContentPartInputAudioParam"
+                    }
+                  ]
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "ChatCompletionUiformMessage"
+      },
+      "ChatCompletionUiformMessage-Output": {
         "properties": {
           "role": {
             "type": "string",
@@ -4371,6 +5165,30 @@
         ],
         "title": "DatasetFile"
       },
+      "DocumentCorrectOrientationRequest": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/MIMEData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "DocumentCorrectOrientationRequest"
+      },
+      "DocumentCorrectOrientationResponse": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/MIMEData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "DocumentCorrectOrientationResponse"
+      },
       "DocumentCreateMessageRequest": {
         "properties": {
           "document": {
@@ -4428,6 +5246,25 @@
                     "pattern": "[Ff][Rr]\\s*(\\d\\s*){11}"
                   }
                 ]
+              }
+            ]
+          },
+          "image_operations": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageOperations"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Preprocessing operations applied to image before sending them to the llm",
+            "default": {
+              "correct_orientation": true
+            },
+            "examples": [
+              {
+                "correct_orientation": true
               }
             ]
           }
@@ -4495,7 +5332,14 @@
             "default": "native"
           },
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "Document to be analyzed"
           },
           "text_operations": {
@@ -4513,13 +5357,22 @@
                 ]
               }
             ]
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatCompletionUiformMessage-Input"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "Messages to be used by the AI model"
           }
         },
         "type": "object",
         "required": [
           "model",
           "json_schema",
-          "document"
+          "document",
+          "messages"
         ],
         "title": "DocumentExtractRequest"
       },
@@ -4537,7 +5390,7 @@
           },
           "messages": {
             "items": {
-              "$ref": "#/components/schemas/ChatCompletionUiformMessage"
+              "$ref": "#/components/schemas/ChatCompletionUiformMessage-Output"
             },
             "type": "array",
             "title": "Messages"
@@ -4622,6 +5475,53 @@
         ],
         "title": "FileWithAnnotation"
       },
+      "FileWithAnnotationAndSchema": {
+        "properties": {
+          "file": {
+            "$ref": "#/components/schemas/DatasetFile"
+          },
+          "annotation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnnotatedFile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "json_schema": {
+            "type": "object",
+            "title": "Json Schema",
+            "description": "The JSON schema of the annotated dataset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "json_schema"
+        ],
+        "title": "FileWithAnnotationAndSchema"
+      },
+      "Function": {
+        "properties": {
+          "arguments": {
+            "type": "string",
+            "title": "Arguments"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "arguments",
+          "name"
+        ],
+        "title": "Function"
+      },
       "FunctionCall": {
         "properties": {
           "arguments": {
@@ -4702,6 +5602,16 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ImageOperations": {
+        "properties": {
+          "correct_orientation": {
+            "type": "boolean",
+            "title": "Correct Orientation"
+          }
+        },
+        "type": "object",
+        "title": "ImageOperations"
       },
       "ImageURL": {
         "properties": {
@@ -4923,6 +5833,17 @@
               }
             ],
             "title": "Lookup Key"
+          },
+          "stripe_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stripe Customer Id"
           }
         },
         "type": "object",
@@ -5142,138 +6063,6 @@
         ],
         "title": "PaginatedListFilesWithAnnotationsResponse"
       },
-      "ParsedChatCompletionMessage": {
-        "properties": {
-          "content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "refusal": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refusal"
-          },
-          "role": {
-            "type": "string",
-            "const": "assistant",
-            "title": "Role"
-          },
-          "audio": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ChatCompletionAudio"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "function_call": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FunctionCall"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "tool_calls": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ParsedFunctionToolCall"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tool Calls"
-          },
-          "parsed": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parsed"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "required": [
-          "role"
-        ],
-        "title": "ParsedChatCompletionMessage"
-      },
-      "ParsedFunction": {
-        "properties": {
-          "arguments": {
-            "type": "string",
-            "title": "Arguments"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "parsed_arguments": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parsed Arguments"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "required": [
-          "arguments",
-          "name"
-        ],
-        "title": "ParsedFunction"
-      },
-      "ParsedFunctionToolCall": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "function": {
-            "$ref": "#/components/schemas/ParsedFunction"
-          },
-          "type": {
-            "type": "string",
-            "const": "function",
-            "title": "Type"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "required": [
-          "id",
-          "function",
-          "type"
-        ],
-        "title": "ParsedFunctionToolCall"
-      },
       "PromptTokensDetails": {
         "properties": {
           "audio_tokens": {
@@ -5433,9 +6222,25 @@
             "type": "object",
             "title": "Json Schema",
             "default": {}
+          },
+          "schema_data_version": {
+            "type": "string",
+            "title": "Schema Data Version",
+            "description": "Returns the SHA1 hash of the schema data, ignoring all prompt/description/default fields.\n\nReturns:\n    str: A SHA1 hash string representing the schema data version.",
+            "readOnly": true
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "description": "Returns the SHA1 hash of the complete schema.\n\nReturns:\n    str: A SHA1 hash string representing the complete schema version.",
+            "readOnly": true
           }
         },
         "type": "object",
+        "required": [
+          "schema_data_version",
+          "schema_version"
+        ],
         "title": "Schema"
       },
       "SubscriptionStatus": {
@@ -5684,6 +6489,87 @@
         ],
         "title": "UiParsedChatCompletion"
       },
+      "UiParsedChatCompletionMessage": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "refusal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal"
+          },
+          "role": {
+            "type": "string",
+            "const": "assistant",
+            "title": "Role"
+          },
+          "audio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatCompletionAudio"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "function_call": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FunctionCall"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tool_calls": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatCompletionMessageToolCall"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Calls"
+          },
+          "parsed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BaseModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "UiParsedChatCompletionMessage"
+      },
       "UiParsedChoice": {
         "properties": {
           "finish_reason": {
@@ -5719,7 +6605,7 @@
             ]
           },
           "message": {
-            "$ref": "#/components/schemas/ParsedChatCompletionMessage"
+            "$ref": "#/components/schemas/UiParsedChatCompletionMessage"
           }
         },
         "additionalProperties": true,
@@ -5729,6 +6615,56 @@
           "message"
         ],
         "title": "UiParsedChoice"
+      },
+      "UpdateAnnotatedDatasetRequest": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "title": "UpdateAnnotatedDatasetRequest"
+      },
+      "UpdateAnnotationRequest": {
+        "properties": {
+          "annotation": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annotation"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "not-annotated",
+                  "in-progress",
+                  "annotated"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "title": "UpdateAnnotationRequest"
       },
       "UpdateSchemaEntry": {
         "properties": {
