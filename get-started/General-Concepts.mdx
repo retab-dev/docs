@@ -24,6 +24,28 @@ print(models)
 
 Both clients provide the same core functionality, enabling you to list models, create messages, extract data from documents, and more, with the flexibility to match your application's concurrency model.
 
+## Pagination
+
+Many top-level resources have support for bulk fetches via list API methods. For instance, you can list extraction links, list email addresses, and list logs. These list API methods share a common structure, taking at least these four parameters: limit, order, after, and before.
+
+UiForm utilizes pagination via the after and before parameters. Both parameters take an existing object ID value and return objects in either descending or ascending order by creation time.
+
+## Idempotency
+
+The UiForm API supports idempotency which guarantees that performing the same operation multiple times will have the same result as if the operation were performed only once. This is handy in situations where you may need to retry a request due to a failure or prevent accidental duplicate requests from creating more than one resource.
+
+To achieve idempotency, you can add Idempotency-Key request header to any UiForm API request with a unique string as the value. Each subsequent request matching this unique string will return the same response. We suggest using [v4 UUIDs](https://en.wikipedia.org/wiki/Universally_unique_identifier) for idempotency keys to avoid collisions.
+
+
+```bash Idempotency key example
+curl --request POST \
+  --url https://api.uiform.com/v1/emails/test/webhook \
+  -H "Authorization: Bearer sk_test_a2V5XzAxSkgwVjhSN1ZaRTlYUzJYQzhOOTVRVDMzLEJSa3BzTEFuUTRVUWF5dEV5ZHpnRVZpVkI" \
+  -H "Idempotency-Key: cd320c5c-e928-4212-a5bd-986c29362867" \
+```
+
+Idempotency keys expire after 24 hours. The UiForm API will generate a new response if you submit a request with an expired key.
+
 
 ## Rate Limits
 
@@ -103,16 +125,6 @@ response = client.documents.extract(
     modality='text' # The image will be converted to text (with an OCR model) before being sent to the LLM
 )
 ```
-
-## Idempotency
-
-Idempotency in UIForm ensures that repeated API requests with the same idempotency key are handled consistently without duplicating processing or generating unintended side effects. When a request is made, UIForm checks if a record with the same idempotency key exists in its database. If a match is found:  
-
-1. **If the request content matches the original request:** The previously computed response is returned.  
-2. **If the request content differs:** An error is returned, indicating a conflict.  
-3. **If the original request is still being processed:** The API prevents concurrent execution by blocking duplicate processing.  
-
-By leveraging idempotency, UIForm ensures each document or operation is processed only once, returning consistent results and avoiding unnecessary computation.  
 
 
 ## Image Settings

@@ -1,51 +1,94 @@
+## Verify Event
+---
+If you want to verify the event you can use the `verify_event` method. The `WEBHOOKS_SECRET` can be generated in the [UiForm Dashboard](https://uiform.com/dashboard/settings).
+
+<CodeGroup>
+```python FastAPI
+import os
+
+from fastapi import FastAPI, Request, Response, HTTPException
+from uiform import UiForm
+
+uiclient = UiForm()
+app = FastAPI()
+
+@app.post("/webhook")
+async def webhook_handler(request: Request):
+    try:
+        # Read payload and signature from request
+        payload = await request.body()
+        signature_header = request.headers.get("UiForm-Signature")
+
+        if not signature_header:
+            raise HTTPException(status_code=400, detail="Missing UiForm-Signature header")
+
+        # Verify the signature and process the event
+        uiclient.automations.verify_event(
+            event_body=payload,
+            event_signature=signature_header,
+            secret=os.getenv("WEBHOOKS_SECRET"),
+        )
+
+        return Response(status_code=200)
+    except Exception as e:
+        # Handle errors (optional: log the error)
+        return Response(status_code=400, content=f"Webhook error: {str(e)}")
+```
+```python Django
+import os
+
+from django import Response
+from uiform import UiForm
+
+uiclient = UiForm()
+
+def webhook_handler(request):
+    payload = request.get_data()
+    signature_header = request.headers["UiForm-Signature"]
+
+    # Verify the signature and process the event
+    response = uiclient.automations.verify_event(
+        event_body=payload,
+        event_signature=signature_header,
+        secret=os.getenv("WEBHOOKS_SECRET"),
+    )
+
+    return Response(status=200)
+```
+```python Flask
+import os
+
+from flask import Flask, Response, request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+app = Flask(__name__)
 
 
+@app.route("/webhook", methods=["POST"])
+def webhook_handler():
+    payload = request.get_data()
+    signature_header = request.headers["UiForm-Signature"]
+
+    # Verify the signature and process the event
+    response = uiclient.automations.verify_event(
+        event_body=payload,
+        event_signature=signature_header,
+        secret=os.getenv("WEBHOOKS_SECRET"),
+    )
+
+    return Response(status=200)
+```
+</CodeGroup>
+
+----
 ## Extraction Link
+----
+### Object
 
-### Create
-
-<ParamField path="create" type="Function">
-  Creates a new extraction link configuration.
-  <Expandable title="parameters">
-    <ParamField path="name" type="string" required>
-      Name of the extraction link
-    </ParamField>
-    <ParamField path="json_schema" type="Dict[str, Any]" required>
-      JSON schema to validate extracted data
-    </ParamField>
-
-    <ParamField path="webhook_url" type="HttpUrl" required>
-      Webhook endpoint for forwarding processed files
-    </ParamField>
-
-    <ParamField path="webhook_headers" type="Dict[str, str]">
-      Optional HTTP headers for webhook requests
-    </ParamField>
-
-    <ParamField path="password" type="string">
-      Optional password for protected links
-    </ParamField>
-
-    <ParamField path="image_settings" type="Dict[str, Any]">
-      Optional image preprocessing operations
-    </ParamField>
-
-    <ParamField path="modality" type="string" default="native">
-      Processing modality (currently only "native" supported)
-    </ParamField>
-
-    <ParamField path="model" type="string" default="gpt-4o-mini">
-      AI model to use for processing
-    </ParamField>
-
-    <ParamField path="temperature" type="float" default="0">
-      Model temperature setting
-    </ParamField>
-  </Expandable>
-</ParamField>
-
-<ResponseField name="Response" type="ExtractionLinkConfig">
-An ExtractionLinkConfig object containing the extraction link configuration.
+<ResponseField name="Object" type="ExtractionLink">
+An ExtractionLink object containing the extraction link configuration.
   <Expandable title="properties">
     <ResponseField name="object" type="string">
       The type of object. Always "extraction_link".
@@ -96,6 +139,8 @@ An ExtractionLinkConfig object containing the extraction link configuration.
     </ResponseField>
   </Expandable>
 </ResponseField>
+
+### Create
 
 <CodeGroup>
 ```python Request
@@ -136,167 +181,200 @@ extraction_link = uiclient.automations.extraction_links.create(
 ```
 </CodeGroup>
 
-### automations.extraction_links.get
+### Get
 
-<ParamField path="get" type="Function">
-  Gets a specific extraction link configuration.
-  <Expandable title="parameters">
-    <ParamField path="link_id" type="string" required>
-      ID of the extraction link to retrieve
-    </ParamField>
-  </Expandable>
-</ParamField>
+<CodeGroup>
+```python Request
+from uiform import UiForm
 
-<ResponseField name="Response" type="ExtractionLinkConfig">
-An ExtractionLinkConfig object containing the extraction link configuration.
-  <Expandable title="properties">
-    <ResponseField name="object" type="string">
-      The type of object. Always "extraction_link".
-    </ResponseField>
+uiclient = UiForm()
+link_obj = uiclient.automations.extraction_links.get(
+    link_id="el_1573aadc-e1ff-4569-80dc-05e71a6c4ff2"
+)
+```
+```json Response
+{'object': 'extraction_link',
+ 'id': 'el_1573aadc-e1ff-4569-80dc-05e71a6c4ff2',
+ 'name': 'Invoices',
+ 'password': None,
+ 'webhook_url': HttpUrl('https://your_server.com/invoices/webhook'),
+ 'webhook_headers': {},
+ 'updated_at': datetime.datetime(2025, 1, 30, 20, 5, 7, 352372, tzinfo=TzInfo(UTC)),
+ 'modality': 'native',
+ 'image_settings': {'correct_image_orientation': True,
+  'dpi': 72,
+  'image_to_text': 'ocr',
+  'browser_canvas': 'A4'},
+ 'model': 'gpt-4o-mini',
+ 'json_schema': {'$defs': {'CompanyEnum': {'enum': ['school',
+     'investor',
+     'startup',
+     'corporate'],
+    'title': 'CompanyEnum',
+    'type': 'string'},
+   'CompanyRelation': {'enum': ['founderBackground',
+     'investor',
+     'competitor',
+     'client',
+     'partnership'],
+    'title': 'CompanyRelation',
+    'type': 'string'}},
+  'properties': {'name': {'X-FieldPrompt': 'Look for the name of the company, or derive it from the logo',
+    'description': 'Name of the identified company',
+    'title': 'Name',
+    'type': 'string'},
+   'type': {'$ref': '#/$defs/CompanyEnum',
+    'X-FieldPrompt': 'Guess the type depending on slide context',
+    'description': 'Type of the identified company'},
+   'relationship': {'$ref': '#/$defs/CompanyRelation',
+    'X-FieldPrompt': 'Guess the relationship of the identified company with the startup from the deck',
+    'description': 'Relationship of the identified company with the startup from the deck'}},
+  'required': ['name', 'type', 'relationship'],
+  'title': 'Company',
+  'type': 'object'},
+ 'temperature': 0.0}
+```
+</CodeGroup>
 
-    <ResponseField name="id" type="string">
-      Unique identifier for the extraction link, prefixed with "el_".
-    </ResponseField>
+### List
 
-    <ResponseField name="name" type="string">
-      Name of the link.
-    </ResponseField>
+<CodeGroup>
+```python Request
+from uiform import UiForm
 
-    <ResponseField name="password" type="string">
-      Optional password to access the link.
-    </ResponseField>
+uiclient = UiForm()
+list_link_obj = uiclient.automations.extraction_links.list()
+```
+</CodeGroup>
 
-    <ResponseField name="webhook_url" type="HttpUrl">
-      URL of the webhook to send the data to.
-    </ResponseField>
 
-    <ResponseField name="webhook_headers" type="Dict[str, str]">
-      Headers to send with the webhook request.
-    </ResponseField>
+### Update
 
-    <ResponseField name="modality" type="Modality">
-      Processing modality for the documents.
-    </ResponseField>
+<CodeGroup>
+```python Request
+from uiform import UiForm
 
-    <ResponseField name="image_settings" type="ImageSettings">
-      Preprocessing operations applied to images before sending to the LLM.
-    </ResponseField>
+uiclient = UiForm()
+link_obj = uiclient.automations.extraction_links.update(
+    link_id="el_1573aadc-e1ff-4569-80dc-05e71a6c4ff2",
+    model="gpt-4o"
+)
+```
+```json Response
+{'object': 'extraction_link',
+ 'id': 'el_1573aadc-e1ff-4569-80dc-05e71a6c4ff2',
+ 'name': 'Invoices',
+ 'password': None,
+ 'webhook_url': HttpUrl('https://your_server.com/invoices/webhook'),
+ 'webhook_headers': {},
+ 'updated_at': datetime.datetime(2025, 1, 31, 14, 40, 46, 542812, tzinfo=TzInfo(UTC)),
+ 'modality': 'native',
+ 'image_settings': {'correct_image_orientation': True,
+  'dpi': 72,
+  'image_to_text': 'ocr',
+  'browser_canvas': 'A4'},
+ 'model': 'gpt-4o',
+ 'json_schema': {'$defs': {'CompanyEnum': {'enum': ['school',
+     'investor',
+     'startup',
+     'corporate'],
+    'title': 'CompanyEnum',
+    'type': 'string'},
+   'CompanyRelation': {'enum': ['founderBackground',
+     'investor',
+     'competitor',
+     'client',
+     'partnership'],
+    'title': 'CompanyRelation',
+    'type': 'string'}},
+  'properties': {'name': {'X-FieldPrompt': 'Look for the name of the company, or derive it from the logo',
+    'description': 'Name of the identified company',
+    'title': 'Name',
+    'type': 'string'},
+   'type': {'$ref': '#/$defs/CompanyEnum',
+    'X-FieldPrompt': 'Guess the type depending on slide context',
+    'description': 'Type of the identified company'},
+   'relationship': {'$ref': '#/$defs/CompanyRelation',
+    'X-FieldPrompt': 'Guess the relationship of the identified company with the startup from the deck',
+    'description': 'Relationship of the identified company with the startup from the deck'}},
+  'required': ['name', 'type', 'relationship'],
+  'title': 'Company',
+  'type': 'object'},
+ 'temperature': 0.0}
+```
+</CodeGroup>
 
-    <ResponseField name="model" type="string">
-      Model used for chat completion.
-    </ResponseField>
+### Delete
 
-    <ResponseField name="json_schema" type="Dict[str, Any]">
-      JSON schema format used to validate the output data.
-    </ResponseField>
+<CodeGroup>
+```python Request
+from uiform import UiForm
 
-    <ResponseField name="temperature" type="float">
-      Temperature for sampling. Defaults to 0.0 if not provided.
-    </ResponseField>
+uiclient = UiForm()
+uiclient.automations.extraction_links.delete(
+    link_id="el_1573aadc-e1ff-4569-80dc-05e71a6c4ff2"
+)
+```
+</CodeGroup>
 
-    <ResponseField name="updated_at" type="datetime">
-      UTC timestamp of when the config was last updated.
-    </ResponseField>
-  </Expandable>
-</ResponseField>
+
+### Test
+
+#### Test Webhook
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+link_log = uiclient.automations.extraction_links.test_webhook(
+    link_id="el_1573aadc-e1ff-4569-80dc-05e71a6c4ff2",
+)
+```
+</CodeGroup>
+
+
+#### Test Document Upload
 
 
 <CodeGroup>
 ```python Request
 from uiform import UiForm
-from openai import OpenAI
 
 uiclient = UiForm()
-doc_msg = uiclient.documents.correct_image_orientation(
-    document = "freight/booking_confirmation.jpg",
+link_log = uiclient.automations.extraction_links.test_document_upload(
+    link_id="el_1573aadc-e1ff-4569-80dc-05e71a6c4ff2",
+    document = "invoice.pdf"
 )
 ```
-```json Response
-{
-    "document": {
-        "id": "cf908729402d0796537bb91e63df5e339ce93b4cabdcac2f9a4f90592647e130",
-        "name": "booking_confirmation.jpg",
-        "mime_type": "image/jpeg",
-        "content": "..."
-    }
-}
-```
 </CodeGroup>
-### automations.extraction_links.update
-<ParamField path="update" type="Function">
-  Update an extraction link configuration.
-  <Expandable title="parameters">
-    <ParamField path="link_id" type="string" required>
-      ID of the extraction link to update
-    </ParamField>
-
-    <ParamField path="name" type="string" optional>
-      New name for the link
-    </ParamField>
-
-    <ParamField path="webhook_url" type="HttpUrl" optional>
-      New webhook endpoint URL
-    </ParamField>
-
-    <ParamField path="webhook_headers" type="Dict[str, str]" optional>
-      New webhook headers
-    </ParamField>
-
-    <ParamField path="password" type="string" optional>
-      New password for protected links
-    </ParamField>
-
-    <ParamField path="image_settings" type="Dict[str, Any]" optional>
-      New image preprocessing operations
-    </ParamField>
-
-    <ParamField path="modality" type="Modality" optional>
-      New processing modality
-    </ParamField>
-
-    <ParamField path="model" type="string" optional>
-      New AI model
-    </ParamField>
-
-    <ParamField path="temperature" type="float" optional>
-      New temperature setting
-    </ParamField>
-
-    <ParamField path="json_schema" type="Dict[str, Any]" optional>
-      New JSON schema
-    </ParamField>
-  </Expandable>
-</ParamField>
-
-### automations.extraction_links.delete
-
-<ParamField path="delete" type="Function">
-  Delete an extraction link configuration.
-  <Expandable title="parameters">
-    <ParamField path="link_id" type="string" required>
-      ID of the extraction link to delete
-    </ParamField>
-  </Expandable>
-</ParamField>
 
 
-<ResponseField name="Response" type="ExtractionLinkConfig">
-An ExtractionLinkConfig object containing the extraction link configuration.
+
+----
+## Extraction Mailbox
+----
+### Object
+<ResponseField name="Object" type="ExtractionMailbox">
+An ExtractionMailbox object containing the extraction mailbox configuration.
   <Expandable title="properties">
     <ResponseField name="object" type="string">
-      The type of object. Always "extraction_link".
+      The type of object. Always "extraction_mailbox".
     </ResponseField>
 
     <ResponseField name="id" type="string">
-      Unique identifier for the extraction link, prefixed with "el_".
+      Unique identifier for the mailbox, prefixed with "emb_".
     </ResponseField>
 
-    <ResponseField name="name" type="string">
-      Name of the link.
+    <ResponseField name="email" type="string">
+      Email address for the mailbox, must end with @mailbox.uiform.com.
     </ResponseField>
 
-    <ResponseField name="password" type="string">
-      Optional password to access the link.
+    <ResponseField name="authorized_domains" type="List[str]">
+      List of authorized domains to receive the emails from.
+    </ResponseField>
+
+    <ResponseField name="authorized_emails" type="List[EmailStr]">
+      List of emails to access the link.
     </ResponseField>
 
     <ResponseField name="webhook_url" type="HttpUrl">
@@ -332,4 +410,135 @@ An ExtractionLinkConfig object containing the extraction link configuration.
     </ResponseField>
   </Expandable>
 </ResponseField>
+
+
+
+### Create
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+extraction_link = uiclient.automations.extraction_mailboxes.create(
+    email="invoices@mailbox.uiform.com",
+    model="gpt-4o-mini",
+    json_schema="json_schema.json"
+    webhook_url="https://your_server.com/invoices/webhook",
+    authorized_domains=["uiform.com", "gmail.com"],
+    authorized_emails=["john@doe.com", "jane@doe.com"]
+)
+```
+</CodeGroup>
+
+
+### Get
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+mailbox = uiclient.automations.extraction_mailboxes.get(
+    email="invoices@mailbox.uiform.com",
+)
+```
+</CodeGroup>
+
+
+### List
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+list_mailboxes = uiclient.automations.extraction_mailboxes.list()
+```
+</CodeGroup>
+
+
+### Update
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+mailbox = uiclient.automations.extraction_mailboxes.update(
+    email="invoices@mailbox.uiform.com",
+    model="gpt-4o-mini"
+)
+```
+</CodeGroup>
+
+
+### Delete
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+uiclient.automations.extraction_mailboxes.delete(
+    email="invoices@mailbox.uiform.com"
+)
+```
+</CodeGroup>
+
+
+### Test
+
+#### Test Webhook
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+mailbox_log = uiclient.automations.extraction_mailboxes.test_webhook(
+    email="invoices@mailbox.uiform.com"
+)
+```
+</CodeGroup>
+
+
+#### Test Email Processing
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+mailbox_log = uiclient.automations.extraction_mailboxes.test_email_processing(
+    email="invoices@mailbox.uiform.com",
+    document="invoice.eml"
+)
+```
+</CodeGroup>
+
+
+
+#### Test Email forwarding
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+mailbox_log = uiclient.automations.extraction_mailboxes.test_email_forwarding(
+    email="invoices@mailbox.uiform.com",
+    document="invoice.eml"
+)
+```
+</CodeGroup>
+
 
