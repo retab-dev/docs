@@ -1,37 +1,10 @@
 In this section, we will see how to use the methods of the `documents` client.
 
+
+
 ## Create Messages
 
-<ParamField path="create_messages" type="Function">
-  Creates messages from a document for use with LLM models
-  <Expandable title="parameters">
-    <ParamField path="document" type="Path | str | IO[bytes] | PIL.Image.Image">
-      The document to process. Can be a file path, string content, bytes IO object, or PIL Image object.
-    </ParamField>
-
-    <ParamField path="modality" type="string" default="native">
-      The modality to use for processing the document. Can be:
-      - "native" (default) - Uses the document's native modality based on file type
-      - "image+text" - Uses both the document's native modality and processes as text
-      - "text" - Process as text
-      - "image" - Process as image 
-    </ParamField>
-
-
-    <ParamField path="image_settings" type="ImageSettings">
-      Optional image preprocessing settings:
-      <Expandable title="properties">
-        <ParamField path="correct_image_orientation" type="boolean">Whether to correct the image orientation</ParamField>
-        <ParamField path="dpi" type="integer">The DPI of the image</ParamField>
-        <ParamField path="image_to_text" type="'ocr' | 'llm_description'">Whether to convert the image to text</ParamField>
-        <ParamField path="browser_canvas" type="'A3' | 'A4' | 'A5'">The canvas of the browser (default = A4)</ParamField>
-      </Expandable>
-    </ParamField>
-
-    
-  </Expandable>
-</ParamField>
-<ResponseField name="Response" type="DocumentMessage Object">
+<ResponseField name="Returns" type="DocumentMessage Object">
 A DocumentMessage object with the messages created from the document.
   <Expandable title="properties">
     <ResponseField name="id" type="string">
@@ -80,6 +53,7 @@ A DocumentMessage object with the messages created from the document.
   </Expandable>
 </ResponseField>
 
+
 <CodeGroup>
 ```python Request
 from uiform import UiForm
@@ -89,13 +63,6 @@ uiclient = UiForm()
 doc_msg = uiclient.documents.create_messages(
     document = "freight/booking_confirmation.jpg",
     modality = "text",
-    text_operations = {
-        "regex_instructions": [{
-            "name": "VAT Number",
-            "description": "All potential VAT numbers in the documents",
-            "pattern": r"[Ff][Rr]\s*(\d\s*){11}"
-        }],
-    },
     image_settings = {
         "correct_image_orientation": True,
         "dpi": 72,
@@ -135,20 +102,7 @@ doc_msg = uiclient.documents.create_messages(
 
 ## Correct image orientation
 
-<ParamField path="correct_image_orientation" type="function">
-  Corrects the orientation of an image using the UiForm API.
-  <Expandable title="parameters">
-    <ParamField path="document" type="Path | str | IOBase | MIMEData | PIL.Image.Image" required>
-      The input image to correct. Can be:
-      - A file path (Path or str)
-      - A file-like object (IOBase) 
-      - A MIMEData object
-      - A PIL Image object
-    </ParamField>
-  </Expandable>
-</ParamField>
-
-<ResponseField name="Response" type="PIL.Image.Image">
+<ResponseField name="Returns" type="PIL.Image.Image">
   The orientation-corrected image as a PIL Image object
 </ResponseField>
 
@@ -158,7 +112,7 @@ from uiform import UiForm
 from openai import OpenAI
 
 uiclient = UiForm()
-doc_msg = uiclient.documents.correct_image_orientation(
+image = uiclient.documents.correct_image_orientation(
     document = "freight/booking_confirmation.jpg",
 )
 ```
@@ -178,237 +132,9 @@ doc_msg = uiclient.documents.correct_image_orientation(
 
 ## Extractions
 
-### extractions.parse
-
-<ParamField path="extractions.parse" type="function">
-  Extract structured data from a document using a JSON schema
-  <Expandable title="parameters">
-    <ParamField path="json_schema" type="dict[str, Any] | Path | str" required>
-      The JSON schema defining the structure to extract. Can be a dict, file path, or string.
-    </ParamField>
-    
-    <ParamField path="document" type="Path | str | IO[bytes]" required>
-      The document to extract from. Can be a file path, string, or bytes IO object.
-    </ParamField>
-
-
-    <ParamField path="image_settings" type="ImageSettings">
-      Optional image preprocessing operations:
-      <Expandable title="properties">
-        <ParamField path="correct_image_orientation" type="boolean">Whether to correct the image orientation</ParamField>
-        <ParamField path="dpi" type="integer">The DPI of the image</ParamField>
-        <ParamField path="image_to_text" type="'ocr' | 'llm_description'">Whether to convert the image to text</ParamField>
-        <ParamField path="browser_canvas" type="'A3' | 'A4' | 'A5'">The canvas of the browser (default = A4)</ParamField>
-      </Expandable>
-    </ParamField>
-
-    <ParamField path="model" type="string" default="gpt-4o-2024-08-06">
-      The model to use for extraction.
-    </ParamField>
-
-    <ParamField path="temperature" type="float" default="0">
-      The sampling temperature to use.
-    </ParamField>
-
-    <ParamField path="messages" type="array[ChatCompletionUiformMessage]" default="[]">
-      Optional list of previous messages to include. Each message must have:
-      <Expandable title="properties">
-        <ParamField path="role" type="string">
-          The role of the message sender. Must be one of:
-          - "user"
-          - "system" 
-          - "assistant"
-        </ParamField>
-        <ParamField path="content" type="string | array[ChatCompletionContentPartParam]">
-          The content of the message. Can be a string or array of content parts:
-          <Expandable title="ChatCompletionContentPartParam">
-            <ParamField path="text" type="object">
-              A text content part
-              <Expandable title="properties">
-                <ParamField path="text" type="string">
-                  The text content
-                </ParamField>
-                <ParamField path="type" type="string">
-                  Must be "text"
-                </ParamField>
-              </Expandable>
-            </ParamField>
-
-            <ParamField path="image_url" type="object">
-              An image content part
-              <Expandable title="properties">
-                <ParamField path="image_url" type="object">
-                  <Expandable title="properties">
-                    <ParamField path="url" type="string">
-                      URL or base64 encoded image data
-                    </ParamField>
-                    <ParamField path="detail" type="string">
-                      Detail level: "auto", "low", or "high"
-                    </ParamField>
-                  </Expandable>
-                </ParamField>
-                <ParamField path="type" type="string">
-                  Must be "image_url"
-                </ParamField>
-              </Expandable>
-            </ParamField>
-
-            <ParamField path="input_audio" type="object">
-              An audio content part
-              <Expandable title="properties">
-                <ParamField path="input_audio" type="object">
-                  <Expandable title="properties">
-                    <ParamField path="data" type="string">
-                      Base64 encoded audio data
-                    </ParamField>
-                    <ParamField path="format" type="string">
-                      Must be "wav" or "mp3"
-                    </ParamField>
-                  </Expandable>
-                </ParamField>
-                <ParamField path="type" type="string">
-                  Must be "input_audio"
-                </ParamField>
-              </Expandable>
-            </ParamField>
-          </Expandable>
-        </ParamField>
-      </Expandable>
-    </ParamField>
-
-   
-    <ParamField path="modality" type="string" default="native">
-      The modality to use for processing the document. Can be:
-      - "native" (default) - Uses the document's native modality based on file type
-      - "image+text" - Uses both the document's native modality and processes as text
-      - "text" - Process as text
-      - "image" - Process as image 
-      - "audio" - Process as audio
-      - "video" - Process as video
-    </ParamField>
-
-  </Expandable>
-</ParamField>
-
-<ResponseField name="Response" type="ParsedChatCompletion">
+<ResponseField name="Returns" type="ParsedChatCompletion">
 An OpenAI ParsedChatCompletion object with the extracted data.
 </ResponseField>
-
-### extractions.stream
-
-<ParamField path="extractions.stream" type="function">
-  Extract structured data from a document using a JSON schema
-  <Expandable title="parameters">
-    <ParamField path="json_schema" type="dict[str, Any] | Path | str" required>
-      The JSON schema defining the structure to extract. Can be a dict, file path, or string.
-    </ParamField>
-    
-    <ParamField path="document" type="Path | str | IO[bytes]" required>
-      The document to extract from. Can be a file path, string, or bytes IO object.
-    </ParamField>
-
-    <ParamField path="image_settings" type="ImageSettings">
-      Optional image preprocessing operations:
-      <Expandable title="properties">
-        <ParamField path="correct_image_orientation" type="boolean">Whether to correct the image orientation</ParamField>
-        <ParamField path="dpi" type="integer">The DPI of the image</ParamField>
-        <ParamField path="image_to_text" type="'ocr' | 'llm_description'">Whether to convert the image to text</ParamField>
-        <ParamField path="browser_canvas" type="'A3' | 'A4' | 'A5'">The canvas of the browser (default = A4)</ParamField>
-      </Expandable>
-    </ParamField>
-
-    <ParamField path="model" type="string" default="gpt-4o-2024-08-06">
-      The model to use for extraction.
-    </ParamField>
-
-    <ParamField path="temperature" type="float" default="0">
-      The sampling temperature to use.
-    </ParamField>
-
-    <ParamField path="messages" type="array[ChatCompletionUiformMessage]" default="[]">
-      Optional list of previous messages to include. Each message must have:
-      <Expandable title="properties">
-        <ParamField path="role" type="string">
-          The role of the message sender. Must be one of:
-          - "user"
-          - "system" 
-          - "assistant"
-        </ParamField>
-        <ParamField path="content" type="string | array[ChatCompletionContentPartParam]">
-          The content of the message. Can be a string or array of content parts:
-          <Expandable title="ChatCompletionContentPartParam">
-            <ParamField path="text" type="object">
-              A text content part
-              <Expandable title="properties">
-                <ParamField path="text" type="string">
-                  The text content
-                </ParamField>
-                <ParamField path="type" type="string">
-                  Must be "text"
-                </ParamField>
-              </Expandable>
-            </ParamField>
-
-            <ParamField path="image_url" type="object">
-              An image content part
-              <Expandable title="properties">
-                <ParamField path="image_url" type="object">
-                  <Expandable title="properties">
-                    <ParamField path="url" type="string">
-                      URL or base64 encoded image data
-                    </ParamField>
-                    <ParamField path="detail" type="string">
-                      Detail level: "auto", "low", or "high"
-                    </ParamField>
-                  </Expandable>
-                </ParamField>
-                <ParamField path="type" type="string">
-                  Must be "image_url"
-                </ParamField>
-              </Expandable>
-            </ParamField>
-
-            <ParamField path="input_audio" type="object">
-              An audio content part
-              <Expandable title="properties">
-                <ParamField path="input_audio" type="object">
-                  <Expandable title="properties">
-                    <ParamField path="data" type="string">
-                      Base64 encoded audio data
-                    </ParamField>
-                    <ParamField path="format" type="string">
-                      Must be "wav" or "mp3"
-                    </ParamField>
-                  </Expandable>
-                </ParamField>
-                <ParamField path="type" type="string">
-                  Must be "input_audio"
-                </ParamField>
-              </Expandable>
-            </ParamField>
-          </Expandable>
-        </ParamField>
-      </Expandable>
-    </ParamField>
-
-   
-    <ParamField path="modality" type="string" default="native">
-      The modality to use for processing the document. Can be:
-      - "native" (default) - Uses the document's native modality based on file type
-      - "image+text" - Uses both the document's native modality and processes as text
-      - "text" - Process as text
-      - "image" - Process as image 
-      - "audio" - Process as audio
-      - "video" - Process as video
-    </ParamField>
-
-  </Expandable>
-</ParamField>
-
-<ResponseField name="Response" type="AsyncChatCompletionStreamManager[ResponseFormatT]">
-An OpenAI AsyncChatCompletionStreamManager[ResponseFormatT] object with the extracted data.
-</ResponseField>
-
 
 <CodeGroup>
 ```python Request (parse)
