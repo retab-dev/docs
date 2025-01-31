@@ -114,147 +114,30 @@ Idempotency in UIForm ensures that repeated API requests with the same idempoten
 
 By leveraging idempotency, UIForm ensures each document or operation is processed only once, returning consistent results and avoiding unnecessary computation.  
 
-## Text Operations
 
-When processing documents, you may want to provide additional context to help the AI better understand the document. This could be previous communications, related documents, or any other relevant information.
+## Image Settings
 
-### Regex Instructions
-
-Define custom patterns to extract specific data types:
-- **Document Numbers**: Extract invoice numbers, PO numbers, etc.
-- **Custom Formats**: Identify company-specific identifiers
-- **Validation**: Ensure extracted data matches expected patterns
-
-<CodeGroup>
-```json RegexInstructions
-{
-  "regex_instructions": [
-    {
-      "name": "InvoiceNumber",
-      "pattern": "INV-\\d{6}",
-      "description": "Matches invoice numbers in format INV-XXXXXX"
-    },
-    {
-      "name": "EUVatNumber",
-      "pattern": "^[A-Z]{2}\\d{8,12}$",
-      "description": "Matches EU VAT numbers"
-    }
-  ]
-}
-```
-```Python main.py {9-16,23}
-import json
-from uiform.client import UiForm
-
-with open("booking_confirmation_json_schema.json", "r") as f:
-    json_schema = json.load(f)
-
-client = UiForm()
-
-text_operations = {'regex_instructions' : [
-        {
-            "name": "vat_number",
-            "pattern": r"[Ff][Rr]\s*(\d\s*){11}",
-            "description": "VAT number in the format XX999999999"
-        }
-    ]
-}
-
-response = client.documents.extract(
-    json_schema = json_schema,
-    document = "booking_confirmation.jpg",
-    model="gpt-4o-mini-2024-07-18",
-    temperature=0,
-    text_operations=text_operations
-)
-```
-</CodeGroup>
-
-
-
-
-**Best Practices**
-- Use consistent formatting in regex patterns
-- Only use regex patterns to extract data that is not easily extracted by the LLM
-
-
-### API Reference
-
-<ResponseField name="text_operations" type="TextOperations Object">
-  Mathematical operations performed on the text to help the AI better extract the data.
-  <Expandable title="properties">
-    <ResponseField name="regex_instructions" type="array[RegexInstruction]">
-      List of regex-based instructions to identify potential data candidates in the text
-      <Expandable title="RegexInstruction properties">
-        <ResponseField name="name" type="string">
-          A key or label for the data being extracted (e.g., "VATNumber")
-        </ResponseField>
-        <ResponseField name="pattern" type="string">
-          The regex pattern to search for
-        </ResponseField>
-        <ResponseField name="description" type="string">
-          A human-readable explanation of what is being extracted
-        </ResponseField>
-      </Expandable>
-    </ResponseField>
-  </Expandable>
-</ResponseField>
-
-## Image Operations (Coming Soon)
-
-When processing images, several factors can affect the LLM's ability to accurately interpret and extract information. The image_operations parameter allows you to preprocess images to improve extraction quality.
+When processing images, several factors can affect the LLM's ability to accurately interpret and extract information. The image_settings parameter allows you to tune images settings to improve extraction quality.
 
 #### API Reference
-
-<ResponseField name="image_operations" type="ImageOperations Object">
+<ResponseField name="image_settings" type="ImageSettings Object">
   Image preprocessing operations to optimize document analysis.
   <Expandable title="properties">
-    <ResponseField name="orientation_correction" type="boolean">
-      Automatically detect and correct image orientation
+    <ResponseField name="correct_image_orientation" type="boolean">
+      Whether to correct the image orientation. Defaults to true.
     </ResponseField>
-    <ResponseField name="resolution" type="object">
-      <Expandable title="properties">
-        <ResponseField name="min_dpi" type="integer">
-          Minimum dots per inch (DPI) required for processing
-        </ResponseField>
-        <ResponseField name="upscale" type="boolean">
-          Whether to upscale images below min_dpi
-        </ResponseField>
-      </Expandable>
+    <ResponseField name="dpi" type="integer">
+      The DPI of the image. Defaults to 72.
     </ResponseField>
-    <ResponseField name="noise_reduction" type="object">
-      <Expandable title="properties">
-        <ResponseField name="denoise" type="boolean">
-          Apply noise reduction algorithms
-        </ResponseField>
-        <ResponseField name="remove_artifacts" type="boolean">
-          Remove compression and scanning artifacts
-        </ResponseField>
-      </Expandable>
+    <ResponseField name="image_to_text" type="string">
+      Whether to convert the image to text. Must be either "ocr" or "llm_description". Defaults to "ocr".
     </ResponseField>
-    <ResponseField name="enhancement" type="object">
-      <Expandable title="properties">
-        <ResponseField name="contrast" type="boolean">
-          Enhance contrast between text and background
-        </ResponseField>
-        <ResponseField name="sharpness" type="boolean">
-          Improve image sharpness and clarity
-        </ResponseField>
-        <ResponseField name="lighting" type="boolean">
-          Correct uneven lighting and exposure
-        </ResponseField>
-      </Expandable>
-    </ResponseField>
-    <ResponseField name="ocr_optimization" type="object">
-      <Expandable title="properties">
-        <ResponseField name="deskew" type="boolean">
-          Correct text skew and warping
-        </ResponseField>
-        <ResponseField name="remove_background" type="boolean">
-          Isolate text from complex backgrounds
-        </ResponseField>
-      </Expandable>
+    <ResponseField name="browser_canvas" type="string">
+      The canvas size of the browser. Must be one of:
+      - "A3" (11.7in x 16.54in)
+      - "A4" (8.27in x 11.7in) 
+      - "A5" (5.83in x 8.27in)
+      Defaults to "A4".
     </ResponseField>
   </Expandable>
 </ResponseField>
-
