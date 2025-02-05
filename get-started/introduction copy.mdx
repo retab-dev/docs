@@ -62,23 +62,14 @@ You come with your own API key from your favorite AI provider, and we handle the
 
 <Steps>
   <Step title="Setup the Python SDK">
-    Install the UiForm Python SDK and configure your API keys to start processing documents with your preferred AI provider
   </Step>
-  <Step title="Create your JSON schema">
-    Define the structure of the data you want to extract from your documents using our schema format with custom prompting capabilities
+  <Step title="Process your first document">
   </Step>
-  <Step title="Create your FastAPI server with a webhook">
-    Set up an endpoint that will receive the structured data extracted from your documents after processing
-  </Step>
-  <Step title="Create your automation">
-    Configure an automation (mailbox or link) that will automatically process incoming documents using your schema and send results to your webhook
-  </Step>
-  <Step title="Test your automation">
-    Validate your setup by sending test documents through your automation and verify the extracted data matches your requirements
+  <Step title="Extract structured data">
   </Step>
 </Steps>
 
-### Step 1: Setup the Python SDK
+### Setup the Python SDK
 
 To get started, install the `uiform` package using pip:
 
@@ -88,32 +79,27 @@ pip install uiform
 
 Then, [create your API key on uiform.com](https://www.uiform.com) and populate your `env` variables:
 
+<CodeGroup>
+```python jupyter
+import os
+os.environ["OPENAI_API_KEY"] = "YOUR-API-KEY" # Your AI provider API key (OpenAI, Anthropic, etc.)
+os.environ["UIFORM_API_KEY"] = "sk_xxxxxxxxx" # Create your API key on https://www.uiform.com
+```
 ```bash .env
+OPENAI_API_KEY=YOUR-API-KEY # Your AI provider API key (OpenAI, Anthropic, etc.)
 UIFORM_API_KEY=sk_xxxxxxxxx # Create your API key on https://www.uiform.com
 ```
+</CodeGroup>
 
-Then, as we will use your API key to make requests to OpenAI on your behalf within an automation, you need to store your API key in the UiForm secrets manager:
+### Process your first document
 
-```python
-import uiform
-import os
+UiForm handles all the document preprocessing - no custom parsers needed. Let's break this down into steps:
 
-uiclient = uiform.UiForm()
-
-uiclient.secrets.external_api_keys.create(
-    provider="OpenAI", 
-    api_key=os.getenv("OPENAI_API_KEY")
-)
-```
-
-**Process your first document**
-
-Here is how to process your first document with the create_messages method:
+1. First, initialize the UiForm client and pre-process your document:
 
 <CodeGroup>
 ```python main.py
 from uiform import UiForm
-from openai import OpenAI
 
 # Initialize UiForm client
 uiclient = UiForm()
@@ -122,19 +108,31 @@ uiclient = UiForm()
 doc_msg = uiclient.documents.create_messages(
     document = "invoice.pdf"  # Works with PDFs, Excel, emails, etc.
 )
-
-client = OpenAI()
-completion = client.chat.completions.create(
-    model="gpt-4o-mini-2024-07-18",
-    messages=doc_msg.openai_messages + [
-        {
-            "role": "user",
-            "content": "Summarize the document"
-        }
-    ]
-)
 ```
-```json doc_msg object
+
+```python full_example.py
+from uiform import UiForm
+
+# Initialize UiForm client
+uiclient = UiForm()
+
+# Convert any document into LLM-ready format
+doc_msg = uiclient.documents.create_messages(
+    document = "document_1.xlsx",
+    modality = "native",
+    image_settings = {
+        "correct_image_orientation": True,
+        "dpi": 72,
+        "image_to_text": "ocr",
+        "browser_canvas": "A4"
+    }
+)
+
+```
+</CodeGroup>
+2. The `doc_msg` object contains the pre-processed document in a format ready for LLMs. Here's what it looks like:
+
+```json doc_msg.json
 {
     "id": "doc_dd003f95-81ce-4a55-9180-00c5a58d82ec",
     "object": "document.message",
@@ -158,11 +156,70 @@ completion = client.chat.completions.create(
     }
 }
 ```
+
+It also contains other class methods like `items`, `openai_messages`, `anthropic_messages`, `gemini_messages`, `xai_messages`... See [Document Methods](https://docs.uiform.com/get-started/Documents-Methods) for more details.
+
+3. Now you can use this pre-processed document with your preferred LLM provider:
+
+<CodeGroup>
+```python OpenAI
+from openai import OpenAI
+
+client = OpenAI()
+completion = client.chat.completions.create(
+    model="gpt-4o-mini-2024-07-18",
+    messages=doc_msg.openai_messages + [
+        {
+            "role": "user",
+            "content": "Summarize the document"
+        }
+    ]
+)
+```
+
+```python Anthropic
+from anthropic import Anthropic
+
+client = Anthropic()
+message = client.messages.create(
+    model="claude-3-5-sonnet-latest",
+    max_tokens=1000,
+    messages=doc_msg.anthropic_messages + [
+        {
+            "role": "user",
+            "content": "Summarize this Document"
+        }
+    ]
+)
+```
+
+```python Gemini
+import google.generativeai as genai
+
+genai.configure()
+model = genai.GenerativeModel("gemini-pro")
+response = model.generate_content(
+    doc_msg.gemini_messages + ["Summarize this invoice"]
+)
+```
+
+```python xAI
+from openai import OpenAI
+
+client = OpenAI(base_url = "https://api.x.ai/v1")
+completion = client.chat.completions.create(
+    model = "gpt-4o-mini",
+    messages = doc_msg.openai_messages + [
+        {
+            "role": "user",
+            "content": "Summarize the document"
+        }
+    ]
+)
+```
 </CodeGroup>
 
-
-
-### Step 2 : Create your JSON Schema
+### Extract structured data with schema-based prompt engineering
 
 We use a standard JSON Schema with custom annotations (`X-SystemPrompt`, `X-FieldPrompt`, and `X-ReasoningPrompt`) as a prompt-engineering framework for the extraction process.
 
@@ -309,100 +366,6 @@ response = uiclient.documents.extractions.parse(
 print("Extracted data:", response.choices[0].message.content)
 ```
 </CodeGroup>
-
-
-### Step 3: Create your FastAPI server with a webhook
-
-
-Next, set up a FastAPI route that will handle incoming webhook POST requests. Below is an example of a simple FastAPI application with a webhook endpoint:
-
-```python
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from uiform.types.automations.webhooks import WebhookRequest
-from pydantic import BaseModel, Field, ConfigDict
-
-app = FastAPI()
-
-@app.post("/webhook")
-async def webhook(request: WebhookRequest):
-    invoice_object = request.completion.choices[0].message.parsed # The parsed object is the same Invoice object as the one you defined in the Pydantic model
-    print("Received payload:", invoice_object)
-    return JSONResponse(content={"status": "success", "data": invoice_object})
-
-# To run the FastAPI app locally, use the command:
-# uvicorn your_module_name:app --reload
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
-You can test the webhook endpoint locally with a tool like curl or Postman. For example, using curl:
-
-```bash
-curl -X POST "http://localhost:8000/webhook" \
-     -H "Content-Type: application/json" \
-     -d '{"name": "Team Meeting", "date": "2023-12-31"}'
-```
-
-<Warning>To continue, you need to deploy your FastAPI app to a server to make your webhook endpoint publicly accessible. We recommend using [Replit](https://replit.com/) to get started quickly if you don't have a server yet.</Warning>
-
-
-
-### Step 4: Create your automation
-
-Finally, integrate the webhook with your automation system using the `uiform` client. This example demonstrates how to create an automation that triggers the webhook when a matching event occurs:
-
-```python
-from uiform import UiForm
-
-# Initialize the UiForm client
-uiclient = UiForm()
-
-# Create an automation that uses the webhook URL from Step 2
-automation = uiclient.automations.mailboxes.create(
-    email="invoices@mailbox.uiform.com",
-    model="gpt-4o-mini",
-    json_schema=Invoice.model_json_schema(), # use the pydantic model to create the json schema
-    webhook_url="https://your-server.com/webhook",  # Replace with your actual webhook URL
-)
-
-```
-
-At any email sent to `invoices@mailbox.uiform.com`, the automation will send a POST request to your FastAPI webhook endpoint, where the payload can be processed.
-
-You can see the automation you just created on your [dashboard](https://www.uiform.com/dashboard/mailboxes) !
-
-### Step 5: Test your automation
-
-Finally, you can test the automation rapidly with the test functions of the sdk: 
-
-```python
-from uiform import UiForm
-
-# Initialize the UiForm client
-uiclient = UiForm()
-
-# If you just want to send a test request to your webhook
-log = uiclient.automations.mailboxes.tests.webhook(
-    email="test-mailbox-local@devmail.uiform.com", 
-)
-
-# If you want to test the file processing logic: 
-log = uiclient.automations.mailboxes.tests.process(
-    email="test-mailbox-local@devmail.uiform.com", 
-    document="your_invoice_email.eml"
-)
-
-# If you want to test a full email forwarding
-log = uiclient.automations.mailboxes.tests.forward(
-    email="uiform-quickstart@mailbox.uiform.com", 
-    document="your_invoice_email.eml"
-)
-```
-
----
-
 
 That's it! You can start processing documents at scale. 
 You have 1000 free requests to get started, and you can [subscribe](https://www.uiform.com) to the pro plan to get more.
