@@ -402,7 +402,8 @@ print("Extracted data:", response.choices[0].message.content)
 
 Next, set up a FastAPI route that will handle incoming webhook POST requests. Below is an example of a simple FastAPI application with a webhook endpoint:
 
-```python
+<CodeGroup>
+```python main.py
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from uiform.types.automations.webhooks import WebhookRequest
@@ -412,9 +413,9 @@ app = FastAPI()
 
 @app.post("/webhook")
 async def webhook(request: WebhookRequest):
-    invoice_object = request.completion.choices[0].message.parsed # The parsed object is the same Invoice object as the one you defined in the Pydantic model
-    print("Received payload:", invoice_object)
-    return JSONResponse(content={"status": "success", "data": invoice_object})
+    invoice_object = json.loads(request.completion.choices[0].message.content or "{}") # The parsed object is the same Invoice object as the one you defined in the Pydantic model
+    print("📬 Webhook received:", invoice_object)
+    return {"status": "success", "data": invoice_object}
 
 # To run the FastAPI app locally, use the command:
 # uvicorn your_module_name:app --reload
@@ -425,14 +426,44 @@ if __name__ == "__main__":
 
 You can test the webhook endpoint locally with a tool like curl or Postman. For example, using curl:
 
-```bash
-curl -X POST "http://localhost:8000/webhook" \
+```bash testing locally
+curl -X POST http://localhost:8000/webhook \
      -H "Content-Type: application/json" \
-     -d '{"name": "Team Meeting", "date": "2023-12-31"}'
+     -d '{"completion":{"id":"id","choices":[{"index":0,"message":{"content":"{\"name\" : \"Team Meeting!\", \"date\" : \"2023-12-31\" }","role":"assistant"}}],"created":0,"model":"gpt-4.1-nano","object":"chat.completion","likelihoods":{}},"file_payload":{"filename":"example.pdf","url":"data:application/pdf;base64,the_content_of_the_pdf_file"}}'
+```
+</CodeGroup>
+
+<Warning>To continue, you need to deploy your FastAPI app to a server to make your webhook endpoint publicly accessible. We recommend using [Replit](https://replit.com/) to get started quickly if you don't have a server yet. An alternative is to use [ngrok](https://ngrok.com/) to expose your local server to the internet.</Warning>
+
+#### Step 3.1: Exposing local server to the internet using ngrok
+
+We have a very simple Dockerfile that fastapi+ngrok to get you started.
+Check out the [webhook_server](https://github.com/UiForm/uiform/tree/main/examples/webhook_server) folder for more details.
+
+<Tip>You will need a ngrok auth token to run the docker container. You can get one [here](https://dashboard.ngrok.com/get-started)</Tip>
+
+Start fastapi+ngrok server:
+
+<CodeGroup>
+```bash startup
+git clone https://github.com/UiForm/uiform.git
+cd uiform/examples/webhook_server
+docker build -t webhook_server .
+docker run --rm -it -e NGROK_AUTH_TOKEN=[your_ngrok_auth_token] webhook_server
 ```
 
-<Warning>To continue, you need to deploy your FastAPI app to a server to make your webhook endpoint publicly accessible. We recommend using [Replit](https://replit.com/) to get started quickly if you don't have a server yet.</Warning>
+```logs {4} server logs
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+🌍 Ngrok tunnel established!
+📬 Webhook URL: https://some-random-ngrok-url.ngrok-free.app/webhook
+📬 Simple curl for testing: curl -X POST https://some-random-ngrok-url.ngrok-free.app/webhook -H "Content-Type: application/json" -d '{"completion":{"id":"id","choices":[{"index":0,"message":{"content":"{\"message\" : \"Hello, World!\"}","role":"assistant"}}],"created":0,"model":"gpt-4.1-nano","object":"chat.completion","likelihoods":{}},"file_payload":{"filename":"example.pdf","url":"data:application/pdf;base64,the_content_of_the_pdf_file"}}'
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+```
+</CodeGroup>
 
+Take note of the `webhook URL`, you will need it on the next steps.
 
 
 ### Step 4: Create your automation
@@ -450,7 +481,7 @@ automation = uiclient.automations.mailboxes.create(
     email="invoices@mailbox.uiform.com",
     model="gpt-4.1-nano",
     json_schema=Invoice.model_json_schema(), # use the pydantic model to create the json schema
-    webhook_url="https://your-server.com/webhook",  # Replace with your actual webhook URL
+    webhook_url="https://your-server.com/webhook",  # Replace with your actual webhook URL (taken from Step 3.1 for example)
 )
 
 ```
