@@ -115,12 +115,12 @@ from uiform.client import UiForm
 with open("booking_confirmation_json_schema.json", "r") as f:
     json_schema = json.load(f)
 
-client = UiForm()
+uiclient = UiForm()
 
-response = client.documents.extract(
+response = uiclient.documents.extractions.parse(
     json_schema = json_schema,
     document="booking_confirmation.jpg",
-    model="gpt-4o-mini-2024-07-18",
+    model="gpt-4.1-nano",
     temperature=0,
     modality='text' # The image will be converted to text (with an OCR model) before being sent to the LLM
 )
@@ -155,6 +155,243 @@ When processing images, several factors can affect the LLM's ability to accurate
 </ResponseField>
 
 
+## Consensus
+
+You can leverage the consensus feature to improve the accuracy of the extraction. The consensus feature is a way to aggregate the results of multiple LLMs to improve the accuracy of the extraction.
+
+The consensus principle is simple: Multiple runs should give the same result, if the result is not the same, the LLM is not confident about the result so neither should you.
+We compute a consensus score for each field.
+
+Some additional `_consensus_score` fields are added to the likelihoods object, they are computed as the average of the consensus scores within some context.
+
+
+<CodeGroup>
+```Python {13} Usage example
+import json
+from uiform.client import UiForm
+
+with open("booking_confirmation_json_schema.json", "r") as f:
+    json_schema = json.load(f)
+
+uiclient = UiForm()
+
+response = uiclient.documents.extractions.parse(
+    json_schema = json_schema,
+    document="booking_confirmation.jpg",
+    model="gpt-4.1-nano",
+    n_consensus=10  # This will run and combine the results of 10 calls to the same LLM
+)
+```
+
+```JSON Extracted JSON
+{
+  "booking_id": null,
+  "payment": {
+    "total_price": 1500,
+    "currency": "EUR"
+  },
+  "client": {
+    "company_name": "Acme Corporation",
+    "VAT_number": "GB123456789",
+    "city": "Manchester",
+    "postal_code": "M1 4WP",
+    "country": "GB",
+    "code": null,
+    "email": "client@acme.com"
+  },
+  "shipments": [
+    {
+      "shipment_id": "BC-67890",
+      "sender": {
+        "company_name": "Acme Corporation",
+        "address": {
+          "city": "Manchester",
+          "postal_code": "M1 4WP",
+          "country": "GB",
+          "line1": "456 Oak Avenue",
+          "line2": "Floor 3"
+        },
+        "phone_number": "+44 20 7946 0958",
+        "email_address": "client@acme.com",
+        "pickup_datetime": {
+          "date": "2023-05-02",
+          "start_time": "08:00:00",
+          "end_time": "12:00:00"
+        },
+        "observations": "The transport involves safety protocols, possibly for hazardous goods."
+      },
+      "recipient": {
+        "company_name": "Beta Industries",
+        "address": {
+          "city": "Munich",
+          "postal_code": "80331",
+          "country": "DE",
+          "line1": "Uncertain",
+          "line2": "Suite 500"
+        },
+        "phone_number": "+49 89 12345",
+        "email_address": "contact@beta-ind.com",
+        "delivery_datetime": {
+          "date": "2023-05-03",
+          "start_time": "10:00:00",
+          "end_time": "16:00:00"
+        },
+        "observations": "Uncertain"
+      },
+      "goods": {
+        "packing": {
+          "units": 10,
+          "packing_type": "pallet",
+          "supplementary_parcels": null,
+          "pallets_on_ground": null,
+          "number_eur_pallet": null,
+          "observation": "Uncertain"
+        },
+        "dimensions": {
+          "loading_meters": null,
+          "volume": null
+        },
+        "weight": null,
+        "temperature_infos": {
+          "min_temperature": null,
+          "max_temperature": null,
+          "category": "Frozen"
+        },
+        "dangerous_goods_infos": [
+          {
+            "weight": 2000,
+            "UN_code": null,
+            "UN_label": "Uncertain",
+            "UN_class": "3",
+            "UN_packing_group": "II",
+            "ADR_tunnel_code": "B/E"
+          }
+        ]
+      },
+      "transport_constraints": {
+        "vehicle_type": "Uncertain",
+        "body_type": "Refrigerated",
+        "tail_lift": false,
+        "crane": null
+      }
+    }
+  ]
+}
+```
+
+```JSON Consensus scores
+{
+  "booking_id": 1.0,
+  "payment": {
+    "total_price": 0.88889,
+    "currency": 0.8,
+    "_consensus_score": 0.84445
+  },
+  "client": {
+    "company_name": 0.9,
+    "VAT_number": 0.8579535180399872,
+    "city": 0.3,
+    "postal_code": 0.3,
+    "country": 0.3,
+    "code": 1.0,
+    "email": 0.1,
+    "_consensus_score": 0.53685
+  },
+  "_consensus_score": 0.72476,
+  "shipments": [
+    {
+      "_consensus_score": 0.51772,
+      "shipment_id": 0.5,
+      "sender": {
+        "company_name": 0.7,
+        "address": {
+          "city": 0.5,
+          "postal_code": 0.7360869868340911,
+          "country": 0.5,
+          "line1": 0.7935465965677979,
+          "line2": 0.6270515867719917,
+          "_consensus_score": 0.63134
+        },
+        "phone_number": 0.9208203821621724,
+        "email_address": 0.4,
+        "pickup_datetime": {
+          "date": 0.2,
+          "start_time": 0.2,
+          "end_time": 0.2,
+          "_consensus_score": 0.2
+        },
+        "observations": 0.5278386154074294,
+        "_consensus_score": 0.56333
+      },
+      "recipient": {
+        "company_name": 0.6,
+        "address": {
+          "city": 0.7,
+          "postal_code": 0.8527968987667864,
+          "country": 0.7,
+          "line1": 0.15743862396133873,
+          "line2": 0.5952886900789938,
+          "_consensus_score": 0.6011
+        },
+        "_consensus_score": 0.36685,
+        "phone_number": 0.1,
+        "email_address": 0.1,
+        "delivery_datetime": {
+          "date": 0.6,
+          "start_time": 0.7,
+          "end_time": 0.7,
+          "_consensus_score": 0.66667
+        },
+        "observations": 0.13333486600852992
+      },
+      "goods": {
+        "packing": {
+          "units": 0.33333,
+          "_consensus_score": 0.47583,
+          "packing_type": 0.3,
+          "supplementary_parcels": 0.77778,
+          "pallets_on_ground": 0.77778,
+          "number_eur_pallet": 0.55556,
+          "observation": 0.11051665874425773
+        },
+        "_consensus_score": 0.58476,
+        "dimensions": {
+          "loading_meters": 1.0,
+          "_consensus_score": 0.88889,
+          "volume": 0.77778
+        },
+        "weight": 0.77778,
+        "temperature_infos": {
+          "min_temperature": 0.66667,
+          "_consensus_score": 0.51111,
+          "max_temperature": 0.66667,
+          "category": 0.2
+        },
+        "dangerous_goods_infos": [
+          {
+            "_consensus_score": 0.27017,
+            "weight": 0.1,
+            "UN_code": 0.33333,
+            "UN_label": 0.1876726334617529,
+            "UN_class": 0.5,
+            "UN_packing_group": 0.4,
+            "ADR_tunnel_code": 0.1
+          }
+        ]
+      },
+      "transport_constraints": {
+        "vehicle_type": 0.1945964952773603,
+        "_consensus_score": 0.57365,
+        "body_type": 0.2,
+        "tail_lift": 0.9,
+        "crane": 1.0
+      }
+    }
+  ]
+}
+```
+
+</CodeGroup>
 
 
 ## Matching JSON Objects with an internal database
