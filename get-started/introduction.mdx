@@ -111,7 +111,7 @@ uiclient.secrets.external_api_keys.create(
 Here is how to process your first document with the create_messages method:
 
 <CodeGroup>
-```python main.py
+```python main.py (OpenAI Completions API)
 from uiform import UiForm
 from openai import OpenAI
 
@@ -125,7 +125,7 @@ doc_msg = uiclient.documents.create_messages(
 
 client = OpenAI()
 completion = client.chat.completions.create(
-    model="gpt-4o-mini-2024-07-18",
+    model="gpt-4.1-nano",
     messages=doc_msg.openai_messages + [
         {
             "role": "user",
@@ -134,6 +134,30 @@ completion = client.chat.completions.create(
     ]
 )
 ```
+```python main.py (OpenAI Responses API)
+from uiform import UiForm
+from openai import OpenAI
+
+# Initialize UiForm client
+uiclient = UiForm()
+
+# Convert any document into LLM-ready format
+doc_msg = uiclient.documents.create_messages(
+    document = "invoice.pdf"  # Works with PDFs, Excel, emails, etc.
+)
+
+client = OpenAI()
+response = client.responses.create(
+    model = "gpt-4.1-nano",
+    input = doc_msg.openai_responses_input + [
+        {
+            "role": "user",
+            "content": "Summarize the document"
+        }
+    ]
+)
+```
+
 ```json doc_msg object
 {
     "id": "doc_dd003f95-81ce-4a55-9180-00c5a58d82ec",
@@ -170,7 +194,7 @@ These annotations help guide the LLM's behavior and improve extraction accuracy.
 You can learn more about these in our [JSON Schema documentation](https://docs.uiform.com/get-started/prompting-with-the-JSON-schema).
 
 <CodeGroup>
-```python Pydantic BaseModel
+```python Pydantic BaseModel (OpenAI Completions API)
 from uiform import UiForm
 from openai import OpenAI
 from pydantic import BaseModel, Field, ConfigDict
@@ -222,7 +246,7 @@ extraction = schema_obj.pydantic_model.model_validate(
     filter_reasoning_fields_json(completion.choices[0].message.content, schema_obj.pydantic_model)
 )
 ```
-```python JSON Schema
+```python JSON Schema (OpenAI Completions API)
 from uiform import UiForm
 from openai import OpenAI
 
@@ -280,7 +304,69 @@ extraction = schema_obj.pydantic_model.model_validate(
 print("Extracted data without the reasoning fields:", extraction)
 
 ```
-```python UiForm Client
+
+```python JSON Schema (OpenAI Responses API)
+from uiform import UiForm
+from openai import OpenAI
+
+# Define your extraction schema
+schema = {
+    "X-SystemPrompt": "You are an expert at analyzing invoice documents.",
+    "properties": {
+        "total_amount": {
+            "type": "number",
+            "description": "The total invoice amount",
+            "X-FieldPrompt": "Find the final total amount including taxes"
+        },
+        "date": {
+            "type": "string",
+            "description": "Invoice date in YYYY-MM-DD format",
+            "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
+        }
+    },
+    "required": ["total_amount", "date"]
+}
+
+# Process document and extract data
+uiclient = UiForm()
+doc_msg = uiclient.documents.create_messages(
+    document = "invoice.pdf"
+)
+schema_obj = uiclient.schemas.load(
+    json_schema = schema
+)
+
+# Extract structured data with any LLM
+# Updated to use Responses API instead of Chat Completions
+client = OpenAI()
+response = client.responses.create(
+    model = model,
+    temperature = temperature,
+    input = schema_obj.openai_responses_input + doc_msg.openai_responses_input,
+    text ={
+        "format": {
+            "type": "json_schema",
+            "name": schema_obj.id,
+            "schema": schema_obj.inference_json_schema,
+            "strict": True
+            }
+        }
+)
+
+print("Extracted data with the reasoning fields:", response.output_text) 
+
+# Validate the response against the original schema if you want to remove the reasoning fields
+from uiform._utils.json_schema import filter_reasoning_fields_json
+assert response.output_text is not None
+extraction = schema_obj.pydantic_model.model_validate(
+    filter_reasoning_fields_json(response.output_text, schema_obj.pydantic_model)
+)
+
+print("Extracted data without the reasoning fields:", extraction)
+
+```
+
+```python JSON Schema (UiForm API)
 from uiform import UiForm
 
 # All-in-one extraction API
@@ -362,7 +448,7 @@ uiclient = UiForm()
 # Create an automation that uses the webhook URL from Step 2
 automation = uiclient.automations.mailboxes.create(
     email="invoices@mailbox.uiform.com",
-    model="gpt-4o-mini",
+    model="gpt-4.1-nano",
     json_schema=Invoice.model_json_schema(), # use the pydantic model to create the json schema
     webhook_url="https://your-server.com/webhook",  # Replace with your actual webhook URL
 )
@@ -371,7 +457,7 @@ automation = uiclient.automations.mailboxes.create(
 
 At any email sent to `invoices@mailbox.uiform.com`, the automation will send a POST request to your FastAPI webhook endpoint, where the payload can be processed.
 
-You can see the automation you just created on your [dashboard](https://www.uiform.com/dashboard/mailboxes) !
+You can see the automation you just created on your [dashboard](https://www.uiform.com/dashboard/automations) !
 
 ### Step 5: Test your automation
 
@@ -430,10 +516,11 @@ But this minimalistic example is just the beginning. Continue reading to learn m
 
 ## Go further
 
-- [Prompt Engineering Guide](https://docs.uiform.com/get-started/prompting-with-the-json-schema)
-- [General Concepts](https://docs.uiform.com/get-started/General-Concepts)
-- [Create mailboxes](https://docs.uiform.com/SDK/Automations#mailbox)
-- [Create links](https://docs.uiform.com/SDK/Automations#link)
+- [Prompt Engineering Guide](/get-started/prompting-with-the-JSON-schema)
+- [General Concepts](/SDK/General-Concepts)
+    - [Consensus](/SDK/General-Concepts#consensus)
+- [Create mailboxes](/SDK/Automations#mailbox)
+- [Create links](/SDK/Automations#link)
 - Finetuning (coming soon)
 - Prompt optimization (coming soon)
 - Data-Labelling with our AI-powered annotator (coming soon)
