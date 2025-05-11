@@ -12,7 +12,6 @@ json_schema = {
   "X-SystemPrompt": "You are a useful assistant extracting information from documents.",
   "properties": {
     "name": {
-      "X-FieldPrompt": "Provide a descriptive and concise name for the event.",
       "description": "The name of the calendar event.",
       "title": "Name",
       "type": "string"

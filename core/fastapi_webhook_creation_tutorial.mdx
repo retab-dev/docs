@@ -1,0 +1,343 @@
+
+
+## Quickstart
+
+<Steps>
+  <Step title="Setup the Python SDK">
+  </Step>
+  <Step title="Create your JSON schema">
+  </Step>
+  <Step title="Create your FastAPI server with a webhook">
+  </Step>
+  <Step title="Create your deployment">
+  </Step>
+</Steps>
+
+### Setup the Python SDK
+
+To get started, install the `uiform` package using pip:
+
+```bash
+pip install uiform
+```
+
+Then, [create your API key on uiform.com](https://www.uiform.com) and populate your `env` variables:
+
+```bash .env
+UIFORM_API_KEY=sk_xxxxxxxxx # Create your API key on https://www.uiform.com
+```
+
+Use the `secrets` module to store your OpenAI API key:
+
+```python
+import uiform
+import os
+
+uiclient = uiform.UiForm()
+
+uiclient.secrets.external_api_keys.create(
+    provider="OpenAI", 
+    api_key=os.getenv("OPENAI_API_KEY")
+)
+```
+
+#### Process your first document
+
+UiForm handles all the document preprocessing.:
+
+
+<CodeGroup>
+```python main.py
+from uiform import UiForm
+from openai import OpenAI
+
+# Initialize UiForm client
+uiclient = UiForm()
+
+# Convert any document into LLM-ready format
+doc_msg = uiclient.documents.create_messages(
+    document = "invoice.pdf"  # Works with PDFs, Excel, emails, etc.
+)
+
+client = OpenAI()
+completion = client.chat.completions.create(
+    model="gpt-4.1-nano",
+    messages=doc_msg.openai_messages + [
+        {
+            "role": "user",
+            "content": "Summarize the document"
+        }
+    ]
+)
+```
+```json doc_msg object
+{
+    "id": "doc_dd003f95-81ce-4a55-9180-00c5a58d82ec",
+    "object": "document.message",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "INVOICE\n\nABC Logistics Inc.\n123 Shipping Lane\nPort City, PC 12345\n\nBill To:\nXYZ Corporation\n456 Business Ave\nMetro City, MC 67890\n\nInvoice Number: INV-2024-0123\nInvoice Date: 2024-01-15\nDue Date: 2024-02-14\n\nDescription:\n1. Ocean Freight (20ft Container) - $2,500.00\n2. Documentation Fee - $150.00\n3. Terminal Handling Charges - $350.00\n4. Customs Clearance - $275.00\n\nSubtotal: $3,275.00\nTax (10%): $327.50\nTotal Amount: $3,602.50\n\nPayment Terms: Net 30\nBank Details:\nBank: Global Trade Bank\nAccount: 1234567890\nSwift: GTBKUS12\n\nThank you for your business!\n\nFor questions contact:\naccounts@abclogistics.com\n+1 (555) 123-4567"
+                }
+            ]
+        }
+    ],
+    "created": 1736524416,
+    "modality": "text",
+    "document": {
+        "id": "cf908729402d0796537bb91e63df5e339ce93b4cabdcac2f9a4f90592647e130",
+        "name": "invoice.pdf",
+        "mime_type": "application/pdf",
+    }
+}
+```
+</CodeGroup>
+
+
+
+### Extract structured data with schema-based prompt engineering
+
+We use a standard JSON Schema with custom annotations (`X-SystemPrompt` and `X-ReasoningPrompt`) as a prompt-engineering framework for the extraction process.
+
+These annotations help guide the LLM's behavior and improve extraction accuracy. 
+You can learn more about these in our [JSON Schema documentation](https://docs.uiform.com/get-started/prompting-with-the-JSON-schema).
+
+<CodeGroup>
+```python Pydantic BaseModel
+from uiform import UiForm
+from openai import OpenAI
+from pydantic import BaseModel, Field, ConfigDict
+
+# Define your extraction schema
+class Invoice(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra = {
+            "X-SystemPrompt": "You are an expert at analyzing invoice documents."
+        }
+    )
+    
+    total_amount: float = Field(...,
+        description="The total invoice amount",
+    )
+    date: str = Field(...,
+        description="Invoice date in YYYY-MM-DD format",
+        json_schema_extra={
+            "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
+        }
+    )
+
+# Process document and extract data
+uiclient = UiForm()
+doc_msg = uiclient.documents.create_messages(
+    document = "invoice.pdf"
+)
+schema_obj = uiclient.schemas.load(
+    pydantic_model = Invoice
+)
+
+# Extract structured data with any LLM
+client = OpenAI()
+completion = client.beta.chat.completions.parse(
+    model="gpt-4o",
+    messages=schema_obj.openai_messages + doc_msg.openai_messages,
+    response_format=schema_obj.inference_pydantic_model
+)
+
+print("Extracted data:", completion.choices[0].message.parsed)
+
+# Validate the response against the original schema if you want to remove the reasoning fields
+from uiform._utils.json_schema import filter_reasoning_fields_json
+assert completion.choices[0].message.content is not None
+extraction = schema_obj.pydantic_model.model_validate(
+    filter_reasoning_fields_json(completion.choices[0].message.content, schema_obj.pydantic_model)
+)
+```
+```python JSON Schema
+from uiform import UiForm
+from openai import OpenAI
+
+# Define your extraction schema
+schema = {
+    "X-SystemPrompt": "You are an expert at analyzing invoice documents.",
+    "properties": {
+        "total_amount": {
+            "type": "number",
+            "description": "The total invoice amount",
+        },
+        "date": {
+            "type": "string",
+            "description": "Invoice date in YYYY-MM-DD format",
+            "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
+        }
+    },
+    "required": ["total_amount", "date"]
+}
+
+# Process document and extract data
+uiclient = UiForm()
+doc_msg = uiclient.documents.create_messages(
+    document = "invoice.pdf"
+)
+schema_obj = uiclient.schemas.load(
+    json_schema = schema
+)
+
+# Extract structured data with any LLM
+client = OpenAI()
+completion = client.chat.completions.create(
+    model="gpt-4o",
+    messages=schema_obj.openai_messages + doc_msg.openai_messages,
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": schema_obj.id,
+            "schema": schema_obj.inference_json_schema,
+            "strict": True
+        }
+    }
+)
+
+print("Extracted data with the reasoning fields:", completion.choices[0].message.content) 
+
+# Validate the response against the original schema if you want to remove the reasoning fields
+from uiform._utils.json_schema import filter_reasoning_fields_json
+assert completion.choices[0].message.content is not None
+extraction = schema_obj.pydantic_model.model_validate(
+    filter_reasoning_fields_json(completion.choices[0].message.content, schema_obj.pydantic_model)
+)
+
+print("Extracted data without the reasoning fields:", extraction)
+
+```
+```python UiForm Client
+from uiform import UiForm
+
+# All-in-one extraction API
+uiclient = UiForm()
+response = uiclient.documents.extractions.parse(
+    document = "invoice.pdf",
+    model = "gpt-4o",
+    json_schema = {
+        "X-SystemPrompt": "You are an expert at analyzing invoice documents.",
+        "properties": {
+            "total_amount": {
+                "type": "number",
+                "description": "The total invoice amount",
+            },
+            "date": {
+                "type": "string",
+                "description": "Invoice date in YYYY-MM-DD format",
+                "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
+            }
+        },
+        "required": ["total_amount", "date"]
+    }
+)
+
+print("Extracted data:", response.choices[0].message.content)
+```
+</CodeGroup>
+
+
+### Step 3: Create your FastAPI server with a webhook
+
+
+Next, set up a FastAPI route that will handle incoming webhook POST requests. Below is an example of a simple FastAPI application with a webhook endpoint:
+
+```python
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from uiform.types.deployments.webhooks import WebhookRequest
+from pydantic import BaseModel, Field, ConfigDict
+
+app = FastAPI()
+
+@app.post("/webhook")
+async def webhook(request: WebhookRequest):
+    invoice_object = request.completion.choices[0].message.parsed # The parsed object is the same Invoice object as the one you defined in the Pydantic model
+    print("Received payload:", invoice_object)
+    return JSONResponse(content={"status": "success", "data": invoice_object})
+
+# To run the FastAPI app locally, use the command:
+# uvicorn your_module_name:app --reload
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+You can test the webhook endpoint with a tool like curl or Postman. For example, using curl:
+
+```bash
+curl -X POST "http://localhost:8000/webhook" \
+     -H "Content-Type: application/json" \
+     -d '{"name": "Team Meeting", "date": "2023-12-31"}'
+```
+
+
+### Step 4: Create your deployment and Test It
+
+Finally, integrate the webhook with your deployment system using the `uiform` client. This example demonstrates how to create an deployment that triggers the webhook when a matching event occurs:
+
+```python
+from uiform import UiForm
+
+# Initialize the UiForm client
+uiclient = UiForm()
+
+# Create an deployment that uses the webhook URL from Step 2
+deployment = uiclient.deployments.mailboxes.create(
+    email="invoices@mailbox.uiform.com",
+    model="gpt-4.1-nano",
+    json_schema=Invoice.model_json_schema(), # use the pydantic model to create the json schema
+    webhook_url="http://localhost:8000/webhook",  # Replace with your actual webhook URL if different
+)
+
+print("Deployment created successfully!")
+print("Details:", deployment)
+```
+
+After setting up the deployment, simulate or trigger an event that complies with your JSON schema. The deployment will send a POST request to your FastAPI webhook endpoint, where the payload can be processed.
+
+### Step 5
+
+Finally, you can test the deployment with the test functions of the sdk: 
+
+```python
+from uiform import UiForm
+
+# Initialize the UiForm client
+uiclient = UiForm()
+
+# If you just want to send a test request to your webhook
+log = uiclient.deployments.mailboxes.tests.webhook(
+    email="test-mailbox-local@devmail.uiform.com", 
+)
+
+# If you want to test the file processing logic: 
+log = uiclient.deployments.mailboxes.tests.process(
+    email="test-mailbox-local@devmail.uiform.com", 
+    document="your_invoice_email.eml"
+)
+
+# If you want to test a full email forwarding
+log = uiclient.deployments.mailboxes.tests.forward(
+    email="uiform-quickstart@mailbox.uiform.com", 
+    document="your_invoice_email.eml"
+)
+```
+
+---
+
+## Summary
+
+- **JSON Schema:** Ensures that your incoming data structure is validated.
+- **FastAPI Webhook:** Receives and processes the POST requests from your deployment.
+- **Deployment Creation:** Connects your webhook to the broader integration, ensuring that events trigger the desired actions.
+
+You now have a complete integration framework linking your FastAPI backend to your deployment workflow. This setup allows you to efficiently process and respond to incoming events.
+
+Happy coding!
+
