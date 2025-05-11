@@ -2,98 +2,18 @@
 ---
 ## Introduction
 
-With UiForm, you can seamlessly connect external sources to your internal backend using webhooks, enabling streamlined document processing. Key capabilities include:
+A deployment allows you to analyze files and send the extracted data to your backend. You can create 4 types of deployments:
 
-- **Creating new file-upload links**: Share links to upload files and automatically send them to your webhook for processing.
-- **Creating new mailboxes**: Set up mailboxes to forward emails directly to your webhook.
+- **Links**: Share links to upload files.
+- **Mailboxes**: Set up mailboxes to forward emails to.
+- **Endpoints**: Create an endpoint to send data to.
+- **Outlook Plugin**: Create and install an Outlook plugin to extract data from emails.
 
-Explore the SDK documentation below to integrate UiForm's deployment tools into your applications.
+You can create, monitor, update, delete and test all the deployments in the [dashboard](https://www.uiform.com/dashboard/deployments).
 
----
-
-## Verify Event
----
-If you want to verify the event you can use the `verify_event` method. The `WEBHOOKS_SECRET` can be generated in the [UiForm Dashboard](https://uiform.com/dashboard/settings).
-
-<CodeGroup>
-```python FastAPI
-import os
-
-from fastapi import FastAPI, Request, Response, HTTPException
-from uiform import UiForm
-
-uiclient = UiForm()
-app = FastAPI()
-
-@app.post("/webhook")
-async def webhook_handler(request: Request):
-    try:
-        # Read payload and signature from request
-        payload = await request.body()
-        signature_header = request.headers.get("UiForm-Signature")
-
-        if not signature_header:
-            raise HTTPException(status_code=400, detail="Missing UiForm-Signature header")
-
-        # Verify the signature and process the event
-        uiclient.deployments.verify_event(
-            event_body=payload,
-            event_signature=signature_header,
-            secret=os.getenv("WEBHOOKS_SECRET"),
-        )
-
-        return Response(status_code=200)
-    except Exception as e:
-        # Handle errors (optional: log the error)
-        return Response(status_code=400, content=f"Webhook error: {str(e)}")
-```
-```python Django
-import os
-
-from django import Response
-from uiform import UiForm
-
-uiclient = UiForm()
-
-def webhook_handler(request):
-    payload = request.get_data()
-    signature_header = request.headers["UiForm-Signature"]
-
-    # Verify the signature and process the event
-    response = uiclient.deployments.verify_event(
-        event_body=payload,
-        event_signature=signature_header,
-        secret=os.getenv("WEBHOOKS_SECRET"),
-    )
-
-    return Response(status=200)
-```
-```python Flask
-import os
-
-from flask import Flask, Response, request
-from uiform import UiForm
-
-uiclient = UiForm()
-
-app = Flask(__name__)
-
-
-@app.route("/webhook", methods=["POST"])
-def webhook_handler():
-    payload = request.get_data()
-    signature_header = request.headers["UiForm-Signature"]
-
-    # Verify the signature and process the event
-    response = uiclient.deployments.verify_event(
-        event_body=payload,
-        event_signature=signature_header,
-        secret=os.getenv("WEBHOOKS_SECRET"),
-    )
-
-    return Response(status=200)
-```
-</CodeGroup>
+<Frame>
+<img src="https://raw.githubusercontent.com/UiForm/uiform/refs/heads/main/assets/docs/automation_dashboard.png" />
+</Frame>
 
 ----
 ## Link
@@ -232,15 +152,13 @@ link_obj = uiclient.deployments.extraction_links.get(
      'partnership'],
     'title': 'CompanyRelation',
     'type': 'string'}},
-  'properties': {'name': {'X-FieldPrompt': 'Look for the name of the company, or derive it from the logo',
+  'properties': {'name': {
     'description': 'Name of the identified company',
     'title': 'Name',
     'type': 'string'},
    'type': {'$ref': '#/$defs/CompanyEnum',
-    'X-FieldPrompt': 'Guess the type depending on slide context',
     'description': 'Type of the identified company'},
    'relationship': {'$ref': '#/$defs/CompanyRelation',
-    'X-FieldPrompt': 'Guess the relationship of the identified company with the startup from the deck',
     'description': 'Relationship of the identified company with the startup from the deck'}},
   'required': ['name', 'type', 'relationship'],
   'title': 'Company',
@@ -300,15 +218,13 @@ link_obj = uiclient.deployments.extraction_links.update(
      'partnership'],
     'title': 'CompanyRelation',
     'type': 'string'}},
-  'properties': {'name': {'X-FieldPrompt': 'Look for the name of the company, or derive it from the logo',
+  'properties': {'name': {
     'description': 'Name of the identified company',
     'title': 'Name',
     'type': 'string'},
    'type': {'$ref': '#/$defs/CompanyEnum',
-    'X-FieldPrompt': 'Guess the type depending on slide context',
     'description': 'Type of the identified company'},
    'relationship': {'$ref': '#/$defs/CompanyRelation',
-    'X-FieldPrompt': 'Guess the relationship of the identified company with the startup from the deck',
     'description': 'Relationship of the identified company with the startup from the deck'}},
   'required': ['name', 'type', 'relationship'],
   'title': 'Company',
@@ -555,3 +471,480 @@ mailbox_log = uiclient.deployments.mailboxes.test_email_forwarding(
 </CodeGroup>
 
 
+
+
+
+Of course! Here's the continuation of your documentation for **Endpoints**, keeping **exactly** the same structure as you requested:
+
+---
+
+## Endpoint
+
+---
+
+### Object
+
+<ResponseField name="Object" type="Endpoint">
+An Endpoint object containing the extraction endpoint configuration.
+  <Expandable title="properties">
+    <ResponseField name="object" type="string">
+      The type of object. Always "endpoint".
+    </ResponseField>
+
+<ResponseField name="id" type="string">
+  Unique identifier for the endpoint, prefixed with "endp_".
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the endpoint.
+</ResponseField>
+
+<ResponseField name="webhook_url" type="HttpUrl">
+  URL of the webhook to send the data to.
+</ResponseField>
+
+<ResponseField name="webhook_headers" type="Dict[str, str]">
+  Headers to send with the webhook request.
+</ResponseField>
+
+<ResponseField name="modality" type="Modality">
+  Processing modality for the documents.
+</ResponseField>
+
+<ResponseField name="image_settings" type="ImageSettings">
+  Preprocessing operations applied to images before sending to the LLM.
+</ResponseField>
+
+<ResponseField name="model" type="string">
+  Model used for chat completion.
+</ResponseField>
+
+<ResponseField name="json_schema" type="Dict[str, Any]">
+  JSON schema format used to validate the output data.
+</ResponseField>
+
+<ResponseField name="temperature" type="float">
+  Temperature for sampling. Defaults to 0.0 if not provided.
+</ResponseField>
+
+<ResponseField name="reasoning_effort" type="ChatCompletionReasoningEffort">
+  Reasoning effort level for chat completion.
+</ResponseField>
+
+<ResponseField name="updated_at" type="datetime">
+  UTC timestamp of when the config was last updated.
+</ResponseField>
+
+  </Expandable>
+</ResponseField>
+
+### Create
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+endpoint = uiclient.deployments.endpoints.create(
+    name="Invoice Extraction Endpoint",
+    model="gpt-4.1-nano",
+    json_schema=json_schema,
+    webhook_url="https://your_server.com/invoices/webhook",
+)
+
+````
+```json Response
+{
+    "object": "endpoint",
+    "id": "ep_9b6a8c8d-254d-4f4b-8f8e-5b2e1b6b3c9a",
+    "name": "Invoice Extraction Endpoint",
+    "webhook_url": "https://your_server.com/invoices/webhook",
+    "webhook_headers": {},
+    "modality": "native",
+    "image_settings": {
+      "correct_image_orientation": true,
+      "dpi": 72,
+      "image_to_text": "ocr",
+      "browser_canvas": "A4"
+    },
+    "model": "gpt-4.1-nano",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "amount": {"type": "number"}
+      },
+      "required": ["invoice_number", "amount"]
+    },
+    "temperature": 0.0,
+    "reasoning_effort": "medium",
+    "updated_at": "2025-05-10T14:30:00Z"
+}
+````
+
+</CodeGroup>
+
+### Get
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+endpoint_obj = uiclient.deployments.endpoints.get(
+    endpoint_id="endp_9b6a8c8d-254d-4f4b-8f8e-5b2e1b6b3c9a"
+)
+
+````
+```json Response
+{
+    "object": "endpoint",
+    "id": "endp_9b6a8c8d-254d-4f4b-8f8e-5b2e1b6b3c9a",
+    "name": "Invoice Extraction Endpoint",
+    "webhook_url": "https://your_server.com/invoices/webhook",
+    "webhook_headers": {},
+    "modality": "native",
+    "image_settings": {
+      "correct_image_orientation": true,
+      "dpi": 72,
+      "image_to_text": "ocr",
+      "browser_canvas": "A4"
+    },
+    "model": "gpt-4.1-nano",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "amount": {"type": "number"}
+      },
+      "required": ["invoice_number", "amount"]
+    },
+    "temperature": 0.0,
+    "reasoning_effort": "medium",
+    "updated_at": "2025-05-10T14:30:00Z"
+}
+````
+
+</CodeGroup>
+
+### List
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+list_endpoints = uiclient.deployments.endpoints.list()
+
+````
+</CodeGroup>
+
+### Update
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+updated_endpoint = uiclient.deployments.endpoints.update(
+    endpoint_id="endp_9b6a8c8d-254d-4f4b-8f8e-5b2e1b6b3c9a",
+    model="gpt-4o"
+)
+````
+
+```json Response
+{
+    "object": "endpoint",
+    "id": "endp_9b6a8c8d-254d-4f4b-8f8e-5b2e1b6b3c9a",
+    "name": "Invoice Extraction Endpoint",
+    "webhook_url": "https://your_server.com/invoices/webhook",
+    "webhook_headers": {},
+    "modality": "native",
+    "image_settings": {
+      "correct_image_orientation": true,
+      "dpi": 72,
+      "image_to_text": "ocr",
+      "browser_canvas": "A4"
+    },
+    "model": "gpt-4o",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "amount": {"type": "number"}
+      },
+      "required": ["invoice_number", "amount"]
+    },
+    "temperature": 0.0,
+    "reasoning_effort": "medium",
+    "updated_at": "2025-05-10T16:00:00Z"
+}
+```
+
+</CodeGroup>
+
+### Delete
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+uiclient.deployments.endpoints.delete(
+    endpoint_id="endp_9b6a8c8d-254d-4f4b-8f8e-5b2e1b6b3c9a"
+)
+
+```
+</CodeGroup>
+
+
+
+
+
+
+---
+
+## Outlook Plugin
+
+---
+
+### Object
+
+<ResponseField name="Object" type="Outlook">
+An Outlook object containing the extraction outlook plugin configuration.
+  <Expandable title="properties">
+    <ResponseField name="object" type="string">
+      The type of object. Always "outlook".
+    </ResponseField>
+
+<ResponseField name="id" type="string">
+  Unique identifier for the outlook plugin, prefixed with "outlook_".
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the plugin.
+</ResponseField>
+
+<ResponseField name="webhook_url" type="HttpUrl">
+  URL of the webhook to send the data to.
+</ResponseField>
+
+<ResponseField name="webhook_headers" type="Dict[str, str]">
+  Headers to send with the webhook request.
+</ResponseField>
+
+<ResponseField name="authorized_domains" type="List[str]">
+  List of authorized domains allowed to use the plugin.
+</ResponseField>
+
+<ResponseField name="authorized_emails" type="List[str]">
+  List of authorized emails allowed to use the plugin.
+</ResponseField>
+
+<ResponseField name="modality" type="Modality">
+  Processing modality for the documents.
+</ResponseField>
+
+<ResponseField name="image_settings" type="ImageSettings">
+  Preprocessing operations applied to images before sending to the LLM.
+</ResponseField>
+
+<ResponseField name="model" type="string">
+  Model used for chat completion.
+</ResponseField>
+
+<ResponseField name="json_schema" type="Dict[str, Any]">
+  JSON schema format used to validate the output data.
+</ResponseField>
+
+<ResponseField name="temperature" type="float">
+  Temperature for sampling. Defaults to 0.0 if not provided.
+</ResponseField>
+
+<ResponseField name="reasoning_effort" type="ChatCompletionReasoningEffort">
+  Reasoning effort level for chat completion.
+</ResponseField>
+
+<ResponseField name="updated_at" type="datetime">
+  UTC timestamp of when the config was last updated.
+</ResponseField>
+
+  </Expandable>
+</ResponseField>
+
+### Create
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+outlook_plugin = uiclient.deployments.outlook.create(
+    name="Invoice Plugin",
+    model="gpt-4.1-nano",
+    json_schema=json_schema,
+    webhook_url="https://your_server.com/invoices/webhook",
+    authorized_domains=["uiform.com"],
+    authorized_emails=["john@doe.com", "jane@doe.com"],
+)
+
+````
+```json Response
+{
+    "object": "outlook",
+    "id": "outlook_56b30f29-ccf2-41b8-8b26-15481f2a78f1",
+    "name": "Invoice Plugin",
+    "webhook_url": "https://your_server.com/invoices/webhook",
+    "webhook_headers": {},
+    "authorized_domains": ["uiform.com"],
+    "authorized_emails": ["john@doe.com", "jane@doe.com"],
+    "modality": "native",
+    "image_settings": {
+      "correct_image_orientation": true,
+      "dpi": 72,
+      "image_to_text": "ocr",
+      "browser_canvas": "A4"
+    },
+    "model": "gpt-4.1-nano",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "amount": {"type": "number"}
+      },
+      "required": ["invoice_number", "amount"]
+    },
+    "temperature": 0.0,
+    "reasoning_effort": "medium",
+    "updated_at": "2025-05-10T15:45:00Z"
+}
+````
+
+</CodeGroup>
+
+### Get
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+outlook_plugin = uiclient.deployments.outlook.get(
+    id="outlook_56b30f29-ccf2-41b8-8b26-15481f2a78f1"
+)
+
+````
+```json Response
+{
+    "object": "outlook",
+    "id": "outlook_56b30f29-ccf2-41b8-8b26-15481f2a78f1",
+    "name": "Invoice Plugin",
+    "webhook_url": "https://your_server.com/invoices/webhook",
+    "webhook_headers": {},
+    "authorized_domains": ["uiform.com"],
+    "authorized_emails": ["john@doe.com", "jane@doe.com"],
+    "modality": "native",
+    "image_settings": {
+      "correct_image_orientation": true,
+      "dpi": 72,
+      "image_to_text": "ocr",
+      "browser_canvas": "A4"
+    },
+    "model": "gpt-4.1-nano",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "amount": {"type": "number"}
+      },
+      "required": ["invoice_number", "amount"]
+    },
+    "temperature": 0.0,
+    "reasoning_effort": "medium",
+    "updated_at": "2025-05-10T15:45:00Z"
+}
+````
+
+</CodeGroup>
+
+### List
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+list_outlooks = uiclient.deployments.outlook.list()
+
+````
+</CodeGroup>
+
+### Update
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+updated_outlook_plugin = uiclient.deployments.outlook.update(
+    outlook_id="outlook_56b30f29-ccf2-41b8-8b26-15481f2a78f1",
+    model="gpt-4o"
+)
+````
+
+```json Response
+{
+    "object": "outlook",
+    "id": "outlook_56b30f29-ccf2-41b8-8b26-15481f2a78f1",
+    "name": "Invoice Plugin",
+    "webhook_url": "https://your_server.com/invoices/webhook",
+    "webhook_headers": {},
+    "authorized_domains": ["uiform.com"],
+    "authorized_emails": ["john@doe.com", "jane@doe.com"],
+    "modality": "native",
+    "image_settings": {
+      "correct_image_orientation": true,
+      "dpi": 72,
+      "image_to_text": "ocr",
+      "browser_canvas": "A4"
+    },
+    "model": "gpt-4o",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "amount": {"type": "number"}
+      },
+      "required": ["invoice_number", "amount"]
+    },
+    "temperature": 0.0,
+    "reasoning_effort": "medium",
+    "updated_at": "2025-05-10T16:10:00Z"
+}
+```
+
+</CodeGroup>
+
+### Delete
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+uiclient.deployments.outlook.delete(
+    outlook_id="outlook_56b30f29-ccf2-41b8-8b26-15481f2a78f1"
+)
+
+```
+</CodeGroup>

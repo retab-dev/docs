@@ -91,21 +91,13 @@ class CompanyRelation(str, Enum):
 class Company(BaseModel):
     name: str = Field(...,
         description="Name of the identified company",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the name of the company, or derive it from the logo"
-        }
     )
     type: CompanyEnum = Field(...,
         description="Type of the identified company",
-        json_schema_extra={
-            "X-FieldPrompt": "Guess the type depending on slide context"
-        }
+
     )
     relationship: CompanyRelation = Field(...,
         description="Relationship of the identified company with the startup from the deck",
-        json_schema_extra={
-            "X-FieldPrompt": "Guess the relationship of the identified company with the startup from the deck"
-        }
     )
 
 class BusinessModel(str, Enum):
@@ -116,27 +108,15 @@ class BusinessModel(str, Enum):
 class TeamMember(BaseModel):
     firstName: str = Field(...,
         description="First name of the team member",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the first name of the team member"
-        }
     )
     lastName: str = Field(...,
         description="Last name of the team member",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the last name of the team member"
-        }
     )
     title: str = Field(...,
         description="Title, position of the team member",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the title or position of the team member"
-        }
     )
     pastExperiences: str = Field(...,
         description="Previous experiences",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for previous experiences of the team member: jobs, education, companies"
-        }
     )
 
 class Deck(BaseModel):
@@ -147,54 +127,40 @@ class Deck(BaseModel):
     )
     name: str = Field(...,
         description="Name of the company",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the name of the company"
-        }
     )
     website: str = Field(...,
         description="URL of the company website",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the company URL in the deck. It is often specified in the founder's email. make sure to format as domainname.domainextesion , without www or http"
-        }
     )
     country: str = Field(...,
         description="2 letter Country code of the company ",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the companys HQ location, in 2 letter format"
-        }
     )
     investors: Company = Field(...,
         description="Existing investors in the startup",
         json_schema_extra={
-            "X-FieldPrompt": "Look for investors, often cited in slides with backed by or cap tables",
             "X-ReasoningPrompt": "Think about the investors. Detail your thought process, and explain logically, step by step, who are the investors, detailing the cues and evidence for each one. For example: 1) Found X in cap table showing Y% ownership 2) Identified Z from 'backed by' slide with logo and investment date 3) etc."
         }
     )
     competitors: Company = Field(...,
         description="Competitors identified by the startup in the deck",
         json_schema_extra={
-            "X-FieldPrompt": "Look for competitors, often cited in competition slides",
             "X-ReasoningPrompt": "Walk through your analysis of the competitive landscape step by step: 1) Which companies are positioned as direct competitors? 2) What specific features/offerings overlap? 3) What market segments do they compete in? 4) What evidence supports each competitor identification?"
         }
     )
     clients: Company = Field(...,
         description="Clients (B2B) in pipe or signed by the startup in the deck",
         json_schema_extra={
-            "X-FieldPrompt": "Look for clients, often cited in traction or commercial pipeline slides slides",
             "X-ReasoningPrompt": "Break down your client analysis systematically: 1) Which companies are mentioned as current clients vs pipeline? 2) What evidence shows their client status (testimonials, case studies, logos)? 3) What stage is each client relationship? 4) Are there any specific metrics or success stories mentioned?"
         }
     )
     team: List[TeamMember] = Field(...,
         description="Company Team",
         json_schema_extra={
-            "X-FieldPrompt": "Look for the founding team and executives at the company",
             "X-ReasoningPrompt": "Analyze the team composition methodically: 1) Who are the key founders/executives? 2) What specific evidence validates their roles? 3) How did you verify their background and experience? 4) What makes their experience relevant to this venture?"
         }
     )
     businessModel: BusinessModel = Field(...,
         description="Business model of the startup",
         json_schema_extra={
-            "X-FieldPrompt": "Guess the business model based on products, offering, clients",
             "X-ReasoningPrompt": "Explain your business model classification process: 1) Who are the primary customers? 2) What is the revenue generation method? 3) How does the product/service flow between parties? 4) What specific slides or content supports this classification?"
         }
     )
@@ -239,19 +205,16 @@ schema_obj = Schema(
     "Company": {
       "properties": {
         "name": {
-          "X-FieldPrompt": "Look for the name of the company, or derive it from the logo",
           "description": "Name of the identified company",
           "title": "Name",
           "type": "string"
         },
         "type": {
           "$ref": "#/$defs/CompanyEnum",
-          "X-FieldPrompt": "Guess the type depending on slide context",
           "description": "Type of the identified company"
         },
         "relationship": {
           "$ref": "#/$defs/CompanyRelation",
-          "X-FieldPrompt": "Guess the relationship of the identified company with the startup from the deck",
           "description": "Relationship of the identified company with the startup from the deck"
         }
       },
@@ -287,25 +250,21 @@ schema_obj = Schema(
     "TeamMember": {
       "properties": {
         "firstName": {
-          "X-FieldPrompt": "Look for the first name of the team member",
           "description": "First name of the team member",
           "title": "Firstname",
           "type": "string"
         },
         "lastName": {
-          "X-FieldPrompt": "Look for the last name of the team member",
           "description": "Last name of the team member",
           "title": "Lastname",
           "type": "string"
         },
         "title": {
-          "X-FieldPrompt": "Look for the title or position of the team member",
           "description": "Title, position of the team member",
           "title": "Title",
           "type": "string"
         },
         "pastExperiences": {
-          "X-FieldPrompt": "Look for previous experiences of the team member: jobs, education, companies",
           "description": "Previous experiences",
           "title": "Pastexperiences",
           "type": "string"
@@ -324,43 +283,36 @@ schema_obj = Schema(
   "X-SystemPrompt": "\nYour task is to extract structured information from pitch decks based on the provided schema. Carefully analyze the content to identify relevant details and populate each field accurately while maintaining consistency across extracted data.\n\nKey Guidelines:\n\t1.\tUnderstanding the Schema:\n\t\u2022\tThe schema includes key entities such as the company, its investors, competitors, clients, team members, and business model. Each field must be carefully reviewed and filled with precise data extracted from the deck.\n\t\u2022\tRelationships between companies (e.g., investor, competitor, client) should be determined based on contextual evidence within the deck.\n\t2.\tContextual Analysis:\n\t\u2022\tConsider multiple slides to understand the startup's positioning, stakeholders, and market landscape.\n\t\u2022\tExtract information by recognizing patterns, such as recurring names or mentions in key slides (e.g., cap tables for investors, competitive analysis for competitors, and traction slides for clients).\n\t3.\tConsistency and Accuracy:\n\t\u2022\tEnsure extracted data is consistent across all fields and accurately reflects the content of the deck.\n\t\u2022\tAvoid duplication or conflicting information by cross-referencing details from various slides.\n\t4.\tData Formatting:\n\t\u2022\tCompany Name: Extract the official name as presented in the deck, ensuring correctness.\n\t\u2022\tWebsite: Extract and format URLs correctly \n\t\u2022\tCountry: Convert to the appropriate two-letter country code for uniformity.\n\t\u2022\tBusiness Model: Determine whether the startup follows B2B, B2C, or C2C based on their product offerings and customer base.\n\t5.\tHandling Team Data:\n\t\u2022\tIdentify key team members, ensuring correct extraction of their first name, last name, title, and previous experiences.\n\t\u2022\tPrioritize executives and founding members when available.\n\t6.\tDealing with Missing Information:\n\t\u2022\tIf some details are not explicitly stated, infer them based on available context or leave them blank if they cannot be determined with certainty.\n\t\u2022\tEnsure no assumptions are made beyond what is supported by the content.\n\nExtraction Output:\n\t\u2022\tThe extracted data should strictly adhere to the defined schema, ensuring each field is correctly populated according to its description.\n\t\u2022\tThe output should be structured, with proper data types (e.g., strings, enumerations, lists) and validated before final submission.\n\nBy following these principles, the extracted information will be comprehensive, accurate, and aligned with the expected data structure for further processing and analysis.\n",
   "properties": {
     "name": {
-      "X-FieldPrompt": "Look for the name of the company",
       "description": "Name of the company",
       "title": "Name",
       "type": "string"
     },
     "website": {
-      "X-FieldPrompt": "Look for the company URL in the deck. It is often specified in the founder's email. make sure to format as domainname.domainextesion , without www or http",
       "description": "URL of the company website",
       "title": "Website",
       "type": "string"
     },
     "country": {
-      "X-FieldPrompt": "Look for the companys HQ location, in 2 letter format",
       "description": "2 letter Country code of the company ",
       "title": "Country",
       "type": "string"
     },
     "investors": {
       "$ref": "#/$defs/Company",
-      "X-FieldPrompt": "Look for investors, often cited in slides with backed by or cap tables",
       "X-ReasoningPrompt": "Think about the investors. Detail your thought process, and explain logically, step by step, who are the investors, detailing the cues and evidence for each one. For example: 1) Found X in cap table showing Y% ownership 2) Identified Z from 'backed by' slide with logo and investment date 3) etc.",
       "description": "Existing investors in the startup"
     },
     "competitors": {
       "$ref": "#/$defs/Company",
-      "X-FieldPrompt": "Look for competitors, often cited in competition slides",
       "X-ReasoningPrompt": "Walk through your analysis of the competitive landscape step by step: 1) Which companies are positioned as direct competitors? 2) What specific features/offerings overlap? 3) What market segments do they compete in? 4) What evidence supports each competitor identification?",
       "description": "Competitors identified by the startup in the deck"
     },
     "clients": {
       "$ref": "#/$defs/Company",
-      "X-FieldPrompt": "Look for clients, often cited in traction or commercial pipeline slides slides",
       "X-ReasoningPrompt": "Break down your client analysis systematically: 1) Which companies are mentioned as current clients vs pipeline? 2) What evidence shows their client status (testimonials, case studies, logos)? 3) What stage is each client relationship? 4) Are there any specific metrics or success stories mentioned?",
       "description": "Clients (B2B) in pipe or signed by the startup in the deck"
     },
     "team": {
-      "X-FieldPrompt": "Look for the founding team and executives at the company",
       "X-ReasoningPrompt": "Analyze the team composition methodically: 1) Who are the key founders/executives? 2) What specific evidence validates their roles? 3) How did you verify their background and experience? 4) What makes their experience relevant to this venture?",
       "description": "Company Team",
       "items": {
@@ -371,7 +323,6 @@ schema_obj = Schema(
     },
     "businessModel": {
       "$ref": "#/$defs/BusinessModel",
-      "X-FieldPrompt": "Guess the business model based on products, offering, clients",
       "X-ReasoningPrompt": "Explain your business model classification process: 1) Who are the primary customers? 2) What is the revenue generation method? 3) How does the product/service flow between parties? 4) What specific slides or content supports this classification?",
       "description": "Business model of the startup"
     }
@@ -616,21 +567,12 @@ class CompanyRelation(str, Enum):
 class Company(BaseModel):
     name: str = Field(...,
         description="Name of the identified company",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the name of the company, or derive it from the logo"
-        }
     )
     type: CompanyEnum = Field(...,
         description="Type of the identified company",
-        json_schema_extra={
-            "X-FieldPrompt": "Guess the type depending on slide context"
-        }
     )
     relationship: CompanyRelation = Field(...,
         description="Relationship of the identified company with the startup from the deck",
-        json_schema_extra={
-            "X-FieldPrompt": "Guess the relationship of the identified company with the startup from the deck"
-        }
     )
 
 class BusinessModel(str, Enum):
@@ -641,27 +583,15 @@ class BusinessModel(str, Enum):
 class TeamMember(BaseModel):
     firstName: str = Field(...,
         description="First name of the team member",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the first name of the team member"
-        }
     )
     lastName: str = Field(...,
         description="Last name of the team member",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the last name of the team member"
-        }
     )
     title: str = Field(...,
         description="Title, position of the team member",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the title or position of the team member"
-        }
     )
     pastExperiences: str = Field(...,
         description="Previous experiences",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for previous experiences of the team member: jobs, education, companies"
-        }
     )
 
 class Deck(BaseModel):
@@ -672,54 +602,40 @@ class Deck(BaseModel):
     )
     name: str = Field(...,
         description="Name of the company",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the name of the company"
-        }
     )
     website: str = Field(...,
         description="URL of the company website",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the company URL in the deck. It is often specified in the founder's email. make sure to format as domainname.domainextesion , without www or http"
-        }
     )
     country: str = Field(...,
         description="2 letter Country code of the company ",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the companys HQ location, in 2 letter format"
-        }
     )
     investors: Company = Field(...,
         description="Existing investors in the startup",
         json_schema_extra={
-            "X-FieldPrompt": "Look for investors, often cited in slides with backed by or cap tables",
             "X-ReasoningPrompt": "Think about the investors. Detail your thought process, and explain logically, step by step, who are the investors, detailing the cues and evidence for each one. For example: 1) Found X in cap table showing Y% ownership 2) Identified Z from 'backed by' slide with logo and investment date 3) etc."
         }
     )
     competitors: Company = Field(...,
         description="Competitors identified by the startup in the deck",
         json_schema_extra={
-            "X-FieldPrompt": "Look for competitors, often cited in competition slides",
             "X-ReasoningPrompt": "Walk through your analysis of the competitive landscape step by step: 1) Which companies are positioned as direct competitors? 2) What specific features/offerings overlap? 3) What market segments do they compete in? 4) What evidence supports each competitor identification?"
         }
     )
     clients: Company = Field(...,
         description="Clients (B2B) in pipe or signed by the startup in the deck",
         json_schema_extra={
-            "X-FieldPrompt": "Look for clients, often cited in traction or commercial pipeline slides slides",
             "X-ReasoningPrompt": "Break down your client analysis systematically: 1) Which companies are mentioned as current clients vs pipeline? 2) What evidence shows their client status (testimonials, case studies, logos)? 3) What stage is each client relationship? 4) Are there any specific metrics or success stories mentioned?"
         }
     )
     team: List[TeamMember] = Field(...,
         description="Company Team",
         json_schema_extra={
-            "X-FieldPrompt": "Look for the founding team and executives at the company",
             "X-ReasoningPrompt": "Analyze the team composition methodically: 1) Who are the key founders/executives? 2) What specific evidence validates their roles? 3) How did you verify their background and experience? 4) What makes their experience relevant to this venture?"
         }
     )
     businessModel: BusinessModel = Field(...,
         description="Business model of the startup",
         json_schema_extra={
-            "X-FieldPrompt": "Guess the business model based on products, offering, clients",
             "X-ReasoningPrompt": "Explain your business model classification process: 1) Who are the primary customers? 2) What is the revenue generation method? 3) How does the product/service flow between parties? 4) What specific slides or content supports this classification?"
         }
     )
@@ -821,21 +737,12 @@ class CompanyRelation(str, Enum):
 class Company(BaseModel):
     name: str = Field(...,
         description="Name of the identified company",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the name of the company, or derive it from the logo"
-        }
     )
     type: CompanyEnum = Field(...,
         description="Type of the identified company",
-        json_schema_extra={
-            "X-FieldPrompt": "Guess the type depending on slide context"
-        }
     )
     relationship: CompanyRelation = Field(...,
         description="Relationship of the identified company with the startup from the deck",
-        json_schema_extra={
-            "X-FieldPrompt": "Guess the relationship of the identified company with the startup from the deck"
-        }
     )
 
 class BusinessModel(str, Enum):
@@ -846,27 +753,15 @@ class BusinessModel(str, Enum):
 class TeamMember(BaseModel):
     firstName: str = Field(...,
         description="First name of the team member",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the first name of the team member"
-        }
     )
     lastName: str = Field(...,
         description="Last name of the team member",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the last name of the team member"
-        }
     )
     title: str = Field(...,
         description="Title, position of the team member",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the title or position of the team member"
-        }
     )
     pastExperiences: str = Field(...,
         description="Previous experiences",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for previous experiences of the team member: jobs, education, companies"
-        }
     )
 
 class Deck(BaseModel):
@@ -877,54 +772,40 @@ class Deck(BaseModel):
     )
     name: str = Field(...,
         description="Name of the company",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the name of the company"
-        }
     )
     website: str = Field(...,
         description="URL of the company website",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the company URL in the deck. It is often specified in the founder's email. make sure to format as domainname.domainextesion , without www or http"
-        }
     )
     country: str = Field(...,
         description="2 letter Country code of the company ",
-        json_schema_extra={
-            "X-FieldPrompt": "Look for the companys HQ location, in 2 letter format"
-        }
     )
     investors: Company = Field(...,
         description="Existing investors in the startup",
         json_schema_extra={
-            "X-FieldPrompt": "Look for investors, often cited in slides with backed by or cap tables",
             "X-ReasoningPrompt": "Think about the investors. Detail your thought process, and explain logically, step by step, who are the investors, detailing the cues and evidence for each one. For example: 1) Found X in cap table showing Y% ownership 2) Identified Z from 'backed by' slide with logo and investment date 3) etc."
         }
     )
     competitors: Company = Field(...,
         description="Competitors identified by the startup in the deck",
         json_schema_extra={
-            "X-FieldPrompt": "Look for competitors, often cited in competition slides",
             "X-ReasoningPrompt": "Walk through your analysis of the competitive landscape step by step: 1) Which companies are positioned as direct competitors? 2) What specific features/offerings overlap? 3) What market segments do they compete in? 4) What evidence supports each competitor identification?"
         }
     )
     clients: Company = Field(...,
         description="Clients (B2B) in pipe or signed by the startup in the deck",
         json_schema_extra={
-            "X-FieldPrompt": "Look for clients, often cited in traction or commercial pipeline slides slides",
             "X-ReasoningPrompt": "Break down your client analysis systematically: 1) Which companies are mentioned as current clients vs pipeline? 2) What evidence shows their client status (testimonials, case studies, logos)? 3) What stage is each client relationship? 4) Are there any specific metrics or success stories mentioned?"
         }
     )
     team: List[TeamMember] = Field(...,
         description="Company Team",
         json_schema_extra={
-            "X-FieldPrompt": "Look for the founding team and executives at the company",
             "X-ReasoningPrompt": "Analyze the team composition methodically: 1) Who are the key founders/executives? 2) What specific evidence validates their roles? 3) How did you verify their background and experience? 4) What makes their experience relevant to this venture?"
         }
     )
     businessModel: BusinessModel = Field(...,
         description="Business model of the startup",
         json_schema_extra={
-            "X-FieldPrompt": "Guess the business model based on products, offering, clients",
             "X-ReasoningPrompt": "Explain your business model classification process: 1) Who are the primary customers? 2) What is the revenue generation method? 3) How does the product/service flow between parties? 4) What specific slides or content supports this classification?"
         }
     )
@@ -991,19 +872,16 @@ print(json.dumps(extraction.model_dump(), indent=2))
     "Company": {
       "properties": {
         "name": {
-          "X-FieldPrompt": "Look for the name of the company, or derive it from the logo",
           "description": "Name of the identified company",
           "title": "Name",
           "type": "string"
         },
         "type": {
           "$ref": "#/$defs/CompanyEnum",
-          "X-FieldPrompt": "Guess the type depending on slide context",
           "description": "Type of the identified company"
         },
         "relationship": {
           "$ref": "#/$defs/CompanyRelation",
-          "X-FieldPrompt": "Guess the relationship of the identified company with the startup from the deck",
           "description": "Relationship of the identified company with the startup from the deck"
         }
       },
@@ -1039,25 +917,21 @@ print(json.dumps(extraction.model_dump(), indent=2))
     "TeamMember": {
       "properties": {
         "firstName": {
-          "X-FieldPrompt": "Look for the first name of the team member",
           "description": "First name of the team member",
           "title": "Firstname",
           "type": "string"
         },
         "lastName": {
-          "X-FieldPrompt": "Look for the last name of the team member",
           "description": "Last name of the team member",
           "title": "Lastname",
           "type": "string"
         },
         "title": {
-          "X-FieldPrompt": "Look for the title or position of the team member",
           "description": "Title, position of the team member",
           "title": "Title",
           "type": "string"
         },
         "pastExperiences": {
-          "X-FieldPrompt": "Look for previous experiences of the team member: jobs, education, companies",
           "description": "Previous experiences",
           "title": "Pastexperiences",
           "type": "string"
@@ -1076,43 +950,36 @@ print(json.dumps(extraction.model_dump(), indent=2))
   "X-SystemPrompt": "\nYour task is to extract structured information from pitch decks based on the provided schema. Carefully analyze the content to identify relevant details and populate each field accurately while maintaining consistency across extracted data.\n\nKey Guidelines:\n\t1.\tUnderstanding the Schema:\n\t\u2022\tThe schema includes key entities such as the company, its investors, competitors, clients, team members, and business model. Each field must be carefully reviewed and filled with precise data extracted from the deck.\n\t\u2022\tRelationships between companies (e.g., investor, competitor, client) should be determined based on contextual evidence within the deck.\n\t2.\tContextual Analysis:\n\t\u2022\tConsider multiple slides to understand the startup's positioning, stakeholders, and market landscape.\n\t\u2022\tExtract information by recognizing patterns, such as recurring names or mentions in key slides (e.g., cap tables for investors, competitive analysis for competitors, and traction slides for clients).\n\t3.\tConsistency and Accuracy:\n\t\u2022\tEnsure extracted data is consistent across all fields and accurately reflects the content of the deck.\n\t\u2022\tAvoid duplication or conflicting information by cross-referencing details from various slides.\n\t4.\tData Formatting:\n\t\u2022\tCompany Name: Extract the official name as presented in the deck, ensuring correctness.\n\t\u2022\tWebsite: Extract and format URLs correctly \n\t\u2022\tCountry: Convert to the appropriate two-letter country code for uniformity.\n\t\u2022\tBusiness Model: Determine whether the startup follows B2B, B2C, or C2C based on their product offerings and customer base.\n\t5.\tHandling Team Data:\n\t\u2022\tIdentify key team members, ensuring correct extraction of their first name, last name, title, and previous experiences.\n\t\u2022\tPrioritize executives and founding members when available.\n\t6.\tDealing with Missing Information:\n\t\u2022\tIf some details are not explicitly stated, infer them based on available context or leave them blank if they cannot be determined with certainty.\n\t\u2022\tEnsure no assumptions are made beyond what is supported by the content.\n\nExtraction Output:\n\t\u2022\tThe extracted data should strictly adhere to the defined schema, ensuring each field is correctly populated according to its description.\n\t\u2022\tThe output should be structured, with proper data types (e.g., strings, enumerations, lists) and validated before final submission.\n\nBy following these principles, the extracted information will be comprehensive, accurate, and aligned with the expected data structure for further processing and analysis.\n",
   "properties": {
     "name": {
-      "X-FieldPrompt": "Look for the name of the company",
       "description": "Name of the company",
       "title": "Name",
       "type": "string"
     },
     "website": {
-      "X-FieldPrompt": "Look for the company URL in the deck. It is often specified in the founder's email. make sure to format as domainname.domainextesion , without www or http",
       "description": "URL of the company website",
       "title": "Website",
       "type": "string"
     },
     "country": {
-      "X-FieldPrompt": "Look for the companys HQ location, in 2 letter format",
       "description": "2 letter Country code of the company ",
       "title": "Country",
       "type": "string"
     },
     "investors": {
       "$ref": "#/$defs/Company",
-      "X-FieldPrompt": "Look for investors, often cited in slides with backed by or cap tables",
       "X-ReasoningPrompt": "Think about the investors. Detail your thought process, and explain logically, step by step, who are the investors, detailing the cues and evidence for each one. For example: 1) Found X in cap table showing Y% ownership 2) Identified Z from 'backed by' slide with logo and investment date 3) etc.",
       "description": "Existing investors in the startup"
     },
     "competitors": {
       "$ref": "#/$defs/Company",
-      "X-FieldPrompt": "Look for competitors, often cited in competition slides",
       "X-ReasoningPrompt": "Walk through your analysis of the competitive landscape step by step: 1) Which companies are positioned as direct competitors? 2) What specific features/offerings overlap? 3) What market segments do they compete in? 4) What evidence supports each competitor identification?",
       "description": "Competitors identified by the startup in the deck"
     },
     "clients": {
       "$ref": "#/$defs/Company",
-      "X-FieldPrompt": "Look for clients, often cited in traction or commercial pipeline slides slides",
       "X-ReasoningPrompt": "Break down your client analysis systematically: 1) Which companies are mentioned as current clients vs pipeline? 2) What evidence shows their client status (testimonials, case studies, logos)? 3) What stage is each client relationship? 4) Are there any specific metrics or success stories mentioned?",
       "description": "Clients (B2B) in pipe or signed by the startup in the deck"
     },
     "team": {
-      "X-FieldPrompt": "Look for the founding team and executives at the company",
       "X-ReasoningPrompt": "Analyze the team composition methodically: 1) Who are the key founders/executives? 2) What specific evidence validates their roles? 3) How did you verify their background and experience? 4) What makes their experience relevant to this venture?",
       "description": "Company Team",
       "items": {
@@ -1123,7 +990,6 @@ print(json.dumps(extraction.model_dump(), indent=2))
     },
     "businessModel": {
       "$ref": "#/$defs/BusinessModel",
-      "X-FieldPrompt": "Guess the business model based on products, offering, clients",
       "X-ReasoningPrompt": "Explain your business model classification process: 1) Who are the primary customers? 2) What is the revenue generation method? 3) How does the product/service flow between parties? 4) What specific slides or content supports this classification?",
       "description": "Business model of the startup"
     }

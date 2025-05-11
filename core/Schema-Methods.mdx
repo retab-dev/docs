@@ -76,13 +76,11 @@ schema_obj = Schema(
       'X-SystemPrompt': 'You are a useful assistant.',
       'properties': {
           'name': {
-              'X-FieldPrompt': 'Provide a descriptive and concise name for the event.',
               'description': 'The name of the calendar event.',
               'title': 'Name',
               'type': 'string'
           },
           'date': {
-              'X-FieldPrompt': 'Specify the event date in YYYY-MM-DD format.',
               'description': 'The date of the calendar event in ISO 8601 format.',
               'title': 'Date',
               'type': 'string'
@@ -103,13 +101,11 @@ schema_obj = Schema(
         "X-SystemPrompt": "You are a useful assistant.",
         "properties": {
             "name": {
-                "X-FieldPrompt": "Provide a descriptive and concise name for the event.",
                 "description": "The name of the calendar event.",
                 "title": "Name",
                 "type": "string"
             },
             "date": {
-                "X-FieldPrompt": "Specify the event date in YYYY-MM-DD format.",
                 "description": "The date of the calendar event in ISO 8601 format.",
                 "title": "Date",
                 "type": "string"
@@ -140,14 +136,10 @@ class CalendarEvent(BaseModel):
     model_config = ConfigDict(json_schema_extra = {"X-SystemPrompt": "You are a useful assistant."})
 
     name: str = Field(...,
-        description="The name of the calendar event.",
-        json_schema_extra={"X-FieldPrompt": "Provide a descriptive and concise name for the event."}
+        description="The name of the calendar event."
     )
     date: str = Field(...,
         description="The date of the calendar event in ISO 8601 format.",
-        json_schema_extra={
-            "X-FieldPrompt": "Specify the event date in YYYY-MM-DD format.",
-        }
     )
 
 schema_obj = Schema(
@@ -163,13 +155,11 @@ schema_obj = Schema(
         "X-SystemPrompt": "You are a useful assistant.",
         "properties": {
             "name": {
-                "X-FieldPrompt": "Provide a descriptive and concise name for the event.",
                 "description": "The name of the calendar event.",
                 "title": "Name",
                 "type": "string"
             },
             "date": {
-                "X-FieldPrompt": "Specify the event date in YYYY-MM-DD format.",
                 "description": "The date of the calendar event in ISO 8601 format.",
                 "title": "Date",
                 "type": "string"
@@ -189,7 +179,7 @@ schema_obj = Schema(
 </CodeGroup>
 
 
-## Generate Schema  (Coming Soon)
+## Generate Schema from Documents
 
 The Generate Schema endpoint allows you to automatically generate a JSON Schema from a set of example documents. This is particularly useful when you want to create a schema that captures all the important fields and patterns present in your documents.
 
@@ -203,6 +193,10 @@ from uiform import UiForm
 uiclient = UiForm()
 
 schema_obj = uiclient.schemas.generate(
+    modality = "native",
+    model = "gpt-4.1",
+    temperature = 0,
+    stream = False,
     documents = [
         "freight/booking_confirmation_1.jpg",
         "freight/booking_confirmation_2.jpg"
@@ -218,13 +212,11 @@ schema_obj = uiclient.schemas.generate(
         "X-SystemPrompt": "You are a useful assistant.",
         "properties": {
             "name": {
-                "X-FieldPrompt": "Provide a descriptive and concise name for the event.",
                 "description": "The name of the calendar event.",
                 "title": "Name",
                 "type": "string"
             },
             "date": {
-                "X-FieldPrompt": "Specify the event date in YYYY-MM-DD format.",
                 "description": "The date of the calendar event in ISO 8601 format.",
                 "title": "Date",
                 "type": "string"
@@ -243,21 +235,17 @@ schema_obj = uiclient.schemas.generate(
 
 </CodeGroup>
 
+## Generate System Prompt
 
-## Promptify Schema (Coming Soon)
+The Generate System Prompt endpoint allows you to create an optimized system prompt for your JSON Schema based on example documents. This helps guide the AI to better understand the context and requirements when extracting information.
 
-The Promptify Schema endpoint allows you to enhance an existing JSON Schema with AI-generated prompts and descriptions. By analyzing example documents, it can add helpful X-Directives (`X-SystemPrompt`, `X-FieldPrompt` and `X-ReasoningPrompt`) that will guide the AI in extracting the right information.
-
-This is particularly useful when you already have a schema structure but want to improve the quality of AI extractions by adding more context and guidance through prompts.
-
-<CodeGroup>
-```python Request
+```python
 from uiform import UiForm
 
 uiclient = UiForm()
 
-schema_obj = uiclient.schemas.promptify(
-    json_schema = {
+system_prompt = uiclient.schemas.system_prompt(
+    raw_schema = {
       'properties': {
           'name': {
               'description': 'The name of the calendar event.',
@@ -277,6 +265,53 @@ schema_obj = uiclient.schemas.promptify(
     documents = [
         "freight/booking_confirmation_1.jpg",
         "freight/booking_confirmation_2.jpg"
+    ],
+    model = "gpt-4.1",
+    temperature = 0,
+    modality = "native",
+    stream = False,
+)
+```
+
+
+
+## Promptify Schema
+
+The Promptify Schema endpoint allows you to enhance an existing JSON Schema with AI-generated prompts and descriptions. By analyzing example documents, it can add helpful X-Directives (`X-SystemPrompt` and `X-ReasoningPrompt`) that will guide the AI in extracting the right information.
+
+This is particularly useful when you already have a schema structure but want to improve the quality of AI extractions by adding more context and guidance through prompts.
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+
+schema_obj = uiclient.schemas.promptify(
+    raw_schema = {
+      'properties': {
+          'name': {
+              'description': 'The name of the calendar event.',
+              'title': 'Name',
+              'type': 'string'
+          },
+          'date': {
+              'description': 'The date of the calendar event in ISO 8601 format.',
+              'title': 'Date',
+              'type': 'string'
+          }
+      },
+      'required': ['name', 'date'],
+      'title': 'CalendarEvent',
+      'type': 'object'
+    },
+    modality = "native",
+    model = "gpt-4.1",
+    temperature = 0,
+    stream = False,
+    documents = [
+        "freight/booking_confirmation_1.jpg",
+        "freight/booking_confirmation_2.jpg"
     ]
 )
 ```
@@ -289,13 +324,11 @@ schema_obj = uiclient.schemas.promptify(
         "X-SystemPrompt": "You are a useful assistant.",
         "properties": {
             "name": {
-                "X-FieldPrompt": "Provide a descriptive and concise name for the event.",
                 "description": "The name of the calendar event.",
                 "title": "Name",
                 "type": "string"
             },
             "date": {
-                "X-FieldPrompt": "Specify the event date in YYYY-MM-DD format.",
                 "description": "The date of the calendar event in ISO 8601 format.",
                 "title": "Date",
                 "type": "string"
