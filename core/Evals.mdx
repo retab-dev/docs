@@ -1,0 +1,328 @@
+
+In this section, we will see how to use the methods of the `client.evals` module. Please check the [API Reference](https://docs.uiform.com/api-reference/evals/create) for more details.
+
+---
+## Evaluations
+
+### Create
+
+Creates a brand‑new evaluation and returns the complete object.
+
+<ResponseField name="Returns" type="Evaluation Object">
+A fully‑populated **Evaluation** instance.
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Unique identifier for the evaluation.</ResponseField>
+    <ResponseField name="object" type="string">Always `"evaluation"`.</ResponseField>
+    <ResponseField name="name" type="string">Human‑readable evaluation name.</ResponseField>
+    <ResponseField name="json_schema" type="object">Evaluation JSON schema.</ResponseField>
+    <ResponseField name="project_id" type="string | null">ID of the owning project.</ResponseField>
+    <ResponseField name="default_inference_settings" type="InferenceSettings | null">Default inference settings inherited by iterations (nullable).</ResponseField>
+    <ResponseField name="documents" type="array[EvaluationDocument]">List of linked documents.</ResponseField>
+    <ResponseField name="iterations" type="array[Iteration]">List of linked iterations.</ResponseField>
+    <ResponseField name="created" type="integer">Unix timestamp (seconds) of creation.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+client = UiForm()
+
+schema = {
+"title": "InvoiceEvaluation",
+"type": "object",
+"properties": {
+"invoice_number": {"type": "string"},
+"total": {"type": "number"}
+},
+"required": ["invoice_number", "total"]
+}
+
+invoice_eval = client.evals.create(
+name="My Invoice Eval",
+json_schema=schema
+)
+
+````
+```json Response
+{
+  "id": "eval_01HZX4H9Q0J2M4P1ZS6E6FY8MN",
+  "object": "evaluation",
+  "name": "My Invoice Eval",
+  "project_id": "proj_abc123",
+  "json_schema": { … },
+  "documents": [],
+  "iterations": [],
+  "created": 1736630400
+}
+````
+
+</CodeGroup>
+
+---
+
+### Get
+
+Gets a single evaluation by ID.
+
+<ResponseField name="Returns" type="Evaluation Object" />
+
+<CodeGroup>
+```python Request
+invoice_eval = client.evals.get(id = "eval_01HZX4H9Q0J2M4P1ZS6E6FY8MN")
+```
+</CodeGroup>
+
+---
+
+### Update
+
+Edits one or more fields. Omitted parameters remain unchanged.
+
+<ResponseField name="Returns" type="Evaluation Object" />
+
+<CodeGroup>
+```python Request
+updated = client.evals.update(
+    id="eval_01HZX4H9Q0J2M4P1ZS6E6FY8MN",
+    name="Invoice Eval v2",
+)
+```
+</CodeGroup>
+
+---
+
+### List
+
+Lists all evaluations that belong to a given project.
+
+<ResponseField name="Returns" type="array[Evaluation]">An array under the `data` key.</ResponseField>
+
+<CodeGroup>
+```python Request
+project_evals = client.evals.list(project_id="proj_abc123")
+```
+```json Response
+{
+  "data": [ {"id": "eval_…"}, {"id": "eval_…"} ]
+}
+```
+</CodeGroup>
+
+---
+
+### Delete
+
+Permanently deletes an evaluation.
+
+<CodeGroup>
+```python Request
+client.evals.delete("eval_01HZX4H9Q0J2M4P1ZS6E6FY8MN")
+```
+</CodeGroup>
+
+---
+
+## Documents
+
+## Documents
+
+Documents are the input data for UiForm evaluations. They contain:
+
+- **Content**: Files, images, PDFs, or other data to be analyzed
+- **Annotation**: User-supplied annotations for evaluation
+- **ID**: Unique identifier
+
+Documents can be uploaded from file paths, URLs, file objects, PIL Images, or MIMEData. The `client.evals.documents` API lets you create, list, retrieve, update, and delete documents associated with evaluations.
+
+
+### Create
+
+Uploads a document (file path, URL, file‑like object, PIL Image, or pre‑built `MIMEData`) and attaches ground‑truth annotations.
+
+<ResponseField name="Returns" type="EvaluationDocument Object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string" />
+    <ResponseField name="object" type="string">Always `"evaluation.document"`.</ResponseField>
+    <ResponseField name="filename" type="string" />
+    <ResponseField name="annotation" type="object">User‑supplied annotations.</ResponseField>
+    <ResponseField name="created" type="integer" />
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```python Request
+from pathlib import Path
+
+sales_invoice = client.evals.documents.create(
+  eval_id="eval_01HZX4H9Q0J2M4P1ZS6E6FY8MN",
+  document=Path("invoices/2025-04-invoice.pdf"),
+  annotation={"invoice_number": "INV-0425", "total": 1234.56}
+)
+
+```
+
+</CodeGroup>
+
+---
+
+### List
+
+<ResponseField name="Returns" type="array[EvaluationDocument]" />
+
+<CodeGroup>
+```python Request
+docs = client.evals.documents.list(eval_id="eval_01HZX4H9Q0J2M4P1ZS6E6FY8MN")
+```
+```json Response
+{ "data": [ {"id": "doc_…"}, {"id": "doc_…"} ] }
+```
+</CodeGroup>
+
+---
+
+### Get
+
+<ResponseField name="Returns" type="EvaluationDocument" />
+
+<CodeGroup>
+```python Request
+single_doc = client.evals.documents.get(
+    eval_id="eval_01HZX4H9Q0J2M4P1ZS6E6FY8MN",
+    id="doc_f7c8…"
+)
+```
+</CodeGroup>
+
+---
+
+### Update
+
+Allows you to replace or amend the ground‑truth field.
+
+<CodeGroup>
+```python Request
+client.evals.documents.update(
+    eval_id="eval_…",
+    id="doc_f7c8…",
+    annotation={"invoice_number": "INV‑0425‑CORRECTED", "total": 1240.00}
+)
+```
+</CodeGroup>
+
+---
+
+### Delete
+
+<ResponseField name="Returns" type="DeleteResponse" />
+
+<CodeGroup>
+```python Request
+client.evals.documents.delete(eval_id="eval_4988392", id="doc_f7c8…")
+```
+```json Response
+{ "id": "doc_f7c8…", "deleted": true, "object": "evaluation.document" }
+```
+</CodeGroup>
+
+---
+
+## Iterations
+
+### List
+
+<ResponseField name="Returns" type="array[Iteration]" />
+
+<CodeGroup>
+```python Request
+iters = client.evals.iterations.list(eval_id="eval_…")
+```
+```json Response
+{ "data": [ {"id": "iter_…"}, … ] }
+```
+</CodeGroup>
+
+---
+
+### Create
+
+Runs the evaluation on a chosen model.
+
+<ResponseField name="Returns" type="Iteration Object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string" />
+    <ResponseField name="object" type="string">Always `"evaluation.iteration"`.</ResponseField>
+    <ResponseField name="model" type="string" />
+    <ResponseField name="temperature" type="float" />
+    <ResponseField name="modality" type="native | text | image | image+text" />
+    <ResponseField name="reasoning_effort" type="auto | low | medium | high" />
+    <ResponseField name="n_consensus" type="integer" />
+    <ResponseField name="status" type="queued | running | finished | failed" />
+    <ResponseField name="created" type="integer" />
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```python Request
+iteration = client.evals.iterations.create(
+    eval_id="eval_…",
+    model="gpt‑4.1‑nano",
+    temperature=0.0,
+    modality="text",
+    n_consensus=3
+)
+```
+```
+(no synchronous response body; poll with `.iterations.list`)
+```
+</CodeGroup>
+
+---
+
+### Delete
+
+<ResponseField name="Returns" type="DeleteResponse" />
+
+<CodeGroup>
+```python Request
+client.evals.iterations.delete("iter_01HZ…")
+```
+```json Response
+{ "id": "iter_01HZ…", "deleted": true, "object": "evaluation.iteration" }
+```
+</CodeGroup>
+
+---
+
+### Compute Distances
+
+Returns embedding‑level distances between a specific document and the ground‑truth/reference in a given iteration.
+
+<ResponseField name="Returns" type="DistancesResult Object">
+  <Expandable title="properties">
+    <ResponseField name="document_id" type="string" />
+    <ResponseField name="iteration_id" type="string" />
+    <ResponseField name="distance" type="float" />
+    <ResponseField name="object" type="string">Always `"distance.result"`.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```python Request
+client.evals.iterations.compute_distances(
+    iteration_id="iter_01HZ…",
+    document_id="doc_f7c8…"
+)
+```
+```json Response
+{
+  "object": "distance.result",
+  "iteration_id": "iter_01HZ…",
+  "document_id": "doc_f7c8…",
+  "distance": 0.0834
+}
+```
+</CodeGroup>
+
+---
+
