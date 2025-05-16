@@ -5,6 +5,30 @@
 
 Structured generation refers to guiding a large language model (LLM) to produce output in a specific, structured format rather than open-ended free text. Instead of a long free-form paragraph, the model’s response is constrained to a predetermined schema or layout (for example, a JSON object with defined fields). This approach ensures the output is organized and machine-readable, making it easier for other systems to parse and use the information. In essence, the model is directed to fill in a template or data structure, which improves the consistency and reliability of its results.
 
+```python
+from pydantic import BaseModel
+from openai import OpenAI
+
+client = OpenAI()
+
+class ResearchPaperExtraction(BaseModel):
+    title: str
+    authors: list[str]
+    abstract: str
+    keywords: list[str]
+
+completion = uiclient.completions.parse(
+    json_schema=ResearchPaperExtraction.model_json_schema(),
+    messages=[
+        {"role": "system", "content": "You are an expert at structured data extraction. You will be given unstructured text from a research paper and should convert it into the given structure."},
+        {"role": "user", "content": "..."}
+    ],
+    model="gpt-4.1",
+    temperature=0
+)
+```
+
+
 ## How to Use Structured Generation
 
 Modern LLM services have introduced native support for structured generation, making it easier to enforce specific output formats. For instance, OpenAI’s API now provides a "structured outputs" feature that guarantees the model’s reply will conform exactly to a developer-supplied JSON schema. Google’s Gemini API offers a similar capability: you can configure a response schema (for example, via a `responseSchema` parameter or a Pydantic model in code) so that the model returns JSON data in the expected shape. Even emerging platforms like xAI’s Grok model include structured output modes, allowing you to supply a schema or format hints to ensure the response comes back in a specific organized form.
