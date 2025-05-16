@@ -1,0 +1,123 @@
+---
+title: 'Completions'
+openapi: 'POST /v1/completions'
+---
+
+
+
+<RequestExample>
+
+```python python
+from uiform import UiForm
+from pydantic import BaseModel
+
+client = UiForm()
+
+class CalendarEvent(BaseModel):
+    name: str
+    date: str
+    participants: list[str]
+
+completion = client.completions.parse(
+    model="gpt-4o-2024-08-06",
+    messages=[
+        {"role": "system", "content": "Extract the event information."},
+        {"role": "user", "content": "Alice and Bob are going to a science fair on Friday."},
+    ],
+    response_format=CalendarEvent,
+)
+
+event = completion.choices[0].message.parsed
+```
+
+
+```bash curl
+curl https://api.uiform.com/v1/completions \
+  -H "API-Key: $UIFORM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-2024-08-06",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are an expert at structured data extraction. You will be given unstructured text from a research paper and should convert it into the given structure."
+      },
+      {
+        "role": "user",
+        "content": "..."
+      }
+    ],
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "research_paper_extraction",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "authors": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "abstract": { "type": "string" },
+            "keywords": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["title", "authors", "abstract", "keywords"],
+          "additionalProperties": false
+        },
+        "strict": true
+      }
+    }
+  }'
+```
+
+</RequestExample>
+
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "chatcmpl-B9MBs8CjcvOU2jLn4n570S5qMJKcT",
+  "object": "chat.completion",
+  "created": 1741569952,
+  "model": "gpt-4.1-2025-04-14",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "'{"title": "Application of Quantum Algorithms in Interstellar Navigation: A New Frontier", "authors": ["Dr. Stella Voyager", "Dr. Nova Star", "Dr. Lyra Hunter"], "abstract": "This paper investigates the utilization of quantum algorithms to improve interstellar navigation systems. By leveraging quantum superposition and entanglement, our proposed navigation system can calculate optimal travel paths through space-time anomalies more efficiently than classical methods. Experimental simulations suggest a significant reduction in travel time and fuel consumption for interstellar missions.", "keywords": ["Quantum algorithms", "interstellar navigation", "space-time anomalies", "quantum superposition", "quantum entanglement", "space travel"]}'",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 19,
+    "completion_tokens": 10,
+    "total_tokens": 29,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default"
+}
+```
+
+
+
+</ResponseExample>
+
