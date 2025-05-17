@@ -1,5 +1,289 @@
+We provide a quick, type‑safe wrapper around OpenAI **Chat Completions** and **Responses** endpoints with automatic consensus reconciliation.
+
+
+- **Step 1: Generating diverse answers.** We purposely sample each call with `temperature > 0` to obtain *distinct* answers.
+
+- **Step 2: SOTA reconciliation.** A bespoke, finetuned LLM (code‑name **`reconcile‑v1`**) performs fuzzy string matching and majority‑vote reasoning to merge the candidates with state‑of‑the‑art accuracy.
+
+---
+
 ## Introduction
+
+### What is “consensus”?
+
+`n_consensus` runs several *independent* LLM calls **in parallel** and fuses their structured outputs into one validated result. The wider the sampling temperature, the more diverse the opinions—giving the reconciler richer evidence to converge on the truth.
+
+Consensus offers: 
+- **Higher accuracy** for structured data extraction
+- **Built‑in uncertainty quantification** (`likelihood` per field)
+- **Automatic guard‑rail against hallucination** without changing your business logic.
+
+### How it works
+
+1. **Spawn n requests.** Fire *n\_consensus* identical OpenAI requests with `temperature>0`.
+2. **Validate.** Parse every raw answer into a JSON object.
+3. **Reconcile.** Reconcile all valid candidates into a single solidified JSON with **`uiform‑reconcile‑v1`**, our proprietary finetuned LLM.
+4. **Return.** Surface the reconciled object in `completion.choices[0].message.parsed` or `response.output_parsed` (other completion fields are in `completion.choices[n].message`).
+
+---
+
+## Introduction
+
+### What is “consensus”?
+
+`n_consensus` lets you ask several independent language‑model instances the **same** question in parallel, then merges their structured outputs into a single, validated result.
+
+Consensus offers higher reliability for extraction tasks, zero‑shot majority voting, uncertainty quantification, and automatic guard‑rail against hallucination—without changing your business logic.
+
+### How it works
+Under the hood UiForm:
+
+1. Fires *n\_consensus* identical calls.
+2. Parses each raw answer into a Pydantic model / JSON‑Schema object.
+3. Runs a deterministic reconciliation strategy
+
+   * **Exact match** vote for scalar fields.
+   * **Deep merge** for arrays / objects when all candidates agree on shape.
+4. Returns the reconciled object in `response.output_parsed` (Responses) or `completion.choices[0].message.parsed` (Completions).
+
+If any response fails JSON validation the call is retried once; after that a `ConsensusError` is raised.
+
+
+---
+
+## Quick‑Start: Switch in One Line
+
+```diff {9}
+-  from openai import OpenAI
+-  client = OpenAI()
++  from uiform import UiForm
++  client = UiForm()
+
+  response = client.responses.create(
+      model="gpt-4.1",
+      input="Write a one-sentence bedtime story about a unicorn."
++     n_consensus=4
+  )
+
+ print(response.output_text)
+ event = response.output_parsed
+```
+
+```diff {14}
+-  from openai import OpenAI
+-  client = OpenAI()
++  from uiform import UiForm
++  client = UiForm()
+
+  completion = client.chat.completions.create(
+      model="gpt-4.1",
+      messages=[
+          {
+              "role": "user",
+              "content": "Write a one-sentence bedtime story about a unicorn."
+          }
+      ],
++     n_consensus=4
+  )
+
+ print(completion.choices[0].message.content)
+```
+
+
+Everything else (models, schema, temperature, etc.) stays untouched.
+
+---
 
 ## Completions API
 
+| Method                          | Description                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------ |
+| `client.completions.parse(...)` | Chat completion that **returns** a parsed object plus the raw OpenAI response. |
+
+### Minimum Arguments
+
+| Name              | Type                                         | Default | Notes                              |
+| ----------------- | -------------------------------------------- | ------- | ---------------------------------- |
+| `model`           | `str`                                        | —       | Any OpenAI chat model name.        |
+| `messages`        | `list[dict]`                                 | —       | Same shape as OpenAI’s `messages`. |
+| `response_format` | `pydantic.BaseModel` *or* `dict JSON‑Schema` | —       | Target structure.                  |
+| `n_consensus`     | `int`                                        | `1`     | >1 enables consensus.              |
+
+### Example
+
+<CodeGroup>
+
+```python python {22}
+from uiform import UiForm
+from pydantic import BaseModel
+
+client = UiForm()
+
+class CalendarEvent(BaseModel):
+    name: str
+    date: str
+    participants: list[str]
+
+completion = client.completions.parse(
+    model="gpt-4.1",
+    messages=[
+        {"role": "system", "content": "Extract the event information."},
+        {"role": "user", "content": "Alice and Bob are going to a science fair on Friday."},
+    ],
+    response_format=CalendarEvent,
+    n_consensus=4
+)
+
+event = completion.choices[0].message.parsed
+```
+
+
+```bash curl
+curl https://api.uiform.com/v1/completions \
+  -H "API-Key: $UIFORM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4.1",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are an expert at structured data extraction. You will be given unstructured text from a research paper and should convert it into the given structure."
+      },
+      {
+        "role": "user",
+        "content": "..."
+      }
+    ],
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "research_paper_extraction",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "authors": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "abstract": { "type": "string" },
+            "keywords": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["title", "authors", "abstract", "keywords"],
+          "additionalProperties": false
+        },
+        "strict": true
+      }
+    },
+    "n_consensus": 4
+  }'
+```
+
+</CodeGroup>
+
+---
+
 ## Responses API
+
+Use when you have a *single* prompt + *single* expected answer (e.g., function‑calling, multi‑step reasoning).
+
+| Method                        | Description                                                               |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| `client.responses.parse(...)` | Thin wrapper for the `/responses` endpoint; consensus works the same way. |
+
+### Arguments
+
+Same as **Completions API**: `model`, `input`, `text_format|text_schema`, `n_consensus`.
+
+### Example
+
+
+
+<CodeGroup>
+
+```python python {24}
+from uiform import UiForm
+from pydantic import BaseModel
+
+client = UiForm()
+
+class Step(BaseModel):
+    explanation: str
+    output: str
+
+class MathReasoning(BaseModel):
+    steps: list[Step]
+    final_answer: str
+
+response = client.responses.parse(
+    model="gpt-4o-2024-08-06",
+    input=[
+        {
+            "role": "system",
+            "content": "You are a helpful math tutor. Guide the user through the solution step by step.",
+        },
+        {"role": "user", "content": "how can I solve 8x + 7 = -23"},
+    ],
+    text_format=MathReasoning,
+    n_consensus=4
+)
+
+math_reasoning = response.output_parsed
+```
+
+
+```bash curl
+curl -X 'POST' \
+  'https://api.uiform.com/v1/responses' \
+  -H 'API-Key: $UIFORM_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "gpt-4o-2024-08-06",
+    "input": [
+      {
+        "role": "system",
+        "content": "You are a helpful math tutor. Guide the user through the solution step by step."
+      },
+      {
+        "role": "user",
+        "content": "how can I solve 8x + 7 = -23"
+      }
+    ],
+    "text": {
+      "format": {
+        "type": "json_schema",
+        "name": "math_reasoning",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "explanation": { "type": "string" },
+                  "output": { "type": "string" }
+                },
+                "required": ["explanation", "output"],
+                "additionalProperties": false
+              }
+            },
+            "final_answer": { "type": "string" }
+          },
+          "required": ["steps", "final_answer"],
+          "additionalProperties": false
+        },
+        "strict": true
+      }
+    },
+    "n_consensus": 4
+  }'
+```
+
+</CodeGroup>
+
+
+---
