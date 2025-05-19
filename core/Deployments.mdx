@@ -932,3 +932,187 @@ uiclient.deployments.outlook.delete(
 
 ```
 </CodeGroup>
+
+
+
+
+
+
+## Logs
+
+Every time a deployment (link, mailbox, endpoint, or Outlook add-in) triggers a webhook, a log entry is created.
+These logs let you
+	1.	Inspect the raw request ↔ response cycle.
+	2.	Debug failed calls (4xx/5xx).
+	3.	Rerun a call with one click/line of code, without resending the original file/email.
+
+### Object
+
+<ResponseField name="Object" type="AutomationLog">
+A single webhook attempt.
+  <Expandable title="properties">
+    <ResponseField name="object" type="string">
+      Always `"automation.log"`.
+    </ResponseField>
+
+
+<ResponseField name="id" type="string">
+  Unique identifier, prefixed with `log_`.
+</ResponseField>
+
+<ResponseField name="deployment_id" type="string">
+  ID of the deployment that generated the log.
+</ResponseField>
+
+<ResponseField name="event" type="string">
+  Action that produced the log.  
+  Examples: `"document.processed"`, `"webhook.delivered"`, `"webhook.failed"`.
+</ResponseField>
+
+<ResponseField name="status_code" type="int">
+  HTTP status code returned by your webhook.
+</ResponseField>
+
+<ResponseField name="status_class" type="string">
+  Convenience class: `"2xx"`, `"3xx"`, `"4xx"`, `"5xx"`.
+</ResponseField>
+
+<ResponseField name="webhook_url" type="HttpUrl">
+  Destination of the call.
+</ResponseField>
+
+<ResponseField name="duration_ms" type="int">
+  End-to-end latency in milliseconds.
+</ResponseField>
+
+<ResponseField name="request_headers" type="Dict[str, str]">
+  Headers sent to your webhook.
+</ResponseField>
+
+<ResponseField name="request_body" type="Any">
+  JSON payload sent to your webhook.
+</ResponseField>
+
+<ResponseField name="response_headers" type="Dict[str, str]">
+  Headers returned by your webhook.
+</ResponseField>
+
+<ResponseField name="response_body" type="Any">
+  Body returned by your webhook.
+</ResponseField>
+
+<ResponseField name="error_message" type="string">
+  Only present for `"4xx"` / `"5xx"` logs.
+</ResponseField>
+
+<ResponseField name="created_at" type="datetime">
+  UTC timestamp when the log was written.
+</ResponseField>
+
+  </Expandable>
+</ResponseField>
+
+
+
+
+### Get
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+log = uiclient.deployments.logs.get(
+    log_id="log_a12b3c4d-e5f6-7890-ab12-3c4d5e6f7890"
+)
+```
+```json Response
+{
+  "object": "automation.log",
+  "id": "log_a12b3c4d-e5f6-7890-ab12-3c4d5e6f7890",
+  "deployment_id": "lnk_1573aadc-e1ff-4569-80dc-05e71a6c4ff2",
+  "event": "webhook.delivered",
+  "status_code": 200,
+  "status_class": "2xx",
+  "webhook_url": "https://your_server.com/invoices/webhook",
+  "duration_ms": 342,
+  "request_headers": {"User-Agent": "UiForm/1.0"},
+  "request_body": {"invoice_number": "INV-42", "amount": 123.45},
+  "response_headers": {"Content-Type": "application/json"},
+  "response_body": {"received": true},
+  "created_at": "2025-05-11T10:20:30Z"
+}
+```
+</CodeGroup>
+
+
+
+
+
+
+### List
+
+Available filters:
+
+Argument	Example	Notes
+before / after	"log_xxx"	Cursor pagination.
+limit	50	1-100, default 10.
+order	"asc" / "desc"	By created_at.
+status_code	404	Exact match.
+status_class	"5xx"	Shorthand class.
+deployment_id	"lnk_…"	Restrict to one deployment.
+webhook_url	"https://…", partial match supported.	
+schema_id / schema_data_id	"sch_…", "scd_…"	Trace logs back to a schema run.
+
+<CodeGroup>
+```python Request
+
+from uiform import UiForm
+
+uiclient = UiForm()
+page = uiclient.deployments.logs.list(
+    limit=20,
+    status_class="4xx",
+    deployment_id="lnk_1573aadc-e1ff-4569-80dc-05e71a6c4ff2"
+)
+
+# page.data -> list[AutomationLog]
+# page.before / page.after -> cursors for the next call
+```
+</CodeGroup>
+
+
+
+
+
+
+
+
+### Rerun
+
+Use this when the original call failed (or you just want to replay it).
+The rerun is performed server-side, using the exact same payload; no need to re-upload the document/email.
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+rerun_log = uiclient.deployments.logs.rerun(
+    log_id="log_a12b3c4d-e5f6-7890-ab12-3c4d5e6f7890"
+)
+```
+```json Response
+{
+  "object": "external_request_log",
+  "id": "req_5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f8a",
+  "original_log_id": "log_a12b3c4d-e5f6-7890-ab12-3c4d5e6f7890",
+  "status_code": 200,
+  "status_class": "2xx",
+  "duration_ms": 310,
+  "response_headers": {"Content-Type": "application/json"},
+  "response_body": {"received": true},
+  "created_at": "2025-05-11T11:05:02Z"
+}
+```
+</CodeGroup>
