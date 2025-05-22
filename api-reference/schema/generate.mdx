@@ -2,3 +2,98 @@
 title: 'Generate'
 openapi: 'POST /v1/schemas/generate'
 ---
+
+
+
+
+<RequestExample>
+
+```python python
+from uiform import UiForm
+from uiform.types.mime import MIMEData
+
+client = UiForm()
+
+
+# 2) Ask UiForm to infer a JSON Schema from that document.
+response = client.schemas.generate(
+    documents=["sample_invoice.pdf"],
+    model="gpt-4o-mini",      # or any model your plan supports
+    temperature=0.0,          # keep the generation deterministic
+    modality="native",        # "native" = let the API decide best modality
+)
+
+print("Generated JSON Schema:")
+print(response.json_schema)
+```
+
+
+```bash curl
+curl https://api.uiform.com/v1/schemas/generate \
+  -H "API-Key: $UIFORM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documents": [
+      {
+        "type": "text",
+        "filename": "invoice_sample.txt",
+        "content": "Invoice No: INV-1234\nDate: 2024-12-12\nBill To: Acme Corp.\n\n1 × Quantum Stabiliser @ 800.00\nSubtotal: 800.00\nTax (5%): 40.00\nTotal: 840.00\n"
+      }
+    ],
+    "model": "gpt-4o-mini",
+    "temperature": 0.0,
+    "modality": "native",
+    "stream": false
+  }'
+
+```
+
+</RequestExample>
+
+
+<ResponseExample>
+
+```json 200
+
+{
+  "json_schema": {
+    "title": "Invoice",
+    "type": "object",
+    "properties": {
+      "invoice_number": {
+        "type": "string",
+        "description": "Unique identifier of the invoice"
+      },
+      "invoice_date": {
+        "type": "string",
+        "format": "date",
+        "description": "Date the invoice was issued"
+      },
+      "customer": {
+        "type": "string",
+        "description": "Name of the billed customer or company"
+      },
+      "line_items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "description": { "type": "string" },
+            "quantity":   { "type": "number" },
+            "unit_price": { "type": "number" },
+            "line_total": { "type": "number" }
+          },
+          "required": ["description", "quantity", "unit_price", "line_total"]
+        }
+      },
+      "subtotal": { "type": "number" },
+      "tax":      { "type": "number" },
+      "total":    { "type": "number" }
+    },
+    "required": ["invoice_number", "invoice_date", "total"]
+  }
+}
+```
+
+</ResponseExample>
+
