@@ -1,39 +1,10 @@
-We provide a quick, type‑safe wrapper around OpenAI **Chat Completions** and **Responses** endpoints with automatic consensus reconciliation.
+### What is "consensus"?
 
-
-- **Step 1: Generating diverse answers.** We purposely sample each call with `temperature > 0` to obtain *distinct* answers.
-
-- **Step 2: SOTA reconciliation.** A bespoke, finetuned LLM (code‑name **`reconcile‑v1`**) performs fuzzy string matching and majority‑vote reasoning to merge the candidates with state‑of‑the‑art accuracy.
-
----
-
-## Introduction
-
-### What is “consensus”?
-
-`n_consensus` runs several *independent* LLM calls **in parallel** and fuses their structured outputs into one validated result. The wider the sampling temperature, the more diverse the opinions—giving the reconciler richer evidence to converge on the truth.
-
-Consensus offers: 
-- **Higher accuracy** for structured data extraction
-- **Built‑in uncertainty quantification** (`likelihood` per field)
-- **Automatic guard‑rail against hallucination** without changing your business logic.
-
-### How it works
-
-1. **Spawn n requests.** Fire *n\_consensus* identical OpenAI requests with `temperature>0`.
-2. **Validate.** Parse every raw answer into a JSON object.
-3. **Reconcile.** Reconcile all valid candidates into a single solidified JSON with **`uiform‑reconcile‑v1`**, our proprietary finetuned LLM.
-4. **Return.** Surface the reconciled object in `completion.choices[0].message.parsed` or `response.output_parsed` (other completion fields are in `completion.choices[n].message`).
-
----
-
-## Introduction
-
-### What is “consensus”?
-
-`n_consensus` lets you ask several independent language‑model instances the **same** question in parallel, then merges their structured outputs into a single, validated result.
+Consensus is about asking several language‑model instances the **same** question in parallel, then merging their structured outputs into a single, consolidated result.
 
 Consensus offers higher reliability for extraction tasks, zero‑shot majority voting, uncertainty quantification, and automatic guard‑rail against hallucination—without changing your business logic.
+
+> **Related to Palantir's K-LLM strategy**: This approach follows similar principles to Palantir's "K-LLMs" methodology, where multiple models evaluate the same prompt and their outputs are synthesized for increased accuracy, confidence, and reduced hallucinations. Like Palantir's approach, UiForm's consensus mechanism helps mitigate biases from any single model while providing flexibility across different LLM providers.
 
 ### How it works
 Under the hood UiForm:
@@ -51,15 +22,24 @@ If any response fails JSON validation the call is retried once; after that a `Co
 
 ---
 
+We provide a quick, type‑safe wrapper around OpenAI **Chat Completions** and **Responses** endpoints with automatic consensus reconciliation.
+
+
+- **Step 1: Generating diverse answers.** We purposely sample each call with `temperature > 0` to obtain *distinct* answers.
+
+- **Step 2: SOTA reconciliation.** A bespoke, finetuned LLM (code‑name **`reconcile‑v1`**) performs fuzzy string matching and majority‑vote reasoning to merge the candidates with state‑of‑the‑art accuracy.
+
+
 ## Quick‑Start: Switch in One Line
 
 ```diff {9}
 -  from openai import OpenAI
 -  client = OpenAI()
 +  from uiform import UiForm
-+  client = UiForm()
++  uiclient = UiForm()
 
-  response = client.responses.create(
+-  response = client.responses.create(
++  response = uiclient.consensus.responses.create(
       model="gpt-4.1",
       input="Write a one-sentence bedtime story about a unicorn."
 +     n_consensus=4
@@ -73,9 +53,10 @@ If any response fails JSON validation the call is retried once; after that a `Co
 -  from openai import OpenAI
 -  client = OpenAI()
 +  from uiform import UiForm
-+  client = UiForm()
++  uiclient = UiForm()
 
-  completion = client.chat.completions.create(
+- completion = client.chat.completions.create(
++  completion = uiclient.consensus.completions.create(
       model="gpt-4.1",
       messages=[
           {
@@ -105,7 +86,7 @@ Everything else (models, schema, temperature, etc.) stays untouched.
 | Name              | Type                                         | Default | Notes                              |
 | ----------------- | -------------------------------------------- | ------- | ---------------------------------- |
 | `model`           | `str`                                        | —       | Any OpenAI chat model name.        |
-| `messages`        | `list[dict]`                                 | —       | Same shape as OpenAI’s `messages`. |
+| `messages`        | `list[dict]`                                 | —       | Same shape as OpenAI's `messages`. |
 | `response_format` | `pydantic.BaseModel` *or* `dict JSON‑Schema` | —       | Target structure.                  |
 | `n_consensus`     | `int`                                        | `1`     | >1 enables consensus.              |
 
@@ -117,14 +98,14 @@ Everything else (models, schema, temperature, etc.) stays untouched.
 from uiform import UiForm
 from pydantic import BaseModel
 
-client = UiForm()
+uiclient = UiForm()
 
 class CalendarEvent(BaseModel):
     name: str
     date: str
     participants: list[str]
 
-completion = client.completions.parse(
+completion = uiclient.consensus.completions.parse(
     model="gpt-4.1",
     messages=[
         {"role": "system", "content": "Extract the event information."},
@@ -139,7 +120,7 @@ event = completion.choices[0].message.parsed
 
 
 ```bash curl
-curl https://api.uiform.com/v1/completions \
+curl https://api.uiform.com/v1/consensus/completions \
   -H "API-Key: $UIFORM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -208,7 +189,7 @@ Same as **Completions API**: `model`, `input`, `text_format|text_schema`, `n_con
 from uiform import UiForm
 from pydantic import BaseModel
 
-client = UiForm()
+uiclient = UiForm()
 
 class Step(BaseModel):
     explanation: str
@@ -218,7 +199,7 @@ class MathReasoning(BaseModel):
     steps: list[Step]
     final_answer: str
 
-response = client.responses.parse(
+response = uiclient.consensus.responses.parse(
     model="gpt-4o-2024-08-06",
     input=[
         {
@@ -237,7 +218,7 @@ math_reasoning = response.output_parsed
 
 ```bash curl
 curl -X 'POST' \
-  'https://api.uiform.com/v1/responses' \
+  'https://api.uiform.com/v1/consensus/responses' \
   -H 'API-Key: $UIFORM_API_KEY' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -287,3 +268,124 @@ curl -X 'POST' \
 
 
 ---
+
+
+## Reconcile API
+
+| Method                        | Description                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `client.consensus.reconcile(...)` | Direct access to reconcile multiple dictionaries into a single consensus result. |
+
+### Arguments
+
+| Name              | Type                                         | Default | Notes                              |
+| ----------------- | -------------------------------------------- | ------- | ---------------------------------- |
+| `list_dicts`      | `list[dict]`                                 | —       | List of dictionaries to reconcile. |
+| `reference_schema`| `dict`                                       | `None`  | Optional schema to validate dictionaries against. |
+| `mode`            | `Literal["direct", "aligned"]`               | `"direct"` | Mode for consensus computation. |
+| `idempotency_key` | `str`                                        | `None`  | Optional idempotency key for the request. |
+
+### Example
+
+<CodeGroup>
+
+```python python
+from uiform import UiForm
+
+uiclient = UiForm()
+
+# List of dictionaries to reconcile
+results = [
+    {"name": "Science Fair", "date": "2023-06-15", "participants": ["Alice", "Bob"]},
+    {"name": "Science Fair", "date": "2023-06-15", "participants": ["Alice", "Bob", "Charlie"]},
+    {"name": "Science Exhibition", "date": "2023-06-15", "participants": ["Alice", "Bob"]}
+]
+
+# Optional schema
+schema = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "date": {"type": "string"},
+        "participants": {
+            "type": "array",
+            "items": {"type": "string"}
+        }
+    },
+    "required": ["name", "date", "participants"]
+}
+
+# Reconcile the dictionaries
+consensus_result = uiclient.consensus.reconcile(
+    list_dicts=results,
+    reference_schema=schema,
+    mode="direct"
+)
+
+# Access the reconciled data and confidence scores
+reconciled_data = consensus_result["data"]
+confidence = consensus_result["likelihoods"]
+```
+
+```bash curl
+curl https://api.uiform.com/v1/consensus/reconcile \
+  -H "API-Key: $UIFORM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "list_dicts": [
+      {
+        "name": "Science Fair",
+        "date": "2023-06-15",
+        "participants": ["Alice", "Bob"]
+      },
+      {
+        "name": "Science Fair",
+        "date": "2023-06-15",
+        "participants": ["Alice", "Bob", "Charlie"]
+      },
+      {
+        "name": "Science Exhibition",
+        "date": "2023-06-15",
+        "participants": ["Alice", "Bob"]
+      }
+    ],
+    "reference_schema": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "date": {"type": "string"},
+        "participants": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "required": ["name", "date", "participants"]
+    },
+    "mode": "direct"
+  }'
+```
+
+
+
+```json Response
+{
+    "data": {
+        "name": "Science Fair",
+          "date": "2023-06-15",
+          "participants": ["Alice", "Bob"]
+      },
+      "likelihoods": {
+          "name": 0.67,
+          "date": 1.0,
+          "participants": {
+              "$array": 1.0,
+              "Alice": 1.0,
+              "Bob": 1.0,
+              "Charlie": 0.33
+        }
+    }
+}
+```
+
+
+</CodeGroup>
