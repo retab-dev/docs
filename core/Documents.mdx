@@ -4,6 +4,8 @@ In this section, we will see how to use the methods of the `client.documents` mo
 
 ## Create Messages
 
+Converts any document into OpenAI-compatible chat messages. You can choose between different preprocessing parameters according to your needs: modalities (text, image, native) and image settings (dpi, browser_canvas, etc..).
+
 <ResponseField name="Returns" type="DocumentMessage Object">
 A DocumentMessage object with the messages created from the document.
   <Expandable title="properties">
@@ -98,6 +100,108 @@ doc_msg = uiclient.documents.create_messages(
 </CodeGroup>
 
 <Note>Use `doc_msg.items` to have a list of `[PIL.Image.Image | str]` objects</Note>
+
+
+
+## Create Inputs
+
+Converts any document and a json schema into OpenAI-compatible responses input. You can choose between different preprocessing parameters according to your needs: modalities (text, image, native) and image settings (dpi, browser_canvas, etc..).
+
+<ResponseField name="Returns" type="DocumentMessage Object">
+A DocumentMessage object with the document content structured according to the provided JSON schema.
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      A unique identifier for the document input.
+    </ResponseField>
+
+    <ResponseField name="object" type="string">
+      The type of object. Always "document.message".
+    </ResponseField>
+
+    <ResponseField name="messages" type="array[ChatCompletionUiformMessage]">
+      A list of messages containing the document content with schema context.
+    </ResponseField>
+
+    <ResponseField name="created" type="integer">
+      The Unix timestamp (in seconds) of when the document input was created.
+    </ResponseField>
+
+    <ResponseField name="modality" type="native | text | image | image+text">
+      The modality used for processing the document.
+    </ResponseField>
+
+    <ResponseField name="document" type="MIMEData Object">
+      The document being processed.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```python Request
+from uiform import UiForm
+
+uiclient = UiForm()
+doc_input = uiclient.documents.create_inputs(
+    document = "freight/invoice.pdf",
+    json_schema = {
+        "properties": {
+            "invoice_number": {
+                "type": "string",
+                "description": "The invoice number"
+            },
+            "total_amount": {
+                "type": "number",
+                "description": "The total invoice amount"
+            },
+            "issue_date": {
+                "type": "string",
+                "description": "The date the invoice was issued"
+            }
+        },
+        "required": ["invoice_number", "total_amount", "issue_date"]
+    },
+    modality = "text",
+    image_settings = {
+        "correct_image_orientation": True,
+        "dpi": 72,
+        "image_to_text": "ocr"
+    }
+)
+```
+```json Response
+{
+    "id": "doc_fe785c13-92b4-47ea-b3d1-a8c61d82f7ec",
+    "object": "document.message",
+    "messages": [
+        {
+            "role": "developer",
+            "content": [
+                {
+                    "text": "Please extract the following information from this document:\n- invoice_number: The invoice number\n- total_amount: The total invoice amount\n- issue_date: The date the invoice was issued",
+                    "type": "text"
+                }
+            ]
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "ACME CORPORATION\nINVOICE\n\nInvoice #: INV-2024-0789\nDate: April 15, 2024\n\nBill To:\nBeta Industries GmbH\n789 Pine Street\nMunich, Bavaria 80331\nGermany\n\nDescription                  Qty    Rate      Amount\n------------------------------------ ---------- ----------\nPremium Widgets              10     €125.00   €1,250.00\nExpress Shipping                             €75.00\n                                     Subtotal €1,325.00\n                                     VAT (19%) €251.75\n                                     TOTAL    €1,576.75\n\nPayment Terms: Net 30\nBank Details: IBAN: DE89 3704 0044 0532 0130 00\n\nThank you for your business!",
+                    "type": "text"
+                }
+            ]
+        }
+    ],
+    "created": 1737482631,
+    "modality": "text",
+    "document": {
+        "id": "e7a8b9f5d2c1a6b3e7a8b9f5d2c1a6b3e7a8b9f5d2c1a6b3e7a8b9f5d2c1a6b3",
+        "name": "invoice.pdf",
+        "mime_type": "application/pdf"
+    }
+}
+```
+</CodeGroup>
 
 
 
