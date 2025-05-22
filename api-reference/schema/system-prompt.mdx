@@ -2,3 +2,142 @@
 title: 'System Prompt'
 openapi: 'POST /v1/schemas/system_prompt'
 ---
+
+<RequestExample>
+
+```python python
+from uiform import UiForm
+from uiform.types.mime import MIMEData
+
+client = UiForm()
+
+# Load your JSON schema
+json_schema = {
+  "title": "Invoice",
+  "type": "object",
+  "properties": {
+    "invoice_number": {
+      "type": "string",
+      "description": "Unique identifier of the invoice"
+    },
+    "invoice_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the invoice was issued"
+    },
+    "customer": {
+      "type": "string",
+      "description": "Name of the billed customer or company"
+    },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": { "type": "string" },
+          "quantity": { "type": "number" },
+          "unit_price": { "type": "number" },
+          "line_total": { "type": "number" }
+        }
+      }
+    },
+    "subtotal": { "type": "number" },
+    "tax": { "type": "number" },
+    "total": { "type": "number" }
+  }
+}
+
+# Generate a system prompt from the schema
+response = client.schemas.system_prompt(
+    raw_schema=json_schema,
+    documents=["sample_invoice.pdf"],  # Optional: provide sample documents
+    model="gpt-4o-mini",
+    temperature=0.0,
+    modality="native",
+    stream=False  # Set to True for streaming response
+)
+
+print(response)  # Plain text response
+```
+
+```bash curl
+curl https://api.uiform.com/v1/schemas/system_prompt \
+  -H "API-Key: $UIFORM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "raw_schema": {
+      "title": "Invoice",
+      "type": "object",
+      "properties": {
+        "invoice_number": {
+          "type": "string",
+          "description": "Unique identifier of the invoice"
+        },
+        "invoice_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Date the invoice was issued"
+        },
+        "customer": {
+          "type": "string",
+          "description": "Name of the billed customer or company"
+        },
+        "line_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "quantity": { "type": "number" },
+              "unit_price": { "type": "number" },
+              "line_total": { "type": "number" }
+            }
+          }
+        },
+        "subtotal": { "type": "number" },
+        "tax": { "type": "number" },
+        "total": { "type": "number" }
+      }
+    },
+    "documents": [
+      {
+        "type": "text",
+        "filename": "invoice_sample.txt",
+        "content": "Invoice No: INV-1234\nDate: 2024-12-12\nBill To: Acme Corp.\n\n1 × Quantum Stabiliser @ 800.00\nSubtotal: 800.00\nTax (5%): 40.00\nTotal: 840.00\n"
+      }
+    ],
+    "model": "gpt-4o-mini",
+    "temperature": 0.0,
+    "modality": "native",
+    "stream": false
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```text 200
+You are a financial document extraction expert. Your task is to extract structured information from invoices according to a specific JSON schema.
+
+Given an invoice document, please extract the following information:
+- invoice_number: The unique identifier of the invoice (e.g., "INV-1234")
+- invoice_date: The date when the invoice was issued, in YYYY-MM-DD format
+- customer: The name of the customer or company being billed
+- line_items: An array of items purchased, each containing:
+  - description: What was purchased
+  - quantity: How many units
+  - unit_price: Price per unit
+  - line_total: Total cost for this line item
+- subtotal: The sum of all line items before tax
+- tax: The tax amount applied
+- total: The final amount due
+
+Be precise and extract only the information that is explicitly present in the document. If certain fields are not available, omit them rather than making assumptions. For dates, ensure they are properly formatted as YYYY-MM-DD.
+
+For line items, carefully identify each distinct product or service, its quantity, unit price, and calculate the line total if not explicitly stated.
+
+Your output should be valid JSON that follows the specified schema structure.
+```
+
+</ResponseExample>
