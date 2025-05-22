@@ -1504,6 +1504,7 @@
           "Documents"
         ],
         "summary": "Create Inputs",
+        "description": "A route for converting any document into OpenAI-compatible responses input.\nYou can choose between different preprocessing parameters according to your needs: modalities (text, image, native) and image settings (dpi, browser_canvas, etc..).",
         "operationId": "create_inputs_v1_documents_create_inputs_post",
         "requestBody": {
           "content": {
@@ -16159,6 +16160,117 @@
         }
       }
     },
+    "/v1/miscellaneous/align_dicts": {
+      "post": {
+        "tags": [
+          "Miscellaneous"
+        ],
+        "summary": "Align Dicts",
+        "operationId": "align_dicts_v1_miscellaneous_align_dicts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlignDictsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlignDictsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ]
+      }
+    },
+    "/v1/miscellaneous/consensus_dict": {
+      "post": {
+        "tags": [
+          "Miscellaneous"
+        ],
+        "summary": " Consensus Dict",
+        "description": "Consensus of a list of dictionaries",
+        "operationId": "_consensus_dict_v1_miscellaneous_consensus_dict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/cube_server__services__v1__miscellaneous__routes__ConsensusDictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsensusDictResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ]
+      }
+    },
     "/v1/miscellaneous/compute_dict_similarity": {
       "post": {
         "tags": [
@@ -17039,14 +17151,14 @@
         }
       }
     },
-    "/v1/consensus/extract-comparison": {
+    "/v1/consensus/distances": {
       "post": {
         "tags": [
           "Consensus"
         ],
         "summary": "Compare Extractions",
         "description": "Compare two extraction results using specified similarity metric.\n\nReturns a dictionary with similarity scores for each corresponding field.",
-        "operationId": "compare_extractions_v1_consensus_extract_comparison_post",
+        "operationId": "compare_extractions_v1_consensus_distances_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -17079,6 +17191,62 @@
             }
           }
         }
+      }
+    },
+    "/v1/consensus/reconcile": {
+      "post": {
+        "tags": [
+          "Consensus"
+        ],
+        "summary": " Reconcile",
+        "description": "Generates a consensus dictionary from multiple input dictionaries. This endpoint reconciles variations and inconsistencies across multiple dictionaries to produce a single unified dictionary.",
+        "operationId": "_reconcile_v1_consensus_reconcile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/cube_server__services__v1__consensus__routes__ConsensusDictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsensusDictResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ]
       }
     },
     "/v1/job_system/job_executions/": {
@@ -18060,6 +18228,64 @@
           "domain"
         ],
         "title": "AddDomainRequest"
+      },
+      "AlignDictsRequest": {
+        "properties": {
+          "list_dicts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "List Dicts"
+          },
+          "min_support_ratio": {
+            "type": "number",
+            "title": "Min Support Ratio",
+            "description": "Only used if reference_idx is not provided. This is used in the reference elements selection. A reference element will be considered only if its support ratio is greater or equal to this value.",
+            "default": 0.51
+          },
+          "reference_idx": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Idx",
+            "description": "If one of the dictionaries is to be used as a reference for the alignment, specify the index of that dictionary here."
+          }
+        },
+        "type": "object",
+        "required": [
+          "list_dicts"
+        ],
+        "title": "AlignDictsRequest"
+      },
+      "AlignDictsResponse": {
+        "properties": {
+          "aligned_dicts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Aligned Dicts"
+          },
+          "key_mapping_all": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Key Mapping All"
+          }
+        },
+        "type": "object",
+        "required": [
+          "aligned_dicts",
+          "key_mapping_all"
+        ],
+        "title": "AlignDictsResponse"
       },
       "Amount": {
         "properties": {
@@ -21532,6 +21758,26 @@
           "type"
         ],
         "title": "ComputerTool"
+      },
+      "ConsensusDictResponse": {
+        "properties": {
+          "consensus_dict": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Consensus Dict"
+          },
+          "consensus_likelihoods": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Consensus Likelihoods"
+          }
+        },
+        "type": "object",
+        "required": [
+          "consensus_dict",
+          "consensus_likelihoods"
+        ],
+        "title": "ConsensusDictResponse"
       },
       "ContentBlockSourceParam": {
         "properties": {
@@ -34835,6 +35081,28 @@
         ],
         "title": "WorkflowStatus"
       },
+      "_ConsensusSettings": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "aligned"
+            ],
+            "title": "Mode",
+            "description": "The mode to use for the consensus. If 'direct', the consensus is computed directly from the list of dictionaries. If 'aligned', the consensus is computed from the aligned dictionaries.",
+            "default": "direct"
+          },
+          "min_support_ratio": {
+            "type": "number",
+            "title": "Min Support Ratio",
+            "description": "This is used in the reference elements selection. A reference element will be considered only if its support ratio is greater or equal to this value.",
+            "default": 0.51
+          }
+        },
+        "type": "object",
+        "title": "_ConsensusSettings"
+      },
       "_DocumentExtractRequest": {
         "properties": {
           "document": {
@@ -35534,6 +35802,53 @@
         ],
         "title": "User"
       },
+      "cube_server__services__v1__consensus__routes__ConsensusDictRequest": {
+        "properties": {
+          "list_dicts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "List Dicts",
+            "description": "List of dictionaries that will be reconciled into a single consensus dictionary."
+          },
+          "reference_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Schema",
+            "description": "Optional schema defining the structure and types of the dictionary fields to validate the list of dictionaries against. Raise an error if one of the dictionaries does not match the schema."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "aligned"
+            ],
+            "title": "Mode",
+            "description": "The mode to use for the consensus. If 'direct', the consensus is computed directly from the list of dictionaries. If 'aligned', the consensus is computed from the aligned dictionaries.",
+            "default": "direct"
+          },
+          "min_support_ratio": {
+            "type": "number",
+            "title": "Min Support Ratio",
+            "description": "This is used in the reference elements selection. A reference element will be considered only if its support ratio is greater or equal to this value.",
+            "default": 0.51
+          }
+        },
+        "type": "object",
+        "required": [
+          "list_dicts"
+        ],
+        "title": "ConsensusDictRequest"
+      },
       "cube_server__services__v1__evals__routes__ExportToCsvResponse": {
         "properties": {
           "csv_data": {
@@ -35580,6 +35895,27 @@
         ],
         "title": "ExportToCsvResponse",
         "description": "Response from the export-to-csv endpoint"
+      },
+      "cube_server__services__v1__miscellaneous__routes__ConsensusDictRequest": {
+        "properties": {
+          "list_dicts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "List Dicts"
+          },
+          "consensus_settings": {
+            "$ref": "#/components/schemas/_ConsensusSettings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "list_dicts",
+          "consensus_settings"
+        ],
+        "title": "ConsensusDictRequest"
       },
       "cube_server__services__v1__schemas__default_templates__routes__CreateTemplateRequest": {
         "properties": {
