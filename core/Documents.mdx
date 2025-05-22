@@ -1,6 +1,29 @@
-In this section, we will see how to use the methods of the `client.documents` module. Please check the [API Reference](https://docs.uiform.com/api-reference/endpoint/create-messages) for more details.
+### Introduction
 
+The `client.documents` module offers a consolidated, production-grade pipeline for converting heterogeneous documents into chat-ready payloads for OpenAI, Anthropic, and Gemini endpoints. **Our model read documents the way humans do.** It accepts native digital files (Images, PDFs, DOCX, XLSX, E-mail) and parses text, detects visual structure across pages, tables, forms, and figures, and re-assembles the content in logical reading order before delivering it in the exact message schema required by each provider. Please check the [API Reference](https://docs.uiform.com/api-reference/endpoint/create-messages) for more details.
+```mermaid
+flowchart LR
+    A[Document] --> B[uiclient.documents.create_messages]
+    C[LLM-Ready Message] --> D[LLM Client]
+    
+    subgraph Preprocessing
+    B --> B0[Parse Text] --> C
+    B --> B1[Parse Tables] --> C
+    B --> B2[Parse Forms] --> C
+    B --> B3[Parse Charts] --> C
+    B --> B4[Parse Images] --> C
+    end
+```
 
+The module exposes three high-level methods:
+
+| Method                                         | Purpose                                                                                   | Typical Scenario                                                        |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **`create_messages`**                          | Generates a verbatim, chat-formatted rendition of the document.                           | Retrieval-augmented generation or “chat with your PDF”.                 |
+| **`create_inputs`**                            | Wraps the document in a developer prompt targeting a supplied JSON schema.                | Function-calling or structured extraction with JSON mode.               |
+| **`extractions.parse` / `extractions.stream`** | Executes the extraction and returns the parsed object (optionally with consensus voting). | One-step OCR + LLM parsing when only the structured output is required. |
+
+In practice, the workflow is straightforward: load a file, invoke the method that matches the desired outcome, and pass the returned `openai_messages` array directly to `client.chat.completions.create()`. The complexities of OCR, layout reconstruction, and prompt scaffolding are handled internally, allowing to focus solely on downstream model logic.
 
 ## Create Messages
 
