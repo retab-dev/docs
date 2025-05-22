@@ -1080,6 +1080,70 @@
               "default": false,
               "title": "Idempotency-Forcerefresh"
             }
+          },
+          {
+            "name": "OpenAI-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Openai-Api-Key"
+            }
+          },
+          {
+            "name": "Anthropic-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Anthropic-Api-Key"
+            }
+          },
+          {
+            "name": "Gemini-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Gemini-Api-Key"
+            }
+          },
+          {
+            "name": "XAI-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Xai-Api-Key"
+            }
           }
         ],
         "requestBody": {
@@ -1163,6 +1227,70 @@
               "type": "boolean",
               "default": false,
               "title": "Idempotency-Forcerefresh"
+            }
+          },
+          {
+            "name": "OpenAI-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Openai-Api-Key"
+            }
+          },
+          {
+            "name": "Anthropic-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Anthropic-Api-Key"
+            }
+          },
+          {
+            "name": "Gemini-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Gemini-Api-Key"
+            }
+          },
+          {
+            "name": "XAI-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Xai-Api-Key"
             }
           }
         ],
@@ -1302,7 +1430,7 @@
           "Documents"
         ],
         "summary": "Create Messages",
-        "description": "A route for converting document data into chat messages.\nThis endpoint takes a document and converts it into a format suitable for LLM processing,\nhandling different modalities (OCR, native) and image settings. The resulting messages\ncan be used as input for chat completions or extraction endpoints.",
+        "description": "A route for converting any document into OpenAI-compatible chat messages.\nYou can choose between different preprocessing parameters according to your needs: modalities (text, image, native) and image settings (dpi, browser_canvas, etc..).",
         "operationId": "create_messages_v1_documents_create_messages_post",
         "security": [
           {
@@ -1625,6 +1753,60 @@
             }
           }
         }
+      }
+    },
+    "/v1/documents/convert_to_pdf": {
+      "post": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Convert To Pdf",
+        "description": "Convert any document to PDF format.\nThis endpoint receives any MIME data and converts it to PDF format, regardless of the original type.\nIt supports various document types including images, HTML, PDFs, Office documents, and more.\nThe converted PDF is returned as a streaming response.",
+        "operationId": "convert_to_pdf_v1_documents_convert_to_pdf_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentTransformRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ]
       }
     },
     "/v1/schemas/templates": {
@@ -5179,6 +5361,42 @@
         ]
       }
     },
+    "/v1/models/openai_tier": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "Get Openai Tier",
+        "description": "Check if the user's OpenAI account is on a limited tier.\nReturns the tier status based on rate limit headers from the OpenAI API.",
+        "operationId": "get_openai_tier_v1_models_openai_tier_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAITierResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ]
+      }
+    },
     "/v1/deployments/mailboxes/tests/forward/{email}": {
       "post": {
         "tags": [
@@ -8195,6 +8413,20 @@
         "summary": "Test Document Upload",
         "description": "Mock endpoint that simulates the upload of a document to the deployment and sends the response to the webhook.",
         "operationId": "test_document_upload_v1_deployments_tests_upload__automation_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ],
         "parameters": [
           {
             "name": "automation_id",
@@ -8244,6 +8476,20 @@
         "summary": "Test Webhook",
         "description": "Mock endpoint that simulates the http request to the deployment webhook",
         "operationId": "test_webhook_v1_deployments_tests_webhook__automation_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ],
         "parameters": [
           {
             "name": "automation_id",
@@ -9147,7 +9393,7 @@
             }
           },
           {
-            "name": "automation_id",
+            "name": "id",
             "in": "query",
             "required": false,
             "schema": {
@@ -9159,7 +9405,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Automation Id"
+              "title": "Id"
             }
           },
           {
@@ -9327,7 +9573,7 @@
             }
           },
           {
-            "name": "automation_id",
+            "name": "deployment_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -9339,7 +9585,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Automation Id"
+              "title": "Deployment Id"
             }
           },
           {
@@ -9389,6 +9635,44 @@
               ],
               "title": "Schema Data Id"
             }
+          },
+          {
+            "name": "status_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status Code"
+            }
+          },
+          {
+            "name": "status_class",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "2xx",
+                    "3xx",
+                    "4xx",
+                    "5xx"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status Class"
+            }
           }
         ],
         "responses": {
@@ -9415,11 +9699,11 @@
         }
       }
     },
-    "/v1/deployments/{automation_id}": {
+    "/v1/deployments/{deployment_id}": {
       "get": {
-        "summary": "Get Automation By Id",
-        "description": "Get an automation by its ID.",
-        "operationId": "get_automation_by_id_v1_deployments__automation_id__get",
+        "summary": "Get Deployment By Id",
+        "description": "Get a deployment by its ID.",
+        "operationId": "get_deployment_by_id_v1_deployments__deployment_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -9436,12 +9720,12 @@
         ],
         "parameters": [
           {
-            "name": "automation_id",
+            "name": "deployment_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Automation Id"
+              "title": "Deployment Id"
             }
           }
         ],
@@ -9465,7 +9749,7 @@
                       "$ref": "#/components/schemas/Outlook-Output"
                     }
                   ],
-                  "title": "Response Get Automation By Id V1 Deployments  Automation Id  Get"
+                  "title": "Response Get Deployment By Id V1 Deployments  Deployment Id  Get"
                 }
               }
             }
@@ -9485,7 +9769,7 @@
       "put": {
         "summary": "Update Automation",
         "description": "Update an automation by its ID and type.",
-        "operationId": "update_automation_v1_deployments__automation_id__put",
+        "operationId": "update_automation_v1_deployments__deployment_id__put",
         "security": [
           {
             "HTTPBearer": []
@@ -9502,12 +9786,12 @@
         ],
         "parameters": [
           {
-            "name": "automation_id",
+            "name": "deployment_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Automation Id"
+              "title": "Deployment Id"
             }
           }
         ],
@@ -9555,7 +9839,7 @@
                       "$ref": "#/components/schemas/Outlook-Output"
                     }
                   ],
-                  "title": "Response Update Automation V1 Deployments  Automation Id  Put"
+                  "title": "Response Update Automation V1 Deployments  Deployment Id  Put"
                 }
               }
             }
@@ -9573,11 +9857,11 @@
         }
       }
     },
-    "/v1/deployments/review-extraction/{automation_id}": {
+    "/v1/deployments/review-extraction/{deployment_id}": {
       "put": {
         "summary": "Review Extraction",
         "description": "Update an automation by its ID and type.",
-        "operationId": "review_extraction_v1_deployments_review_extraction__automation_id__put",
+        "operationId": "review_extraction_v1_deployments_review_extraction__deployment_id__put",
         "security": [
           {
             "HTTPBearer": []
@@ -9594,12 +9878,12 @@
         ],
         "parameters": [
           {
-            "name": "automation_id",
+            "name": "deployment_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Automation Id"
+              "title": "Deployment Id"
             }
           },
           {
@@ -9697,6 +9981,60 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExternalRequestLog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments/logs/{log_id}": {
+      "get": {
+        "summary": "Get Log",
+        "description": "Get a specific automation log by ID",
+        "operationId": "get_log_v1_deployments_logs__log_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "log_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Log Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentLog"
                 }
               }
             }
@@ -13044,7 +13382,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": true,
-                  "title": "Response Download Extractions V1 Extractions Logs Download Get"
+                  "title": "Response Download Extractions V1 Extractions Download Get"
                 }
               }
             }
@@ -13139,7 +13477,7 @@
                     "type": "array"
                   },
                   "type": "object",
-                  "title": "Response Get Distinct Field Values V1 Extractions Logs Fields Get"
+                  "title": "Response Get Distinct Field Values V1 Extractions Fields Get"
                 }
               }
             }
@@ -13910,6 +14248,122 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Amount"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usage/time_series_organization": {
+      "get": {
+        "tags": [
+          "Usage"
+        ],
+        "summary": "Get Organization Time Series",
+        "description": "Get time series usage data for the entire organization within a specified time range.",
+        "operationId": "get_organization_time_series_v1_usage_time_series_organization_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "time_range",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TimeRange",
+              "description": "Time range for usage calculation"
+            },
+            "description": "Time range for usage calculation"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageTimeSeries"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usage/time_series_preprocessing": {
+      "get": {
+        "tags": [
+          "Usage"
+        ],
+        "summary": "Get Preprocessing Time Series",
+        "description": "Get time series usage data for preprocessing operations within a specified time range.\nEach page costs $0.001 USD.",
+        "operationId": "get_preprocessing_time_series_v1_usage_time_series_preprocessing_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "time_range",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TimeRange",
+              "description": "Time range for usage calculation"
+            },
+            "description": "Time range for usage calculation"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageTimeSeries"
                 }
               }
             }
@@ -16309,14 +16763,14 @@
         }
       }
     },
-    "/v1/completions": {
+    "/v1/consensus/completions": {
       "post": {
         "tags": [
-          "Completions"
+          "Consensus"
         ],
         "summary": "Completions",
         "description": "A route mimicking the OpenAI chat completions API with additional consensus capability.\nThis endpoint allows for consensus-based chat completions where multiple LLM instances \nare used to generate responses and reach agreement, enhancing output reliability.\nThe n_consensus parameter controls how many models will be used in the consensus process.",
-        "operationId": "completions_v1_completions_post",
+        "operationId": "completions_v1_consensus_completions_post",
         "security": [
           {
             "HTTPBearer": []
@@ -16346,6 +16800,70 @@
                 }
               ],
               "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "OpenAI-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Openai-Api-Key"
+            }
+          },
+          {
+            "name": "Anthropic-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Anthropic-Api-Key"
+            }
+          },
+          {
+            "name": "Gemini-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Gemini-Api-Key"
+            }
+          },
+          {
+            "name": "XAI-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Xai-Api-Key"
             }
           }
         ],
@@ -16383,14 +16901,14 @@
         }
       }
     },
-    "/v1/responses": {
+    "/v1/consensus/responses": {
       "post": {
         "tags": [
-          "Responses"
+          "Consensus"
         ],
         "summary": "Responses",
         "description": "A route mimicking the OpenAI responses API with additional consensus capability.\nThis endpoint allows for consensus-based completions where multiple LLM instances \nare used to generate responses and reach agreement, enhancing output reliability.\nThe n_consensus parameter controls how many models will be used in the consensus process.",
-        "operationId": "responses_v1_responses_post",
+        "operationId": "responses_v1_consensus_responses_post",
         "security": [
           {
             "HTTPBearer": []
@@ -16421,6 +16939,70 @@
               ],
               "title": "Idempotency-Key"
             }
+          },
+          {
+            "name": "OpenAI-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Openai-Api-Key"
+            }
+          },
+          {
+            "name": "Anthropic-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Anthropic-Api-Key"
+            }
+          },
+          {
+            "name": "Gemini-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Gemini-Api-Key"
+            }
+          },
+          {
+            "name": "XAI-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Xai-Api-Key"
+            }
           }
         ],
         "requestBody": {
@@ -16440,6 +17022,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UiParsedChatCompletion-Output"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/consensus/extract-comparison": {
+      "post": {
+        "tags": [
+          "Consensus"
+        ],
+        "summary": "Compare Extractions",
+        "description": "Compare two extraction results using specified similarity metric.\n\nReturns a dictionary with similarity scores for each corresponding field.",
+        "operationId": "compare_extractions_v1_consensus_extract_comparison_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComparisonRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonResponse"
                 }
               }
             }
@@ -17556,7 +18180,7 @@
           "temperature": {
             "type": "number",
             "title": "Temperature",
-            "default": 0
+            "default": 0.0
           }
         },
         "type": "object",
@@ -17933,9 +18557,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -18060,9 +18684,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -18216,110 +18840,6 @@
           "total_results"
         ],
         "title": "AutomationDecisionResponse"
-      },
-      "DeploymentLog": {
-        "properties": {
-          "object": {
-            "type": "string",
-            "const": "automation_log",
-            "title": "Object",
-            "default": "automation_log"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Unique identifier for the automation log"
-          },
-          "user_email": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "email"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "User Email"
-          },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "deployment_snapshot": {
-            "$ref": "#/components/schemas/AutomationConfig"
-          },
-          "completion": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/UiParsedChatCompletion-Output"
-              },
-              {
-                "$ref": "#/components/schemas/ChatCompletion-Output"
-              }
-            ],
-            "title": "Completion"
-          },
-          "file_metadata": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/uiform__types__mime__BaseMIMEData"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "external_request_log": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ExternalRequestLog"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "extraction_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Extraction Id",
-            "description": "ID of the extraction"
-          },
-          "api_cost": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Amount"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "readOnly": true
-          }
-        },
-        "type": "object",
-        "required": [
-          "user_email",
-          "organization_id",
-          "deployment_snapshot",
-          "completion",
-          "file_metadata",
-          "external_request_log",
-          "api_cost"
-        ],
-        "title": "DeploymentLog"
       },
       "Base64ImageSourceParam": {
         "properties": {
@@ -18899,7 +19419,7 @@
           "temperature": {
             "type": "number",
             "title": "Temperature",
-            "default": 0
+            "default": 0.0
           },
           "modality": {
             "type": "string",
@@ -20531,6 +21051,62 @@
         ],
         "title": "ClusteringMetrics"
       },
+      "CodeInterpreter": {
+        "properties": {
+          "container": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/CodeInterpreterContainerCodeInterpreterToolAuto"
+              }
+            ],
+            "title": "Container"
+          },
+          "type": {
+            "type": "string",
+            "const": "code_interpreter",
+            "title": "Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "container",
+          "type"
+        ],
+        "title": "CodeInterpreter"
+      },
+      "CodeInterpreterContainerCodeInterpreterToolAuto": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "auto",
+            "title": "Type"
+          },
+          "file_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Ids"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "CodeInterpreterContainerCodeInterpreterToolAuto"
+      },
       "ComparisonFilter": {
         "properties": {
           "key": {
@@ -20801,12 +21377,23 @@
           "total_similarity": {
             "type": "number",
             "title": "Total Similarity"
+          },
+          "aligned_per_element_similarity": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Aligned Per Element Similarity"
+          },
+          "aligned_total_similarity": {
+            "type": "number",
+            "title": "Aligned Total Similarity"
           }
         },
         "type": "object",
         "required": [
           "per_element_similarity",
-          "total_similarity"
+          "total_similarity",
+          "aligned_per_element_similarity",
+          "aligned_total_similarity"
         ],
         "title": "ComputeDictSimilarityResponse"
       },
@@ -20981,6 +21568,79 @@
           "type"
         ],
         "title": "ContentBlockSourceParam"
+      },
+      "CostBreakdown": {
+        "properties": {
+          "total": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "text_prompt_cost": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "text_cached_cost": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "text_completion_cost": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "text_total_cost": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "audio_prompt_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Amount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "audio_completion_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Amount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "audio_total_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Amount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "token_counts": {
+            "$ref": "#/components/schemas/TokenCounts"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "is_fine_tuned": {
+            "type": "boolean",
+            "title": "Is Fine Tuned",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "text_prompt_cost",
+          "text_cached_cost",
+          "text_completion_cost",
+          "text_total_cost",
+          "token_counts",
+          "model"
+        ],
+        "title": "CostBreakdown",
+        "description": "Detailed breakdown of API call costs by token type and usage category."
       },
       "CreateAndLinkOrganizationRequest": {
         "properties": {
@@ -21357,6 +22017,122 @@
         ],
         "title": "DatasetClusteringResponsePoint"
       },
+      "DeploymentLog": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "automation_log",
+            "title": "Object",
+            "default": "automation_log"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier for the automation log"
+          },
+          "user_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Email"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "deployment_snapshot": {
+            "$ref": "#/components/schemas/AutomationConfig"
+          },
+          "completion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UiParsedChatCompletion-Output"
+              },
+              {
+                "$ref": "#/components/schemas/ChatCompletion-Output"
+              }
+            ],
+            "title": "Completion"
+          },
+          "file_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/uiform__types__mime__BaseMIMEData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "external_request_log": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExternalRequestLog"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extraction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Id",
+            "description": "ID of the extraction"
+          },
+          "api_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Amount"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true
+          },
+          "cost_breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_email",
+          "organization_id",
+          "deployment_snapshot",
+          "completion",
+          "file_metadata",
+          "external_request_log",
+          "api_cost",
+          "cost_breakdown"
+        ],
+        "title": "DeploymentLog"
+      },
       "DisplayMetadata": {
         "properties": {
           "url": {
@@ -21604,6 +22380,11 @@
               "image+text"
             ],
             "title": "Modality"
+          },
+          "token_count": {
+            "$ref": "#/components/schemas/TokenCount",
+            "description": "Returns the token count for the document message.\n\nThis property calculates token usage based on both text and image content\nin the messages using the token counting utilities.\n\nReturns:\n    TokenCount: A Pydantic model with total, user, and developer token counts.",
+            "readOnly": true
           }
         },
         "type": "object",
@@ -21611,7 +22392,8 @@
           "id",
           "messages",
           "created",
-          "modality"
+          "modality",
+          "token_count"
         ],
         "title": "DocumentMessage"
       },
@@ -22133,7 +22915,7 @@
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
             "examples": [
-              0
+              0.0
             ]
           },
           "n_consensus": {
@@ -22252,9 +23034,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -22372,9 +23154,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -22725,6 +23507,7 @@
                     "schema",
                     "data_structure",
                     "file",
+                    "preprocessing",
                     "dataset",
                     "dataset_membership",
                     "endpoint",
@@ -22954,6 +23737,18 @@
             "title": "File Id",
             "description": "ID of the file"
           },
+          "file_page_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Page Count",
+            "description": "Number of pages in the file if available"
+          },
           "ocr_file_gcs": {
             "anyOf": [
               {
@@ -23034,7 +23829,7 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature used for the analysis",
-            "default": 0
+            "default": 0.0
           },
           "source": {
             "$ref": "#/components/schemas/ExtractionSource",
@@ -23154,6 +23949,17 @@
               }
             ],
             "readOnly": true
+          },
+          "cost_breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true
           }
         },
         "type": "object",
@@ -23169,7 +23975,8 @@
           "schema_id",
           "schema_data_id",
           "organization_id",
-          "api_cost"
+          "api_cost",
+          "cost_breakdown"
         ],
         "title": "Extraction"
       },
@@ -23984,7 +24791,7 @@
           "temperature": {
             "type": "number",
             "title": "Temperature",
-            "default": 0
+            "default": 0.0
           },
           "reasoning_effort": {
             "anyOf": [
@@ -24165,6 +24972,175 @@
         ],
         "title": "ImageBlockParam"
       },
+      "ImageGeneration": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "image_generation",
+            "title": "Type"
+          },
+          "background": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "transparent",
+                  "opaque",
+                  "auto"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Background"
+          },
+          "input_image_mask": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageGenerationInputImageMask"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "gpt-image-1"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "moderation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "low"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moderation"
+          },
+          "output_compression": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Compression"
+          },
+          "output_format": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "png",
+                  "webp",
+                  "jpeg"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Format"
+          },
+          "partial_images": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partial Images"
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "auto"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "1024x1024",
+                  "1024x1536",
+                  "1536x1024",
+                  "auto"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "ImageGeneration"
+      },
+      "ImageGenerationInputImageMask": {
+        "properties": {
+          "file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Id"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "ImageGenerationInputImageMask"
+      },
       "ImageSettings": {
         "properties": {
           "correct_image_orientation": {
@@ -24254,7 +25230,7 @@
           "temperature": {
             "type": "number",
             "title": "Temperature",
-            "default": 0
+            "default": 0.0
           },
           "modality": {
             "type": "string",
@@ -24810,9 +25786,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -24942,9 +25918,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -25319,6 +26295,61 @@
         ],
         "title": "ListTemplates"
       },
+      "LocalShell": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "local_shell",
+            "title": "Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "LocalShell"
+      },
+      "LocalShellCallOutput": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "output": {
+            "type": "string",
+            "title": "Output"
+          },
+          "type": {
+            "type": "string",
+            "const": "local_shell_call_output",
+            "title": "Type"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "in_progress",
+                  "completed",
+                  "incomplete"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "output",
+          "type"
+        ],
+        "title": "LocalShellCallOutput"
+      },
       "LogCompletionRequest": {
         "properties": {
           "json_schema": {
@@ -25420,6 +26451,30 @@
                     },
                     {
                       "$ref": "#/components/schemas/ResponseReasoningItemParam"
+                    },
+                    {
+                      "$ref": "#/components/schemas/openai__types__responses__response_input_param__ImageGenerationCall"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ResponseCodeInterpreterToolCallParam"
+                    },
+                    {
+                      "$ref": "#/components/schemas/openai__types__responses__response_input_param__LocalShellCall"
+                    },
+                    {
+                      "$ref": "#/components/schemas/LocalShellCallOutput"
+                    },
+                    {
+                      "$ref": "#/components/schemas/openai__types__responses__response_input_param__McpListTools"
+                    },
+                    {
+                      "$ref": "#/components/schemas/openai__types__responses__response_input_param__McpApprovalRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpApprovalResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/openai__types__responses__response_input_param__McpCall"
                     },
                     {
                       "$ref": "#/components/schemas/ItemReference"
@@ -25699,9 +26754,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -25836,9 +26891,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -25997,8 +27052,8 @@
           },
           "k": {
             "type": "integer",
-            "maximum": 100,
-            "minimum": 1,
+            "maximum": 100.0,
+            "minimum": 1.0,
             "title": "K",
             "description": "Number of matching results to return",
             "default": 20,
@@ -26012,6 +27067,230 @@
           "record"
         ],
         "title": "MatchRequest"
+      },
+      "Mcp": {
+        "properties": {
+          "server_label": {
+            "type": "string",
+            "title": "Server Label"
+          },
+          "server_url": {
+            "type": "string",
+            "title": "Server Url"
+          },
+          "type": {
+            "type": "string",
+            "const": "mcp",
+            "title": "Type"
+          },
+          "allowed_tools": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/McpAllowedToolsMcpAllowedToolsFilter"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Tools"
+          },
+          "headers": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headers"
+          },
+          "require_approval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/McpRequireApprovalMcpToolApprovalFilter"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "always",
+                  "never"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Require Approval"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "server_label",
+          "server_url",
+          "type"
+        ],
+        "title": "Mcp"
+      },
+      "McpAllowedToolsMcpAllowedToolsFilter": {
+        "properties": {
+          "tool_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Names"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "McpAllowedToolsMcpAllowedToolsFilter"
+      },
+      "McpApprovalResponse": {
+        "properties": {
+          "approval_request_id": {
+            "type": "string",
+            "title": "Approval Request Id"
+          },
+          "approve": {
+            "type": "boolean",
+            "title": "Approve"
+          },
+          "type": {
+            "type": "string",
+            "const": "mcp_approval_response",
+            "title": "Type"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "approval_request_id",
+          "approve",
+          "type"
+        ],
+        "title": "McpApprovalResponse"
+      },
+      "McpRequireApprovalMcpToolApprovalFilter": {
+        "properties": {
+          "always": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/McpRequireApprovalMcpToolApprovalFilterAlways"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "never": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/McpRequireApprovalMcpToolApprovalFilterNever"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tool_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Names"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "McpRequireApprovalMcpToolApprovalFilter"
+      },
+      "McpRequireApprovalMcpToolApprovalFilterAlways": {
+        "properties": {
+          "tool_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Names"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "McpRequireApprovalMcpToolApprovalFilterAlways"
+      },
+      "McpRequireApprovalMcpToolApprovalFilterNever": {
+        "properties": {
+          "tool_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Names"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "McpRequireApprovalMcpToolApprovalFilterNever"
       },
       "MessageParam": {
         "properties": {
@@ -26436,6 +27715,55 @@
         ],
         "title": "OCR"
       },
+      "OpenAIRateLimits": {
+        "properties": {
+          "limit_requests": {
+            "type": "integer",
+            "title": "Limit Requests",
+            "default": 0
+          },
+          "limit_tokens": {
+            "type": "integer",
+            "title": "Limit Tokens",
+            "default": 0
+          },
+          "remaining_requests": {
+            "type": "integer",
+            "title": "Remaining Requests",
+            "default": 0
+          },
+          "remaining_tokens": {
+            "type": "integer",
+            "title": "Remaining Tokens",
+            "default": 0
+          },
+          "reset_requests": {
+            "type": "string",
+            "title": "Reset Requests",
+            "default": ""
+          },
+          "reset_tokens": {
+            "type": "string",
+            "title": "Reset Tokens",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "OpenAIRateLimits",
+        "description": "Pydantic model for OpenAI API rate limits."
+      },
+      "OpenAITierResponse": {
+        "properties": {
+          "rate_limits": {
+            "$ref": "#/components/schemas/OpenAIRateLimits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rate_limits"
+        ],
+        "title": "OpenAITierResponse"
+      },
       "Organization": {
         "properties": {
           "id": {
@@ -26711,9 +28039,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -26877,9 +28205,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -27716,7 +29044,7 @@
           "ft_price_hike": {
             "type": "number",
             "title": "Ft Price Hike",
-            "default": 1
+            "default": 1.0
           }
         },
         "type": "object",
@@ -27787,7 +29115,7 @@
           "temperature": {
             "type": "number",
             "title": "Temperature",
-            "default": 0
+            "default": 0.0
           },
           "modality": {
             "type": "string",
@@ -28009,6 +29337,7 @@
                   "gpt-4o-search-preview-2025-03-11",
                   "gpt-4o-mini-search-preview-2025-03-11",
                   "chatgpt-4o-latest",
+                  "codex-mini-latest",
                   "gpt-4o-mini",
                   "gpt-4o-mini-2024-07-18",
                   "gpt-4-turbo",
@@ -28069,6 +29398,24 @@
                 },
                 {
                   "$ref": "#/components/schemas/ResponseReasoningItem"
+                },
+                {
+                  "$ref": "#/components/schemas/openai__types__responses__response_output_item__ImageGenerationCall"
+                },
+                {
+                  "$ref": "#/components/schemas/ResponseCodeInterpreterToolCall"
+                },
+                {
+                  "$ref": "#/components/schemas/openai__types__responses__response_output_item__LocalShellCall"
+                },
+                {
+                  "$ref": "#/components/schemas/openai__types__responses__response_output_item__McpCall"
+                },
+                {
+                  "$ref": "#/components/schemas/openai__types__responses__response_output_item__McpListTools"
+                },
+                {
+                  "$ref": "#/components/schemas/openai__types__responses__response_output_item__McpApprovalRequest"
                 }
               ]
             },
@@ -28113,16 +29460,28 @@
             "items": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/FileSearchTool"
+                  "$ref": "#/components/schemas/FunctionTool"
                 },
                 {
-                  "$ref": "#/components/schemas/FunctionTool"
+                  "$ref": "#/components/schemas/FileSearchTool"
                 },
                 {
                   "$ref": "#/components/schemas/WebSearchTool"
                 },
                 {
                   "$ref": "#/components/schemas/ComputerTool"
+                },
+                {
+                  "$ref": "#/components/schemas/Mcp"
+                },
+                {
+                  "$ref": "#/components/schemas/CodeInterpreter"
+                },
+                {
+                  "$ref": "#/components/schemas/ImageGeneration"
+                },
+                {
+                  "$ref": "#/components/schemas/LocalShell"
                 }
               ]
             },
@@ -28139,6 +29498,17 @@
               }
             ],
             "title": "Top P"
+          },
+          "background": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Background"
           },
           "max_output_tokens": {
             "anyOf": [
@@ -28196,6 +29566,8 @@
                   "completed",
                   "failed",
                   "in_progress",
+                  "cancelled",
+                  "queued",
                   "incomplete"
                 ]
               },
@@ -28265,6 +29637,120 @@
           "tools"
         ],
         "title": "Response"
+      },
+      "ResponseCodeInterpreterToolCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "results": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/openai__types__responses__response_code_interpreter_tool_call__ResultLogs"
+                },
+                {
+                  "$ref": "#/components/schemas/openai__types__responses__response_code_interpreter_tool_call__ResultFiles"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "interpreting",
+              "completed"
+            ],
+            "title": "Status"
+          },
+          "type": {
+            "type": "string",
+            "const": "code_interpreter_call",
+            "title": "Type"
+          },
+          "container_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Container Id"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "results",
+          "status",
+          "type"
+        ],
+        "title": "ResponseCodeInterpreterToolCall"
+      },
+      "ResponseCodeInterpreterToolCallParam": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "results": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/openai__types__responses__response_code_interpreter_tool_call_param__ResultLogs"
+                },
+                {
+                  "$ref": "#/components/schemas/openai__types__responses__response_code_interpreter_tool_call_param__ResultFiles"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "interpreting",
+              "completed"
+            ],
+            "title": "Status"
+          },
+          "type": {
+            "type": "string",
+            "const": "code_interpreter_call",
+            "title": "Type"
+          },
+          "container_id": {
+            "type": "string",
+            "title": "Container Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "results",
+          "status",
+          "type"
+        ],
+        "title": "ResponseCodeInterpreterToolCallParam"
       },
       "ResponseComputerToolCall": {
         "properties": {
@@ -29381,7 +30867,7 @@
           "deployment_snapshot_json_schema": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Automation Snapshot Json Schema"
+            "title": "Deployment Snapshot Json Schema"
           },
           "deployment_snapshot_email": {
             "anyOf": [
@@ -29395,7 +30881,7 @@
                 "type": "null"
               }
             ],
-            "title": "Automation Snapshot Email"
+            "title": "Deployment Snapshot Email"
           },
           "deployment_snapshot_name": {
             "anyOf": [
@@ -29409,7 +30895,7 @@
                 "type": "null"
               }
             ],
-            "title": "Automation Snapshot Name"
+            "title": "Deployment Snapshot Name"
           }
         },
         "type": "object",
@@ -29432,7 +30918,7 @@
           "temperature": {
             "type": "number",
             "title": "Temperature",
-            "default": 0
+            "default": 0.0
           },
           "modality": {
             "type": "string",
@@ -30163,6 +31649,66 @@
         ],
         "title": "TimeRange"
       },
+      "TokenCount": {
+        "properties": {
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens",
+            "default": 0
+          },
+          "developer_tokens": {
+            "type": "integer",
+            "title": "Developer Tokens",
+            "default": 0
+          },
+          "user_tokens": {
+            "type": "integer",
+            "title": "User Tokens",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "TokenCount"
+      },
+      "TokenCounts": {
+        "properties": {
+          "prompt_regular_text": {
+            "type": "integer",
+            "title": "Prompt Regular Text"
+          },
+          "prompt_cached_text": {
+            "type": "integer",
+            "title": "Prompt Cached Text"
+          },
+          "prompt_audio": {
+            "type": "integer",
+            "title": "Prompt Audio"
+          },
+          "completion_regular_text": {
+            "type": "integer",
+            "title": "Completion Regular Text"
+          },
+          "completion_audio": {
+            "type": "integer",
+            "title": "Completion Audio"
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt_regular_text",
+          "prompt_cached_text",
+          "prompt_audio",
+          "completion_regular_text",
+          "completion_audio",
+          "total_tokens"
+        ],
+        "title": "TokenCounts",
+        "description": "Detailed breakdown of token counts by type and category."
+      },
       "TokenPrice": {
         "properties": {
           "prompt": {
@@ -30215,7 +31761,10 @@
               "file_search",
               "web_search_preview",
               "computer_use_preview",
-              "web_search_preview_2025_03_11"
+              "web_search_preview_2025_03_11",
+              "image_generation",
+              "code_interpreter",
+              "mcp"
             ],
             "title": "Type"
           }
@@ -30442,9 +31991,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -30542,6 +32091,30 @@
                       "$ref": "#/components/schemas/ResponseReasoningItemParam"
                     },
                     {
+                      "$ref": "#/components/schemas/openai__types__responses__response_input_param__ImageGenerationCall"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ResponseCodeInterpreterToolCallParam"
+                    },
+                    {
+                      "$ref": "#/components/schemas/openai__types__responses__response_input_param__LocalShellCall"
+                    },
+                    {
+                      "$ref": "#/components/schemas/LocalShellCallOutput"
+                    },
+                    {
+                      "$ref": "#/components/schemas/openai__types__responses__response_input_param__McpListTools"
+                    },
+                    {
+                      "$ref": "#/components/schemas/openai__types__responses__response_input_param__McpApprovalRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpApprovalResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/openai__types__responses__response_input_param__McpCall"
+                    },
+                    {
                       "$ref": "#/components/schemas/ItemReference"
                     }
                   ]
@@ -30579,9 +32152,9 @@
             ],
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning": {
@@ -31112,6 +32685,17 @@
               }
             ],
             "readOnly": true
+          },
+          "cost_breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true
           }
         },
         "additionalProperties": true,
@@ -31122,7 +32706,8 @@
           "created",
           "model",
           "object",
-          "api_cost"
+          "api_cost",
+          "cost_breakdown"
         ],
         "title": "UiParsedChatCompletionChunk"
       },
@@ -33285,9 +34870,9 @@
             "type": "number",
             "title": "Temperature",
             "description": "Temperature for sampling. If not provided, the default temperature for the model will be used.",
-            "default": 0,
+            "default": 0.0,
             "examples": [
-              0
+              0.0
             ]
           },
           "reasoning_effort": {
@@ -33858,8 +35443,8 @@
           },
           "similarity": {
             "type": "number",
-            "maximum": 1,
-            "minimum": 0,
+            "maximum": 1.0,
+            "minimum": 0.0,
             "title": "Similarity",
             "description": "Similarity score between 0 and 1, where 1 indicates a perfect match",
             "examples": [
@@ -34183,6 +35768,127 @@
           "name"
         ],
         "title": "Function"
+      },
+      "openai__types__responses__response_code_interpreter_tool_call__ResultFiles": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/openai__types__responses__response_code_interpreter_tool_call__ResultFilesFile"
+            },
+            "type": "array",
+            "title": "Files"
+          },
+          "type": {
+            "type": "string",
+            "const": "files",
+            "title": "Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "files",
+          "type"
+        ],
+        "title": "ResultFiles"
+      },
+      "openai__types__responses__response_code_interpreter_tool_call__ResultFilesFile": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "title": "File Id"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "file_id",
+          "mime_type"
+        ],
+        "title": "ResultFilesFile"
+      },
+      "openai__types__responses__response_code_interpreter_tool_call__ResultLogs": {
+        "properties": {
+          "logs": {
+            "type": "string",
+            "title": "Logs"
+          },
+          "type": {
+            "type": "string",
+            "const": "logs",
+            "title": "Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "logs",
+          "type"
+        ],
+        "title": "ResultLogs"
+      },
+      "openai__types__responses__response_code_interpreter_tool_call_param__ResultFiles": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/openai__types__responses__response_code_interpreter_tool_call_param__ResultFilesFile"
+            },
+            "type": "array",
+            "title": "Files"
+          },
+          "type": {
+            "type": "string",
+            "const": "files",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files",
+          "type"
+        ],
+        "title": "ResultFiles"
+      },
+      "openai__types__responses__response_code_interpreter_tool_call_param__ResultFilesFile": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "title": "File Id"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_id",
+          "mime_type"
+        ],
+        "title": "ResultFilesFile"
+      },
+      "openai__types__responses__response_code_interpreter_tool_call_param__ResultLogs": {
+        "properties": {
+          "logs": {
+            "type": "string",
+            "title": "Logs"
+          },
+          "type": {
+            "type": "string",
+            "const": "logs",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "logs",
+          "type"
+        ],
+        "title": "ResultLogs"
       },
       "openai__types__responses__response_computer_tool_call__ActionClick": {
         "properties": {
@@ -34816,6 +36522,319 @@
         "type": "object",
         "title": "Result"
       },
+      "openai__types__responses__response_input_param__ImageGenerationCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "completed",
+              "generating",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "type": {
+            "type": "string",
+            "const": "image_generation_call",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "result",
+          "status",
+          "type"
+        ],
+        "title": "ImageGenerationCall"
+      },
+      "openai__types__responses__response_input_param__LocalShellCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "action": {
+            "$ref": "#/components/schemas/openai__types__responses__response_input_param__LocalShellCallAction"
+          },
+          "call_id": {
+            "type": "string",
+            "title": "Call Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "completed",
+              "incomplete"
+            ],
+            "title": "Status"
+          },
+          "type": {
+            "type": "string",
+            "const": "local_shell_call",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "action",
+          "call_id",
+          "status",
+          "type"
+        ],
+        "title": "LocalShellCall"
+      },
+      "openai__types__responses__response_input_param__LocalShellCallAction": {
+        "properties": {
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Command"
+          },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Env"
+          },
+          "type": {
+            "type": "string",
+            "const": "exec",
+            "title": "Type"
+          },
+          "timeout_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Ms"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          },
+          "working_directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Working Directory"
+          }
+        },
+        "type": "object",
+        "required": [
+          "command",
+          "env",
+          "type"
+        ],
+        "title": "LocalShellCallAction"
+      },
+      "openai__types__responses__response_input_param__McpApprovalRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "arguments": {
+            "type": "string",
+            "title": "Arguments"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "server_label": {
+            "type": "string",
+            "title": "Server Label"
+          },
+          "type": {
+            "type": "string",
+            "const": "mcp_approval_request",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "arguments",
+          "name",
+          "server_label",
+          "type"
+        ],
+        "title": "McpApprovalRequest"
+      },
+      "openai__types__responses__response_input_param__McpCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "arguments": {
+            "type": "string",
+            "title": "Arguments"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "server_label": {
+            "type": "string",
+            "title": "Server Label"
+          },
+          "type": {
+            "type": "string",
+            "const": "mcp_call",
+            "title": "Type"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "arguments",
+          "name",
+          "server_label",
+          "type"
+        ],
+        "title": "McpCall"
+      },
+      "openai__types__responses__response_input_param__McpListTools": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "server_label": {
+            "type": "string",
+            "title": "Server Label"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/openai__types__responses__response_input_param__McpListToolsTool"
+            },
+            "type": "array",
+            "title": "Tools"
+          },
+          "type": {
+            "type": "string",
+            "const": "mcp_list_tools",
+            "title": "Type"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "server_label",
+          "tools",
+          "type"
+        ],
+        "title": "McpListTools"
+      },
+      "openai__types__responses__response_input_param__McpListToolsTool": {
+        "properties": {
+          "input_schema": {
+            "title": "Input Schema"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "annotations": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annotations"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input_schema",
+          "name"
+        ],
+        "title": "McpListToolsTool"
+      },
       "openai__types__responses__response_input_param__Message": {
         "properties": {
           "content": {
@@ -34865,6 +36884,325 @@
           "role"
         ],
         "title": "Message"
+      },
+      "openai__types__responses__response_output_item__ImageGenerationCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "completed",
+              "generating",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "type": {
+            "type": "string",
+            "const": "image_generation_call",
+            "title": "Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "type"
+        ],
+        "title": "ImageGenerationCall"
+      },
+      "openai__types__responses__response_output_item__LocalShellCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "action": {
+            "$ref": "#/components/schemas/openai__types__responses__response_output_item__LocalShellCallAction"
+          },
+          "call_id": {
+            "type": "string",
+            "title": "Call Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "completed",
+              "incomplete"
+            ],
+            "title": "Status"
+          },
+          "type": {
+            "type": "string",
+            "const": "local_shell_call",
+            "title": "Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "action",
+          "call_id",
+          "status",
+          "type"
+        ],
+        "title": "LocalShellCall"
+      },
+      "openai__types__responses__response_output_item__LocalShellCallAction": {
+        "properties": {
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Command"
+          },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Env"
+          },
+          "type": {
+            "type": "string",
+            "const": "exec",
+            "title": "Type"
+          },
+          "timeout_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Ms"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          },
+          "working_directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Working Directory"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "command",
+          "env",
+          "type"
+        ],
+        "title": "LocalShellCallAction"
+      },
+      "openai__types__responses__response_output_item__McpApprovalRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "arguments": {
+            "type": "string",
+            "title": "Arguments"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "server_label": {
+            "type": "string",
+            "title": "Server Label"
+          },
+          "type": {
+            "type": "string",
+            "const": "mcp_approval_request",
+            "title": "Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "arguments",
+          "name",
+          "server_label",
+          "type"
+        ],
+        "title": "McpApprovalRequest"
+      },
+      "openai__types__responses__response_output_item__McpCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "arguments": {
+            "type": "string",
+            "title": "Arguments"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "server_label": {
+            "type": "string",
+            "title": "Server Label"
+          },
+          "type": {
+            "type": "string",
+            "const": "mcp_call",
+            "title": "Type"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "arguments",
+          "name",
+          "server_label",
+          "type"
+        ],
+        "title": "McpCall"
+      },
+      "openai__types__responses__response_output_item__McpListTools": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "server_label": {
+            "type": "string",
+            "title": "Server Label"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/openai__types__responses__response_output_item__McpListToolsTool"
+            },
+            "type": "array",
+            "title": "Tools"
+          },
+          "type": {
+            "type": "string",
+            "const": "mcp_list_tools",
+            "title": "Type"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "server_label",
+          "tools",
+          "type"
+        ],
+        "title": "McpListTools"
+      },
+      "openai__types__responses__response_output_item__McpListToolsTool": {
+        "properties": {
+          "input_schema": {
+            "title": "Input Schema"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "annotations": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annotations"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "input_schema",
+          "name"
+        ],
+        "title": "McpListToolsTool"
       },
       "openai__types__responses__response_output_text__AnnotationFileCitation": {
         "properties": {
@@ -35417,10 +37755,25 @@
       }
     },
     "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "Master Key": {
+        "type": "apiKey",
+        "description": "Master Key and Organization ID separated by '::'. Example: '[KEY]::[ORG_ID]'",
+        "in": "header",
+        "name": "Master-Key"
+      },
       "API Key": {
         "type": "apiKey",
         "in": "header",
         "name": "Api-Key"
+      },
+      "Outlook Auth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Outlook-Auth"
       },
       "HTTPBasic": {
         "type": "http",
