@@ -14,7 +14,7 @@ from uiform import UiForm
 uiclient = UiForm()
 
 schema_obj = uiclient.schemas.promptify(
-    raw_schema = {
+    json_schema = {
       'properties': {
           'name': {
               'description': 'The name of the calendar event.',

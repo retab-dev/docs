@@ -10,15 +10,11 @@ openapi: 'POST /v1/schemas/generate'
 
 ```python python
 from uiform import UiForm
-from uiform.types.mime import MIMEData
-
 client = UiForm()
 
-
-# 2) Ask UiForm to infer a JSON Schema from that document.
 response = client.schemas.generate(
-    documents=["sample_invoice.pdf"],
-    model="gpt-4o-mini",      # or any model your plan supports
+    documents=["Invoice.pdf"],
+    model="gpt-4.1",      # or any model your plan supports
     temperature=0.0,          # keep the generation deterministic
     modality="native",        # "native" = let the API decide best modality
 )
@@ -35,15 +31,13 @@ curl https://api.uiform.com/v1/schemas/generate \
   -d '{
     "documents": [
       {
-        "type": "text",
-        "filename": "invoice_sample.txt",
-        "content": "Invoice No: INV-1234\nDate: 2024-12-12\nBill To: Acme Corp.\n\n1 × Quantum Stabiliser @ 800.00\nSubtotal: 800.00\nTax (5%): 40.00\nTotal: 840.00\n"
+        "filename": "Invoice.pdf",
+        "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMS..."
       }
     ],
-    "model": "gpt-4o-mini",
+    "model": "gpt-4.1",
     "temperature": 0.0,
-    "modality": "native",
-    "stream": false
+    "modality": "native"
   }'
 
 ```
@@ -54,44 +48,143 @@ curl https://api.uiform.com/v1/schemas/generate \
 <ResponseExample>
 
 ```json 200
-
 {
+  "object": "schema",
+  "created_at": "2025-05-26T14:25:47.510051Z",
   "json_schema": {
-    "title": "Invoice",
+    "title": "Invoice Document Schema",
+    "description": "A schema for storing structured data extracted from invoice documents, including parties, line items, and payment details.",
     "type": "object",
+    "X-SchemaType": "generic",
     "properties": {
       "invoice_number": {
         "type": "string",
-        "description": "Unique identifier of the invoice"
+        "description": "Unique identifier for the invoice."
       },
-      "invoice_date": {
+      "date_of_issue": {
         "type": "string",
-        "format": "date",
-        "description": "Date the invoice was issued"
+        "description": "Date when the invoice was issued."
       },
-      "customer": {
+      "date_due": {
         "type": "string",
-        "description": "Name of the billed customer or company"
+        "description": "Date when the invoice payment is due."
+      },
+      "seller": {
+        "$ref": "#/$defs/party"
+      },
+      "bill_to": {
+        "$ref": "#/$defs/party"
+      },
+      "ship_to": {
+        "$ref": "#/$defs/party"
       },
       "line_items": {
         "type": "array",
+        "description": "List of items or services billed on the invoice.",
         "items": {
-          "type": "object",
-          "properties": {
-            "description": { "type": "string" },
-            "quantity":   { "type": "number" },
-            "unit_price": { "type": "number" },
-            "line_total": { "type": "number" }
-          },
-          "required": ["description", "quantity", "unit_price", "line_total"]
+          "$ref": "#/$defs/line_item"
         }
       },
-      "subtotal": { "type": "number" },
-      "tax":      { "type": "number" },
-      "total":    { "type": "number" }
+      "subtotal": {
+        "type": "number",
+        "description": "Subtotal amount before taxes or discounts."
+      },
+      "total": {
+        "type": "number",
+        "description": "Total amount due."
+      },
+      "amount_due": {
+        "type": "number",
+        "description": "Amount due for payment."
+      },
+      "currency": {
+        "type": "string",
+        "description": "Currency code (e.g., USD, EUR)."
+      }
     },
-    "required": ["invoice_number", "invoice_date", "total"]
-  }
+    "required": [
+      "invoice_number",
+      "date_of_issue",
+      "date_due",
+      "seller",
+      "bill_to",
+      "ship_to",
+      "line_items",
+      "subtotal",
+      "total",
+      "amount_due",
+      "currency"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "party": {
+        "type": "object",
+        "description": "Information about a party involved in the invoice (seller, buyer, or recipient).",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the party."
+          },
+          "address": {
+            "type": "string",
+            "description": "Full address of the party."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address of the party."
+          },
+          "tax_id": {
+            "type": "string",
+            "description": "Tax identification number or EIN."
+          }
+        },
+        "required": [
+          "name",
+          "address",
+          "email",
+          "tax_id"
+        ],
+        "additionalProperties": false
+      },
+      "line_item": {
+        "type": "object",
+        "description": "A single item or service listed on the invoice.",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the item or service."
+          },
+          "service_period": {
+            "type": "string",
+            "description": "Service period or date range for the item."
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantity of the item or service."
+          },
+          "unit_price": {
+            "type": "number",
+            "description": "Unit price of the item or service."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Total amount for this line item."
+          }
+        },
+        "required": [
+          "description",
+          "service_period",
+          "quantity",
+          "unit_price",
+          "amount"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "strict": true,
+  "data_id": "sch_data_id_ed47b086b7d524b2",
+  "id": "sch_id_2d22907094f77ade"
 }
 ```
 

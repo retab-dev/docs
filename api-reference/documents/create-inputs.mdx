@@ -9,12 +9,13 @@ openapi: 'POST /v1/documents/create_inputs'
 
 
 ```python python
-from uiform.client import UiForm
+from uiform import UiForm
 
 uiclient = UiForm()
 response = uiclient.documents.create_inputs(
-    document = "freight/booking_confirmation.jpg",
-    json_schema = "freight/booking_confirmation_json_schema.json",
+    document = "Invoice.pdf",
+    json_schema = "Invoice_schema.json",
+    modality = "text",
 )
 ```
 
@@ -25,16 +26,181 @@ curl -X 'POST' \
   -H "API-Key: $UIFORM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "json_schema": {}
   "document": {
-    "id": "string",
-    "name": "string",
-    "mime_type": "string",
-    "content": "string"
+    "filename": "Invoice.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMS..."
   },
-  "modality": "text",
-  "model": "string",
-  "provider": "OpenAI",
+  "json_schema": {
+    "$defs": {
+        "InvoiceLineItem": {
+        "properties": {
+            "amount": {
+            "description": "Total price for this line item",
+            "title": "Amount",
+            "type": "number"
+            },
+            "description": {
+            "description": "Description of the item",
+            "title": "Description",
+            "type": "string"
+            },
+            "quantity": {
+            "description": "Quantity of the item purchased",
+            "title": "Quantity",
+            "type": "integer"
+            },
+            "unit_price": {
+            "description": "Price per unit of the item",
+            "title": "Unit Price",
+            "type": "number"
+            }
+        },
+        "required": [
+            "amount",
+            "description",
+            "quantity",
+            "unit_price"
+        ],
+        "title": "InvoiceLineItem",
+        "type": "object"
+        }
+    },
+    "X-SystemPrompt": "\nYou are an advanced document processing AI specializing in extracting structured data from invoices. Your task is to analyze invoices and provide structured JSON output that conforms to the predefined `Invoice` Pydantic model. Ensure accuracy in capturing all relevant details from the invoice image or document.\n\n**Requirements:**\n1. Extract and accurately populate the following invoice fields:\n   - Supplier information (name, phone, email, address, website)\n   - Receiver details (name, phone, email, address)\n   - Invoice details (date, ID, currency)\n   - Financial information (total amount, tax amount, net amount, amount due, amount paid since last invoice)\n   - Shipping details (ship-to name, address)\n   - Line items, each containing:\n     - Description\n     - Quantity\n     - Unit price\n     - Amount\n\n2. Handle different invoice formats and ensure robustness in field extraction, considering varying layouts and text alignments.\n\n3. Output must be formatted according to the `Invoice` model:\n\n```python\n{\n    \"supplier_phone\": \"123-456-7890\",\n    \"invoice_date\": \"2024-01-22\",\n    \"amount_due\": 68.01,\n    \"supplier_email\": \"sales@amnoshsuppliers.com\",\n    \"receiver_phone\": \"321-321-1234\",\n    \"total_tax_amount\": 225.87,\n    \"invoice_id\": \"1437\",\n    \"supplier_name\": \"AMNOSH SUPPLIERS\",\n    \"total_amount\": 12113.67,\n    \"receiver_name\": \"Johnson Carrie\",\n    \"supplier_website\": \"http://www.amnoshsuppliers.com\",\n    \"supplier_address\": \"9291 Proin Road, Lake Charles, ME-11292\",\n    \"currency\": \"USD\",\n    \"ship_to_name\": \"Johnny Patel\",\n    \"ship_to_address\": \"45 Lightning Road, Arizona, AZ 88776\",\n    \"line_items\": [\n        {\"description\": \"Drag Series Transmission Build - A WD DSM\", \"quantity\": 3, \"unit_price\": 1129.03, \"amount\": 3387.09},\n        {\"description\": \"Drive Shaft Automatic Right\", \"quantity\": 2, \"unit_price\": 243.01, \"amount\": 486.02},\n        {\"description\": \"MIZOL 20W40 Engine Oil\", \"quantity\": 4, \"unit_price\": 342.00, \"amount\": 1368.00},\n        {\"description\": \"Spirax W2 ATF\", \"quantity\": 3, \"unit_price\": 54.50, \"amount\": 163.50},\n        {\"description\": \"Hydraulic Press-25 Tons\", \"quantity\": 1, \"unit_price\": 6391.85, \"amount\": 6391.85},\n        {\"description\": \"Optional: Slotter Machine\", \"quantity\": 2, \"unit_price\": 45.67, \"amount\": 91.34}\n    ],\n    \"receiver_email\": \"proprietor@abcxyz.com\",\n    \"receiver_address\": \"45 Lightning Road, Arizona, AZ 88776\",\n    \"amount_paid_since_last_invoice\": 12045.66,\n    \"net_amount\": 68.01\n}\n```\n\n4. Ensure the output strictly adheres to the data types and field definitions specified in the model.\n\n5. Provide accurate and consistent values, minimizing extraction errors by leveraging OCR and text recognition best practices.\n",
+    "additionalProperties": true,
+    "properties": {
+        "supplier_phone": {
+        "description": "Phone number of the supplier",
+        "title": "Supplier Phone",
+        "type": "string"
+        },
+        "invoice_date": {
+        "description": "Date of the invoice",
+        "title": "Invoice Date",
+        "type": "string"
+        },
+        "amount_due": {
+        "description": "Total amount due after payments",
+        "title": "Amount Due",
+        "type": "number"
+        },
+        "supplier_email": {
+        "description": "Email address of the supplier",
+        "title": "Supplier Email",
+        "type": "string"
+        },
+        "receiver_phone": {
+        "description": "Phone number of the receiver",
+        "title": "Receiver Phone",
+        "type": "string"
+        },
+        "total_tax_amount": {
+        "description": "Total tax amount applied",
+        "title": "Total Tax Amount",
+        "type": "number"
+        },
+        "invoice_id": {
+        "description": "Unique identifier for the invoice",
+        "title": "Invoice Id",
+        "type": "string"
+        },
+        "supplier_name": {
+        "description": "Name of the supplier",
+        "title": "Supplier Name",
+        "type": "string"
+        },
+        "total_amount": {
+        "description": "Total invoice amount including tax",
+        "title": "Total Amount",
+        "type": "number"
+        },
+        "receiver_name": {
+        "description": "Name of the invoice receiver",
+        "title": "Receiver Name",
+        "type": "string"
+        },
+        "supplier_website": {
+        "description": "Website URL of the supplier",
+        "format": "uri",
+        "maxLength": 2083,
+        "minLength": 1,
+        "title": "Supplier Website",
+        "type": "string"
+        },
+        "supplier_address": {
+        "description": "Address of the supplier",
+        "title": "Supplier Address",
+        "type": "string"
+        },
+        "currency": {
+        "description": "Currency of the invoice amount",
+        "title": "Currency",
+        "type": "string"
+        },
+        "ship_to_name": {
+        "description": "Name of the person the invoice is shipped to",
+        "title": "Ship To Name",
+        "type": "string"
+        },
+        "ship_to_address": {
+        "description": "Shipping address",
+        "title": "Ship To Address",
+        "type": "string"
+        },
+        "line_items": {
+        "description": "List of line items in the invoice",
+        "items": {
+            "$ref": "#/$defs/InvoiceLineItem"
+        },
+        "title": "Line Items",
+        "type": "array"
+        },
+        "receiver_email": {
+        "description": "Email address of the receiver",
+        "title": "Receiver Email",
+        "type": "string"
+        },
+        "receiver_address": {
+        "description": "Address of the invoice receiver",
+        "title": "Receiver Address",
+        "type": "string"
+        },
+        "amount_paid_since_last_invoice": {
+        "description": "Amount paid since the last invoice",
+        "title": "Amount Paid Since Last Invoice",
+        "type": "number"
+        },
+        "net_amount": {
+        "description": "Net amount to be paid after deductions",
+        "title": "Net Amount",
+        "type": "number"
+        }
+    },
+    "required": [
+        "supplier_phone",
+        "invoice_date",
+        "amount_due",
+        "supplier_email",
+        "receiver_phone",
+        "total_tax_amount",
+        "invoice_id",
+        "supplier_name",
+        "total_amount",
+        "receiver_name",
+        "supplier_website",
+        "supplier_address",
+        "currency",
+        "ship_to_name",
+        "ship_to_address",
+        "line_items",
+        "receiver_email",
+        "receiver_address",
+        "amount_paid_since_last_invoice",
+        "net_amount"
+    ],
+    "title": "Invoice",
+    "type": "object"
+    },
+  "modality": "text"
 }'
 ```
 
@@ -45,35 +211,30 @@ curl -X 'POST' \
 
 ```json 200
 {
-    "id": "doc_dd003f95-81ce-4a55-9180-00c5a58d82ec",
-    "object": "document.inputs",
-    "inputs": [
-         {
-            "role": "developer",
-            "content": [
-                {
-                    "text": "/, ACME\n\n4% Corporation\u201d\n\nConfirmation d'affr\u00e9tement\nACME CORPORATION\n\nVAT Number: GB123456789\n\n11/8/2024, 11:41:43 AM\n\naA\n\nD\u00e9tails de la soci\u00e9t\u00e9 Site de: Adresse de facturation:\nContact: Jane Doe 456 Oak Avenue 123 Elm Street\nAcme Corporation Floor 3 Suite 500\nTel: +44 20 7946 0958 Manchester London\nEmail: client@acme.com M1 4WP. WC2N S5DU GB\nUnited Kingdom Tel: +44 20 7946 0958\n\nEmail: client@acme.com\nVAT Number: GB123456789\n\nR\u00e9f\u00e9rence a rappeler sur votre\nfacture\n\nN\u00b0OT : SHIP-001\n\nR\u00e9f.Client : BC-67890\n\nN\u00b0 Cde : SHIP-001\n\nTransporteur :\n\nTRANSPORT EXPRESS.\nAl'attention du Service Logistique\nZone Industrielle Est, Batiment C\n45 rue des Transporteurs\n\n75001 PARIS\n\nFRANCE\n\nT\u00e9l : 0123 45 67 89\n\nFax : 0123 45 67 90\n\nTva : FR12 345 678 901\n\nLe transporteur s'engage :\n\ne a-souscrire une assurance sp\u00e9cifique aux marchandises\nsensibles.\n\n* arespecter les clauses vol de ses polices d'assurance\nmarchandises transport\u00e9es.\n\n\u00a2 a v\u00e9rifier que les marchandises soient bien accompagn\u00e9es des\ndocuments et notamment des documents de douane\ncorrespondants.\n\n\u00a2 ad\u00e9clarer les incidents et notamment contacter imm\u00e9diatement\nnotre bureau d'affr\u00e9tement et le bureau de douanes le plus\nproche en cas de vol attest\u00e9.\n\n\u00a2 a mettre en oeuvre les moyens de pr\u00e9vention visant a la\ns\u00e9curisation de la marchandise dont le stationnement dans des\nendroits clos et gardienn\u00e9s.\n\n \n\nNature des marchandises: Prise en charge le Livraison le\nPoids: 500 T Pallets: 5 Unit\u00e9s: 10 Volume: 1.44 M3 5/2/2023 5/3/2023\nMetres de chargement: 0.4 ML De 08:00 a 12:00 De 10:00 a 16:00\nTemp\u00e9rature: 5\u00b0C - 25\u00b0C (Frais) Acme Corporation Beta Industries\nMarchandises dangereuses: UN1202 Classe 3 - Liquide 123 Elm Street 789 Pine Street\ninflammable Suite 500 Munich, Bavaria\nLondon, Greater London 80331 DE\nWC2N SDU GB +49 89 123456\n\n \n\n \n\n \n\nPrix convenu: 1500 EUR HT PRIX NEGOCIE GASOIL INCLUS R\u00e9f\u00e9rence a rappeler sur votre facture :\n\nBC-67890\n\nConditions de transport et de reglement :\n\nAfin de permettre un reglement conforme aux dispositions, il est rappel\u00e9 au transporteur affr\u00e9t\u00e9 que la facture ne sera admise pour paiement que sous\nla condition stricte de reception des documents l\u00e9gaux requis pour justifier de la r\u00e9alisation de la prestation de transport et notamment : I'original de la\nlettre de voiture accompagn\u00e9 du bon de livraison original r\u00e9gularis\u00e9 et la preuve de l'\u00e9change des palettes consign\u00e9es. II est a noter que le prix\nconvenu a fait l'objet d'une n\u00e9gociation entre les parties et qu'il integre notamment les charges de carburant sur la base de l'indice CNR du mois en\ncours a la date de r\u00e9alisation du transport. Pour les flux belges, le prix convenu comprend la taxe kilom\u00e9trique. Le transporteur affr\u00e9teur s'oblige a\nex\u00e9cuter l'ordre de transport confi\u00e9 par ses propres moyens. Il s'interdit de le sous-traiter a des tiers. Le non respect de cette clause entraine la\nr\u00e9solution imm\u00e9diate et de plein droit du contrat de transport. Il reconnait \u00e9galement que le forfait ci-dessus permet de couvrir l'ensemble des charges\nd\u00e9finies a l'article L3221-1 du Code des Transports. En cons\u00e9quence, il d\u00e9clare \u00e9tre a jour de son obligation de d\u00e9claration, du paiement des charges\nsociales (URSSAF) et du respect de la lutte contre le travail ill\u00e9gal. Il s'engage a respecter les obligations sur le d\u00e9tachement transnational de salari\u00e9s,\naussi il doit \u00e9tre a jour de |'\u00e9tablissement de I'attestation de d\u00e9tachement des salari\u00e9s ainsi que de la nomination d'un repr\u00e9sentant en France. Nous\nvous rappelons la l\u00e9gislation frangaise concernant le cabotage routier de marchandises qui fait l'objet des articles L.3421-3 et suivants du Code des\nTransports modifi\u00e9s par le d\u00e9cret n\u00b0 2016-418 du 7 avril 2016, tout transport doit donc \u00e9tre effectu\u00e9 dans le respect de la loi. Nous vous remercions de\nnous tenir imm\u00e9diatement inform\u00e9s de tout incident rencontr\u00e9 dans |'ex\u00e9cution de ce transport.\n\n \n\nSile transport de marchandises s'effectue sur Retour imp\u00e9ratif par fax avec la mention Bon\ndes palettes Europe, celles-ci doivent \u00e9tre pour accord, votre cachet commercial, vos\n\u00e9chang\u00e9es au chargement ou restitu\u00e9es sous noms et signature. A d\u00e9faut de retour, le\n\n8 jours. Dans le cas contraire, elles vous seront contrat de transport sera r\u00e9put\u00e9 ex\u00e9cut\u00e9 selon\nfactur\u00e9es au prix de 28 \u20ac ht/Palette (14 \u20achtde \u2014_les modalit\u00e9s pr\u00e9cit\u00e9es.Tous les bons de\n\nfrais de dossier non remboursable en cas livraisons devront \u00e9tre retourn\u00e9s sous 8 jours.\nd'avoir).\n\n \n\n \n\n \n\f",
-                    "type": "text"
-                }
-            ]
-        },
+  "id": "doc_f_I7Jj02kQpTqmDlYre0J",
+  "object": "document_message",
+  "messages": [
+    {
+      "role": "developer",
+      "content": "\n# General Instructions\n\nYou are an expert in data extraction and structured data outputs.\n\nWhen provided with a **JSON schema** and a **document**, you must:\n\n1. Carefully extract all relevant data from the provided document according to the given schema.\n2. Return extracted data strictly formatted according to the provided schema.\n3. Make sure that the extracted values are **UTF-8** encodable strings.\n4. Avoid generating bytes, binary data, base64 encoded data, or other non-UTF-8 encodable data.\n\n---\n\n## Handling Missing and Nullable Fields\n\n### Nullable Leaf Attributes\n\n- If valid data is missing or not explicitly present, set leaf attributes explicitly to `null`.\n- **Do NOT** use empty strings (`\"\"`), placeholder values, or fabricated data.\n\n**Example:**\n\n```json\n// Correct:\n{\"email\": null}\n\n// Incorrect:\n{\"email\": \"\"}\n```\n\n### Nullable Nested Objects\n\n- If an entire nested object\u2019s data is missing or incomplete, **do NOT** set the object itself to `null`.\n- Keep the object structure fully intact, explicitly setting each leaf attribute within to `null`.\n- This preserves overall structure and explicitly communicates exactly which fields lack data.\n\n**Example:**\n\n```json\n// Correct (all information is missing):\n{\n  \"address\": {\n    \"street\": null,\n    \"zipCode\": null,\n    \"city\": null\n  }\n}\n\n// Incorrect (all information is missing):\n{\n  \"address\": null\n}\n\n// Correct (only some information is missing):\n{\n  \"address\": {\n    \"street\": null,\n    \"zipCode\": null,\n    \"city\": \"Paris\"\n  }\n}\n\n// Incorrect (only some information is missing):\n{\n  \"address\": {\n    \"city\": \"Paris\"\n  }\n}\n```\n\n---\n\n## Reasoning Fields\n\nYour schema includes special reasoning fields (`reasoning___*`) used exclusively to document your extraction logic. These fields are for detailed explanations and will not appear in final outputs.\n\n| Reasoning Field Type | Field Naming Pattern       |\n|----------------------|----------------------------|\n| Root Object          | `reasoning___root`         |\n| Nested Objects       | `reasoning___[objectname]` |\n| Array Fields         | `reasoning___[arrayname]`  |\n| Array Elements       | `reasoning___item`         |\n| Leaf Attributes      | `reasoning___[attributename]` |\n\nYou MUST include these details explicitly in your reasoning fields:\n\n- **Explicit Evidence**: Quote specific lines or phrases from the document confirming your extraction.\n- **Decision Justification**: Clearly justify why specific data was chosen or rejected.\n- **Calculations/Transformations**: Document explicitly any computations, unit conversions, or normalizations.\n- **Alternative Interpretations**: Explicitly describe any alternative data interpretations considered and why you rejected them.\n- **Confidence and Assumptions**: Clearly state your confidence level and explicitly articulate any assumptions.\n\n**Example Reasoning:**\n\n> Found company name 'ACME Corp' explicitly stated in the top-right corner of page 1, matching standard letterhead format. Confirmed by matching signature block ('ACME Corp') at bottom of page 3. Confidence high. Alternative interpretation (e.g., sender's name) explicitly rejected due to explicit labeling 'Client: ACME Corp' on page 1.\n\n---\n\n## Detailed Reasoning Examples\n\n### Array Reasoning (`reasoning___[arrayname]`)\n\n- Explicitly describe how the entire array was identified.\n- List explicitly all extracted items with clear details and source references.\n\n**Example:**\n\n```markdown\nIdentified itemized invoice section clearly demarcated by header \"Invoice Items\" (page 2, lines 12\u201317). Extracted items explicitly listed:\n\n1. Office Supplies, quantity 5, unit price $4.99, total $24.95 (line 12)\n2. Printer Paper, quantity 1, unit price $5.99, total $5.99 (line 13)\n3. Stapler, quantity 1, unit price $4.07, total $4.07 (line 14)\n\nNo ambiguity detected.\n```\n\n### Array Item Reasoning (`reasoning___item`)\n\nExplicitly document evidence for each individual item:\n\n```markdown\nExtracted explicitly from line 12: 'Office Supplies x5 $4.99ea $24.95'. Quantity (5 units) multiplied explicitly by unit price ($4.99) matches listed total ($24.95). Format consistent across invoice, high confidence.\n```\n\n---\n\n## Principles for Accurate Extraction\n\nWhen performing extraction, explicitly follow these core principles:\n\n- **Transparency**: Explicitly document and justify every extraction decision.\n- **Precision**: Always verify explicitly using direct quotes from the source document.\n- **Conservatism**: Set explicitly fields as `null` when data is explicitly missing or ambiguous\u2014never fabricate or guess.\n- **Structure Preservation**: Always maintain explicitly the full schema structure, even when entire nested objects lack data (leaf attributes as null).\n\n\n## Source Fields\n\nSome leaf fields require you to explicitly provide the source of the data (verbatim from the document).\nThe idea is to simply provide a verbatim quote from the document, without any additional formatting or commentary, keeping it as close as possible to the original text.\nMake sure to reasonably include some surrounding text to provide context about the quote.\n\nYou can easily identify the fields that require a source by the `quote___[attributename]` naming pattern.\n\n**Example:**\n\n```json\n{\n  \"quote___name\": \"NAME:\nJohn Doe\",\n  \"name\": \"John Doe\"\n}\n```\n\n---\n\n# User Defined System Prompt\n\n\n\n\nYou are an advanced document processing AI specializing in extracting structured data from invoices. Your task is to analyze invoices and provide structured JSON output that conforms to the predefined `Invoice` Pydantic model. Ensure accuracy in capturing all relevant details from the invoice image or document.\n\n**Requirements:**\n1. Extract and accurately populate the following invoice fields:\n   - Supplier information (name, phone, email, address, website)\n   - Receiver details (name, phone, email, address)\n   - Invoice details (date, ID, currency)\n   - Financial information (total amount, tax amount, net amount, amount due, amount paid since last invoice)\n   - Shipping details (ship-to name, address)\n   - Line items, each containing:\n     - Description\n     - Quantity\n     - Unit price\n     - Amount\n\n2. Handle different invoice formats and ensure robustness in field extraction, considering varying layouts and text alignments.\n\n3. Output must be formatted according to the `Invoice` model:\n\n```python\n{\n    \"supplier_phone\": \"123-456-7890\",\n    \"invoice_date\": \"2024-01-22\",\n    \"amount_due\": 68.01,\n    \"supplier_email\": \"sales@amnoshsuppliers.com\",\n    \"receiver_phone\": \"321-321-1234\",\n    \"total_tax_amount\": 225.87,\n    \"invoice_id\": \"1437\",\n    \"supplier_name\": \"AMNOSH SUPPLIERS\",\n    \"total_amount\": 12113.67,\n    \"receiver_name\": \"Johnson Carrie\",\n    \"supplier_website\": \"http://www.amnoshsuppliers.com\",\n    \"supplier_address\": \"9291 Proin Road, Lake Charles, ME-11292\",\n    \"currency\": \"USD\",\n    \"ship_to_name\": \"Johnny Patel\",\n    \"ship_to_address\": \"45 Lightning Road, Arizona, AZ 88776\",\n    \"line_items\": [\n        {\"description\": \"Drag Series Transmission Build - A WD DSM\", \"quantity\": 3, \"unit_price\": 1129.03, \"amount\": 3387.09},\n        {\"description\": \"Drive Shaft Automatic Right\", \"quantity\": 2, \"unit_price\": 243.01, \"amount\": 486.02},\n        {\"description\": \"MIZOL 20W40 Engine Oil\", \"quantity\": 4, \"unit_price\": 342.00, \"amount\": 1368.00},\n        {\"description\": \"Spirax W2 ATF\", \"quantity\": 3, \"unit_price\": 54.50, \"amount\": 163.50},\n        {\"description\": \"Hydraulic Press-25 Tons\", \"quantity\": 1, \"unit_price\": 6391.85, \"amount\": 6391.85},\n        {\"description\": \"Optional: Slotter Machine\", \"quantity\": 2, \"unit_price\": 45.67, \"amount\": 91.34}\n    ],\n    \"receiver_email\": \"proprietor@abcxyz.com\",\n    \"receiver_address\": \"45 Lightning Road, Arizona, AZ 88776\",\n    \"amount_paid_since_last_invoice\": 12045.66,\n    \"net_amount\": 68.01\n}\n```\n\n4. Ensure the output strictly adheres to the data types and field definitions specified in the model.\n\n5. Provide accurate and consistent values, minimizing extraction errors by leveraging OCR and text recognition best practices.\n\n\n## Invoice -- NLP Data Structure\n\n### supplier_phone (string)\n<Description>\nPhone number of the supplier\n</Description>\n\n### invoice_date (string)\n<Description>\nDate of the invoice\n</Description>\n\n### amount_due (number)\n<Description>\nTotal amount due after payments\n</Description>\n\n### supplier_email (string)\n<Description>\nEmail address of the supplier\n</Description>\n\n### receiver_phone (string)\n<Description>\nPhone number of the receiver\n</Description>\n\n### total_tax_amount (number)\n<Description>\nTotal tax amount applied\n</Description>\n\n### invoice_id (string)\n<Description>\nUnique identifier for the invoice\n</Description>\n\n### supplier_name (string)\n<Description>\nName of the supplier\n</Description>\n\n### total_amount (number)\n<Description>\nTotal invoice amount including tax\n</Description>\n\n### receiver_name (string)\n<Description>\nName of the invoice receiver\n</Description>\n\n### supplier_website (string)\n<Description>\nWebsite URL of the supplier\n</Description>\n\n### supplier_address (string)\n<Description>\nAddress of the supplier\n</Description>\n\n### currency (string)\n<Description>\nCurrency of the invoice amount\n</Description>\n\n### ship_to_name (string)\n<Description>\nName of the person the invoice is shipped to\n</Description>\n\n### ship_to_address (string)\n<Description>\nShipping address\n</Description>\n\n### line_items (array of object)\n<Description>\nList of line items in the invoice\n</Description>\n\n#### line_items.* (object)\n<Description></Description>\n\n##### line_items.*.amount (number)\n<Description>\nTotal price for this line item\n</Description>\n\n##### line_items.*.description (string)\n<Description>\nDescription of the item\n</Description>\n\n##### line_items.*.quantity (integer)\n<Description>\nQuantity of the item purchased\n</Description>\n\n##### line_items.*.unit_price (number)\n<Description>\nPrice per unit of the item\n</Description>\n\n### receiver_email (string)\n<Description>\nEmail address of the receiver\n</Description>\n\n### receiver_address (string)\n<Description>\nAddress of the invoice receiver\n</Description>\n\n### amount_paid_since_last_invoice (number)\n<Description>\nAmount paid since the last invoice\n</Description>\n\n### net_amount (number)\n<Description>\nNet amount to be paid after deductions\n</Description>\n\n\n---\n## Expected output schema as a TypeScript interface for better readability:\n\ninterface RootInterface {\n  supplier_phone: string;\n  invoice_date: string;\n  amount_due: number;\n  supplier_email: string;\n  receiver_phone: string;\n  total_tax_amount: number;\n  invoice_id: string;\n  supplier_name: string;\n  total_amount: number;\n  receiver_name: string;\n  supplier_website: string;\n  supplier_address: string;\n  currency: string;\n  ship_to_name: string;\n  ship_to_address: string;\n  line_items: Array<{\n      amount: number;\n      description: string;\n      quantity: number;\n      unit_price: number;\n    }>;\n  receiver_email: string;\n  receiver_address: string;\n  amount_paid_since_last_invoice: number;\n  net_amount: number;\n}"
+    },
+    {
+      "role": "user",
+      "content": [
         {
-            "role": "user",
-            "content": [
-                {
-                    "text": "/, ACME\n\n4% Corporation\u201d\n\nConfirmation d'affr\u00e9tement\nACME CORPORATION\n\nVAT Number: GB123456789\n\n11/8/2024, 11:41:43 AM\n\naA\n\nD\u00e9tails de la soci\u00e9t\u00e9 Site de: Adresse de facturation:\nContact: Jane Doe 456 Oak Avenue 123 Elm Street\nAcme Corporation Floor 3 Suite 500\nTel: +44 20 7946 0958 Manchester London\nEmail: client@acme.com M1 4WP. WC2N S5DU GB\nUnited Kingdom Tel: +44 20 7946 0958\n\nEmail: client@acme.com\nVAT Number: GB123456789\n\nR\u00e9f\u00e9rence a rappeler sur votre\nfacture\n\nN\u00b0OT : SHIP-001\n\nR\u00e9f.Client : BC-67890\n\nN\u00b0 Cde : SHIP-001\n\nTransporteur :\n\nTRANSPORT EXPRESS.\nAl'attention du Service Logistique\nZone Industrielle Est, Batiment C\n45 rue des Transporteurs\n\n75001 PARIS\n\nFRANCE\n\nT\u00e9l : 0123 45 67 89\n\nFax : 0123 45 67 90\n\nTva : FR12 345 678 901\n\nLe transporteur s'engage :\n\ne a-souscrire une assurance sp\u00e9cifique aux marchandises\nsensibles.\n\n* arespecter les clauses vol de ses polices d'assurance\nmarchandises transport\u00e9es.\n\n\u00a2 a v\u00e9rifier que les marchandises soient bien accompagn\u00e9es des\ndocuments et notamment des documents de douane\ncorrespondants.\n\n\u00a2 ad\u00e9clarer les incidents et notamment contacter imm\u00e9diatement\nnotre bureau d'affr\u00e9tement et le bureau de douanes le plus\nproche en cas de vol attest\u00e9.\n\n\u00a2 a mettre en oeuvre les moyens de pr\u00e9vention visant a la\ns\u00e9curisation de la marchandise dont le stationnement dans des\nendroits clos et gardienn\u00e9s.\n\n \n\nNature des marchandises: Prise en charge le Livraison le\nPoids: 500 T Pallets: 5 Unit\u00e9s: 10 Volume: 1.44 M3 5/2/2023 5/3/2023\nMetres de chargement: 0.4 ML De 08:00 a 12:00 De 10:00 a 16:00\nTemp\u00e9rature: 5\u00b0C - 25\u00b0C (Frais) Acme Corporation Beta Industries\nMarchandises dangereuses: UN1202 Classe 3 - Liquide 123 Elm Street 789 Pine Street\ninflammable Suite 500 Munich, Bavaria\nLondon, Greater London 80331 DE\nWC2N SDU GB +49 89 123456\n\n \n\n \n\n \n\nPrix convenu: 1500 EUR HT PRIX NEGOCIE GASOIL INCLUS R\u00e9f\u00e9rence a rappeler sur votre facture :\n\nBC-67890\n\nConditions de transport et de reglement :\n\nAfin de permettre un reglement conforme aux dispositions, il est rappel\u00e9 au transporteur affr\u00e9t\u00e9 que la facture ne sera admise pour paiement que sous\nla condition stricte de reception des documents l\u00e9gaux requis pour justifier de la r\u00e9alisation de la prestation de transport et notamment : I'original de la\nlettre de voiture accompagn\u00e9 du bon de livraison original r\u00e9gularis\u00e9 et la preuve de l'\u00e9change des palettes consign\u00e9es. II est a noter que le prix\nconvenu a fait l'objet d'une n\u00e9gociation entre les parties et qu'il integre notamment les charges de carburant sur la base de l'indice CNR du mois en\ncours a la date de r\u00e9alisation du transport. Pour les flux belges, le prix convenu comprend la taxe kilom\u00e9trique. Le transporteur affr\u00e9teur s'oblige a\nex\u00e9cuter l'ordre de transport confi\u00e9 par ses propres moyens. Il s'interdit de le sous-traiter a des tiers. Le non respect de cette clause entraine la\nr\u00e9solution imm\u00e9diate et de plein droit du contrat de transport. Il reconnait \u00e9galement que le forfait ci-dessus permet de couvrir l'ensemble des charges\nd\u00e9finies a l'article L3221-1 du Code des Transports. En cons\u00e9quence, il d\u00e9clare \u00e9tre a jour de son obligation de d\u00e9claration, du paiement des charges\nsociales (URSSAF) et du respect de la lutte contre le travail ill\u00e9gal. Il s'engage a respecter les obligations sur le d\u00e9tachement transnational de salari\u00e9s,\naussi il doit \u00e9tre a jour de |'\u00e9tablissement de I'attestation de d\u00e9tachement des salari\u00e9s ainsi que de la nomination d'un repr\u00e9sentant en France. Nous\nvous rappelons la l\u00e9gislation frangaise concernant le cabotage routier de marchandises qui fait l'objet des articles L.3421-3 et suivants du Code des\nTransports modifi\u00e9s par le d\u00e9cret n\u00b0 2016-418 du 7 avril 2016, tout transport doit donc \u00e9tre effectu\u00e9 dans le respect de la loi. Nous vous remercions de\nnous tenir imm\u00e9diatement inform\u00e9s de tout incident rencontr\u00e9 dans |'ex\u00e9cution de ce transport.\n\n \n\nSile transport de marchandises s'effectue sur Retour imp\u00e9ratif par fax avec la mention Bon\ndes palettes Europe, celles-ci doivent \u00e9tre pour accord, votre cachet commercial, vos\n\u00e9chang\u00e9es au chargement ou restitu\u00e9es sous noms et signature. A d\u00e9faut de retour, le\n\n8 jours. Dans le cas contraire, elles vous seront contrat de transport sera r\u00e9put\u00e9 ex\u00e9cut\u00e9 selon\nfactur\u00e9es au prix de 28 \u20ac ht/Palette (14 \u20achtde \u2014_les modalit\u00e9s pr\u00e9cit\u00e9es.Tous les bons de\n\nfrais de dossier non remboursable en cas livraisons devront \u00e9tre retourn\u00e9s sous 8 jours.\nd'avoir).\n\n \n\n \n\n \n\f",
-                    "type": "text"
-                }
-            ]
+            "text": "<Unstructured Text Content>\n    \u00a0\nINV-2024-001 \u00b7 $XX.XX USD due [DATE]\nPage 1 of 1\nInvoice\nInvoice number INV-2024-001\nDate of issue\n[DATE]\nDate due\n[DATE]\n[VENDOR COMPANY]\n[VENDOR ADDRESS LINE 1]\n[VENDOR ADDRESS LINE 2]\n[VENDOR CITY], [VENDOR STATE] [VENDOR ZIP]\n[VENDOR COUNTRY]\n[VENDOR EMAIL]\n[VENDOR TAX ID]\nBill to\n[CUSTOMER COMPANY]\n[CUSTOMER ADDRESS LINE 1]\n[CUSTOMER ADDRESS LINE 2]\n[CUSTOMER CITY], [CUSTOMER STATE] [CUSTOMER ZIP]\n[CUSTOMER COUNTRY]\n[CUSTOMER EMAIL]\nShip to\n[RECIPIENT NAME]\n[SHIPPING ADDRESS LINE 1]\n[SHIPPING ADDRESS LINE 2]\n[SHIPPING CITY], [SHIPPING STATE] [SHIPPING ZIP]\n[SHIPPING COUNTRY]\n$XX.XX USD due [DATE]\nPay online\nDescription\nQty\nUnit price\nAmount\n[SERVICE DESCRIPTION]\n[SERVICE PERIOD]\n1\n$XX.XX\n$XX.XX\nSubtotal\n$XX.XX\nTotal\n$XX.XX\nAmount due\n$XX.XX\u00a0USD\n\u00a0\n\n    </Unstructured Text Content>\n    \n    <Structured Text Content from LLM>\n    # Invoice\n\nInvoice number INV-2024-001\nDate of issue [DATE]\nDate due [DATE]\n\n[VENDOR COMPANY]\n[VENDOR ADDRESS LINE 1]\n[VENDOR ADDRESS LINE 2]\n[VENDOR CITY], [VENDOR STATE] [VENDOR ZIP]\n[VENDOR COUNTRY]\n[VENDOR EMAIL]\n[VENDOR TAX ID]\n\nBill to\n[CUSTOMER COMPANY]\n[CUSTOMER ADDRESS LINE 1]\n[CUSTOMER ADDRESS LINE 2]\n[CUSTOMER CITY], [CUSTOMER STATE] [CUSTOMER ZIP]\n[CUSTOMER COUNTRY]\n[CUSTOMER EMAIL]\n\nShip to\n[RECIPIENT NAME]\n[SHIPPING ADDRESS LINE 1]\n[SHIPPING ADDRESS LINE 2]\n[SHIPPING CITY], [SHIPPING STATE] [SHIPPING ZIP]\n[SHIPPING COUNTRY]\n\n$XX.XX USD due [DATE]\n\nPay online\n\n~~~yaml\ntable:\n  caption: \"\"\n  dimensions:\n    rows: 1\n    columns: 4\n  header:\n    - [Description, Qty, Unit price, Amount]\n  body:\n    - [[SERVICE DESCRIPTION], 1, $XX.XX, $XX.XX]\n~~~\n\n[SERVICE PERIOD]\n\n~~~yaml\ntable:\n  caption: \"\"\n  dimensions:\n    rows: 3\n    columns: 2\n  body:\n    - [Subtotal, $XX.XX]\n    - [Total, $XX.XX]\n    - [Amount due, $XX.XX USD]\n~~~\n\nINV-2024-001 - $XX.XX USD due [DATE]\n\nPage 1 of 1\n    </Structured Text Content from LLM>\n    ",
+            "type": "text"
         }
-    ],
-    "created": 1736524416,
-    "modality": "text",
-    "document": {
-        "id": "cf908729402d0796537bb91e63df5e339ce93b4cabdcac2f9a4f90592647e130",
-        "name": "booking_confirmation.jpg",
-        "mime_type": "image/jpeg"
+      ]
     }
+  ],
+  "created": 1748269127,
+  "modality": "text",
+  "token_count": {
+    "total_tokens": 3140,
+    "developer_tokens": 2525,
+    "user_tokens": 615
+  }
 }
 ```
 
