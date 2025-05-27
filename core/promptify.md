@@ -77,14 +77,15 @@ schema_obj = uiclient.schemas.promptify(
 
 ## System Prompt
 
-The Generate System Prompt endpoint allows you to create an optimized system prompt for your JSON Schema based on example documents. This helps guide the AI to better understand the context and requirements when extracting information.
+The Schema.enhance endpoint allows you to create an optimized system prompt for your JSON Schema based on example documents. This helps guide the AI to better understand the context and requirements when extracting information.
+(coming soon) This endpoint will also receive a likelihoods/distances object that will allow you to modify the data structure of the schema (by changing confusing fields, adding new fields, removing unecessary fields, etc.). Furthermore, we will also allow this endpoint to change the field's descriptions and toggling the reasoning for each field.
 
 ```python
 from uiform import UiForm
 
 uiclient = UiForm()
 
-system_prompt = uiclient.schemas.system_prompt(
+new_schema_object = uiclient.schemas.enhance(
     json_schema = {
       'properties': {
           'name': {
