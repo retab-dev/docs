@@ -2795,19 +2795,19 @@
         ]
       }
     },
-    "/v1/schemas/system_prompt": {
+    "/v1/schemas/enhance": {
       "post": {
         "tags": [
           "Schemas"
         ],
-        "summary": "System Prompt",
-        "description": "Generates a system prompt for a given schema.",
-        "operationId": "system_prompt_v1_schemas_system_prompt_post",
+        "summary": "Enhance",
+        "description": "Enhances a JSON Schema by modifying fields and descriptions based on configuration.",
+        "operationId": "enhance_v1_schemas_enhance_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GenerateSystemPromptRequest"
+                "$ref": "#/components/schemas/EnhanceSchemaRequest"
               }
             }
           },
@@ -2878,6 +2878,62 @@
                   "additionalProperties": true,
                   "type": "object",
                   "title": "Response Cache Preload V1 Schemas Cache Preload Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          },
+          {
+            "Outlook Auth": []
+          }
+        ]
+      }
+    },
+    "/v1/schemas/evaluate": {
+      "post": {
+        "tags": [
+          "Schemas"
+        ],
+        "summary": "Evaluate Schema",
+        "description": "Evaluates a schema by performing extractions on provided documents.\nIf ground truths are provided, compares extractions against them.\nOtherwise, uses consensus likelihoods as metrics.\nReturns metrics for each document.",
+        "operationId": "evaluate_schema_v1_schemas_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateSchemaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluateSchemaResponse"
                 }
               }
             }
@@ -15612,63 +15668,6 @@
         }
       }
     },
-    "/v1/evals/map-extraction-fields/{extraction_id}": {
-      "post": {
-        "tags": [
-          "Evals"
-        ],
-        "summary": "Map Extraction Fields To Blocks",
-        "description": "Map extracted field values to their source OCR blocks within a document.\nThis helps visualize where each extracted field came from in the original document.",
-        "operationId": "map_extraction_fields_to_blocks_v1_evals_map_extraction_fields__extraction_id__post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          },
-          {
-            "Outlook Auth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "extraction_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Extraction Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FieldMappingResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/blog": {
       "get": {
         "tags": [
@@ -17797,22 +17796,20 @@
             "title": "Modality",
             "default": "native"
           },
-          "image_settings": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ImageSettings"
-              },
-              {
-                "type": "null"
-              }
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
             ],
-            "description": "Preprocessing operations applied to image before sending them to the llm",
-            "default": {
-              "correct_image_orientation": true,
-              "dpi": 72,
-              "image_to_text": "ocr",
-              "browser_canvas": "A4"
-            }
+            "title": "Browser Canvas",
+            "default": "A4"
           },
           "temperature": {
             "type": "number",
@@ -18111,9 +18108,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -18238,9 +18248,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -21904,9 +21927,22 @@
             "title": "Modality",
             "description": "The modality of the document to load."
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "json_schema": {
             "additionalProperties": true,
@@ -21939,9 +21975,22 @@
             "title": "Modality",
             "description": "The modality of the document to load."
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           }
         },
         "type": "object",
@@ -22506,15 +22555,33 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
+          "image_resolution_dpi": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ImageSettings"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
+            "title": "Image Resolution Dpi",
+            "description": "Preprocessing operations applied to image before sending them to the llm"
+          },
+          "browser_canvas": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A3",
+                  "A4",
+                  "A5"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Browser Canvas",
             "description": "Preprocessing operations applied to image before sending them to the llm"
           },
           "model": {
@@ -22654,9 +22721,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -22774,9 +22854,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -22858,6 +22951,148 @@
         ],
         "title": "Endpoint"
       },
+      "EnhanceSchemaConfig": {
+        "properties": {
+          "allow_fields_insertion": {
+            "type": "boolean",
+            "title": "Allow Fields Insertion",
+            "default": false
+          },
+          "allow_fields_deletion": {
+            "type": "boolean",
+            "title": "Allow Fields Deletion",
+            "default": false
+          },
+          "allow_field_description_update": {
+            "type": "boolean",
+            "title": "Allow Field Description Update",
+            "default": false
+          },
+          "allow_reasoning_field_toggle": {
+            "type": "boolean",
+            "title": "Allow Reasoning Field Toggle",
+            "default": false
+          },
+          "allow_system_prompt_update": {
+            "type": "boolean",
+            "title": "Allow System Prompt Update",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "EnhanceSchemaConfig"
+      },
+      "EnhanceSchemaRequest": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/MIMEData-Input"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "ground_truths": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ground Truths"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "gpt-4o-mini"
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperature",
+            "default": 0.0
+          },
+          "reasoning_effort": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Effort",
+            "default": "medium"
+          },
+          "modality": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "native",
+              "image+text"
+            ],
+            "title": "Modality"
+          },
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "default": "A4"
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "default": false
+          },
+          "tools_config": {
+            "$ref": "#/components/schemas/EnhanceSchemaConfig",
+            "description": "The configuration for the tools to use"
+          },
+          "json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Schema"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documents",
+          "modality",
+          "json_schema"
+        ],
+        "title": "EnhanceSchemaRequest",
+        "description": "The request body for enhancing a JSON Schema."
+      },
       "ErrorDetail": {
         "properties": {
           "code": {
@@ -22887,6 +23122,121 @@
           "message"
         ],
         "title": "ErrorDetail"
+      },
+      "EvaluateSchemaRequest": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/MIMEData-Input"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "ground_truths": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ground Truths"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "gpt-4o-mini"
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperature",
+            "default": 0.0
+          },
+          "reasoning_effort": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Effort",
+            "default": "medium"
+          },
+          "modality": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "native",
+              "image+text"
+            ],
+            "title": "Modality"
+          },
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus",
+            "default": 1
+          },
+          "json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Schema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documents",
+          "modality",
+          "json_schema"
+        ],
+        "title": "EvaluateSchemaRequest",
+        "description": "The request body for evaluating a JSON Schema."
+      },
+      "EvaluateSchemaResponse": {
+        "properties": {
+          "item_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/ItemMetric"
+            },
+            "type": "array",
+            "title": "Item Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_metrics"
+        ],
+        "title": "EvaluateSchemaResponse",
+        "description": "The response body for evaluating a JSON Schema."
       },
       "Evaluation-Input": {
         "properties": {
@@ -23419,15 +23769,22 @@
             "$ref": "#/components/schemas/ExtractionSource",
             "description": "Source of the extraction"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm",
-            "default": {
-              "correct_image_orientation": true,
-              "dpi": 72,
-              "image_to_text": "ocr",
-              "browser_canvas": "A4"
-            }
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "modality": {
             "type": "string",
@@ -23793,26 +24150,6 @@
           "quote"
         ],
         "title": "FieldLocation"
-      },
-      "FieldMappingResponse": {
-        "properties": {
-          "field_locations": {
-            "additionalProperties": {
-              "items": {
-                "$ref": "#/components/schemas/FieldLocation"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Field Locations"
-          }
-        },
-        "type": "object",
-        "required": [
-          "field_locations"
-        ],
-        "title": "FieldMappingResponse",
-        "description": "Response model for field mapping results"
       },
       "File": {
         "properties": {
@@ -24415,9 +24752,22 @@
             ],
             "title": "Instructions"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "stream": {
             "type": "boolean",
@@ -24489,9 +24839,22 @@
             ],
             "title": "Instructions"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "stream": {
             "type": "boolean",
@@ -24811,41 +25174,6 @@
         "type": "object",
         "title": "ImageGenerationInputImageMask"
       },
-      "ImageSettings": {
-        "properties": {
-          "correct_image_orientation": {
-            "type": "boolean",
-            "title": "Correct Image Orientation",
-            "default": true
-          },
-          "dpi": {
-            "type": "integer",
-            "title": "Dpi",
-            "default": 72
-          },
-          "image_to_text": {
-            "type": "string",
-            "enum": [
-              "ocr",
-              "llm_description"
-            ],
-            "title": "Image To Text",
-            "default": "ocr"
-          },
-          "browser_canvas": {
-            "type": "string",
-            "enum": [
-              "A3",
-              "A4",
-              "A5"
-            ],
-            "title": "Browser Canvas",
-            "default": "A4"
-          }
-        },
-        "type": "object",
-        "title": "ImageSettings"
-      },
       "ImageURL": {
         "properties": {
           "url": {
@@ -24930,9 +25258,20 @@
             "title": "Reasoning Effort",
             "default": "medium"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "default": "A4"
           },
           "n_consensus": {
             "type": "integer",
@@ -24998,6 +25337,84 @@
         ],
         "title": "InvitationRequest"
       },
+      "ItemMetric": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "The ID of the item being measured"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "The name of the item being measured"
+          },
+          "similarity": {
+            "type": "number",
+            "title": "Similarity",
+            "description": "The similarity score between 0 and 1"
+          },
+          "similarities": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Similarities",
+            "description": "The similarity scores for each item in the list"
+          },
+          "flat_similarities": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Flat Similarities",
+            "description": "The similarity scores for each item in the list in dot notation format"
+          },
+          "aligned_similarity": {
+            "type": "number",
+            "title": "Aligned Similarity",
+            "description": "The similarity score between 0 and 1, after alignment"
+          },
+          "aligned_similarities": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Aligned Similarities",
+            "description": "The similarity scores for each item in the list, after alignment"
+          },
+          "aligned_flat_similarities": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Aligned Flat Similarities",
+            "description": "The similarity scores for each item in the list in dot notation format, after alignment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "similarity",
+          "similarities",
+          "flat_similarities",
+          "aligned_similarity",
+          "aligned_similarities",
+          "aligned_flat_similarities"
+        ],
+        "title": "ItemMetric"
+      },
       "ItemReference": {
         "properties": {
           "id": {
@@ -25044,6 +25461,17 @@
             "type": "array",
             "title": "Predictions",
             "description": "The predictions of the iteration for all the documents"
+          },
+          "metric_results": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetricResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The metric results of the iteration"
           }
         },
         "type": "object",
@@ -25074,6 +25502,17 @@
             "type": "array",
             "title": "Predictions",
             "description": "The predictions of the iteration for all the documents"
+          },
+          "metric_results": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetricResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The metric results of the iteration"
           },
           "schema_data_id": {
             "type": "string",
@@ -25437,9 +25876,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -25569,9 +26021,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -26345,9 +26810,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -26482,9 +26960,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -26658,6 +27149,39 @@
           "similarity"
         ],
         "title": "MatchResultModel"
+      },
+      "Matrix": {
+        "properties": {
+          "rows": {
+            "type": "integer",
+            "title": "Rows",
+            "description": "Number of rows in the matrix"
+          },
+          "cols": {
+            "type": "integer",
+            "title": "Cols",
+            "description": "Number of columns in the matrix"
+          },
+          "type_": {
+            "type": "integer",
+            "title": "Type",
+            "description": "OpenCV data type (e.g., 0 for CV_8U)"
+          },
+          "data": {
+            "type": "string",
+            "title": "Data",
+            "description": "The matrix data compressed with gzip and encoded as base64 string for JSON serialization"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "cols",
+          "type_",
+          "data"
+        ],
+        "title": "Matrix",
+        "description": "Representation for transformation matrix, compatible with OpenCV format.\n\nThis represents transformation matrices that were applied to the original\ndocument image to produce the processed page image."
       },
       "Mcp": {
         "properties": {
@@ -26946,6 +27470,46 @@
           "role"
         ],
         "title": "MessageParam"
+      },
+      "MetricResult": {
+        "properties": {
+          "item_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/ItemMetric"
+            },
+            "type": "array",
+            "title": "Item Metrics",
+            "description": "List of similarity metrics for individual items"
+          },
+          "mean_similarity": {
+            "type": "number",
+            "title": "Mean Similarity",
+            "description": "The average similarity score across all items"
+          },
+          "aligned_mean_similarity": {
+            "type": "number",
+            "title": "Aligned Mean Similarity",
+            "description": "The average similarity score across all items, after alignment"
+          },
+          "metric_type": {
+            "type": "string",
+            "enum": [
+              "levenshtein",
+              "jaccard",
+              "hamming"
+            ],
+            "title": "Metric Type",
+            "description": "The type of similarity metric used for comparison"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_metrics",
+          "mean_similarity",
+          "aligned_mean_similarity",
+          "metric_type"
+        ],
+        "title": "MetricResult"
       },
       "MetricsResponse": {
         "properties": {
@@ -27621,9 +28185,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -27787,9 +28364,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -28441,25 +29031,40 @@
             "title": "Extraction Id",
             "description": "ID of the extraction"
           },
-          "field_locations": {
+          "ocr_file_id": {
+            "type": "string",
+            "title": "Ocr File Id",
+            "description": "ID of the OCR file"
+          },
+          "ocr_file_url": {
+            "type": "string",
+            "title": "Ocr File Url",
+            "description": "URL of the OCR file"
+          },
+          "all_choices_field_locations": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Field Locations",
-            "description": "Field locations extracted from the document"
+            "title": "All Choices Field Locations",
+            "description": "Field locations for all choices"
           }
         },
         "type": "object",
         "required": [
           "status",
           "message",
-          "extraction_id"
+          "extraction_id",
+          "ocr_file_id",
+          "ocr_file_url"
         ],
         "title": "PerformOCRResponse",
         "description": "Response model for OCR results."
@@ -30546,8 +31151,20 @@
             "title": "Modality",
             "default": "native"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "default": "A4"
           },
           "document": {
             "$ref": "#/components/schemas/MIMEData-Input"
@@ -32687,15 +33304,32 @@
             ],
             "title": "Webhook Headers"
           },
-          "image_settings": {
+          "image_resolution_dpi": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ImageSettings"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Image Resolution Dpi"
+          },
+          "browser_canvas": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A3",
+                  "A4",
+                  "A5"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Browser Canvas"
           },
           "modality": {
             "anyOf": [
@@ -32927,15 +33561,32 @@
             ],
             "title": "Webhook Headers"
           },
-          "image_settings": {
+          "image_resolution_dpi": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ImageSettings"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Image Resolution Dpi"
+          },
+          "browser_canvas": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A3",
+                  "A4",
+                  "A5"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Browser Canvas"
           },
           "modality": {
             "anyOf": [
@@ -33082,15 +33733,32 @@
             ],
             "title": "Webhook Headers"
           },
-          "image_settings": {
+          "image_resolution_dpi": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ImageSettings"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Image Resolution Dpi"
+          },
+          "browser_canvas": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A3",
+                  "A4",
+                  "A5"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Browser Canvas"
           },
           "modality": {
             "anyOf": [
@@ -33244,15 +33912,32 @@
             ],
             "title": "Webhook Headers"
           },
-          "image_settings": {
+          "image_resolution_dpi": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ImageSettings"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Image Resolution Dpi"
+          },
+          "browser_canvas": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A3",
+                  "A4",
+                  "A5"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Browser Canvas"
           },
           "modality": {
             "anyOf": [
@@ -34426,9 +35111,22 @@
             ],
             "title": "Modality"
           },
-          "image_settings": {
-            "$ref": "#/components/schemas/ImageSettings",
-            "description": "Preprocessing operations applied to image before sending them to the llm"
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "browser_canvas": {
+            "type": "string",
+            "enum": [
+              "A3",
+              "A4",
+              "A5"
+            ],
+            "title": "Browser Canvas",
+            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
+            "default": "A4"
           },
           "model": {
             "type": "string",
@@ -37185,6 +37883,12 @@
             "type": "integer",
             "title": "Height"
           },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "The unit of the page dimensions",
+            "default": "pixels"
+          },
           "blocks": {
             "items": {
               "$ref": "#/components/schemas/TextBox"
@@ -37205,6 +37909,15 @@
             },
             "type": "array",
             "title": "Tokens"
+          },
+          "transforms": {
+            "items": {
+              "$ref": "#/components/schemas/Matrix"
+            },
+            "type": "array",
+            "title": "Transforms",
+            "description": "Transformation matrices applied to the original document image",
+            "default": []
           }
         },
         "type": "object",
