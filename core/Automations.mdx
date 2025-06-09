@@ -1,5 +1,5 @@
 
-In this section, we will see how to use the methods of the `client.automations` module. Please check the [API Reference](https://docs.uiform.com/api-reference/deployments/links/create) for more details.
+In this section, we will see how to use the methods of the `client.processors.automations` module. Please check the [API Reference](https://docs.uiform.com/api-reference/deployments/links/create) for more details.
 
 ---
 ## Introduction
@@ -27,7 +27,7 @@ You can create, monitor, update, delete and test all the deployments in the [das
 from uiform import UiForm
 
 uiclient = UiForm()
-log = uiclient.automations.tests.webhook(
+log = uiclient.processors.automations.tests.webhook(
     id="lnk_1573aadc-e1ff-4569-80dc-05e71a6c4ff2",
 )
 ```
@@ -42,7 +42,7 @@ log = uiclient.automations.tests.webhook(
 from uiform import UiForm
 
 uiclient = UiForm()
-log = uiclient.automations.tests.upload(
+log = uiclient.processors.automations.tests.upload(
     id="lnk_1573aadc-e1ff-4569-80dc-05e71a6c4ff2",
     document = "invoice.pdf"
 )
@@ -83,32 +83,8 @@ An Link object containing the extraction link configuration.
       Headers to send with the webhook request.
     </ResponseField>
 
-    <ResponseField name="modality" type="Modality">
-      Processing modality for the documents.
-    </ResponseField>
-
-    <ResponseField name="image_resolution_dpi" type="integer">
-      The DPI of the image. Defaults to 96.
-    </ResponseField>
-
-    <ResponseField name="browser_canvas" type="string">
-      The canvas size of the browser. Must be one of:
-      - "A3" (11.7in x 16.54in)
-      - "A4" (8.27in x 11.7in) 
-      - "A5" (5.83in x 8.27in)
-      Defaults to "A4".
-    </ResponseField>
-
-    <ResponseField name="model" type="string">
-      Model used for chat completion.
-    </ResponseField>
-
-    <ResponseField name="json_schema" type="Dict[str, Any]">
-      JSON schema format used to validate the output data.
-    </ResponseField>
-
-    <ResponseField name="temperature" type="float">
-      Temperature for sampling. Defaults to 0.0 if not provided.
+    <ResponseField name="processor_id" type="string">
+      ID of the processor this automation is attached to.
     </ResponseField>
 
     <ResponseField name="updated_at" type="datetime">
@@ -125,10 +101,17 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-link = uiclient.automations.links.create(
-    name="Invoices",
+# Step 1: Create a processor
+processor = uiclient.processors.create(
+    name="Invoice Processor",
     model="gpt-4.1-nano",
     json_schema=json_schema,
+)
+
+# Step 2: Create a link automation and attach it to the processor
+link = uiclient.processors.automations.links.create(
+    name="Invoices",
+    processor_id=processor.id,
     webhook_url="https://your_server.com/invoices/webhook",
 )
 ```
@@ -140,35 +123,8 @@ link = uiclient.automations.links.create(
  'webhook_url': HttpUrl('https://your_server.com/invoices/webhook'),
  'webhook_headers': {},
  'updated_at': datetime.datetime(2025, 1, 30, 20, 5, 7, 352372, tzinfo=TzInfo(UTC)),
- 'modality': 'native',
- 'image_resolution_dpi': 96,
- 'browser_canvas': 'A4',
- 'model': 'gpt-4o-mini',
- 'json_schema': {'$defs': {'CompanyEnum': {'enum': ['school',
-     'investor',
-     'startup',
-     'corporate'],
-    'title': 'CompanyEnum',
-    'type': 'string'},
-   'CompanyRelation': {'enum': ['founderBackground',
-     'investor',
-     'competitor',
-     'client',
-     'partnership'],
-    'title': 'CompanyRelation',
-    'type': 'string'}},
-  'properties': {'name': {
-    'description': 'Name of the identified company',
-    'title': 'Name',
-    'type': 'string'},
-   'type': {'$ref': '#/$defs/CompanyEnum',
-    'description': 'Type of the identified company'},
-   'relationship': {'$ref': '#/$defs/CompanyRelation',
-    'description': 'Relationship of the identified company with the startup from the deck'}},
-  'required': ['name', 'type', 'relationship'],
-  'title': 'Company',
-  'type': 'object'},
- 'temperature': 0.0}
+ 'processor_id': 'prc_1234567890'
+}
 ```
 </CodeGroup>
 
@@ -179,7 +135,7 @@ link = uiclient.automations.links.create(
 from uiform import UiForm
 
 uiclient = UiForm()
-link_obj = uiclient.automations.links.get(
+link_obj = uiclient.processors.automations.links.get(
     id="lnk_1573aadc-e1ff-4569-80dc-05e71a6c4ff2"
 )
 ```
@@ -191,35 +147,8 @@ link_obj = uiclient.automations.links.get(
  'webhook_url': HttpUrl('https://your_server.com/invoices/webhook'),
  'webhook_headers': {},
  'updated_at': datetime.datetime(2025, 1, 30, 20, 5, 7, 352372, tzinfo=TzInfo(UTC)),
- 'modality': 'native',
- 'image_resolution_dpi': 96,
- 'browser_canvas': 'A4',
- 'model': 'gpt-4o-mini',
- 'json_schema': {'$defs': {'CompanyEnum': {'enum': ['school',
-     'investor',
-     'startup',
-     'corporate'],
-    'title': 'CompanyEnum',
-    'type': 'string'},
-   'CompanyRelation': {'enum': ['founderBackground',
-     'investor',
-     'competitor',
-     'client',
-     'partnership'],
-    'title': 'CompanyRelation',
-    'type': 'string'}},
-  'properties': {'name': {
-    'description': 'Name of the identified company',
-    'title': 'Name',
-    'type': 'string'},
-   'type': {'$ref': '#/$defs/CompanyEnum',
-    'description': 'Type of the identified company'},
-   'relationship': {'$ref': '#/$defs/CompanyRelation',
-    'description': 'Relationship of the identified company with the startup from the deck'}},
-  'required': ['name', 'type', 'relationship'],
-  'title': 'Company',
-  'type': 'object'},
- 'temperature': 0.0}
+ 'processor_id': 'prc_1234567890'
+}
 ```
 </CodeGroup>
 
@@ -230,7 +159,7 @@ link_obj = uiclient.automations.links.get(
 from uiform import UiForm
 
 uiclient = UiForm()
-list_link_obj = uiclient.automations.extraction_links.list()
+list_link_obj = uiclient.processors.automations.extraction_links.list()
 ```
 </CodeGroup>
 
@@ -242,9 +171,9 @@ list_link_obj = uiclient.automations.extraction_links.list()
 from uiform import UiForm
 
 uiclient = UiForm()
-link_obj = uiclient.automations.links.update(
+link_obj = uiclient.processors.automations.links.update(
     id="lnk_1573aadc-e1ff-4569-80dc-05e71a6c4ff2",
-    model="gpt-4o"
+    name="Updated Invoices"
 )
 ```
 ```json Response
@@ -255,35 +184,8 @@ link_obj = uiclient.automations.links.update(
  'webhook_url': HttpUrl('https://your_server.com/invoices/webhook'),
  'webhook_headers': {},
  'updated_at': datetime.datetime(2025, 1, 31, 14, 40, 46, 542812, tzinfo=TzInfo(UTC)),
- 'modality': 'native',
- 'image_resolution_dpi': 96,
- 'browser_canvas': 'A4',
- 'model': 'gpt-4o',
- 'json_schema': {'$defs': {'CompanyEnum': {'enum': ['school',
-     'investor',
-     'startup',
-     'corporate'],
-    'title': 'CompanyEnum',
-    'type': 'string'},
-   'CompanyRelation': {'enum': ['founderBackground',
-     'investor',
-     'competitor',
-     'client',
-     'partnership'],
-    'title': 'CompanyRelation',
-    'type': 'string'}},
-  'properties': {'name': {
-    'description': 'Name of the identified company',
-    'title': 'Name',
-    'type': 'string'},
-   'type': {'$ref': '#/$defs/CompanyEnum',
-    'description': 'Type of the identified company'},
-   'relationship': {'$ref': '#/$defs/CompanyRelation',
-    'description': 'Relationship of the identified company with the startup from the deck'}},
-  'required': ['name', 'type', 'relationship'],
-  'title': 'Company',
-  'type': 'object'},
- 'temperature': 0.0}
+ 'processor_id': 'prc_1234567890'
+}
 ```
 </CodeGroup>
 
@@ -294,7 +196,7 @@ link_obj = uiclient.automations.links.update(
 from uiform import UiForm
 
 uiclient = UiForm()
-uiclient.automations.links.delete(
+uiclient.processors.automations.links.delete(
     id="lnk_1573aadc-e1ff-4569-80dc-05e71a6c4ff2"
 )
 ```
@@ -337,32 +239,8 @@ An Mailbox object containing the extraction mailbox configuration.
       Headers to send with the webhook request.
     </ResponseField>
 
-    <ResponseField name="modality" type="Modality">
-      Processing modality for the documents.
-    </ResponseField>
-
-    <ResponseField name="image_resolution_dpi" type="integer">
-      The DPI of the image. Defaults to 96.
-    </ResponseField>
-
-    <ResponseField name="browser_canvas" type="string">
-      The canvas size of the browser. Must be one of:
-      - "A3" (11.7in x 16.54in)
-      - "A4" (8.27in x 11.7in) 
-      - "A5" (5.83in x 8.27in)
-      Defaults to "A4".
-    </ResponseField>
-
-    <ResponseField name="model" type="string">
-      Model used for chat completion.
-    </ResponseField>
-
-    <ResponseField name="json_schema" type="Dict[str, Any]">
-      JSON schema format used to validate the output data.
-    </ResponseField>
-
-    <ResponseField name="temperature" type="float">
-      Temperature for sampling. Defaults to 0.0 if not provided.
+    <ResponseField name="processor_id" type="string">
+      ID of the processor this automation is attached to.
     </ResponseField>
 
     <ResponseField name="updated_at" type="datetime">
@@ -381,10 +259,17 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-mailbox = uiclient.automations.mailboxes.create(
-    email="invoices@mailbox.uiform.com",
+# Step 1: Create a processor
+processor = uiclient.processors.create(
+    name="Invoice Processor",
     model="gpt-4.1-nano",
     json_schema=json_schema,
+)
+
+# Step 2: Create a mailbox automation and attach it to the processor
+mailbox = uiclient.processors.automations.mailboxes.create(
+    email="invoices@mailbox.uiform.com",
+    processor_id=processor.id,
     webhook_url="https://your_server.com/invoices/webhook",
     authorized_domains=["uiform.com", "gmail.com"],
     authorized_emails=["john@doe.com", "jane@doe.com"]
@@ -401,7 +286,7 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-mailbox = uiclient.automations.mailboxes.get(
+mailbox = uiclient.processors.automations.mailboxes.get(
     email="invoices@mailbox.uiform.com",
 )
 ```
@@ -416,7 +301,7 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-list_mailboxes = uiclient.automations.mailboxes.list()
+list_mailboxes = uiclient.processors.automations.mailboxes.list()
 ```
 </CodeGroup>
 
@@ -429,9 +314,9 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-mailbox = uiclient.automations.mailboxes.update(
+mailbox = uiclient.processors.automations.mailboxes.update(
     email="invoices@mailbox.uiform.com",
-    model="gpt-4.1-nano"
+    webhook_url="https://your_server.com/invoices/webhook"
 )
 ```
 </CodeGroup>
@@ -445,7 +330,7 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-uiclient.automations.mailboxes.delete(
+uiclient.processors.automations.mailboxes.delete(
     email="invoices@mailbox.uiform.com"
 )
 ```
@@ -461,7 +346,7 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-mailbox_log = uiclient.automations.mailboxes.test_email_forwarding(
+mailbox_log = uiclient.processors.automations.mailboxes.test_email_forwarding(
     email="invoices@mailbox.uiform.com",
     document="invoice.eml"
 )
@@ -501,41 +386,12 @@ An Endpoint object containing the extraction endpoint configuration.
   Headers to send with the webhook request.
 </ResponseField>
 
-<ResponseField name="modality" type="Modality">
-  Processing modality for the documents.
-</ResponseField>
-
-<ResponseField name="image_resolution_dpi" type="integer">
-  The DPI of the image. Defaults to 96.
-</ResponseField>
-
-<ResponseField name="browser_canvas" type="string">
-  The canvas size of the browser. Must be one of:
-  - "A3" (11.7in x 16.54in)
-  - "A4" (8.27in x 11.7in) 
-  - "A5" (5.83in x 8.27in)
-  Defaults to "A4".
-</ResponseField>
-
-  
-<ResponseField name="model" type="string">
-  Model used for chat completion.
-</ResponseField>
-
-<ResponseField name="json_schema" type="Dict[str, Any]">
-  JSON schema format used to validate the output data.
-</ResponseField>
-
-<ResponseField name="temperature" type="float">
-  Temperature for sampling. Defaults to 0.0 if not provided.
-</ResponseField>
-
-<ResponseField name="reasoning_effort" type="ChatCompletionReasoningEffort">
-  Reasoning effort level for chat completion.
-</ResponseField>
-
 <ResponseField name="updated_at" type="datetime">
   UTC timestamp of when the config was last updated.
+</ResponseField>
+
+<ResponseField name="processor_id" type="string">
+  ID of the processor this automation is attached to.
 </ResponseField>
 
   </Expandable>
@@ -549,10 +405,17 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-endpoint = uiclient.automations.endpoints.create(
-    name="Invoice Extraction Endpoint",
+# Step 1: Create a processor
+processor = uiclient.processors.create(
+    name="Invoice Processor",
     model="gpt-4.1-nano",
     json_schema=json_schema,
+)
+
+# Step 2: Create an endpoint automation and attach it to the processor
+endpoint = uiclient.processors.automations.endpoints.create(
+    name="Invoice Extraction Endpoint",
+    processor_id=processor.id,
     webhook_url="https://your_server.com/invoices/webhook",
 )
 
@@ -564,21 +427,8 @@ endpoint = uiclient.automations.endpoints.create(
     "name": "Invoice Extraction Endpoint",
     "webhook_url": "https://your_server.com/invoices/webhook",
     "webhook_headers": {},
-    "modality": "native",
-    "image_resolution_dpi": 96,
-    "browser_canvas": "A4",
-    "model": "gpt-4.1-nano",
-    "json_schema": {
-      "type": "object",
-      "properties": {
-        "invoice_number": {"type": "string"},
-        "amount": {"type": "number"}
-      },
-      "required": ["invoice_number", "amount"]
-    },
-    "temperature": 0.0,
-    "reasoning_effort": "medium",
-    "updated_at": "2025-05-10T14:30:00Z"
+    "updated_at": "2025-05-10T14:30:00Z",
+    "processor_id": "prc_1234567890"
 }
 ````
 
@@ -592,7 +442,7 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-endpoint_obj = uiclient.automations.endpoints.get(
+endpoint_obj = uiclient.processors.automations.endpoints.get(
     id="endp_9b6a8c8d-254d-4f4b-8f8e-5b2e1b6b3c9a"
 )
 
@@ -604,21 +454,8 @@ endpoint_obj = uiclient.automations.endpoints.get(
     "name": "Invoice Extraction Endpoint",
     "webhook_url": "https://your_server.com/invoices/webhook",
     "webhook_headers": {},
-    "modality": "native",
-    "image_resolution_dpi": 96,
-    "browser_canvas": "A4",
-    "model": "gpt-4.1-nano",
-    "json_schema": {
-      "type": "object",
-      "properties": {
-        "invoice_number": {"type": "string"},
-        "amount": {"type": "number"}
-      },
-      "required": ["invoice_number", "amount"]
-    },
-    "temperature": 0.0,
-    "reasoning_effort": "medium",
-    "updated_at": "2025-05-10T14:30:00Z"
+    "updated_at": "2025-05-10T14:30:00Z",
+    "processor_id": "prc_1234567890"
 }
 ````
 
@@ -632,7 +469,7 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-list_endpoints = uiclient.automations.endpoints.list()
+list_endpoints = uiclient.processors.automations.endpoints.list()
 
 ````
 </CodeGroup>
@@ -645,9 +482,9 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-updated_endpoint = uiclient.automations.endpoints.update(
+updated_endpoint = uiclient.processors.automations.endpoints.update(
     id="endp_9b6a8c8d-254d-4f4b-8f8e-5b2e1b6b3c9a",
-    model="gpt-4o"
+    name="Updated Invoice Extraction Endpoint"
 )
 ````
 
@@ -655,23 +492,10 @@ updated_endpoint = uiclient.automations.endpoints.update(
 {
     "object": "endpoint",
     "id": "endp_9b6a8c8d-254d-4f4b-8f8e-5b2e1b6b3c9a",
-    "name": "Invoice Extraction Endpoint",
+    "name": "Updated Invoice Extraction Endpoint",
+    "processor_id": "prc_1234567890",
     "webhook_url": "https://your_server.com/invoices/webhook",
     "webhook_headers": {},
-    "modality": "native",
-    "image_resolution_dpi": 96,
-    "browser_canvas": "A4",
-    "model": "gpt-4o",
-    "json_schema": {
-      "type": "object",
-      "properties": {
-        "invoice_number": {"type": "string"},
-        "amount": {"type": "number"}
-      },
-      "required": ["invoice_number", "amount"]
-    },
-    "temperature": 0.0,
-    "reasoning_effort": "medium",
     "updated_at": "2025-05-10T16:00:00Z"
 }
 ```
@@ -686,7 +510,7 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-uiclient.automations.endpoints.delete(
+uiclient.processors.automations.endpoints.delete(
     id="endp_9b6a8c8d-254d-4f4b-8f8e-5b2e1b6b3c9a"
 )
 
@@ -737,36 +561,8 @@ An Outlook object containing the extraction outlook plugin configuration.
   List of authorized emails allowed to use the plugin.
 </ResponseField>
 
-<ResponseField name="modality" type="Modality">
-  Processing modality for the documents.
-</ResponseField>
-
-<ResponseField name="image_resolution_dpi" type="integer">
-  The DPI of the image. Defaults to 96.
-</ResponseField>
-
-<ResponseField name="browser_canvas" type="string">
-  The canvas size of the browser. Must be one of:
-  - "A3" (11.7in x 16.54in)
-  - "A4" (8.27in x 11.7in) 
-  - "A5" (5.83in x 8.27in)
-  Defaults to "A4".
-</ResponseField>
-
-<ResponseField name="model" type="string">
-  Model used for chat completion.
-</ResponseField>
-
-<ResponseField name="json_schema" type="Dict[str, Any]">
-  JSON schema format used to validate the output data.
-</ResponseField>
-
-<ResponseField name="temperature" type="float">
-  Temperature for sampling. Defaults to 0.0 if not provided.
-</ResponseField>
-
-<ResponseField name="reasoning_effort" type="ChatCompletionReasoningEffort">
-  Reasoning effort level for chat completion.
+<ResponseField name="processor_id" type="string">
+  ID of the processor this automation is attached to.
 </ResponseField>
 
 <ResponseField name="updated_at" type="datetime">
@@ -784,10 +580,17 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-outlook_plugin = uiclient.automations.outlook.create(
-    name="Invoice Plugin",
+# Step 1: Create a processor
+processor = uiclient.processors.create(
+    name="Invoice Processor",
     model="gpt-4.1-nano",
     json_schema=json_schema,
+)
+
+# Step 2: Create an Outlook plugin automation and attach it to the processor
+outlook_plugin = uiclient.processors.automations.outlook.create(
+    name="Invoice Plugin",
+    processor_id=processor.id,
     webhook_url="https://your_server.com/invoices/webhook",
     authorized_domains=["uiform.com"],
     authorized_emails=["john@doe.com", "jane@doe.com"],
@@ -803,21 +606,8 @@ outlook_plugin = uiclient.automations.outlook.create(
     "webhook_headers": {},
     "authorized_domains": ["uiform.com"],
     "authorized_emails": ["john@doe.com", "jane@doe.com"],
-    "modality": "native",
-    "image_resolution_dpi": 96,
-    "browser_canvas": "A4",
-    "model": "gpt-4.1-nano",
-    "json_schema": {
-      "type": "object",
-      "properties": {
-        "invoice_number": {"type": "string"},
-        "amount": {"type": "number"}
-      },
-      "required": ["invoice_number", "amount"]
-    },
-    "temperature": 0.0,
-    "reasoning_effort": "medium",
-    "updated_at": "2025-05-10T15:45:00Z"
+    "updated_at": "2025-05-10T15:45:00Z",
+    "processor_id": "prc_1234567890"
 }
 ````
 
@@ -831,7 +621,7 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-outlook_plugin = uiclient.automations.outlook.get(
+outlook_plugin = uiclient.processors.automations.outlook.get(
     id="outlook_56b30f29-ccf2-41b8-8b26-15481f2a78f1"
 )
 
@@ -845,21 +635,8 @@ outlook_plugin = uiclient.automations.outlook.get(
     "webhook_headers": {},
     "authorized_domains": ["uiform.com"],
     "authorized_emails": ["john@doe.com", "jane@doe.com"],
-    "modality": "native",
-    "image_resolution_dpi": 96,
-    "browser_canvas": "A4",
-    "model": "gpt-4.1-nano",
-    "json_schema": {
-      "type": "object",
-      "properties": {
-        "invoice_number": {"type": "string"},
-        "amount": {"type": "number"}
-      },
-      "required": ["invoice_number", "amount"]
-    },
-    "temperature": 0.0,
-    "reasoning_effort": "medium",
-    "updated_at": "2025-05-10T15:45:00Z"
+    "updated_at": "2025-05-10T15:45:00Z",
+    "processor_id": "prc_1234567890"
 }
 ````
 
@@ -873,7 +650,7 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-list_outlooks = uiclient.automations.outlook.list()
+list_outlooks = uiclient.processors.automations.outlook.list()
 
 ````
 </CodeGroup>
@@ -886,9 +663,9 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-updated_outlook_plugin = uiclient.automations.outlook.update(
+updated_outlook_plugin = uiclient.processors.automations.outlook.update(
     id="outlook_56b30f29-ccf2-41b8-8b26-15481f2a78f1",
-    model="gpt-4o"
+    name="Updated Invoice Plugin"
 )
 ````
 
@@ -896,25 +673,12 @@ updated_outlook_plugin = uiclient.automations.outlook.update(
 {
     "object": "outlook",
     "id": "outlook_56b30f29-ccf2-41b8-8b26-15481f2a78f1",
-    "name": "Invoice Plugin",
+    "name": "Updated Invoice Plugin",
+    "processor_id": "prc_1234567890",
     "webhook_url": "https://your_server.com/invoices/webhook",
     "webhook_headers": {},
     "authorized_domains": ["uiform.com"],
     "authorized_emails": ["john@doe.com", "jane@doe.com"],
-    "modality": "native",
-    "image_resolution_dpi": 96,
-    "browser_canvas": "A4",
-    "model": "gpt-4o",
-    "json_schema": {
-      "type": "object",
-      "properties": {
-        "invoice_number": {"type": "string"},
-        "amount": {"type": "number"}
-      },
-      "required": ["invoice_number", "amount"]
-    },
-    "temperature": 0.0,
-    "reasoning_effort": "medium",
     "updated_at": "2025-05-10T16:10:00Z"
 }
 ```
@@ -929,7 +693,7 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-uiclient.automations.outlook.delete(
+uiclient.processors.automations.outlook.delete(
     id="outlook_56b30f29-ccf2-41b8-8b26-15481f2a78f1"
 )
 
@@ -1025,7 +789,7 @@ A single webhook attempt.
 from uiform import UiForm
 
 uiclient = UiForm()
-log = uiclient.automations.logs.get(
+log = uiclient.processors.automations.logs.get(
     log_id="log_a12b3c4d-e5f6-7890-ab12-3c4d5e6f7890"
 )
 ```
@@ -1073,7 +837,7 @@ schema_id / schema_data_id	"sch_…", "scd_…"	Trace logs back to a schema run.
 from uiform import UiForm
 
 uiclient = UiForm()
-page = uiclient.automations.logs.list(
+page = uiclient.processors.automations.logs.list(
     limit=20,
     status_class="4xx",
     deployment_id="lnk_1573aadc-e1ff-4569-80dc-05e71a6c4ff2"
@@ -1101,7 +865,7 @@ The rerun is performed server-side, using the exact same payload; no need to re-
 from uiform import UiForm
 
 uiclient = UiForm()
-rerun_log = uiclient.automations.logs.rerun(
+rerun_log = uiclient.processors.automations.logs.rerun(
     log_id="log_a12b3c4d-e5f6-7890-ab12-3c4d5e6f7890"
 )
 ```

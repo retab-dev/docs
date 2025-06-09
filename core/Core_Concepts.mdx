@@ -471,10 +471,11 @@ if __name__ == "__main__":
 
 ### Create a new deployment sending data to your webhook endpoint
 
-Let's create a new extraction link sending data to your webhook endpoint.
+Let's create a new processor and automation to send data to your webhook endpoint.
+
+First, create a processor:
 
 ```python
-
 class Invoice(BaseModel):
     amount: int
     currency: str
@@ -485,11 +486,17 @@ from uiform import UiForm
 
 uiclient = UiForm()
 
-
-extraction_link = uiclient.automations.extraction_links.create(
-    name="Invoices",
+# Step 1: Create a processor
+processor = uiclient.processors.create(
+    name="Invoice Processor",
     model="gpt-4.1",
     json_schema=Invoice.model_json_schema(),
+)
+
+# Step 2: Create an automation and attach it to the processor
+extraction_link = uiclient.processors.automations.links.create(
+    name="Invoices",
+    processor_id=processor.id,
     webhook_url="https://your_server.com/invoices/webhook",
 )
 ```
@@ -504,7 +511,7 @@ You can do so by sending a test request to your webhook endpoint using the UiFor
 from uiform import UiForm
 
 uiclient = UiForm()
-link_log = uiclient.automations.extraction_links.test_document_upload(
+link_log = uiclient.processors.automations.links.test_document_upload(
     link_id=extraction_link.id,
     document = "invoice.pdf"
 )
@@ -546,7 +553,7 @@ async def webhook_handler(request: Request):
             raise HTTPException(status_code=400, detail="Missing UiForm-Signature header")
 
         # Verify the signature and process the event
-        uiclient.automations.verify_event(
+        uiclient.processors.automations.verify_event(
             event_body=payload,
             event_signature=signature_header,
             secret=os.getenv("WEBHOOKS_SECRET"),
@@ -616,7 +623,7 @@ async def webhook_handler(request: Request):
             raise HTTPException(status_code=400, detail="Missing UiForm-Signature header")
 
         # Verify the signature and process the event
-        uiclient.automations.verify_event(
+        uiclient.processors.automations.verify_event(
             event_body=payload,
             event_signature=signature_header,
             secret=os.getenv("WEBHOOKS_SECRET"),
@@ -640,7 +647,7 @@ def webhook_handler(request):
     signature_header = request.headers["UiForm-Signature"]
 
     # Verify the signature and process the event
-    response = uiclient.automations.verify_event(
+    response = uiclient.processors.automations.verify_event(
         event_body=payload,
         event_signature=signature_header,
         secret=os.getenv("WEBHOOKS_SECRET"),
@@ -665,7 +672,7 @@ def webhook_handler():
     signature_header = request.headers["UiForm-Signature"]
 
     # Verify the signature and process the event
-    response = uiclient.automations.verify_event(
+    response = uiclient.processors.automations.verify_event(
         event_body=payload,
         event_signature=signature_header,
         secret=os.getenv("WEBHOOKS_SECRET"),
