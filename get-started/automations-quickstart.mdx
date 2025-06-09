@@ -1,4 +1,3 @@
-
 <Steps>
   <Step title="Setup the Python SDK">
     Install the UiForm Python SDK and configure your API keys to start processing documents with your preferred AI provider
@@ -9,11 +8,11 @@
   <Step title="Create your FastAPI server with a webhook">
     Set up an endpoint that will receive the structured data extracted from your documents after processing
   </Step>
-  <Step title="Create your deployment">
-    Configure an deployment (mailbox or link) that will automatically process incoming documents using your schema and send results to your webhook
+  <Step title="Create your processor and automation">
+    Configure a processor and an automation to handle triggers like emails and send results to your webhook
   </Step>
-  <Step title="Test your deployment">
-    Validate your setup by sending test documents through your deployment and verify the extracted data matches your requirements
+  <Step title="Test your processor and automation">
+    Validate your setup by sending test documents through your processor and verify the extracted data matches your requirements
   </Step>
 </Steps>
 
@@ -31,7 +30,7 @@ Then, [create your API key on uiform.com](https://www.uiform.com) and populate y
 UIFORM_API_KEY=sk_xxxxxxxxx # Create your API key on https://www.uiform.com
 ```
 
-Then, as we will use your API key to make requests to OpenAI on your behalf within an deployment, you need to store your API key in the UiForm secrets manager:
+Then, as we will use your API key to make requests to OpenAI on your behalf within a processor, you need to store your API key in the UiForm secrets manager:
 
 ```python
 import uiform
@@ -399,9 +398,9 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 Take note of the `webhook URL`, you will need it on the next steps.
 
 
-### Step 4: Create your deployment
+### Step 4: Create your processor and automation
 
-Finally, integrate the webhook with your deployment system using the `uiform` client. This example demonstrates how to create an deployment that triggers the webhook when a matching event occurs:
+Instead of creating automations directly, you now first create a **processor** (which contains the extraction configuration) and then attach an **automation** (which handles triggers like emails) to it.
 
 ```python
 from uiform import UiForm
@@ -409,23 +408,47 @@ from uiform import UiForm
 # Initialize the UiForm client
 uiclient = UiForm()
 
-# Create an deployment that uses the webhook URL from Step 2
-deployment = uiclient.processors.automations.mailboxes.create(
-    email="invoices@mailbox.uiform.com",
-    model="gpt-4.1-nano",
-    json_schema=Invoice.model_json_schema(), # use the pydantic model to create the json schema
-    webhook_url="https://your-server.com/webhook",  # Replace with your actual webhook URL (taken from Step 3.1 for example)
+# Step 1: Create a processor with your extraction configuration
+processor = uiclient.processors.create(
+    name="Invoice Processor",
+    model="gpt-4o-mini",
+    modality="native",
+    json_schema={
+        "X-SystemPrompt": "You are an expert at analyzing invoice documents.",
+        "properties": {
+            "total_amount": {
+                "type": "number",
+                "description": "The total invoice amount",
+            },
+            "date": {
+                "type": "string",
+                "description": "Invoice date in YYYY-MM-DD format",
+                "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
+            }
+        },
+        "required": ["total_amount", "date"]
+    }
 )
 
+# Step 2: Create a mailbox automation and attach it to the processor
+mailbox = uiclient.processors.automations.mailboxes.create(
+    name="Invoice Mailbox",
+    email="invoices@mailbox.uiform.com",
+    processor_id=processor.id,
+    webhook_url="https://your-server.com/webhook",  # Replace with your actual webhook URL
+)
+
+print(f"✅ Processor created: {processor.id}")
+print(f"✅ Mailbox created: {mailbox.email}")
 ```
 
-At any email sent to `invoices@mailbox.uiform.com`, the deployment will send a POST request to your FastAPI webhook endpoint, where the payload can be processed.
+At any email sent to `invoices@mailbox.uiform.com`, the automation will use your processor configuration to extract data and send a POST request to your FastAPI webhook endpoint.
 
-You can see the deployment you just created on your [dashboard](https://www.uiform.com/dashboard/processors) !
+You can see the processor and automation you just created on your [dashboard](https://www.uiform.com/dashboard/processors)!
 
-### Step 5: Test your deployment
+### Step 5: Test your processor and automation
 
-Finally, you can test the deployment rapidly with the test functions of the sdk: 
+Finally, you can test the processor and automation rapidly with the test functions of the SDK: 
 
 ```python
 from uiform import UiForm
@@ -435,25 +458,25 @@ uiclient = UiForm()
 
 # If you just want to send a test request to your webhook
 log = uiclient.processors.automations.mailboxes.tests.webhook(
-    email="test-mailbox-local@devmail.uiform.com", 
+    email="invoices@mailbox.uiform.com", 
 )
 
 # If you want to test the file processing logic: 
 log = uiclient.processors.automations.mailboxes.tests.process(
-    email="test-mailbox-local@devmail.uiform.com", 
+    email="invoices@mailbox.uiform.com", 
     document="your_invoice_email.eml"
 )
 
 # If you want to test a full email forwarding
 log = uiclient.processors.automations.mailboxes.tests.forward(
-    email="uiform-quickstart@mailbox.uiform.com", 
+    email="invoices@mailbox.uiform.com", 
     document="your_invoice_email.eml"
 )
 ```
 
-<Tip>You can also test your webhook locally by overriding the webhook url set in the deployment</Tip>
+<Tip>You can also test your webhook locally by overriding the webhook url set in the automation</Tip>
 
-You can also test your deployment directly from the [dashboard](https://www.uiform.com/dashboard/processors):
+You can also test your processor and automation directly from the [dashboard](https://www.uiform.com/dashboard/processors):
 <Frame>
   <img src="https://raw.githubusercontent.com/UiForm/uiform/refs/heads/main/assets/docs/automation_test.png" />
 </Frame>
@@ -465,8 +488,8 @@ uiclient = UiForm()
 
 # If you just want to send a test request to your webhook
 log = uiclient.processors.automations.mailboxes.tests.webhook(
-    email="test-mailbox-local@devmail.uiform.com", 
-    webhook_url="http://localhost:8000/webhook" # If you want to try your webhook locally, you can override the webhook url set in the deployment
+    email="invoices@mailbox.uiform.com", 
+    webhook_url="http://localhost:8000/webhook" # If you want to try your webhook locally, you can override the webhook url set in the automation
 )
 ```
 
