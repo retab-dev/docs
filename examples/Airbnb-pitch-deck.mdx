@@ -1,23 +1,23 @@
 
 ## Overview
-This tutorial guides you through the process of extracting structured data from the Airbnb pitch deck using UiForm, OpenAI, and Pydantic. We will define a schema to capture important entities from the document and use an LLM to analyze and extract relevant information.
+This tutorial guides you through the process of extracting structured data from the Airbnb pitch deck using Retab, OpenAI, and Pydantic. We will define a schema to capture important entities from the document and use an LLM to analyze and extract relevant information.
 
 ## Prerequisites
 Before proceeding, ensure you have the following installed and configured:
 
 - Python 3.8+
-- `pydantic`, `dotenv`, `uiform`, `openai`
+- `pydantic`, `dotenv`, `retab`, `openai`
 - An `.env.production` file containing your API keys
-- A [airbnb_pitch_deck.pdf](https://github.com/UiForm/uiform/blob/main/notebooks/airbnb/airbnb_pitch_deck.pdf) file in the same directory as the `main.py` file 
+- A [airbnb_pitch_deck.pdf](https://github.com/Retab-dev/retab/blob/main/notebooks/airbnb/airbnb_pitch_deck.pdf) file in the same directory as the `main.py` file 
 
 Install dependencies:
 ```bash
-pip install pydantic python-dotenv uiform openai
+pip install pydantic python-dotenv retab openai
 ```
 
 Download the pitch deck:
 ```bash
-wget https://github.com/UiForm/uiform/blob/main/notebooks/airbnb/airbnb_pitch_deck.pdf
+wget https://github.com/Retab-dev/retab/blob/main/notebooks/airbnb/airbnb_pitch_deck.pdf
 ```
 
 ## Step 1: Load Environment Variables
@@ -168,23 +168,23 @@ class Deck(BaseModel):
 ```
 
 ## Step 3: Load the Document
-We will use `UiForm` to load the pitch deck document.
+We will use `Retab` to load the pitch deck document.
 
 ```python
-from uiform import UiForm
+from retab import Retab
 
-uiclient = UiForm()
-doc_msg = uiclient.documents.create_messages(
+reclient = Retab()
+doc_msg = reclient.documents.create_messages(
     document="airbnb_pitch_deck.pdf"
 )
 ```
 
 ## Step 4: Schema Creation
-We create a schema object using the `Schema` class from UiForm to structure the extraction process.
+We create a schema object using the `Schema` class from Retab to structure the extraction process.
 
 <CodeGroup>
 ```python main.py
-from uiform import Schema
+from retab import Schema
 
 schema_obj = Schema(
     pydantic_model=Deck
@@ -438,7 +438,7 @@ Finally, validate the extracted data against the schema by removing reasoning fi
 
 <CodeGroup>
 ```python main.py (OpenAI Completions API)
-from uiform._utils.json_schema import filter_auxiliary_fields_json
+from retab._utils.json_schema import filter_auxiliary_fields_json
 
 assert completion.choices[0].message.content is not None
 extraction = schema_obj.pydantic_model.model_validate(
@@ -449,7 +449,7 @@ print(json.dumps(extraction.model_dump(), indent=2))
 ```
 
 ```python main.py (OpenAI Responses API)
-from uiform._utils.json_schema import filter_auxiliary_fields_json
+from retab._utils.json_schema import filter_auxiliary_fields_json
 
 assert response.output_text is not None
 extraction = schema_obj.pydantic_model.model_validate(
@@ -517,7 +517,7 @@ from typing import List
 from enum import Enum, IntEnum
 from dotenv import load_dotenv
 assert load_dotenv(".env.production") # Load environment variables from a .env file
-from uiform import UiForm
+from retab import Retab
 
 system_prompt = """
 Your task is to extract structured information from pitch decks based on the provided schema. Carefully analyze the content to identify relevant details and populate each field accurately while maintaining consistency across extracted data.
@@ -643,13 +643,13 @@ class Deck(BaseModel):
 
 
 
-from uiform import UiForm, Schema
+from retab import Retab, Schema
 from openai import OpenAI
 from pydantic import BaseModel, Field, ConfigDict
 import json
 
-uiclient = UiForm()
-doc_msg = uiclient.documents.create_messages(
+reclient = Retab()
+doc_msg = reclient.documents.create_messages(
     document = "airbnb_pitch_deck.pdf"
 )
 
@@ -672,7 +672,7 @@ print(json.dumps(completion.choices[0].message.parsed.model_dump(), indent=2))
 # ------------------------------------------------------------------------------------------------
 
 # Eventually: validate the response against the original schema if you want to remove the reasoning fields
-from uiform._utils.json_schema import filter_auxiliary_fields_json
+from retab._utils.json_schema import filter_auxiliary_fields_json
 assert completion.choices[0].message.content is not None
 extraction = schema_obj.pydantic_model.model_validate(
     filter_auxiliary_fields_json(completion.choices[0].message.content)
@@ -687,7 +687,7 @@ from typing import List
 from enum import Enum, IntEnum
 from dotenv import load_dotenv
 assert load_dotenv(".env.production") # Load environment variables from a .env file
-from uiform import UiForm
+from retab import Retab
 
 system_prompt = """
 Your task is to extract structured information from pitch decks based on the provided schema. Carefully analyze the content to identify relevant details and populate each field accurately while maintaining consistency across extracted data.
@@ -813,13 +813,13 @@ class Deck(BaseModel):
 
 
 
-from uiform import UiForm, Schema
+from retab import Retab, Schema
 from openai import OpenAI
 from pydantic import BaseModel, Field, ConfigDict
 import json
 
-uiclient = UiForm()
-doc_msg = uiclient.documents.create_messages(
+reclient = Retab()
+doc_msg = reclient.documents.create_messages(
     document = "airbnb_pitch_deck.pdf"
 )
 
@@ -848,7 +848,7 @@ print(response.output_text)
 # ------------------------------------------------------------------------------------------------
 
 # Eventually: validate the response against the original schema if you want to remove the reasoning fields
-from uiform._utils.json_schema import filter_auxiliary_fields_json
+from retab._utils.json_schema import filter_auxiliary_fields_json
 assert response.output_text is not None
 extraction = schema_obj.pydantic_model.model_validate(
     filter_auxiliary_fields_json(response.output_text)
@@ -1109,4 +1109,4 @@ print(json.dumps(extraction.model_dump(), indent=2))
 
 
 ## Conclusion
-In this tutorial, we've successfully extracted structured data from the Airbnb pitch deck using UiForm and OpenAI, leveraging Pydantic models for data validation and schema definition.
+In this tutorial, we've successfully extracted structured data from the Airbnb pitch deck using Retab and OpenAI, leveraging Pydantic models for data validation and schema definition.

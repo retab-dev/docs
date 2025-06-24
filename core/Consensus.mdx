@@ -53,11 +53,11 @@ flowchart TD
     style Final fill:#93c47d,stroke:#333,stroke-width:2px,color:#000
 ```
 
-> **Related to Palantir's K-LLM strategy**: This approach follows similar principles to [Palantir's "K-LLMs" methodology](https://www.linkedin.com/posts/palantir-technologies_never-use-1-llm-when-you-can-use-k-llms-activity-7109622372021780480-eMPG/), where multiple models evaluate the same prompt and their outputs are synthesized for increased accuracy, confidence, and reduced hallucinations. Like Palantir's approach, UiForm's consensus mechanism helps mitigate biases from any single model while providing flexibility across different LLM providers.
+> **Related to Palantir's K-LLM strategy**: This approach follows similar principles to [Palantir's "K-LLMs" methodology](https://www.linkedin.com/posts/palantir-technologies_never-use-1-llm-when-you-can-use-k-llms-activity-7109622372021780480-eMPG/), where multiple models evaluate the same prompt and their outputs are synthesized for increased accuracy, confidence, and reduced hallucinations. Like Palantir's approach, Retab's consensus mechanism helps mitigate biases from any single model while providing flexibility across different LLM providers.
 
 
 ### How it works
-Under the hood UiForm:
+Under the hood Retab:
 
 1. Fires *n\_consensus* identical calls.
 2. Parses each raw answer into a Pydantic model / JSON‑Schema object.
@@ -85,11 +85,11 @@ We provide a quick, type‑safe wrapper around OpenAI **Chat Completions** and
 ```diff {9}
 -  from openai import OpenAI
 -  client = OpenAI()
-+  from uiform import UiForm
-+  uiclient = UiForm()
++  from retab import Retab
++  reclient = Retab()
 
 -  response = client.responses.create(
-+  response = uiclient.consensus.responses.create(
++  response = reclient.consensus.responses.create(
       model="gpt-4.1",
       input="Write a one-sentence bedtime story about a unicorn."
 +     n_consensus=4
@@ -102,11 +102,11 @@ We provide a quick, type‑safe wrapper around OpenAI **Chat Completions** and
 ```diff {14}
 -  from openai import OpenAI
 -  client = OpenAI()
-+  from uiform import UiForm
-+  uiclient = UiForm()
++  from retab import Retab
++  reclient = Retab()
 
 - completion = client.chat.completions.create(
-+  completion = uiclient.consensus.completions.create(
++  completion = reclient.consensus.completions.create(
       model="gpt-4.1",
       messages=[
           {
@@ -145,17 +145,17 @@ Everything else (models, schema, temperature, etc.) stays untouched.
 <CodeGroup>
 
 ```python python {22}
-from uiform import UiForm
+from retab import Retab
 from pydantic import BaseModel
 
-uiclient = UiForm()
+reclient = Retab()
 
 class CalendarEvent(BaseModel):
     name: str
     date: str
     participants: list[str]
 
-completion = uiclient.consensus.completions.parse(
+completion = reclient.consensus.completions.parse(
     model="gpt-4.1",
     messages=[
         {"role": "system", "content": "Extract the event information."},
@@ -170,8 +170,8 @@ event = completion.choices[0].message.parsed
 
 
 ```bash curl
-curl https://api.uiform.com/v1/consensus/completions \
-  -H "API-Key: $UIFORM_API_KEY" \
+curl https://api.retab.dev/v1/consensus/completions \
+  -H "API-Key: $RETAB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-4.1",
@@ -236,10 +236,10 @@ Same as **Completions API**: `model`, `input`, `text_format|text_schema`, `n_con
 <CodeGroup>
 
 ```python python {24}
-from uiform import UiForm
+from retab import Retab
 from pydantic import BaseModel
 
-uiclient = UiForm()
+reclient = Retab()
 
 class Step(BaseModel):
     explanation: str
@@ -249,7 +249,7 @@ class MathReasoning(BaseModel):
     steps: list[Step]
     final_answer: str
 
-response = uiclient.consensus.responses.parse(
+response = reclient.consensus.responses.parse(
     model="gpt-4o-2024-08-06",
     input=[
         {
@@ -268,8 +268,8 @@ math_reasoning = response.output_parsed
 
 ```bash curl
 curl -X 'POST' \
-  'https://api.uiform.com/v1/consensus/responses' \
-  -H 'API-Key: $UIFORM_API_KEY' \
+  'https://api.retab.dev/v1/consensus/responses' \
+  -H 'API-Key: $RETAB_API_KEY' \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "gpt-4o-2024-08-06",
@@ -340,9 +340,9 @@ curl -X 'POST' \
 <CodeGroup>
 
 ```python python
-from uiform import UiForm
+from retab import Retab
 
-uiclient = UiForm()
+reclient = Retab()
 
 # List of dictionaries to reconcile
 results = [
@@ -366,7 +366,7 @@ schema = {
 }
 
 # Reconcile the dictionaries
-consensus_result = uiclient.consensus.reconcile(
+consensus_result = reclient.consensus.reconcile(
     list_dicts=results,
     reference_schema=schema,
     mode="direct"
@@ -378,8 +378,8 @@ confidence = consensus_result["likelihoods"]
 ```
 
 ```bash curl
-curl https://api.uiform.com/v1/consensus/reconcile \
-  -H "API-Key: $UIFORM_API_KEY" \
+curl https://api.retab.dev/v1/consensus/reconcile \
+  -H "API-Key: $RETAB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "list_dicts": [

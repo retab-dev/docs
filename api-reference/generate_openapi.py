@@ -18,7 +18,7 @@ def generate_openapi() -> None:
     # Update servers
     spec["servers"] = [
         {
-            "url": "https://api.uiform.com"
+            "url": "https://api.retab.dev"
         }
     ]
 

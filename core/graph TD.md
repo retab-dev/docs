@@ -1,6 +1,6 @@
 ```mermaid
 graph TD
-    A["JSON schema / Pydantic model"] --> B["UiForm Schema instance"]
+    A["JSON schema / Pydantic model"] --> B["Retab Schema instance"]
     B --> C1["self.inference_json_schema"]
     B --> C2["self.inference_pydantic_model"]
     B --> C3["self.system_prompt"]
