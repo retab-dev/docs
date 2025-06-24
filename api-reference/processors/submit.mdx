@@ -1,0 +1,77 @@
+---
+title: 'Submit'
+openapi: 'POST /v1/processors/{processor_id}/submit'
+---
+
+<RequestExample>
+
+
+```python python
+from retab import Retab, MIMEData
+
+reclient = Retab()
+
+# Load document as MIMEData
+with open("invoice.pdf", "rb") as f:
+    document = MIMEData.from_bytes(f.read(), filename="invoice.pdf")
+
+completion = reclient.processors.submit(
+    id="prc_01G34H8J2K",
+    document=document
+)
+
+# Access extracted data
+extracted_data = completion.choices[0].message.parsed
+print(extracted_data)
+```
+
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.dev/v1/processors/{processor_id}/submit' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -F 'document=@invoice.pdf' \
+  -F 'stream=false'
+```
+
+</RequestExample>
+
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1744316542,
+  "model": "gpt-4o-mini",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"invoice_number\": \"INV-42\", \"total_amount\": 123.45}",
+        "parsed": {
+          "invoice_number": "INV-42", 
+          "total_amount": 123.45
+        }
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1250,
+    "completion_tokens": 35,
+    "total_tokens": 1285
+  },
+  "likelihoods": {
+    "invoice_number": 0.95,
+    "total_amount": 0.87
+  },
+  "extraction_id": "ext_1234567890"
+}
+```
+
+
+</ResponseExample>
