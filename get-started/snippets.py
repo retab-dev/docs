@@ -1,10 +1,10 @@
-from uiform import UiForm
+from retab import Retab
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-uiclient = UiForm()
+reclient = Retab()
 
-doc_msg = uiclient.documents.create_messages(
+doc_msg = reclient.documents.create_messages(
     document = "freight/booking_confirmation.jpg"
 )
 
@@ -32,7 +32,7 @@ json_schema = {
 }
 
 
-schema_obj = uiclient.schemas.load(json_schema = json_schema)
+schema_obj = reclient.schemas.load(json_schema = json_schema)
 
 # Now you can use your favorite model to analyze your document
 client = OpenAI()

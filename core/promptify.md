@@ -9,11 +9,11 @@ This is particularly useful when you already have a schema structure but want to
 
 <CodeGroup>
 ```python Request
-from uiform import UiForm
+from retab import Retab
 
-uiclient = UiForm()
+reclient = Retab()
 
-schema_obj = uiclient.schemas.promptify(
+schema_obj = reclient.schemas.promptify(
     json_schema = {
       'properties': {
           'name': {
@@ -81,11 +81,11 @@ The Schema.enhance endpoint allows you to create an optimized system prompt for 
 (coming soon) This endpoint will also receive a likelihoods/distances object that will allow you to modify the data structure of the schema (by changing confusing fields, adding new fields, removing unecessary fields, etc.). Furthermore, we will also allow this endpoint to change the field's descriptions and toggling the reasoning for each field.
 
 ```python
-from uiform import UiForm
+from retab import Retab
 
-uiclient = UiForm()
+reclient = Retab()
 
-new_schema_object = uiclient.schemas.enhance(
+new_schema_object = reclient.schemas.enhance(
     json_schema = {
       'properties': {
           'name': {

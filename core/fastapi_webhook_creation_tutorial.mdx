@@ -15,27 +15,27 @@
 
 ### Setup the Python SDK
 
-To get started, install the `uiform` package using pip:
+To get started, install the `retab` package using pip:
 
 ```bash
-pip install uiform
+pip install retab
 ```
 
-Then, [create your API key on uiform.com](https://www.uiform.com) and populate your `env` variables:
+Then, [create your API key on retab.dev](https://www.retab.dev) and populate your `env` variables:
 
 ```bash .env
-UIFORM_API_KEY=sk_xxxxxxxxx # Create your API key on https://www.uiform.com
+RETAB_API_KEY=sk_xxxxxxxxx # Create your API key on https://www.retab.dev
 ```
 
 Use the `secrets` module to store your OpenAI API key:
 
 ```python
-import uiform
+import retab
 import os
 
-uiclient = uiform.UiForm()
+reclient = retab.Retab()
 
-uiclient.secrets.external_api_keys.create(
+reclient.secrets.external_api_keys.create(
     provider="OpenAI", 
     api_key=os.getenv("OPENAI_API_KEY")
 )
@@ -43,19 +43,19 @@ uiclient.secrets.external_api_keys.create(
 
 #### Process your first document
 
-UiForm handles all the document preprocessing.:
+Retab handles all the document preprocessing.:
 
 
 <CodeGroup>
 ```python main.py
-from uiform import UiForm
+from retab import Retab
 from openai import OpenAI
 
-# Initialize UiForm client
-uiclient = UiForm()
+# Initialize Retab client
+reclient = Retab()
 
 # Convert any document into LLM-ready format
-doc_msg = uiclient.documents.create_messages(
+doc_msg = reclient.documents.create_messages(
     document = "invoice.pdf"  # Works with PDFs, Excel, emails, etc.
 )
 
@@ -103,11 +103,11 @@ completion = client.chat.completions.create(
 We use a standard JSON Schema with custom annotations (`X-SystemPrompt` and `X-ReasoningPrompt`) as a prompt-engineering framework for the extraction process.
 
 These annotations help guide the LLM's behavior and improve extraction accuracy. 
-You can learn more about these in our [JSON Schema documentation](https://docs.uiform.com/get-started/prompting-with-the-JSON-schema).
+You can learn more about these in our [JSON Schema documentation](https://docs.retab.dev/get-started/prompting-with-the-JSON-schema).
 
 <CodeGroup>
 ```python Pydantic BaseModel
-from uiform import UiForm
+from retab import Retab
 from openai import OpenAI
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -130,11 +130,11 @@ class Invoice(BaseModel):
     )
 
 # Process document and extract data
-uiclient = UiForm()
-doc_msg = uiclient.documents.create_messages(
+reclient = Retab()
+doc_msg = reclient.documents.create_messages(
     document = "invoice.pdf"
 )
-schema_obj = uiclient.schemas.load(
+schema_obj = reclient.schemas.load(
     pydantic_model = Invoice
 )
 
@@ -149,14 +149,14 @@ completion = client.beta.chat.completions.parse(
 print("Extracted data:", completion.choices[0].message.parsed)
 
 # Validate the response against the original schema if you want to remove the reasoning fields
-from uiform._utils.json_schema import filter_auxiliary_fields_json
+from retab._utils.json_schema import filter_auxiliary_fields_json
 assert completion.choices[0].message.content is not None
 extraction = schema_obj.pydantic_model.model_validate(
     filter_auxiliary_fields_json(completion.choices[0].message.content, schema_obj.pydantic_model)
 )
 ```
 ```python JSON Schema
-from uiform import UiForm
+from retab import Retab
 from openai import OpenAI
 
 # Define your extraction schema
@@ -177,11 +177,11 @@ schema = {
 }
 
 # Process document and extract data
-uiclient = UiForm()
-doc_msg = uiclient.documents.create_messages(
+reclient = Retab()
+doc_msg = reclient.documents.create_messages(
     document = "invoice.pdf"
 )
-schema_obj = uiclient.schemas.load(
+schema_obj = reclient.schemas.load(
     json_schema = schema
 )
 
@@ -203,7 +203,7 @@ completion = client.chat.completions.create(
 print("Extracted data with the reasoning fields:", completion.choices[0].message.content) 
 
 # Validate the response against the original schema if you want to remove the reasoning fields
-from uiform._utils.json_schema import filter_auxiliary_fields_json
+from retab._utils.json_schema import filter_auxiliary_fields_json
 assert completion.choices[0].message.content is not None
 extraction = schema_obj.pydantic_model.model_validate(
     filter_auxiliary_fields_json(completion.choices[0].message.content, schema_obj.pydantic_model)
@@ -212,12 +212,12 @@ extraction = schema_obj.pydantic_model.model_validate(
 print("Extracted data without the reasoning fields:", extraction)
 
 ```
-```python UiForm Client
-from uiform import UiForm
+```python Retab Client
+from retab import Retab
 
 # All-in-one extraction API
-uiclient = UiForm()
-response = uiclient.documents.extractions.parse(
+reclient = Retab()
+response = reclient.documents.extractions.parse(
     document = "invoice.pdf",
     model = "gpt-4o",
     json_schema = {
@@ -250,7 +250,7 @@ Next, set up a FastAPI route that will handle incoming webhook POST requests. Be
 ```python
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from uiform.types.automations.webhooks import WebhookRequest
+from retab.types.automations.webhooks import WebhookRequest
 from pydantic import BaseModel, Field, ConfigDict
 
 app = FastAPI()
@@ -279,17 +279,17 @@ curl -X POST "http://localhost:8000/webhook" \
 
 ### Step 4: Create your deployment and Test It
 
-Finally, integrate the webhook with your deployment system using the `uiform` client. This example demonstrates how to create an deployment that triggers the webhook when a matching event occurs:
+Finally, integrate the webhook with your deployment system using the `retab` client. This example demonstrates how to create an deployment that triggers the webhook when a matching event occurs:
 
 ```python
-from uiform import UiForm
+from retab import Retab
 
-# Initialize the UiForm client
-uiclient = UiForm()
+# Initialize the Retab client
+reclient = Retab()
 
 # Create an deployment that uses the webhook URL from Step 2
-deployment = uiclient.processors.automations.mailboxes.create(
-    email="invoices@mailbox.uiform.com",
+deployment = reclient.processors.automations.mailboxes.create(
+    email="invoices@mailbox.retab.dev",
     model="gpt-4.1-nano",
     json_schema=Invoice.model_json_schema(), # use the pydantic model to create the json schema
     webhook_url="http://localhost:8000/webhook",  # Replace with your actual webhook URL if different
@@ -306,25 +306,25 @@ After setting up the deployment, simulate or trigger an event that complies with
 Finally, you can test the deployment with the test functions of the sdk: 
 
 ```python
-from uiform import UiForm
+from retab import Retab
 
-# Initialize the UiForm client
-uiclient = UiForm()
+# Initialize the Retab client
+reclient = Retab()
 
 # If you just want to send a test request to your webhook
-log = uiclient.processors.automations.mailboxes.tests.webhook(
-    email="test-mailbox-local@devmail.uiform.com", 
+log = reclient.processors.automations.mailboxes.tests.webhook(
+    email="test-mailbox-local@devmail.retab.dev", 
 )
 
 # If you want to test the file processing logic: 
-log = uiclient.processors.automations.mailboxes.tests.process(
-    email="test-mailbox-local@devmail.uiform.com", 
+log = reclient.processors.automations.mailboxes.tests.process(
+    email="test-mailbox-local@devmail.retab.dev", 
     document="your_invoice_email.eml"
 )
 
 # If you want to test a full email forwarding
-log = uiclient.processors.automations.mailboxes.tests.forward(
-    email="uiform-quickstart@mailbox.uiform.com", 
+log = reclient.processors.automations.mailboxes.tests.forward(
+    email="retab-quickstart@mailbox.retab.dev", 
     document="your_invoice_email.eml"
 )
 ```
