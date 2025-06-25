@@ -1,0 +1,69 @@
+---
+title: 'Parse'
+openapi: 'POST /v1/documents/parse'
+---
+
+<RequestExample>
+
+```python python
+from retab.client import Retab
+
+client = Retab()
+result = client.documents.parse(
+    document="document.pdf",
+    fast_mode=False,
+    table_parsing_format="html",
+    image_resolution_dpi=72,
+    browser_canvas="A4"
+)
+
+# Access parsed content
+for i, page_content in enumerate(result.pages):
+    print(f"Page {i + 1}: {page_content}")
+
+print(f"Total pages: {result.usage.page_count}")
+print(f"Credits used: {result.usage.credits}")
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.dev/v1/documents/parse' \
+  -H "API-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "document.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsO..."
+  },
+  "fast_mode": false,
+  "table_parsing_format": "html",
+  "image_resolution_dpi": 72,
+  "browser_canvas": "A4"
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "document": {
+    "filename": "document.pdf",
+    "mime_type": "application/pdf",
+    "size": 15432
+  },
+  "usage": {
+    "page_count": 3,
+    "credits": 1.5
+  },
+  "pages": [
+    "<h1>Document Title</h1><p>First page content with formatted text and tables...</p>",
+    "<p>Second page content continues here...</p>",
+    "<p>Third and final page content...</p>"
+  ]
+}
+```
+
+</ResponseExample>
+
