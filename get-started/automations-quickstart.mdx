@@ -1,338 +1,316 @@
-<Steps>
-  <Step title="Setup the Python SDK">
-    Install the Retab Python SDK and configure your API keys to start processing documents with your preferred AI provider
-  </Step>
-  <Step title="Create your JSON schema">
-    Define the structure of the data you want to extract from your documents using our schema format with custom prompting capabilities
-  </Step>
-  <Step title="Create your FastAPI server with a webhook">
-    Set up an endpoint that will receive the structured data extracted from your documents after processing
-  </Step>
-  <Step title="Create your processor and automation">
-    Configure a processor and an automation to handle triggers like emails and send results to your webhook
-  </Step>
-  <Step title="Test your processor and automation">
-    Validate your setup by sending test documents through your processor and verify the extracted data matches your requirements
-  </Step>
-</Steps>
+Automations allow you to process documents at scale. 
 
-### Step 1: Setup the Python SDK
+## Introduction
 
-To get started, install the `retab` package using pip:
+Retab uses HTTPS to send webhook events to your app as a JSON payload representing a `WebhookRequest` object.
+You will need a server with a webhook endpoint that will receive the extraction results, allowing you to process them as you want after that.
 
-```bash
-pip install retab
-```
 
-Then, [create your API key on retab.dev](https://www.retab.dev) and populate your `env` variables:
+The `WebhookRequest` object is a Pydantic model that contains the following fields:
 
-```bash .env
-RETAB_API_KEY=sk_xxxxxxxxx # Create your API key on https://www.retab.dev
-```
+- `completion`: The parsed chat completion object, containing the extracted data.
+- `user`: The user email address.
+- `file_payload`: The file payload object, containing the file name, url and other metadata.
+- `metadata`: Some additional metadata.
 
-Then, as we will use your API key to make requests to OpenAI on your behalf within a processor, you need to store your API key in the Retab secrets manager:
 
 ```python
-import retab
+from openai.types.chat.parsed_chat_completion import ParsedChatCompletion
+
+class MIMEData(BaseModel):
+    filename: str = Field(description="The filename of the file", examples=["file.pdf", "image.png", "data.txt"])
+    url: str = Field(description="The URL of the file in base64 format", examples=["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."])
+    ##... other fields
+
+class WebhookRequest(BaseModel):
+    completion: ParsedChatCompletion
+    user: Optional[EmailStr] = None
+    file_payload: MIMEData
+    metadata: Optional[dict[str, Any]] = None
+
+```
+
+
+To start receiving webhook events in your app:
+
+- Create a webhook endpoint handler to receive event data POST requests.
+- Create a new deployment sending data to your webhook endpoint.
+- Test your webhook endpoint handler locally using the Retab SDK.
+- Secure your webhook endpoint.
+
+
+### Create a webhook endpoint handler
+
+Set up an HTTPS endpoint function that can accept webhook requests with a POST method.
+
+Set up your endpoint function so that it:
+
+- Handles POST requests with a JSON payload consisting of an event object.
+- Quickly returns a successful status code (2xx) prior to any complex logic that might cause a timeout.
+
+```python
 import os
 
-reclient = retab.Retab()
-
-reclient.secrets.external_api_keys.create(
-    provider="OpenAI", 
-    api_key=os.getenv("OPENAI_API_KEY")
-)
-```
-
-**Process your first document**
-
-Here is how to process your first document with the create_messages method:
-
-<CodeGroup>
-```python main.py (OpenAI Completions API)
+from fastapi import FastAPI, Request, Response, HTTPException
 from retab import Retab
-from openai import OpenAI
 
-# Initialize Retab client
 reclient = Retab()
+app = FastAPI()
 
-# Convert any document into LLM-ready format
-doc_msg = reclient.documents.create_messages(
-    document = "invoice.pdf"  # Works with PDFs, Excel, emails, etc.
-)
+@app.post("/webhook")
+async def webhook_handler(request: Request):
 
-client = OpenAI()
-completion = client.chat.completions.create(
-    model="gpt-4.1-nano",
-    messages=doc_msg.openai_messages + [
-        {
-            "role": "user",
-            "content": "Summarize the document"
-        }
-    ]
-)
-```
-```python main.py (OpenAI Responses API)
-from retab import Retab
-from openai import OpenAI
+    payload = await request.body()
 
-# Initialize Retab client
-reclient = Retab()
+    # Decode and parse the webhook request from the verified payload
+    json_data = json.loads(payload.decode('utf-8'))
+    webhook_request = WebhookRequest.model_validate(json_data)
 
-# Convert any document into LLM-ready format
-doc_msg = reclient.documents.create_messages(
-    document = "invoice.pdf"  # Works with PDFs, Excel, emails, etc.
-)
+    invoice_object = Invoice.model_validate_json(webhook_request.completion.choices[0].message.content or "{}") # The parsed object is the same Invoice object as the one you defined in the Pydantic model
+    print("📬 Webhook received:", invoice_object)
+    return {"status": "success", "data": invoice_object}
 
-client = OpenAI()
-response = client.responses.create(
-    model = "gpt-4.1-nano",
-    input = doc_msg.openai_responses_input + [
-        {
-            "role": "user",
-            "content": "Summarize the document"
-        }
-    ]
-)
+
+# To run the FastAPI app locally, use the command:
+# uvicorn your_module_name:app --reload
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-```json doc_msg object
-{
-    "id": "doc_dd003f95-81ce-4a55-9180-00c5a58d82ec",
-    "object": "document.message",
-    "messages": [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": "INVOICE\n\nABC Logistics Inc.\n123 Shipping Lane\nPort City, PC 12345\n\nBill To:\nXYZ Corporation\n456 Business Ave\nMetro City, MC 67890\n\nInvoice Number: INV-2024-0123\nInvoice Date: 2024-01-15\nDue Date: 2024-02-14\n\nDescription:\n1. Ocean Freight (20ft Container) - $2,500.00\n2. Documentation Fee - $150.00\n3. Terminal Handling Charges - $350.00\n4. Customs Clearance - $275.00\n\nSubtotal: $3,275.00\nTax (10%): $327.50\nTotal Amount: $3,602.50\n\nPayment Terms: Net 30\nBank Details:\nBank: Global Trade Bank\nAccount: 1234567890\nSwift: GTBKUS12\n\nThank you for your business!\n\nFor questions contact:\naccounts@abclogistics.com\n+1 (555) 123-4567"
-                }
-            ]
-        }
-    ],
-    "created": 1736524416,
-    "modality": "text",
-    "document": {
-        "id": "cf908729402d0796537bb91e63df5e339ce93b4cabdcac2f9a4f90592647e130",
-        "name": "invoice.pdf",
-        "mime_type": "application/pdf",
-    }
-}
-```
-</CodeGroup>
+### Create a new deployment sending data to your webhook endpoint
 
+Let's create a new processor and automation to send data to your webhook endpoint.
 
+First, create a processor:
 
-### Step 2 : Create your JSON Schema
-
-We use a standard JSON Schema with custom annotations (`X-SystemPrompt` and `X-ReasoningPrompt`) as a prompt-engineering framework for the extraction process.
-
-These annotations help guide the LLM's behavior and improve extraction accuracy. 
-You can learn more about these in our [JSON Schema documentation](https://docs.retab.dev/get-started/prompting-with-the-JSON-schema).
-
-<CodeGroup>
-```python Pydantic BaseModel (OpenAI Completions API)
-from retab import Retab
-from openai import OpenAI
-from pydantic import BaseModel, Field, ConfigDict
-
-# Define your extraction schema
+```python
 class Invoice(BaseModel):
-    model_config = ConfigDict(
-        json_schema_extra = {
-            "X-SystemPrompt": "You are an expert at analyzing invoice documents."
-        }
-    )
-    
-    total_amount: float = Field(...,
-        description="The total invoice amount",
-    )
-    date: str = Field(...,
-        description="Invoice date in YYYY-MM-DD format",
-        json_schema_extra={
-            "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
-        }
-    )
+    amount: int
+    currency: str
+    customer_email: EmailStr
 
-# Process document and extract data
+
+from retab import Retab
+
 reclient = Retab()
-doc_msg = reclient.documents.create_messages(
-    document = "invoice.pdf"
-)
-schema_obj = reclient.schemas.load(
-    pydantic_model = Invoice
-)
 
-# Extract structured data with any LLM
-client = OpenAI()
-completion = client.beta.chat.completions.parse(
-    model="gpt-4o",
-    messages=schema_obj.openai_messages + doc_msg.openai_messages,
-    response_format=schema_obj.inference_pydantic_model
+# Step 1: Create a processor
+processor = reclient.processors.create(
+    name="Invoice Processor",
+    model="gpt-4.1",
+    json_schema=Invoice.model_json_schema(),
 )
 
-print("Extracted data:", completion.choices[0].message.parsed)
-
-# Validate the response against the original schema if you want to remove the reasoning fields
-from retab.utils.json_schema import filter_auxiliary_fields_json
-assert completion.choices[0].message.content is not None
-extraction = schema_obj.pydantic_model.model_validate(
-    filter_auxiliary_fields_json(completion.choices[0].message.content, schema_obj.pydantic_model)
+# Step 2: Create an automation and attach it to the processor
+extraction_link = reclient.processors.automations.links.create(
+    name="Invoices",
+    processor_id=processor.id,
+    webhook_url="https://your_server.com/invoices/webhook",
 )
 ```
-```python JSON Schema (OpenAI Completions API)
+
+### Test your webhook endpoint handler locally using the Retab SDK
+
+Before you go-live with your webhook endpoint function, we recommend that you test your application integration.
+
+You can do so by sending a test request to your webhook endpoint using the Retab SDK.
+
+```python
 from retab import Retab
-from openai import OpenAI
 
-# Define your extraction schema
-schema = {
-    "X-SystemPrompt": "You are an expert at analyzing invoice documents.",
-    "properties": {
-        "total_amount": {
-            "type": "number",
-            "description": "The total invoice amount",
-        },
-        "date": {
-            "type": "string",
-            "description": "Invoice date in YYYY-MM-DD format",
-            "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
-        }
-    },
-    "required": ["total_amount", "date"]
-}
-
-# Process document and extract data
 reclient = Retab()
-doc_msg = reclient.documents.create_messages(
+link_log = reclient.processors.automations.links.test_document_upload(
+    link_id=extraction_link.id,
     document = "invoice.pdf"
 )
-schema_obj = reclient.schemas.load(
-    json_schema = schema
-)
-
-# Extract structured data with any LLM
-client = OpenAI()
-completion = client.chat.completions.create(
-    model="gpt-4o",
-    messages=schema_obj.openai_messages + doc_msg.openai_messages,
-    response_format={
-        "type": "json_schema",
-        "json_schema": {
-            "name": schema_obj.id,
-            "schema": schema_obj.inference_json_schema,
-            "strict": True
-        }
-    }
-)
-
-print("Extracted data with the reasoning fields:", completion.choices[0].message.content) 
-
-# Validate the response against the original schema if you want to remove the reasoning fields
-from retab.utils.json_schema import filter_auxiliary_fields_json
-assert completion.choices[0].message.content is not None
-extraction = schema_obj.pydantic_model.model_validate(
-    filter_auxiliary_fields_json(completion.choices[0].message.content, schema_obj.pydantic_model)
-)
-
-print("Extracted data without the reasoning fields:", extraction)
-
 ```
 
-```python JSON Schema (OpenAI Responses API)
+### Secure your webhook endpoint
+
+You need to secure your integration by making sure your handler verifies that all webhook requests are generated by Retab. 
+
+You perform the verification by providing the event payload, the `Retab-Signature` header, and the endpoint's secret. If verification fails, you get an error.
+
+
+**Important:** Make sure to replace `"your_webhooks_secret_here"` with the actual secret from your [Retab dashboard](https://www.retab.dev/dashboard/settings).
+
+
+```python {13-39}
+import os
+
+from fastapi import FastAPI, Request, Response, HTTPException
 from retab import Retab
-from openai import OpenAI
 
-# Define your extraction schema
-schema = {
-    "X-SystemPrompt": "You are an expert at analyzing invoice documents.",
-    "properties": {
-        "total_amount": {
-            "type": "number",
-            "description": "The total invoice amount",
-        },
-        "date": {
-            "type": "string",
-            "description": "Invoice date in YYYY-MM-DD format",
-            "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
-        }
-    },
-    "required": ["total_amount", "date"]
-}
-
-# Process document and extract data
 reclient = Retab()
-doc_msg = reclient.documents.create_messages(
-    document = "invoice.pdf"
-)
-schema_obj = reclient.schemas.load(
-    json_schema = schema
-)
+app = FastAPI()
 
-# Extract structured data with any LLM
-# Updated to use Responses API instead of Chat Completions
-client = OpenAI()
-response = client.responses.create(
-    model = model,
-    temperature = temperature,
-    input = schema_obj.openai_responses_input + doc_msg.openai_responses_input,
-    text ={
-        "format": {
-            "type": "json_schema",
-            "name": schema_obj.id,
-            "schema": schema_obj.inference_json_schema,
-            "strict": True
-            }
-        }
-)
+@app.post("/webhook")
+async def webhook_handler(request: Request):
 
-print("Extracted data with the reasoning fields:", response.output_text) 
+    payload = await request.body()
 
-# Validate the response against the original schema if you want to remove the reasoning fields
-from retab.utils.json_schema import filter_auxiliary_fields_json
-assert response.output_text is not None
-extraction = schema_obj.pydantic_model.model_validate(
-    filter_auxiliary_fields_json(response.output_text, schema_obj.pydantic_model)
-)
+    #########################################################
+    # SIGNATURE VERIFICATION
+    #########################################################
+    try:
+        # Read the signature from the request headers
+        
+        signature_header = request.headers.get("Retab-Signature")
 
-print("Extracted data without the reasoning fields:", extraction)
+        if not signature_header:
+            raise HTTPException(status_code=400, detail="Missing Retab-Signature header")
+
+        # Verify the signature and process the event
+        reclient.processors.automations.verify_event(
+            event_body=payload,
+            event_signature=signature_header,
+            secret=os.getenv("WEBHOOKS_SECRET"),
+        )
+
+        return Response(status_code=200)
+    except Exception as e:
+        # Handle errors (optional: log the error)
+        return Response(status_code=400, content=f"Webhook error: {str(e)}")
+
+    ########################################################   
+    # END OF SIGNATURE VERIFICATION
+    #########################################################
+
+    # Decode and parse the webhook request from the verified payload
+    json_data = json.loads(payload.decode('utf-8'))
+    webhook_request = WebhookRequest.model_validate(json_data)
+
+    #Then continue with your webhook handler logic .....
+    invoice_object = Invoice.model_validate_json(webhook_request.completion.choices[0].message.content or "{}") # The parsed object is the same Invoice object as the one you defined in the Pydantic model
+    print("📬 Webhook received:", invoice_object)
+    return {"status": "success", "data": invoice_object}
+
 
 ```
 
-```python JSON Schema (Retab API)
+#### Vulnerability
+
+When you set up a webhook, you provide an **HTTP endpoint** on your server for Retab to send data to. If this endpoint is not secured (i.e., it accepts unauthenticated `POST` requests from anywhere), it essentially becomes a public door into your system. **Any actor** could attempt to call this URL and send fake data. This is inherently dangerous: a malicious party might send **forged webhook requests** that masquerade as Retab, but contain bogus or harmful data. Without verification, your server might accept these fake events and perform unintended actions. In short, an open webhook endpoint without authentication is **highly vulnerable** to abuse.
+
+#### Mitigation
+
+To secure webhook deliveries, Retab employs a **signature verification** mechanism using an HMAC-like scheme (similar to the approach used by [Stripe](https://docs.stripe.com/webhooks#verify-official-libraries), [WorkOS](https://workos.com/docs/events/data-syncing/webhooks/1-set-up-your-webhook-endpoint), and other providers). HMAC stands for *Hash-Based Message Authentication Code*, a method that uses a secret key to create a cryptographic signature for each message. In fact, HMAC signing is by far the most popular strategy for webhook security (used in \~65% of webhook implementations), because it ensures that only the trusted source (with knowledge of the secret) could have sent the request.
+
+**How it works:** Retab and your application share a **webhook secret** (a random string known only to Retab and you). This secret is available in your Retab dashboard (often labeled as `WEBHOOKS_SECRET`). Retab uses this secret to include a special signature header with every webhook request:
+
+* **Signature Generation (Retab):** When Retab prepares to send a webhook, it computes an HMAC-SHA256 signature of the webhook's payload using your secret key, and includes this signature in the request headers (specifically in the `Retab-Signature` header).
+* **Signature Verification (Your Server):** When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret. Then, compare your computed signature to the value in the `Retab-Signature` header.
+* **Comparison Result:** If the two signatures **match**, it means the request truly came from Retab (since only Retab knows the secret) and that the payload was not altered in transit. You can then safely trust and process the webhook. If the signatures **do not match**, the request is illegitimate – either coming from an impostor or corrupted – and you should reject it (e.g. respond with an HTTP 400 Bad Request or 401 Unauthorized).
+
+By using this HMAC signature validation, we achieve both **authentication** and **integrity** for webhook messages: only the genuine sender (Retab) can produce a matching signature, and any change to the data would break the signature verification. In other words, a valid `Retab-Signature` proves that the webhook content is exactly what Retab sent and has not been tampered with.
+
+
+
+#### Code Snippets
+---
+Here are some code snippets for different frameworks.
+
+<CodeGroup>
+```python FastAPI
+import os
+
+from fastapi import FastAPI, Request, Response, HTTPException
 from retab import Retab
 
-# All-in-one extraction API
 reclient = Retab()
-response = reclient.documents.extract(
-    document = "invoice.pdf",
-    model = "gpt-4o",
-    json_schema = {
-        "X-SystemPrompt": "You are an expert at analyzing invoice documents.",
-        "properties": {
-            "total_amount": {
-                "type": "number",
-                "description": "The total invoice amount",
-            },
-            "date": {
-                "type": "string",
-                "description": "Invoice date in YYYY-MM-DD format",
-                "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
-            }
-        },
-        "required": ["total_amount", "date"]
-    }
-)
+app = FastAPI()
 
-print("Extracted data:", response.choices[0].message.content)
+@app.post("/webhook")
+async def webhook_handler(request: Request):
+    try:
+        # Read payload and signature from request
+        payload = await request.body()
+        signature_header = request.headers.get("Retab-Signature")
+
+        if not signature_header:
+            raise HTTPException(status_code=400, detail="Missing Retab-Signature header")
+
+        # Verify the signature and process the event
+        reclient.processors.automations.verify_event(
+            event_body=payload,
+            event_signature=signature_header,
+            secret=os.getenv("WEBHOOKS_SECRET"),
+        )
+
+        return Response(status_code=200)
+    except Exception as e:
+        # Handle errors (optional: log the error)
+        return Response(status_code=400, content=f"Webhook error: {str(e)}")
+```
+```python Django
+import os
+
+from django import Response
+from retab import Retab
+
+reclient = Retab()
+
+def webhook_handler(request):
+    payload = request.get_data()
+    signature_header = request.headers["Retab-Signature"]
+
+    # Verify the signature and process the event
+    response = reclient.processors.automations.verify_event(
+        event_body=payload,
+        event_signature=signature_header,
+        secret=os.getenv("WEBHOOKS_SECRET"),
+    )
+
+    return Response(status=200)
+```
+```python Flask
+import os
+
+from flask import Flask, Response, request
+from retab import Retab
+
+reclient = Retab()
+
+app = Flask(__name__)
+
+
+@app.route("/webhook", methods=["POST"])
+def webhook_handler():
+    payload = request.get_data()
+    signature_header = request.headers["Retab-Signature"]
+
+    # Verify the signature and process the event
+    response = reclient.processors.automations.verify_event(
+        event_body=payload,
+        event_signature=signature_header,
+        secret=os.getenv("WEBHOOKS_SECRET"),
+    )
+
+    return Response(status=200)
 ```
 </CodeGroup>
 
+## Create your processor
 
-### Step 3: Create your FastAPI server with a webhook
+Start by creating a **processor** with your extraction configuration.
 
+```python
+from retab import Retab
 
-Next, set up a FastAPI route that will handle incoming webhook POST requests. Below is an example of a simple FastAPI application with a webhook endpoint:
+client = Retab()
+
+processor = client.processors.create(
+    name="Invoice Processor",
+    model="gpt-4.1",
+    json_schema="Invoice_schema.json"
+)
+
+```
+
+## Create your FastAPI server with a webhook
+
+Then, set up a FastAPI route that will handle incoming webhook POST requests. You will need it to create an automation. Below is an example of a simple FastAPI application with a webhook endpoint:
 
 <CodeGroup>
 ```python main.py
@@ -367,7 +345,7 @@ curl -X POST http://localhost:8000/webhook \
 
 <Warning>To continue, you need to deploy your FastAPI app to a server to make your webhook endpoint publicly accessible. We recommend using [Replit](https://replit.com/) to get started quickly if you don't have a server yet. An alternative is to use [ngrok](https://ngrok.com/) to expose your local server to the internet.</Warning>
 
-#### Step 3.1: Exposing local server to the internet using ngrok
+## Exposing local server to the internet using ngrok
 
 We have a very simple Dockerfile that fastapi+ngrok to get you started.
 Check out the [webhook_server](https://github.com/Retab-dev/retab/tree/main/examples/webhook_server) folder for more details.
@@ -398,55 +376,29 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 Take note of the `webhook URL`, you will need it on the next steps.
 
 
-### Step 4: Create your processor and automation
+## Create an automation
 
-Instead of creating automations directly, you now first create a **processor** (which contains the extraction configuration) and then attach an **automation** (which handles triggers like emails) to it.
+Now, you can create an automation that will use your processor to extract data from emails.
 
 ```python
 from retab import Retab
 
-# Initialize the Retab client
-reclient = Retab()
+client = Retab()
 
-# Step 1: Create a processor with your extraction configuration
-processor = reclient.processors.create(
-    name="Invoice Processor",
-    model="gpt-4o-mini",
-    modality="native",
-    json_schema={
-        "X-SystemPrompt": "You are an expert at analyzing invoice documents.",
-        "properties": {
-            "total_amount": {
-                "type": "number",
-                "description": "The total invoice amount",
-            },
-            "date": {
-                "type": "string",
-                "description": "Invoice date in YYYY-MM-DD format",
-                "X-ReasoningPrompt": "Look for dates labeled as 'Invoice Date', 'Date', etc."
-            }
-        },
-        "required": ["total_amount", "date"]
-    }
-)
-
-# Step 2: Create a mailbox automation and attach it to the processor
-mailbox = reclient.processors.automations.mailboxes.create(
+# Create a mailbox automation and attach it to the processor
+mailbox = client.processors.automations.mailboxes.create(
     name="Invoice Mailbox",
     email="invoices@mailbox.retab.dev",
-    processor_id=processor.id,
+    processor_id=processor.id, # The processor id you created in the previous step
     webhook_url="https://your-server.com/webhook",  # Replace with your actual webhook URL
 )
-
-print(f"✅ Processor created: {processor.id}")
-print(f"✅ Mailbox created: {mailbox.email}")
 ```
 
 At any email sent to `invoices@mailbox.retab.dev`, the automation will use your processor configuration to extract data and send a POST request to your FastAPI webhook endpoint.
 
 You can see the processor and automation you just created on your [dashboard](https://www.retab.dev/dashboard/processors)!
 
-### Step 5: Test your processor and automation
+### Test your automation
 
 Finally, you can test the processor and automation rapidly with the test functions of the SDK: 
 
@@ -454,21 +406,21 @@ Finally, you can test the processor and automation rapidly with the test functio
 from retab import Retab
 
 # Initialize the Retab client
-reclient = Retab()
+client = Retab()
 
 # If you just want to send a test request to your webhook
-log = reclient.processors.automations.mailboxes.tests.webhook(
+log = client.processors.automations.mailboxes.tests.webhook(
     email="invoices@mailbox.retab.dev", 
 )
 
 # If you want to test the file processing logic: 
-log = reclient.processors.automations.mailboxes.tests.process(
+log = client.processors.automations.mailboxes.tests.process(
     email="invoices@mailbox.retab.dev", 
     document="your_invoice_email.eml"
 )
 
 # If you want to test a full email forwarding
-log = reclient.processors.automations.mailboxes.tests.forward(
+log = client.processors.automations.mailboxes.tests.forward(
     email="invoices@mailbox.retab.dev", 
     document="your_invoice_email.eml"
 )
@@ -476,18 +428,15 @@ log = reclient.processors.automations.mailboxes.tests.forward(
 
 <Tip>You can also test your webhook locally by overriding the webhook url set in the automation</Tip>
 
-You can also test your processor and automation directly from the [dashboard](https://www.retab.dev/dashboard/processors):
-<Frame>
-  <img src="https://raw.githubusercontent.com/Retab/retab/refs/heads/main/assets/docs/automation_test.png" />
-</Frame>
+You can also test your automation directly from the [dashboard](https://www.retab.dev/dashboard/processors).
 
 ```python
 from retab import Retab
 
-reclient = Retab()
+client = Retab()
 
 # If you just want to send a test request to your webhook
-log = reclient.processors.automations.mailboxes.tests.webhook(
+log = client.processors.automations.mailboxes.tests.webhook(
     email="invoices@mailbox.retab.dev", 
     webhook_url="http://localhost:8000/webhook" # If you want to try your webhook locally, you can override the webhook url set in the automation
 )
@@ -500,6 +449,3 @@ log = reclient.processors.automations.mailboxes.tests.webhook(
 
 
 That's it! You can start processing documents at scale. 
-You have 1000 free requests to get started, and you can [subscribe](https://www.retab.dev) to the pro plan to get more.
-
-But this minimalistic example is just the beginning. Continue reading to learn more about how to use Retab **to its full potential**.
