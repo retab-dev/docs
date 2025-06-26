@@ -1,9 +1,140 @@
-In this section, we will see how to use the methods of the client.schemas module. Please check the [API Reference](https://docs.retab.dev/api-reference/schema/generate) for more details.
+
+The Schema is the blueprint for structured data extraction—a formal specification that defines the exact shape, types, and validation rules for the data you want to extract from documents. Think of it as a contract between you and the AI: you define what fields you need (invoice amounts, customer names, dates), their data types (string, number, boolean), and any constraints (required fields, format patterns), and the AI delivers perfectly structured data that matches your specification every time. By using JSON Schema, you transform unpredictable document parsing into reliable, type-safe data pipelines that integrate seamlessly with your applications, databases, and workflows.
+
+ Please check the [API Reference](https://docs.retab.dev/api-reference/schema/generate) for more details.
+
+
+## Generate Schema
+
+The Generate Schema endpoint allows you to automatically generate a JSON Schema from a set of example documents. This is particularly useful when you want to create a schema that captures all the important fields and patterns present in your documents.
+
+You can provide multiple documents to ensure the generated schema covers all possible variations in your data structure. The AI will analyze the documents and create a comprehensive schema with appropriate field descriptions and validation rules.
+
+
+<CodeGroup>
+```python Request
+from retab import Retab
+
+reclient = Retab()
+
+schema_obj = reclient.schemas.generate(
+    modality = "native",
+    model = "gpt-4.1",
+    temperature = 0,
+    stream = False,
+    documents = [
+        "freight/booking_confirmation_1.jpg",
+        "freight/booking_confirmation_2.jpg"
+    ]
+)
+```
+```json Response
+{
+    "id_": "sch_id_c547dbfaa0cbcb8d646ca7c53af54d8870f2740e",
+    "object": "schema",
+    "created_at": "2024-01-01T00:00:00Z",
+    "json_schema": {
+        "X-SystemPrompt": "You are a useful assistant.",
+        "properties": {
+            "name": {
+                "description": "The name of the calendar event.",
+                "title": "Name",
+                "type": "string"
+            },
+            "date": {
+                "description": "The date of the calendar event in ISO 8601 format.",
+                "title": "Date",
+                "type": "string"
+            }
+        },
+        "required": [
+            "name",
+            "date"
+        ],
+        "title": "CalendarEvent",
+        "type": "object"
+    },
+    "data_id": "sch_data_id_d6d04390f2390eab3dc9a017d043b26b95faeb94",
+}
+```
+
+</CodeGroup>
+
+---
+
+## The Schema Object
+
 
 The `Schema` class turns a **design-time schema** that you supply (JSON Schema or Pydantic model) into all the artefacts required to obtain, validate and post-process a large-language-model (LLM) extraction: 
 
 - A **system prompt**
 - An **inference-time schema**
+
+
+
+
+<ResponseField name="Schema Object" type="object">
+  A Schema object represents a JSON schema for structured data extraction.
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      A unique identifier for the schema, prefixed by "sch_id_"
+    </ResponseField>
+
+    <ResponseField name="object" type="string">
+      The type of object being preprocessed. Always "schema".
+    </ResponseField>
+
+    <ResponseField name="created_at" type="datetime">
+      The timestamp when the schema was created.
+    </ResponseField>
+
+    <ResponseField name="json_schema" type="dict[str, Any]">
+      The JSON schema to use for loading.
+    </ResponseField>
+
+    <ResponseField name="pydantic_model" type="type[BaseModel]">
+      The Pydantic model to use for loading.
+    </ResponseField>
+
+    <ResponseField name="inference_json_schema" type="dict[str, Any]">
+      Returns the schema formatted for inference, with the FieldPrompt and ReasoningPrompt fields added.
+    </ResponseField>
+
+    <ResponseField name="inference_pydantic_model" type="type[BaseModel]">
+      Converts the inference schema to a Pydantic model, with the FieldPrompt and ReasoningPrompt fields added.
+    </ResponseField>
+
+    <ResponseField name="inference_gemini_json_schema" type="dict[str, Any]">
+      Returns the schema formatted for inference for Gemini, with the FieldPrompt and ReasoningPrompt fields added.
+    </ResponseField>
+
+    <ResponseField name="data_id" type="string">
+      SHA1 hash of the schema data, ignoring prompt/description/default fields, prefixed by "sch_data_id_"
+    </ResponseField>
+
+    <ResponseField name="title" type="string">
+      The title of the schema. Returns "NoTitle" if not specified.
+    </ResponseField>
+
+    <ResponseField name="openai_messages" type="array[ChatCompletionMessageParam]">
+      Returns the messages formatted for OpenAI's API.
+    </ResponseField>
+
+    <ResponseField name="anthropic_system_prompt" type="string | NotGiven">
+      Returns the system message in Anthropic's Claude format.
+    </ResponseField>
+
+    <ResponseField name="anthropic_messages" type="array[MessageParam]">
+      Returns the messages in Anthropic's Claude format.
+    </ResponseField>
+
+    <ResponseField name="gemini_messages" type="ContentsType">
+      Returns the messages formatted for Google's Gemini API.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+
 
 <CodeGroup>
 ```json Design-time Schema
@@ -63,7 +194,7 @@ When provided with a **JSON schema** and a **document**, you must:
 
 ### Nullable Nested Objects
 
-- If an entire nested object’s data is missing or incomplete, **do NOT** set the object itself to `null`.
+- If an entire nested object's data is missing or incomplete, **do NOT** set the object itself to `null`.
 - Keep the object structure fully intact, explicitly setting each leaf attribute within to `null`.
 - This preserves overall structure and explicitly communicates exactly which fields lack data.
 
@@ -278,76 +409,8 @@ print("System Prompt: \n\n",schema_obj.system_prompt)
 
 print("Inference JSON Schema \n\n", json.dumps(schema_obj.inference_json_schema, indent=2))
 ```
-
-
 </CodeGroup>
 
-
-
-
----
-
-## The Schema Object
-<ResponseField name="Schema Object" type="object">
-  A Schema object represents a JSON schema for structured data extraction.
-  <Expandable title="properties">
-    <ResponseField name="id" type="string">
-      A unique identifier for the schema, prefixed by "sch_id_"
-    </ResponseField>
-
-    <ResponseField name="object" type="string">
-      The type of object being preprocessed. Always "schema".
-    </ResponseField>
-
-    <ResponseField name="created_at" type="datetime">
-      The timestamp when the schema was created.
-    </ResponseField>
-
-    <ResponseField name="json_schema" type="dict[str, Any]">
-      The JSON schema to use for loading.
-    </ResponseField>
-
-    <ResponseField name="pydantic_model" type="type[BaseModel]">
-      The Pydantic model to use for loading.
-    </ResponseField>
-
-    <ResponseField name="inference_json_schema" type="dict[str, Any]">
-      Returns the schema formatted for inference, with the FieldPrompt and ReasoningPrompt fields added.
-    </ResponseField>
-
-    <ResponseField name="inference_pydantic_model" type="type[BaseModel]">
-      Converts the inference schema to a Pydantic model, with the FieldPrompt and ReasoningPrompt fields added.
-    </ResponseField>
-
-    <ResponseField name="inference_gemini_json_schema" type="dict[str, Any]">
-      Returns the schema formatted for inference for Gemini, with the FieldPrompt and ReasoningPrompt fields added.
-    </ResponseField>
-
-    <ResponseField name="data_id" type="string">
-      SHA1 hash of the schema data, ignoring prompt/description/default fields, prefixed by "sch_data_id_"
-    </ResponseField>
-
-    <ResponseField name="title" type="string">
-      The title of the schema. Returns "NoTitle" if not specified.
-    </ResponseField>
-
-    <ResponseField name="openai_messages" type="array[ChatCompletionMessageParam]">
-      Returns the messages formatted for OpenAI's API.
-    </ResponseField>
-
-    <ResponseField name="anthropic_system_prompt" type="string | NotGiven">
-      Returns the system message in Anthropic's Claude format.
-    </ResponseField>
-
-    <ResponseField name="anthropic_messages" type="array[MessageParam]">
-      Returns the messages in Anthropic's Claude format.
-    </ResponseField>
-
-    <ResponseField name="gemini_messages" type="ContentsType">
-      Returns the messages formatted for Google's Gemini API.
-    </ResponseField>
-  </Expandable>
-</ResponseField>
 
 ### Introduction
 
@@ -526,63 +589,6 @@ class CalendarEvent(BaseModel):
 
 schema_obj = Schema(
     pydantic_model = CalendarEvent
-)
-```
-```json Response
-{
-    "id_": "sch_id_c547dbfaa0cbcb8d646ca7c53af54d8870f2740e",
-    "object": "schema",
-    "created_at": "2024-01-01T00:00:00Z",
-    "json_schema": {
-        "X-SystemPrompt": "You are a useful assistant.",
-        "properties": {
-            "name": {
-                "description": "The name of the calendar event.",
-                "title": "Name",
-                "type": "string"
-            },
-            "date": {
-                "description": "The date of the calendar event in ISO 8601 format.",
-                "title": "Date",
-                "type": "string"
-            }
-        },
-        "required": [
-            "name",
-            "date"
-        ],
-        "title": "CalendarEvent",
-        "type": "object"
-    },
-    "data_id": "sch_data_id_d6d04390f2390eab3dc9a017d043b26b95faeb94",
-}
-```
-
-</CodeGroup>
-
-
-## Generate Schema
-
-The Generate Schema endpoint allows you to automatically generate a JSON Schema from a set of example documents. This is particularly useful when you want to create a schema that captures all the important fields and patterns present in your documents.
-
-You can provide multiple documents to ensure the generated schema covers all possible variations in your data structure. The AI will analyze the documents and create a comprehensive schema with appropriate field descriptions and validation rules.
-
-
-<CodeGroup>
-```python Request
-from retab import Retab
-
-reclient = Retab()
-
-schema_obj = reclient.schemas.generate(
-    modality = "native",
-    model = "gpt-4.1",
-    temperature = 0,
-    stream = False,
-    documents = [
-        "freight/booking_confirmation_1.jpg",
-        "freight/booking_confirmation_2.jpg"
-    ]
 )
 ```
 ```json Response
