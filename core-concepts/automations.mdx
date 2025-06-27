@@ -118,9 +118,9 @@ curl -X POST http://localhost:8000/webhook \
 
 When you set up a webhook, you provide an **HTTP endpoint** on your server for Retab to send data to. If this endpoint is not secured (i.e., it accepts unauthenticated `POST` requests from anywhere), it essentially becomes a public door into your system. **Any actor** could attempt to call this URL and send fake data. This is inherently dangerous: a malicious party might send **forged webhook requests** that masquerade as Retab, but contain bogus or harmful data.
 
-To secure webhook deliveries, Retab employs a **signature verification** mechanism using an HMAC-like scheme. Retab and your application share a **webhook secret** (a random string known only to Retab and you). This secret is available in your [Retab dashboard](https://www.retab.dev/dashboard/settings) (Labeled as `WEBHOOKS_SECRET`). Retab uses this secret to include a special signature header with every webhook request. When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret, then compare your computed signature to the value in the `Retab-Signature` header. If the signatures **match**, the request truly came from Retab and the payload was not altered in transit.
+To secure webhook deliveries, Retab employs a **signature verification** mechanism using an HMAC-like scheme. Retab and your application share a **webhook secret** (a random string known only to Retab and you). This secret is available in your [Retab dashboard](https://www.retab.com/dashboard/settings) (Labeled as `WEBHOOKS_SECRET`). Retab uses this secret to include a special signature header with every webhook request. When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret, then compare your computed signature to the value in the `Retab-Signature` header. If the signatures **match**, the request truly came from Retab and the payload was not altered in transit.
 
-<Warning>Make sure to set your `WEBHOOKS_SECRET` environment variable with the secret from your [Retab dashboard](https://www.retab.dev/dashboard/settings).</Warning>
+<Warning>Make sure to set your `WEBHOOKS_SECRET` environment variable with the secret from your [Retab dashboard](https://www.retab.com/dashboard/settings).</Warning>
 
 Here's how to implement signature verification in your FastAPI webhook:
 
@@ -211,15 +211,15 @@ client = Retab()
 # Create a mailbox automation and attach it to the processor
 mailbox = client.processors.automations.mailboxes.create(
     name="Invoice Mailbox",
-    email="invoices@mailbox.retab.dev",
+    email="invoices@mailbox.retab.com",
     processor_id=processor.id, # The processor id you created in the previous step
     webhook_url="https://your-server.com/webhook",  # Replace with your actual webhook URL
 )
 ```
 
-At any email sent to `invoices@mailbox.retab.dev`, the automation will use your processor configuration to extract data and send a POST request to your FastAPI webhook endpoint.
+At any email sent to `invoices@mailbox.retab.com`, the automation will use your processor configuration to extract data and send a POST request to your FastAPI webhook endpoint.
 
-You can see the processor and automation you just created on your [dashboard](https://www.retab.dev/dashboard/processors)!
+You can see the processor and automation you just created on your [dashboard](https://www.retab.com/dashboard/processors)!
 
 ### Test your automation
 
@@ -244,14 +244,14 @@ log = client.processors.automations.tests.upload(
 
 # If you want to test a full email forwarding
 log = client.processors.automations.mailboxes.tests.forward(
-    email="invoices@mailbox.retab.dev", 
+    email="invoices@mailbox.retab.com", 
     document="your_invoice_email.eml"
 )
 ```
 
 <Tip>You can also test your webhook locally by overriding the webhook url set in the automation</Tip>
 
-You can also test your automation directly from the [dashboard](https://www.retab.dev/dashboard/processors).
+You can also test your automation directly from the [dashboard](https://www.retab.com/dashboard/processors).
 
 ```python
 from retab import Retab
