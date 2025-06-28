@@ -22,10 +22,37 @@ The module exposes three high-level methods:
   | **`create_messages`**                          | Generates a verbatim, chat-formatted rendition of the document.                           | Retrieval-augmented generation or “chat with your PDF”.                 |
   | **`create_inputs`**                            | Wraps the document in a developer prompt targeting a supplied JSON schema.                | Function-calling or structured extraction with JSON mode.               |
 | **`extract`** | Executes the extraction and returns the parsed object (optionally with consensus voting). | One-step OCR + LLM parsing when only the structured output is required. |
+| **`parse`** | Converts any document into structured text content with page-by-page extraction. | Perfect for RAG, text extraction, and preparing documents for further processing or indexing. |
 
 The complexities of OCR, layout reconstruction are handled internally, allowing to focus solely on downstream prompt and context-engineering logic.
 
+## The document data structure
 
+Documents in Retab are represented as `MIMEData` objects, which encapsulate the file content and metadata. This structure allows you to work with documents in a consistent way regardless of their original format. **The `url` field directly matches [OpenAI's expected format for image inputs](https://platform.openai.com/docs/guides/images-vision?api-mode=chat&format=base64-encoded).**
+
+<ResponseField name="MIMEData Object Structure" type="object">
+  <Expandable title="document">
+    <ResponseField name="filename" type="string">
+      The original filename of the document.
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      A data URL containing the base64-encoded content of the document, prefixed with the appropriate MIME type.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```json MIMEData Object Structure
+{
+  "document": {
+    "filename": "Alphabet-10Q-Q1-25.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMSAwIG9iago8PAovVHlwZS…"
+  }
+}
+```
+</CodeGroup>
+
+The python SDK is flexible and allows you to use the `document` parameter as a file path, bytes, or a `PIL.Image.Image` object, and we will automatically convert it to a `MIMEData` object for you.
 
 ## Extract
 
@@ -34,7 +61,7 @@ An OpenAI ParsedChatCompletion object with the extracted data.
 </ResponseField>
 
 <CodeGroup>
-```python Request (parse)
+```python Request (python)
 
 from retab import Retab
 
@@ -65,6 +92,40 @@ doc_msg = reclient.documents.extract(
     n_consensus=1 # 1 means disabled (default), if greater than 1 it will run the extraction with n-consensus mode
 )
 ```
+```curl Request (curl)
+curl -X POST https://api.retab.com/v1/documents/extract \
+-H "Authorization: Bearer $RETAB_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "document": {
+      "filename": "Alphabet-10Q-Q1-25.pdf",
+      "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMSAwIG9iago8PAovVHlwZS…"
+    },
+    "model": "gpt-4.1-nano",
+    "json_schema": {
+        "X-SystemPrompt": "You are a useful assistant.",
+        "properties": {
+            "name": {
+                "description": "The name of the calendar event.",
+                "title": "Name",
+                "type": "string"  
+            },
+            "date": {
+                "description": "The date of the calendar event in ISO 8601 format.",
+                "title": "Date",
+                "type": "string"
+            }
+        },  
+        "required": ["name", "date"],
+        "title": "CalendarEvent",
+        "type": "object"
+    },
+    "modality": "native",
+    "n_consensus": 1
+}
+```
+
+
 ```python Request (stream)
 
 from retab import Retab
@@ -148,12 +209,144 @@ doc_msg = reclient.documents.extractions.stream(
 ```
 </CodeGroup>
 
+
+## Parse
+
+Converts any document into structured text content with page-by-page extraction. This method processes various document types and returns plain text content along with usage information and metadata. Perfect for OCR tasks, text extraction, and preparing documents for further processing or indexing.
+
+<ParamField body="ParseRequest" type="ParseRequest">
+  <Expandable title="properties">
+
+<ParamField body="document" type="MIMEData" required>
+  The document to parse.
+</ParamField>
+
+<ParamField body="model" type="LLMModel">
+  The AI model to use for document parsing.
+</ParamField>
+
+<ParamField body="table_parsing_format" type="TableParsingFormat" default="html">
+  Format for parsing tables within the document. Available options:
+  - `"html"` (default): Tables converted to HTML format
+  - `"markdown"`: Tables converted to Markdown format
+  - `"yaml"`: Tables converted to YAML format
+  - `"json"`: Tables converted to JSON format
+</ParamField>
+
+<ParamField body="image_resolution_dpi" type="integer" default="72">
+  DPI (dots per inch) for image processing. Higher values provide better quality but consume more resources. Defaults to 72.
+</ParamField>
+
+<ParamField body="browser_canvas" type="BrowserCanvas" default="A4">
+  Canvas size for document rendering. Common options include "A4", "Letter", "Legal", etc. Defaults to "A4".
+</ParamField>
+
+<ParamField body="idempotency_key" type="string">
+  Optional idempotency key for the request to ensure the same operation is not performed multiple times.
+</ParamField>
+</Expandable>
+</ParamField>
+
+
+
+<ResponseField name="Returns" type="ParseResult Object">
+A ParseResult object containing the extracted text content and processing information.
+  <Expandable title="properties">
+    <ResponseField name="document" type="BaseMIMEData Object">
+      Processed document metadata containing file information.
+    </ResponseField>
+
+    <ResponseField name="usage" type="RetabUsage Object">
+      Processing usage information.
+      <Expandable title="usage properties">
+        <ResponseField name="page_count" type="integer">
+          Number of pages processed in the document.
+        </ResponseField>
+        <ResponseField name="credits" type="float">
+          Credits consumed for processing the document.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="pages" type="array[string]">
+      Text content of each page as separate strings in the array.
+    </ResponseField>
+
+    <ResponseField name="text" type="string">
+      Complete text content of the document as a single concatenated string.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```python Request
+from retab import Retab
+
+reclient = Retab()
+result = reclient.documents.parse(
+    document = "reports/annual-report-2024.pdf",
+    fast_mode = False,
+    table_parsing_format = "html",
+    image_resolution_dpi = 72,
+    browser_canvas = "A4"
+)
+
+# Access individual pages
+for i, page_content in enumerate(result.pages):
+    print(f"Page {i + 1}: {page_content[:100]}...")
+
+# Access full document text
+full_text = result.text
+print(f"Document contains {result.usage.page_count} pages")
+print(f"Processing consumed {result.usage.credits} credits")
+```
+```curl Request (curl)
+curl -X POST https://api.retab.com/v1/documents/parse \
+-H "Authorization: Bearer $RETAB_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "document": {
+      "filename": "annual-report-2024.pdf",
+      "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMSAwIG9iago8PAovVHlwZS…"
+    },
+    "model": "gemini-2.5-flash",
+    "table_parsing_format": "html",
+    "image_resolution_dpi": 72,
+    "browser_canvas": "A4"
+}
+```
+```json Response
+{
+    "document": {
+        "id": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
+        "name": "annual-report-2024.pdf",
+        "mime_type": "application/pdf"
+    },
+    "usage": {
+        "page_count": 45,
+        "credits": 2.25
+    },
+    "pages": [
+        "ANNUAL REPORT 2024\n\nACME CORPORATION\n\nTable of Contents\n1. Executive Summary............2\n2. Financial Highlights..........5\n3. Operations Review............12\n4. Market Analysis..............18\n5. Future Outlook...............25\n6. Financial Statements.........30\n7. Appendices..................40",
+        "EXECUTIVE SUMMARY\n\nFiscal Year 2024 Performance\n\nACME Corporation achieved record-breaking results in fiscal year 2024, with total revenue reaching $2.4 billion, representing a 15% increase over the previous year...",
+        "The company's strategic initiatives focused on three key areas:\n\n• Digital transformation and automation\n• Sustainable business practices\n• International market expansion\n\nThese efforts resulted in improved operational efficiency and enhanced customer satisfaction..."
+    ],
+    "text": "ANNUAL REPORT 2024\n\nACME CORPORATION\n\nTable of Contents\n1. Executive Summary............2\n2. Financial Highlights..........5\n3. Operations Review............12\n4. Market Analysis..............18\n5. Future Outlook...............25\n6. Financial Statements.........30\n7. Appendices..................40\n\nEXECUTIVE SUMMARY\n\nFiscal Year 2024 Performance\n\nACME Corporation achieved record-breaking results in fiscal year 2024, with total revenue reaching $2.4 billion, representing a 15% increase over the previous year...\n\nThe company's strategic initiatives focused on three key areas:\n\n• Digital transformation and automation\n• Sustainable business practices\n• International market expansion\n\nThese efforts resulted in improved operational efficiency and enhanced customer satisfaction..."
+}
+```
+</CodeGroup>
+
+
+
+
+
+
 ## Make files LLM-ready
 
 
 Retab's document processing pipeline automatically converts various file types into LLM-ready formats, eliminating the need for custom parsers. This guide explains how to process different document types and understand the resulting output format.
 
-## Supported File Types
+### Supported File Types
 
 Retab supports a wide range of document formats:
 
