@@ -1,0 +1,179 @@
+Reasoning is about giving the LLM some time to think before providing the final answer.
+
+Imagine you have a field that asks for a value in a peculiar unit. LLMs can perform computations to convert units, but they will perform significantly better when they have dedicated space to explicitly break down the computation, instead of guessing the answer directly.
+
+## Example: Temperature Unit Conversion
+
+Let's say we have a temperature report in Celsius, but our data model expects the temperature in Fahrenheit.
+
+
+```markdown temperature_report.md
+| Location | Date | Temperature (°C) | Humidity (%) | Conditions |
+|----------|------|------------------|--------------|------------|
+| New York | 2024-01-15 | 22.5 | 65 | Partly Cloudy |
+```
+
+### Without Reasoning Field
+
+<CodeGroup>
+```python extract.py
+from pydantic import BaseModel, Field
+from datetime import date
+
+class TemperatureReport(BaseModel):
+    date: date
+    location: str
+    temperature: float = Field(
+        description="temperature in Fahrenheit",
+    )
+    humidity: float
+    conditions: str
+
+from retab import Retab
+client = Retab()
+
+result = client.documents.extract(
+    model="gpt-4.1-nano",
+    schema=TemperatureReport,
+    document="temperature_report.md",
+)
+
+print(result.completion.choices[0].message.content)
+```
+```json schema_without_reasoning.json
+{
+    "properties": {
+        "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+        },
+        "location": {
+            "title": "Location",
+            "type": "string"
+        },
+        "temperature": {
+            "description": "temperature in Fahrenheit",
+            "title": "Temperature",
+            "type": "number"
+        },
+        "humidity": {
+            "title": "Humidity",
+            "type": "number"
+        },
+        "conditions": {
+            "title": "Conditions",
+            "type": "string"
+        }
+    },
+    "required": [
+        "date",
+        "location",
+        "temperature",
+        "humidity",
+        "conditions"
+    ],
+    "title": "TemperatureReport",
+    "type": "object"
+}
+```
+</CodeGroup>
+
+```json result_without_reasoning.json
+{
+  "date": "2024-01-15",
+  "location": "New York", 
+  "temperature": 22.5,
+  "humidity": 65,
+  "conditions": "Partly Cloudy"
+}
+```
+
+❌ **Problem**: The LLM incorrectly used 22.5°F instead of converting from Celsius to Fahrenheit. The correct value should be 72.5°F.
+
+### With Reasoning Field
+
+<CodeGroup>
+```python extract.py
+from pydantic import BaseModel, Field
+from datetime import date
+
+class TemperatureReport(BaseModel):
+    date: date
+    location: str
+    temperature: float = Field(
+        description="temperature in Fahrenheit",
+        json_schema_extra={
+            "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is."
+        },
+    )
+    humidity: float
+    conditions: str
+```
+```json schema_with_reasoning.json
+{
+    "properties": {
+        "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+        },
+        "location": {
+            "title": "Location",
+            "type": "string"
+        },
+        "temperature": {
+            "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.",
+            "description": "temperature in Fahrenheit",
+            "title": "Temperature",
+            "type": "number"
+        },
+        "humidity": {
+            "title": "Humidity",
+            "type": "number"
+        },
+        "conditions": {
+            "title": "Conditions",
+            "type": "string"
+        }
+    },
+    "required": [
+        "date",
+        "location",
+        "temperature",
+        "humidity",
+        "conditions"
+    ],
+    "title": "TemperatureReport",
+    "type": "object"
+}
+```
+</CodeGroup>
+
+**Result with reasoning:**
+```json result_with_reasoning.json
+{
+  "date": "2024-01-15",
+  "location": "New York",
+  "reasoning___temperature": "The temperature is given as 22.5°C. To convert to Fahrenheit: F = (C × 9/5) + 32. So: F = (22.5 × 9/5) + 32 = (22.5 × 1.8) + 32 = 40.5 + 32 = 72.5°F",
+  "temperature": 72.5,
+  "humidity": 65,
+  "conditions": "Partly Cloudy"
+}
+```
+
+✅ **Success**: The LLM correctly converted 22.5°C to 72.5°F and showed its work in the reasoning field.
+
+## Key Benefits
+
+1. **Accuracy**: LLMs perform calculations more reliably when they can show their work
+2. **Transparency**: You can see exactly how the LLM arrived at its answer
+3. **Debugging**: Easy to identify where conversions or calculations went wrong
+4. **Trust**: Users can verify the logic behind complex transformations
+
+## Best Practices
+
+- Use reasoning fields for any calculations, unit conversions, or multi-step logic
+- Make the reasoning description specific to guide the LLM's thought process
+- Place reasoning fields before the fields that depend on the reasoning
+- Keep reasoning concise but complete enough to follow the logic
