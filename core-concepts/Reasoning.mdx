@@ -1,168 +1,308 @@
 Reasoning is about giving the LLM some time to think before providing the final answer.
 
-Imagine you have a field that asks for a value in a peculiar unit. LLMs can perform computations to convert units, but they will perform significantly better when they have dedicated space to explicitly break down the computation, instead of guessing the answer directly.
 
-## Example: Temperature Unit Conversion
+We use standard JSON Schema with a custom annotation for LLM data extraction:
 
-Let's say we have a temperature report in Celsius, but our data model expects the temperature in Fahrenheit.
+- **`X-ReasoningPrompt`** - Creates auxiliary reasoning fields to help LLMs provide context and justification for extracted values in complex scenarios.
+
+Our promptify method optimizes schema directives for better performance while preserving the original schema structure and field definitions.
 
 
-```markdown temperature_report.md
-| Location | Date | Temperature (°C) | Humidity (%) | Conditions |
-|----------|------|------------------|--------------|------------|
-| New York | 2024-01-15 | 22.5 | 65 | Partly Cloudy |
-```
+## Reasoning Prompt
 
-### Without Reasoning Field
+A `X-ReasoningPrompt` tag in the schema generates a reasoning field alongside the data field. This is particularly useful for calculations, unit conversions, or multi-step logic.
 
-<CodeGroup>
-```python extract.py
-from pydantic import BaseModel, Field
-from datetime import date
+**Example: Temperature Unit Conversion**
 
-class TemperatureReport(BaseModel):
-    date: date
-    location: str
-    temperature: float = Field(
-        description="temperature in Fahrenheit",
-    )
-    humidity: float
-    conditions: str
+Let's say we have a temperature report in Celsius, but our data model expects the temperature in Fahrenheit:
 
-from retab import Retab
-client = Retab()
-
-result = client.documents.extract(
-    model="gpt-4.1-nano",
-    schema=TemperatureReport,
-    document="temperature_report.md",
-)
-
-print(result.completion.choices[0].message.content)
-```
-```json schema_without_reasoning.json
+```json
 {
-    "properties": {
-        "date": {
-            "format": "date",
-            "title": "Date",
-            "type": "string"
-        },
-        "location": {
-            "title": "Location",
-            "type": "string"
-        },
-        "temperature": {
-            "description": "temperature in Fahrenheit",
-            "title": "Temperature",
-            "type": "number"
-        },
-        "humidity": {
-            "title": "Humidity",
-            "type": "number"
-        },
-        "conditions": {
-            "title": "Conditions",
-            "type": "string"
-        }
+  "properties": {
+    "date": {
+      "format": "date",
+      "title": "Date",
+      "type": "string"
     },
-    "required": [
-        "date",
-        "location",
-        "temperature",
-        "humidity",
-        "conditions"
-    ],
-    "title": "TemperatureReport",
-    "type": "object"
-}
-```
-</CodeGroup>
-
-```json result_without_reasoning.json
-{
-  "date": "2024-01-15",
-  "location": "New York", 
-  "temperature": 22.5,
-  "humidity": 65,
-  "conditions": "Partly Cloudy"
-}
-```
-
-❌ **Problem**: The LLM incorrectly used 22.5°F instead of converting from Celsius to Fahrenheit. The correct value should be 72.5°F.
-
-### With Reasoning Field
-
-<CodeGroup>
-```python extract.py
-from pydantic import BaseModel, Field
-from datetime import date
-
-class TemperatureReport(BaseModel):
-    date: date
-    location: str
-    temperature: float = Field(
-        description="temperature in Fahrenheit",
-        json_schema_extra={
-            "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is."
-        },
-    )
-    humidity: float
-    conditions: str
-```
-```json schema_with_reasoning.json
-{
-    "properties": {
-        "date": {
-            "format": "date",
-            "title": "Date",
-            "type": "string"
-        },
-        "location": {
-            "title": "Location",
-            "type": "string"
-        },
-        "temperature": {
-            "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.",
-            "description": "temperature in Fahrenheit",
-            "title": "Temperature",
-            "type": "number"
-        },
-        "humidity": {
-            "title": "Humidity",
-            "type": "number"
-        },
-        "conditions": {
-            "title": "Conditions",
-            "type": "string"
-        }
+    "location": {
+      "title": "Location",
+      "type": "string"
     },
-    "required": [
-        "date",
-        "location",
-        "temperature",
-        "humidity",
-        "conditions"
-    ],
-    "title": "TemperatureReport",
-    "type": "object"
+    "temperature": {
+      "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.",
+      "description": "temperature in Fahrenheit",
+      "title": "Temperature",
+      "type": "number"
+    },
+    "humidity": {
+      "title": "Humidity",
+      "type": "number"
+    },
+    "conditions": {
+      "title": "Conditions",
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "location", 
+    "temperature",
+    "humidity",
+    "conditions"
+  ],
+  "title": "TemperatureReport",
+  "type": "object"
 }
 ```
-</CodeGroup>
 
-**Result with reasoning:**
-```json result_with_reasoning.json
+Without reasoning, the LLM might incorrectly use 22.5°F instead of converting from Celsius. With reasoning, it produces:
+
+```json
 {
   "date": "2024-01-15",
   "location": "New York",
-  "reasoning___temperature": "The temperature is given as 22.5°C. To convert to Fahrenheit: F = (C × 9/5) + 32. So: F = (22.5 × 9/5) + 32 = (22.5 × 1.8) + 32 = 40.5 + 32 = 72.5°F",
+  "reasoning___temperature": "The temperature is given as 22.5°C. To convert to Fahrenheit: F = (C × 9/5) + 32. So: F = (22.5 × 9/5) + 32 = 72.5°F",
   "temperature": 72.5,
   "humidity": 65,
   "conditions": "Partly Cloudy"
 }
 ```
 
-✅ **Success**: The LLM correctly converted 22.5°C to 72.5°F and showed its work in the reasoning field.
+As you can see, the "reasoning___" fields help the LLM show its work while the final output follows your schema structure.
+
+## Python's Pydantic BaseModel Support
+
+You can define the custom annotations in the `pydantic.Field` class using the `json_schema_extra` field.
+
+Here is a minimalistic example with everything you should need:
+
+```python
+from pydantic import BaseModel, Field
+from datetime import date
+
+class TemperatureReport(BaseModel):
+    date: date
+    location: str
+    temperature: float = Field(...,
+        description="temperature in Fahrenheit",
+        json_schema_extra={
+            "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.",
+        }
+    )
+    humidity: float
+    conditions: str
+```
+
+If you need a json_schema, you can convert the BaseModel to model_json_schema:
+
+<CodeGroup>
+```python main.py
+TemperatureReport.model_json_schema()
+```
+```json result.json
+{
+  "properties": {
+    "date": {
+      "format": "date",
+      "title": "Date",
+      "type": "string"
+    },
+    "location": {
+      "title": "Location",
+      "type": "string"
+    },
+    "temperature": {
+      "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.",
+      "description": "temperature in Fahrenheit",
+      "title": "Temperature",
+      "type": "number"
+    },
+    "humidity": {
+      "title": "Humidity",
+      "type": "number"
+    },
+    "conditions": {
+      "title": "Conditions",
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "location",
+    "temperature",
+    "humidity",
+    "conditions"
+  ],
+  "title": "TemperatureReport",
+  "type": "object"
+}
+```
+</CodeGroup>
+
+---
+
+## Complete Example
+
+You will need to use retab's `Schema` object to leverage the directives in the schema.
+<CodeGroup>
+```python Pydantic
+from retab import Retab, Schema
+from openai import OpenAI
+from pydantic import BaseModel, Field
+from datetime import date
+
+reclient = Retab()
+doc_msg = reclient.documents.create_messages(
+    document = "temperature_report.md"
+)
+
+class TemperatureReport(BaseModel):
+    date: date
+    location: str
+    temperature: float = Field(...,
+        description="temperature in Fahrenheit",
+        json_schema_extra={
+            'X-ReasoningPrompt': 'If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.',
+        }
+    )
+    humidity: float
+    conditions: str
+
+schema_obj = Schema(
+    pydantic_model = TemperatureReport
+)
+
+# Now you can use your favorite model to analyze your document
+client = OpenAI()
+completion = client.beta.chat.completions.parse(
+    model="gpt-4o",
+    messages=schema_obj.openai_messages + doc_msg.openai_messages,
+    response_format=schema_obj.response_format_pydantic
+)
+
+# Validate the response against the original schema if you want to remove the reasoning fields
+from retab.utils.json_schema import filter_auxiliary_fields_json
+assert completion.choices[0].message.content is not None
+extraction = schema_obj.pydantic_model.model_validate(
+    filter_auxiliary_fields_json(completion.choices[0].message.content, schema_obj.pydantic_model)
+)
+
+print("Extraction:",extraction)
+```
+```python JSON Schema
+from retab import Retab, Schema
+from openai import OpenAI
+
+reclient = Retab()
+doc_msg = reclient.documents.create_messages(
+    document = "temperature_report.md"
+)
+schema_obj = Schema(
+    json_schema = {
+        'properties': {
+            'date': {
+                'format': 'date',
+                'title': 'Date',
+                'type': 'string'
+            },
+            'location': {
+                'title': 'Location',
+                'type': 'string'
+            },
+            'temperature': {
+                'X-ReasoningPrompt': 'If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.',
+                'description': 'temperature in Fahrenheit',
+                'title': 'Temperature',
+                'type': 'number'
+            },
+            'humidity': {
+                'title': 'Humidity',
+                'type': 'number'
+            },
+            'conditions': {
+                'title': 'Conditions',
+                'type': 'string'
+            }
+        },
+        'required': ['date', 'location', 'temperature', 'humidity', 'conditions'],
+        'title': 'TemperatureReport',
+        'type': 'object'
+    }
+)
+
+# Now you can use your favorite model to analyze your document
+client = OpenAI()
+completion = client.chat.completions.create(
+    model="gpt-4o", 
+    messages=schema_obj.openai_messages + doc_msg.openai_messages,
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": schema_obj.id,
+            "schema": schema_obj.inference_json_schema,
+            "strict": True
+        }
+    }
+)
+
+# Validate the response against the original schema if you want to remove the reasoning fields
+from retab.utils.json_schema import filter_auxiliary_fields_json
+assert completion.choices[0].message.content is not None
+extraction = schema_obj.pydantic_model.model_validate(
+    filter_auxiliary_fields_json(completion.choices[0].message.content, schema_obj.pydantic_model)
+)
+
+print("Result:",extraction)
+```
+```python Retab Client
+from retab import Retab
+
+reclient = Retab()
+
+# You can also use our all-in-one API
+# We return a standard OpenAI response
+response = reclient.documents.extract(
+    document = "temperature_report.md", 
+    model="gpt-4.1-nano",
+    json_schema = {
+      'properties': {
+          'date': {
+              'format': 'date',
+              'title': 'Date',
+              'type': 'string'
+          },
+          'location': {
+              'title': 'Location',
+              'type': 'string'
+          },
+          'temperature': {
+              'X-ReasoningPrompt': 'If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.',
+              'description': 'temperature in Fahrenheit',
+              'title': 'Temperature',
+              'type': 'number'
+          },
+          'humidity': {
+              'title': 'Humidity',
+              'type': 'number'
+          },
+          'conditions': {
+              'title': 'Conditions',
+              'type': 'string'
+          }
+      },
+      'required': ['date', 'location', 'temperature', 'humidity', 'conditions'],
+      'title': 'TemperatureReport',
+      'type': 'object'
+  },
+   modality="text"
+)
+
+print(response.choices[0].message.content)
+```
+</CodeGroup>
+
+---
+
 
 ## Key Benefits
 
@@ -177,3 +317,9 @@ class TemperatureReport(BaseModel):
 - Make the reasoning description specific to guide the LLM's thought process
 - Place reasoning fields before the fields that depend on the reasoning
 - Keep reasoning concise but complete enough to follow the logic
+
+
+## Go further
+
+- [Schema](https://docs.retab.com/core-concepts/Schema)
+- [OpenAI Prompt Engineering Guide](https://platform.openai.com/docs/guides/prompt-engineering)
