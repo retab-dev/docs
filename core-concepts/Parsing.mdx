@@ -2,21 +2,34 @@
 
 The `parse` method in Retab's document processing pipeline converts any document into cleaned, raw markdown text with page-by-page extraction. This endpoint is ideal for extracting cleaned document content to be used as context for downstream processing, such as RAG pipelines, custom ingestion pipelines, embeddings classification, and content indexing workflows.
 
+The typical RAG workflow follows these steps:
+
+1. **Parsing**: Extract clean text from documents using Retab's `parse` method
+2. **Chunking**: Split the text into manageable blocks (sentences, paragraphs, etc..) called "chunks" for embedding
+3. **Indexing**: Store chunks in a vector database or any other search index for retrieval
+
+For chunking, **we recommend** [chonkie](https://chonkie.ai/) - a powerful and flexible text chunking library designed specifically for RAG pipelines.
+
 ```mermaid
 flowchart LR
-    A[Document] --> B[reclient.documents.parse]
+    A[Documents] --> B
     
-    subgraph Retab Parse API
-    B --> B1[OCR & Layout] --> C[Structured Text]
-    B --> B2[Table Extraction] --> C
-    B --> B3[Text Cleaning] --> C
-    B --> B4[Page Separation] --> C
+    subgraph Retab["Retab Parse API"]
+    B[1. Parsing into raw text]
+        
     end
     
-    C --> D[RAG Pipeline]
-    C --> E[Text Analysis]
-    C --> F[Search Index]
-    C --> G[Content Processing]
+    B --> C
+    
+    subgraph Chonker["Chunker (eg. chonkie)"]
+        C[2. Dividing text into chunks]
+    end
+    
+    C --> D
+
+    subgraph Vector Database["Search Index"]
+        D[3. Indexing ]
+    end
 ```
 
 Unlike other methods that focus on chat formatting or structured extraction, `parse` provides:
@@ -26,7 +39,7 @@ Unlike other methods that focus on chat formatting or structured extraction, `pa
 - **OCR Integration**: Handles both text-based and image-based documents
 - **Batch Processing Ready**: Efficient for processing multiple documents
 
-## Method Overview
+## Parse API
 
 <ParamField body="ParseRequest" type="ParseRequest">
   <Expandable title="properties">
@@ -82,35 +95,7 @@ A ParseResult object containing the extracted text content and processing inform
   </Expandable>
 </ResponseField>
 
-## Use Cases
-
-### 1. Basic Document Text Extraction
-
-Extract clean text from any document type for basic processing or display.
-
-<CodeGroup>
-```python Basic Text Extraction
-from retab import Retab
-
-reclient = Retab()
-
-# Simple text extraction
-result = reclient.documents.parse(
-    document="annual-report.pdf",
-    model="gemini-2.5-flash"
-)
-
-# Get the full document text
-full_text = result.text
-print(f"Extracted {len(full_text)} characters from {result.usage.page_count} pages")
-
-# Process individual pages
-for i, page_content in enumerate(result.pages, 1):
-    print(f"Page {i}: {page_content[:100]}...")
-```
-</CodeGroup>
-
-### 2. RAG (Retrieval-Augmented Generation) Pipeline
+## Use Case: RAG (Retrieval-Augmented Generation) Pipeline Preparation
 
 Prepare documents for RAG applications by extracting and chunking text content.
 
