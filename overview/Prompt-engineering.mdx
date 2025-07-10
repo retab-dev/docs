@@ -44,30 +44,16 @@ The Retab dashboard provides powerful visualization tools to help you understand
 
 ---
 
-### Quick Debugging Guide
-
-| Consensus Pattern | Likely Cause | Best Fix |
-|------------------|--------------|----------|
-| Date/time fields vary wildly | Format ambiguity | Use `datetime` types with explicit formats |
-| Numbers as strings inconsistent | Parsing ambiguity | Use `int`/`float`/`Decimal` types |
-| Single field with multiple concepts | Cognitive overload | Break into sub-objects |
-| Correct data, wrong format | Instruction unclear | Add specific formatting examples |
-| Empty vs filled arrays | Inclusion criteria unclear | Define explicit inclusion rules |
-| Varying data across requests | Description ambiguity | Clarify field descriptions with examples |
-| Simple computations failing | Insufficient reasoning space | [Add a reasoning field](https://retab.com/core-concepts/Reasoning) |
-
----
-
 ### Schema Improvement Levers
 
-**Available techniques to enhance your schema:**
-
-1. **Change field names** — Use more descriptive, unambiguous names
-2. **Enhance field descriptions** — Add examples and clarify expectations  
-3. **Adjust field types** — Use specific types instead of generic strings
-4. **Restructure data hierarchy** — Break complex fields into sub-objects
-5. **Add reasoning prompts** — Gives some space to the model to think step by step before giving the answer
-6. **Remove problematic fields** — Sometimes less is more
+| Lever | When to apply (typical consensus patterns) | Root cause | Concrete fix |
+|-------|---------------------------------------------|------------|--------------|
+| **Change field names** | Diverging values because models mix up concepts (e.g. organizer vs event title) | Ambiguous or overloaded label | Rename `name` → `event_name`; clarify: "Do not include organizer." |
+| **Enhance field descriptions** | Correct data, wrong format · Empty vs filled arrays · Varying data across requests | Instructions too vague | Add examples: "Return price in USD, two decimals (e.g. 1234.56)." / "Include items only if stock > 0." |
+| **Adjust field types** | Numbers arrive as strings/ints/floats · Date/time fields vary wildly | Format ambiguity or loose typing | `amount: Decimal` instead of `str`; `date: datetime.date` with ISO-8601 requirement |
+| **Restructure data hierarchy** | Single field conflates multiple concepts (address, full name, etc.) | Ambiguous formatting | Replace `address: str` with nested `Address` model (`street`, `city`, `zip_code`, `country`) |
+| **Add reasoning prompts** | Simple computations fail or values inconsistent even with clear schema | Model needs step-by-step reasoning space | Add "Convert the weight to kg" as [reasoning prompt](https://docs.retab.com/core-concepts/Reasoning) to `weight` |
+| **Remove problematic fields** | Field stays low-likelihood after multiple iterations and isn't critical | Unnecessary complexity | Drop the field entirely or defer to a later version |
 
 ---
 ### Example of a schema building process
@@ -282,13 +268,14 @@ class CalendarEvent(BaseModel):
 </CodeGroup>
 
 **Repeat these steps** until all fields achieve high likelihood scores.
+
 ---
 
 ### Best Practices
 
 1. **Start with n_consensus=4** for development and testing
-2. **Target likelihood ≥ 0.75** on every field for production readiness
+2. **Target likelihood ≥ 0.95** on every field for production readiness
 3. **Fix lowest consensus scores first** — maximize improvement impact
 4. **Test with diverse documents** — different formats reveal different issues
 
-**Remember:** Consensus reveals where your schema is brittle. Fix the ambiguities that consensus exposes, and you'll build robust schemas that work reliably in production.
+**Consensus reveals where your schema is brittle**. Fix the ambiguities that consensus exposes, and you'll build robust schemas that work reliably in production.
