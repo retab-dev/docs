@@ -1,7 +1,7 @@
 
 
 
-## How to build a great schema
+## How to Build a Great Schema
 
 **Consensus = Making n parallel requests and merging them into 1 result.**
 
@@ -19,22 +19,64 @@ flowchart LR
     Refine --> Draft
 ```
 
-#### Step 1 — Draft an Initial Schema
 
-1. Establish only the essential fields.
-2. Prefer generic `str` types during the first pass.
-3. Compose an extraction prompt that mirrors the schema exactly.
+---
+
+### Visualizing Consensus on the Retab Dashboard
+
+The Retab dashboard provides powerful visualization tools to help you understand consensus patterns and optimize your schemas.
+
+**Query parameters:**
+
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `extraction_id` | Unique identifier for the extraction | Required |
+| `include_responses` | Include individual response details | `false` |
+| `format` | Response format (`summary` or `detailed`) | `summary` |
+| `threshold` | Minimum likelihood threshold for filtering | `0.0` |
+
+---
+
+### Quick Debugging Guide
+
+| Consensus Pattern | Likely Cause | Best Fix |
+|------------------|--------------|----------|
+| Date/time fields vary wildly | Format ambiguity | Use `datetime` types with explicit formats |
+| Numbers as strings inconsistent | Parsing ambiguity | Use `int`/`float`/`Decimal` types |
+| Single field with multiple concepts | Cognitive overload | Break into sub-objects |
+| Correct data, wrong format | Instruction unclear | Add specific formatting examples |
+| Empty vs filled arrays | Inclusion criteria unclear | Define explicit inclusion rules |
+| Varying data across requests | Description ambiguity | Clarify field descriptions with examples |
+| Simple computations failing | Insufficient reasoning space | [Add a reasoning field](https://retab.com/core-concepts/Reasoning) |
+
+---
+
+### Schema Improvement Levers
+
+**Available techniques to enhance your schema:**
+
+1. **Change field names** — Use more descriptive, unambiguous names
+2. **Enhance field descriptions** — Add examples and clarify expectations  
+3. **Adjust field types** — Use specific types instead of generic strings
+4. **Restructure data hierarchy** — Break complex fields into sub-objects
+5. **Add reasoning prompts** — Gives some space to the model to think step by step before giving the answer
+6. **Remove problematic fields** — Sometimes less is more
+
+---
+### Example of a schema building process
+
+#### Step 1 — Draft an Initial Schema
 
 ```python
 class CalendarEvent(BaseModel):
     name: str
-    date: str            # Initial permissive format
-    address: str         # Initial permissive format
+    date: str
+    address: str
 ```
 
 ---
 
-#### Step 2 — Execute with Consensus (n = 4)
+#### Step 2 — Execute with Consensus
 
 ```python
 from retab import Retab
@@ -51,7 +93,7 @@ result = client.documents.extract(
 print(json.dumps(result.likelihoods, indent=2))
 ```
 
-Sample output:
+**Sample output:**
 <CodeGroup>
 ```json Consolidated output
 # Obtained from result.choices[0].message.content
@@ -61,7 +103,7 @@ Sample output:
   "address": "123 Main St, Anytown, USA"
 }
 ```
-```json #1
+```json Response #1
 # Obtained from result.choices[1].message.content
 {
   "name": "Science Fair",
@@ -70,7 +112,7 @@ Sample output:
 }
 ```
 
-```json #2
+```json Response #2
 # Obtained from result.choices[2].message.content
 {
   "name": "Science Fair",
@@ -79,7 +121,7 @@ Sample output:
 }
 ```
 
-```json #3
+```json Response #3
 # Obtained from result.choices[3].message.content
 {
   "name": "Science Fair",
@@ -88,7 +130,7 @@ Sample output:
 }
 ```
 
-```json #4
+```json Response #4
 # Obtained from result.choices[4].message.content
 {
   "name": "Science Fair",
@@ -105,35 +147,35 @@ Sample output:
 ```
 </CodeGroup>
 
-Interpretation:
+**Interpretation of the consensus likelihoods:**
 
-* The **name** field is reliable.
-* The **date** field requires format unification.
-* The **address** column is unstable.
-
----
-
-#### Step 3 — Rank Fields by Likelihood
-
-| Field          | Likelihood (4 samples) | Recommended Action             |
-| -------------- | --------------------- | ------------------------------ |
-| `name`         | 1.0                   | Retain current configuration   |
-| `date`         | 0.5                   | Clarify format or tighten type |
-| `address` | 0.25                   | Redesign field data structure       |
-
-A working threshold of likelihood **≥ 0.75** is suitable for production deployment.
+- The **name** field is reliable (perfect consensus)
+- The **date** field requires format unification (mixed formats)
+- The **address** field is unstable (high variation in structure)
 
 ---
 
-#### Step 4 — Disambiguation Levers
+#### Step 3 — Rank Fields by Likelihood
 
-| Priority | Lever                    | Typical Use Case                     | Example Modification                                                |
-| -------- | ------------------------ | ------------------------------------ | ------------------------------------------------------------------- |
-| 1        | **Prompt clarification** | The data extracted varies accross iterations | "Name is the name of the event, not the name of the person organizing it"   |
-| 2        | **Type constraints**     | Correct semantics, parsing errors    | Convert `str` → `datetime.date`;                             |
-| 3        | **Structural revision**  | Field conflates multiple concepts    | Break down `address` into `street`, `city`, `zip_code`, `country`.  |
+| Field     | Likelihood | Status | Recommended Action             |
+| --------- | ---------- | ------ | ------------------------------ |
+| `name`    | 1.0        | ✅ Good | Retain current configuration   |
+| `date`    | 0.5        | ⚠️ Needs work | Clarify format or tighten type |
+| `address` | 0.25       | ❌ Poor | Redesign field data structure  |
 
-Revised schema:
+**Production threshold:** Likelihood **≥ 0.75** is recommended for production deployment.
+
+---
+
+#### Step 4 — Enhance schema
+
+| Priority | Lever                    | Use Case                         | Example Modification                                                |
+| -------- | ------------------------ | -------------------------------- | ------------------------------------------------------------------- |
+| 1        | **Prompt clarification** | Extraction varies across runs   | "Name is the event title, not the organizer's name"                |
+| 2        | **Type constraints**     | Parsing errors, format issues   | Convert `str` → `datetime.date`                                     |
+| 3        | **Structural revision**  | Field conflates multiple concepts| Break `address` into `street`, `city`, `zip_code`, `country`       |
+
+**Revised schema:**
 
 ```python
 class Address(BaseModel):
@@ -148,7 +190,7 @@ class CalendarEvent(BaseModel):
     address: Address
 ```
 
-Outputs: 
+**Improved outputs:**
 <CodeGroup>
 ```json Consolidated output
 # Obtained from result.choices[0].message.content
@@ -163,7 +205,7 @@ Outputs:
   }
 }
 ```
-```json #1 
+```json Response #1 
 # Obtained from result.choices[1].message.content
 {
   "name": "Science Fair",
@@ -177,7 +219,7 @@ Outputs:
 }
 ```
 
-```json #2
+```json Response #2
 # Obtained from result.choices[2].message.content
 {
   "name": "Science Fair",
@@ -191,7 +233,7 @@ Outputs:
 }
 ```
 
-```json #3
+```json Response #3
 # Obtained from result.choices[3].message.content
 {
   "name": "Science Fair",
@@ -205,7 +247,7 @@ Outputs:
 }
 ```
 
-```json #4
+```json Response #4
 # Obtained from result.choices[4].message.content
 {
   "name": "Science Fair",
@@ -232,49 +274,14 @@ Outputs:
 ```
 </CodeGroup>
 
-
-Re‑execute these steps until all fields meet the have a high likelihood.
-
----
-
-### Visualizing consensus on Retab
-
-### TODO: Explain how Retab allows to visualize the consensus on the dashboard and how to access the likelihoods with the endpoint /consensus 
-
----
-
-### Quick Debugging Guide
-
-| Low Consensus Pattern | Likely Cause | Best Fix |
-|----------------------|--------------|----------|
-| Date/time fields vary wildly | Format ambiguity | Use `datetime` types |
-| Numbers as strings inconsistent | Parsing ambiguity | Use `int`/`float`/`Decimal` |
-| Single field with multiple concepts | Cognitive overload | Break into sub-objects |
-| Good data, wrong format | Instruction unclear | Be more specific in your description |
-| Empty vs filled arrays | Inclusion criteria unclear | Define when to include items |
-| Varying data across requests | Description ambiguity | Clarify description |
-| Simple computations are failing | Not enough room to think | [Add a reasoning field](https://retab.com/core-concepts/Reasoning) |
-
----
-
-### Available levers to improve your schema: 
-
-1 - ** Change the name of the field **
-2 - ** Change the description of the field **
-3 - ** Change the type of the field **
-4 - ** Change the data structure of the field **
-5 - ** Add a reasoning prompt **
-6 - ** Delete the field **
-
-
+**Repeat these steps** until all fields achieve high likelihood scores.
 ---
 
 ### Best Practices
 
-1. **Start with n_consensus=4** for development
-2. **Target a likelihood ≥ 0.75** On every field
-3. **Fix the worst consensus scores first** - biggest impact
-4. **Test on diverse documents** - different formats reveal different issues
-5. **Use evals to track consensus over time** - catch regressions early
+1. **Start with n_consensus=4** for development and testing
+2. **Target likelihood ≥ 0.75** on every field for production readiness
+3. **Fix lowest consensus scores first** — maximize improvement impact
+4. **Test with diverse documents** — different formats reveal different issues
 
-Remember: **Consensus reveals where your schema is brittle.** Fix the ambiguities consensus exposes, and you'll have a robust schema that works reliably in production.
+**Remember:** Consensus reveals where your schema is brittle. Fix the ambiguities that consensus exposes, and you'll build robust schemas that work reliably in production.
