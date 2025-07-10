@@ -1,0 +1,122 @@
+
+## Reconcile API
+
+| Method                        | Description                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `client.consensus.reconcile(...)` | Direct access to reconcile multiple dictionaries into a single consensus result. |
+
+### Arguments
+
+| Name              | Type                                         | Default | Notes                              |
+| ----------------- | -------------------------------------------- | ------- | ---------------------------------- |
+| `list_dicts`      | `list[dict]`                                 | —       | List of dictionaries to reconcile. |
+| `reference_schema`| `dict`                                       | `None`  | Optional schema to validate dictionaries against. |
+| `mode`            | `Literal["direct", "aligned"]`               | `"direct"` | Mode for consensus computation. |
+| `idempotency_key` | `str`                                        | `None`  | Optional idempotency key for the request. |
+
+### Example
+
+<CodeGroup>
+
+```python python
+from retab import Retab
+
+reclient = Retab()
+
+# List of dictionaries to reconcile
+results = [
+    {"name": "Science Fair", "date": "2023-06-15", "participants": ["Alice", "Bob"]},
+    {"name": "Science Fair", "date": "2023-06-15", "participants": ["Alice", "Bob", "Charlie"]},
+    {"name": "Science Exhibition", "date": "2023-06-15", "participants": ["Alice", "Bob"]}
+]
+
+# Optional schema
+schema = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "date": {"type": "string"},
+        "participants": {
+            "type": "array",
+            "items": {"type": "string"}
+        }
+    },
+    "required": ["name", "date", "participants"]
+}
+
+# Reconcile the dictionaries
+consensus_result = reclient.consensus.reconcile(
+    list_dicts=results,
+    reference_schema=schema,
+    mode="direct"
+)
+
+# Access the reconciled data and confidence scores
+reconciled_data = consensus_result["data"]
+confidence = consensus_result["likelihoods"]
+```
+
+```bash curl
+curl https://api.retab.com/v1/consensus/reconcile \
+  -H "API-Key: $RETAB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "list_dicts": [
+      {
+        "name": "Science Fair",
+        "date": "2023-06-15",
+        "participants": ["Alice", "Bob"]
+      },
+      {
+        "name": "Science Fair",
+        "date": "2023-06-15",
+        "participants": ["Alice", "Bob", "Charlie"]
+      },
+      {
+        "name": "Science Exhibition",
+        "date": "2023-06-15",
+        "participants": ["Alice", "Bob"]
+      }
+    ],
+    "reference_schema": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "date": {"type": "string"},
+        "participants": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "required": ["name", "date", "participants"]
+    },
+    "mode": "direct"
+  }'
+```
+
+
+
+```json Response
+{
+    "data": {
+        "name": "Science Fair",
+          "date": "2023-06-15",
+          "participants": ["Alice", "Bob"]
+      },
+      "likelihoods": {
+          "name": 0.67,
+          "date": 1.0,
+          "participants": {
+              "$array": 1.0,
+              "Alice": 1.0,
+              "Bob": 1.0,
+              "Charlie": 0.33
+        }
+    }
+}
+```
+
+
+</CodeGroup>
+
+
