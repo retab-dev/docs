@@ -25,7 +25,7 @@ class ResearchPaperExtraction(BaseModel):
     abstract: str
     keywords: list[str]
 
-completion = reclient.completions.parse(
+completion = client.completions.parse(
     json_schema=ResearchPaperExtraction.model_json_schema(),
     messages=[
         {"role": "system", "content": "You are an expert at structured data extraction. You will be given unstructured text from a research paper and should convert it into the given structure."},
@@ -35,6 +35,33 @@ completion = reclient.completions.parse(
     temperature=0
 )
 ```
+
+```javascript JavaScript
+import OpenAI from "openai";
+import { zodResponseFormat } from "openai/helpers/zod";
+import { z } from "zod";
+
+const openai = new OpenAI();
+
+const ResearchPaperExtraction = z.object({
+  title: z.string(),
+  authors: z.array(z.string()),
+  abstract: z.string(),
+  keywords: z.array(z.string()),
+});
+
+const completion = await openai.chat.completions.parse({
+  model: "gpt-4o",
+  messages: [
+    { role: "system", content: "You are an expert at structured data extraction. You will be given unstructured text from a research paper and should convert it into the given structure." },
+    { role: "user", content: "..." },
+  ],
+  response_format: zodResponseFormat(ResearchPaperExtraction, "research_paper"),
+});
+
+const researchPaper = completion.choices[0].message.parsed;
+```
+
 ```json json_schema.json
 {
   "properties": {

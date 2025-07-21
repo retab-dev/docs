@@ -60,18 +60,32 @@ The Retab dashboard provides powerful visualization tools to help you understand
 
 #### Step 1 — Draft an Initial Schema
 
-```python
+<CodeGroup>
+```python Python
 class CalendarEvent(BaseModel):
     name: str
     date: str
     address: str
 ```
 
+```javascript JavaScript
+import { z } from 'zod';
+
+const CalendarEvent = z.object({
+    name: z.string(),
+    date: z.string(),
+    address: z.string()
+});
+```
+
+</CodeGroup>
+
 ---
 
 #### Step 2 — Execute with Consensus
 
-```python
+<CodeGroup>
+```python Python
 from retab import Retab
 
 client = Retab()
@@ -85,6 +99,23 @@ result = client.documents.extract(
 
 print(json.dumps(result.likelihoods, indent=2))
 ```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+
+const client = new Retab();
+
+const result = await client.documents.extract({
+    model: "gpt-4o-mini",
+    messages: messages,
+    json_schema: zodToJsonSchema(CalendarEvent),
+    n_consensus: 4,
+});
+
+console.log(JSON.stringify(result.likelihoods, null, 2));
+```
+</CodeGroup>
 
 **Sample output:**
 <CodeGroup>
@@ -170,7 +201,8 @@ print(json.dumps(result.likelihoods, indent=2))
 
 **Revised schema:**
 
-```python
+<CodeGroup>
+```python Python
 class Address(BaseModel):
     street: str
     city: str
@@ -182,6 +214,26 @@ class CalendarEvent(BaseModel):
     date: datetime.date
     address: Address
 ```
+
+```javascript JavaScript
+import { z } from 'zod';
+
+const Address = z.object({
+    street: z.string(),
+    city: z.string(),
+    zip_code: z.string(),
+    country: z.string()
+});
+
+const CalendarEvent = z.object({
+    name: z.string(),
+    date: z.string().date(), // ISO date string (YYYY-MM-DD)
+    address: Address
+});
+```
+</CodeGroup>
+
+
 
 **Improved outputs:**
 <CodeGroup>

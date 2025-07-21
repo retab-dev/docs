@@ -100,14 +100,14 @@ A ParseResult object containing the extracted text content and processing inform
 Prepare documents for RAG applications by extracting and chunking text content.
 
 <CodeGroup>
-```python RAG Pipeline Preparation
+```python Python
 from retab import Retab
 from chonkie import SentenceChunker
 
-reclient = Retab()
+client = Retab()
 
 # Parse the document
-result = reclient.documents.parse(
+result = client.documents.parse(
     document="technical-manual.pdf",
     model="gemini-2.5-flash",
     table_parsing_format="markdown",  # Better for RAG
@@ -137,6 +137,58 @@ for page_num, page_text in enumerate(result.pages, 1):
         all_chunks.append(chunk_data)
 
 print(f"Created {len(all_chunks)} chunks from {result.usage.page_count} pages")
+```
+
+```javascript Javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// Parse the document
+const result = await client.documents.parse({
+    document: "technical-manual.pdf",
+    model: "gemini-2.5-flash",
+    table_parsing_format: "markdown",  // Better for RAG
+    image_resolution_dpi: 150  // Higher quality for technical docs
+});
+
+// Process each page
+const allChunks = [];
+result.pages.forEach((pageText, index) => {
+    const pageNum = index + 1;
+    
+    // Simple sentence-based chunking
+    const sentences = pageText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const chunks = [];
+    
+    for (let i = 0; i < sentences.length; i += 3) {
+        const chunk = sentences.slice(i, i + 3).join('. ');
+        chunks.push(chunk);
+    }
+    
+    chunks.forEach((chunk, chunkIdx) => {
+        const chunkData = {
+            page: pageNum,
+            chunk_id: `page_${pageNum}_chunk_${chunkIdx}`,
+            text: chunk,
+            document: result.document.name
+        };
+        allChunks.push(chunkData);
+    });
+});
+
+console.log(`Created ${allChunks.length} chunks from ${result.usage.page_count} pages`);
+
+// Access all text content
+console.log("Full document text:", result.text);
+
+// Access page-by-page content
+result.pages.forEach((pageText, index) => {
+    console.log(`Page ${index + 1}:`, pageText);
+});
+
+// Check usage information
+console.log(`Processed ${result.usage.page_count} pages`);
 ```
 </CodeGroup>
 

@@ -61,12 +61,12 @@ An OpenAI ParsedChatCompletion object with the extracted data.
 </ResponseField>
 
 <CodeGroup>
-```python Request (python)
-
+```python Python
 from retab import Retab
 
-reclient = Retab()
+client = Retab()
 
+# doc_msg = reclient.documents.extractions.stream(...) for stream mode
 doc_msg = reclient.documents.extract(
     document = "freight/booking_confirmation.jpg", 
     model="gpt-4.1-nano",
@@ -92,7 +92,38 @@ doc_msg = reclient.documents.extract(
     n_consensus=1 # 1 means disabled (default), if greater than 1 it will run the extraction with n-consensus mode
 )
 ```
-```curl Request (curl)
+```javascript Javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// const docMsg = await client.documents.extractions.stream(...) for stream mode
+const docMsg = await client.documents.extract({
+    document: "freight/booking_confirmation.jpg",
+    model: "gpt-4.1-nano",
+    json_schema: {
+        "X-SystemPrompt": "You are a useful assistant.",
+        properties: {
+            name: {
+                description: "The name of the calendar event.",
+                title: "Name",
+                type: "string"
+            },
+            date: {
+                description: "The date of the calendar event in ISO 8601 format.",
+                title: "Date",
+                type: "string"
+            }
+        },
+        required: ["name", "date"],
+        title: "CalendarEvent",
+        type: "object"
+    },
+    modality: "text",
+    n_consensus: 1 // 1 means disabled (default), if greater than 1 it will run the extraction with n-consensus mode
+});
+```
+```curl cURL
 curl -X POST https://api.retab.com/v1/documents/extract \
 -H "Authorization: Bearer $RETAB_API_KEY" \
 -H "Content-Type: application/json" \
@@ -123,38 +154,6 @@ curl -X POST https://api.retab.com/v1/documents/extract \
     "modality": "native",
     "n_consensus": 1
 }
-```
-
-
-```python Request (stream)
-
-from retab import Retab
-
-reclient = Retab()
-
-doc_msg = reclient.documents.extractions.stream(
-    document = "freight/booking_confirmation.jpg", 
-    model="gpt-4.1-nano",
-    json_schema = {
-      'X-SystemPrompt': 'You are a useful assistant.',
-      'properties': {
-          'name': {
-              'description': 'The name of the calendar event.',
-              'title': 'Name',
-              'type': 'string'
-          },
-          'date': {
-              'description': 'The date of the calendar event in ISO 8601 format.',
-              'title': 'Date',
-              'type': 'string'
-          }
-      },
-      'required': ['name', 'date'],
-      'title': 'CalendarEvent',
-      'type': 'object'
-    },
-    modality="native"
-)
 ```
 ```json Response
 {
@@ -279,11 +278,11 @@ A ParseResult object containing the extracted text content and processing inform
 </ResponseField>
 
 <CodeGroup>
-```python Request
+```python Python
 from retab import Retab
 
-reclient = Retab()
-result = reclient.documents.parse(
+client = Retab()
+result = client.documents.parse(
     document = "reports/annual-report-2024.pdf",
     model = "gemini-2.5-flash",
     table_parsing_format = "html",
@@ -300,7 +299,29 @@ full_text = result.text
 print(f"Document contains {result.usage.page_count} pages")
 print(f"Processing consumed {result.usage.credits} credits")
 ```
-```curl Request (curl)
+```javascript Javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+const result = await client.documents.parse({
+    document: "reports/annual-report-2024.pdf",
+    model: "gemini-2.5-flash",
+    table_parsing_format: "html",
+    image_resolution_dpi: 72,
+    browser_canvas: "A4"
+});
+
+// Access individual pages
+result.pages.forEach((pageContent, i) => {
+    console.log(`Page ${i + 1}: ${pageContent.slice(0, 100)}...`);
+});
+
+// Access full document text
+const fullText = result.text;
+console.log(`Document contains ${result.usage.page_count} pages`);
+console.log(`Processing consumed ${result.usage.credits} credits`);
+```
+```curl cURL
 curl -X POST https://api.retab.com/v1/documents/parse \
 -H "Authorization: Bearer $RETAB_API_KEY" \
 -H "Content-Type: application/json" \
@@ -413,17 +434,29 @@ A DocumentMessage object with the messages created from the document.
 
 
 <CodeGroup>
-```python Request
+```python Python
 from retab import Retab
 from openai import OpenAI
 
-reclient = Retab()
-doc_msg = reclient.documents.create_messages(
+client = Retab()
+doc_msg = client.documents.create_messages(
     document = "freight/booking_confirmation.jpg",
     modality = "text",
     image_resolution_dpi = 72,
     browser_canvas = "A4"
 )
+```
+```javascript Javascript
+import { Retab } from '@retab/node';
+import OpenAI from 'openai';
+
+const client = new Retab();
+const docMsg = await client.documents.create_messages({
+    document: "freight/booking_confirmation.jpg",
+    modality: "text",
+    image_resolution_dpi: 72,
+    browser_canvas: "A4"
+});
 ```
 ```json Response
 {
@@ -489,11 +522,11 @@ A DocumentMessage object with the document content structured according to the p
 </ResponseField>
 
 <CodeGroup>
-```python Request
+```python Python
 from retab import Retab
 
-reclient = Retab()
-doc_input = reclient.documents.create_inputs(
+client = Retab()
+doc_input = client.documents.create_inputs(
     document = "freight/invoice.pdf",
     json_schema = {
         "properties": {
@@ -516,6 +549,34 @@ doc_input = reclient.documents.create_inputs(
     image_resolution_dpi = 72,
     browser_canvas = "A4"
 )
+```
+```javascript Javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+const docInput = await client.documents.create_inputs({
+    document: "freight/invoice.pdf",
+    json_schema: {
+        properties: {
+            invoice_number: {
+                type: "string",
+                description: "The invoice number"
+            },
+            total_amount: {
+                type: "number",
+                description: "The total invoice amount"
+            },
+            issue_date: {
+                type: "string",
+                description: "The date the invoice was issued"
+            }
+        },
+        required: ["invoice_number", "total_amount", "issue_date"]
+    },
+    modality: "text",
+    image_resolution_dpi: 72,
+    browser_canvas: "A4"
+});
 ```
 ```json Response
 {
