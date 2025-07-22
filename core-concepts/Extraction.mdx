@@ -1,8 +1,111 @@
+### Introduction
 
-## Extract
+The `extract` method in Retab's document processing pipeline uses AI models to extract structured data from any document based on a provided JSON schema. This endpoint is ideal for automating data extraction tasks, such as pulling key information from invoices, forms, receipts, images, or scanned documents, for use in workflows like data entry automation, analytics, or integration with databases and applications.
+
+The typical extraction workflow follows these steps:
+
+1. **Schema Definition**: Define a JSON schema that describes the structure of the data you want to extract.
+2. **Extraction**: Use Retab's `extract` method to process the document and retrieve structured data.
+3. **Validation & Usage**: Validate the extracted data (optionally using likelihood scores) and integrate it into your application.
+
+For advanced validation or post-processing, **we recommend** combining this with schema validation libraries like Pydantic (Python) or Zod (JavaScript) to ensure data integrity.
+
+```mermaid
+flowchart LR
+    A[Documents] --> B
+    
+    subgraph Retab["Retab Extract API"]
+    B[1. AI-Powered Extraction]
+    end
+    
+    B --> C
+    
+    subgraph Validation["Schema Validation (eg. Pydantic/Zod)"]
+        C[2. Validate & Clean Data]
+    end
+    
+    C --> D
+
+    subgraph Application["Database/Application"]
+        D[3. Store/Use Data]
+    end
+```
+
+Unlike the `parse` method that focuses on raw text extraction, `extract` provides:
+- **Structured Output**: Data extracted directly into JSON format matching your schema.
+- **AI-Powered Inference**: Handles complex layouts, handwritten text, and contextual understanding.
+- **Modality Support**: Works with text, images, or native document formats.
+- **Consensus Mode**: Optional multi-run consensus for higher accuracy on ambiguous documents.
+- **Likelihood Scores**: Provides confidence scores for each extracted field.
+- **Batch Processing Ready**: Efficient for high-volume extraction tasks.
+
+## Extract API
+
+<ParamField body="ExtractRequest" type="ExtractRequest">
+  <Expandable title="properties">
+
+<ParamField body="document" type="string | object" required>
+  The document to extract from. Can be a file path (string), or an object with `filename` (string) and `url` (string, e.g., base64-encoded data).
+</ParamField>
+
+<ParamField body="model" type="string" required>
+  The AI model to use for extraction. Examples: `gpt-4.1-nano` for balanced accuracy and speed.
+</ParamField>
+
+<ParamField body="json_schema" type="object" required>
+  The JSON schema defining the structure of the extracted data. Includes properties, required fields, and optional `X-SystemPrompt` for custom instructions.
+</ParamField>
+
+<ParamField body="modality" type="string" default="text">
+  The processing modality: `"text"` for text-based extraction, `"native"` for handling native document formats like PDF.
+</ParamField>
+
+<ParamField body="n_consensus" type="integer" default="1">
+  Number of consensus runs. Set to >1 for multi-run averaging to improve accuracy on uncertain extractions (increases cost).
+</ParamField>
+
+  </Expandable>
+</ParamField>
 
 <ResponseField name="Returns" type="ParsedChatCompletion">
-An OpenAI ParsedChatCompletion object with the extracted data.
+A ParsedChatCompletion object with the extracted data, usage details, and confidence scores.
+  <Expandable title="properties">
+    <ResponseField name="content" type="object">
+      The core response content, including the OpenAI-compatible chat completion structure.
+      <Expandable title="properties">
+        <ResponseField name="id" type="string">
+          Unique identifier for the completion.
+        </ResponseField>
+        <ResponseField name="choices" type="array[object]">
+          Array of completion choices, typically containing one object with the extracted message.
+        </ResponseField>
+        <ResponseField name="created" type="integer">
+          Timestamp of creation (Unix epoch).
+        </ResponseField>
+        <ResponseField name="model" type="string">
+          The model used for extraction.
+        </ResponseField>
+        <ResponseField name="object" type="string">
+          Object type, e.g., "chat.completion".
+        </ResponseField>
+        <ResponseField name="service_tier" type="string">
+          Service tier used.
+        </ResponseField>
+        <ResponseField name="system_fingerprint" type="string">
+          System fingerprint for tracking.
+        </ResponseField>
+        <ResponseField name="usage" type="object">
+          Token usage details.
+        </ResponseField>
+        <ResponseField name="likelihoods" type="object">
+          Confidence scores for each extracted field (0-1 scale).
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="error" type="object | null">
+      Error details if the request failed, otherwise null.
+    </ResponseField>
+  </Expandable>
 </ResponseField>
 
 <CodeGroup>
@@ -152,3 +255,152 @@ curl -X POST https://api.retab.com/v1/documents/extract \
 }
 ```
 </CodeGroup>
+
+## Use Case: Extracting Event Information from Documents
+
+Extract structured calendar event data from a booking confirmation image and validate confidence scores before saving to a database.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+from pydantic import BaseModel, ValidationError
+
+client = Retab()
+
+# Define Pydantic model matching the schema for validation
+class CalendarEvent(BaseModel):
+    name: str
+    date: str  # ISO 8601
+
+# Extract data
+result = client.documents.extract(
+    document="freight/booking_confirmation.jpg",
+    model="gpt-4.1-nano",
+    json_schema={
+        'X-SystemPrompt': 'You are a useful assistant.',
+        'properties': {
+            'name': {
+                'description': 'The name of the calendar event.',
+                'title': 'Name',
+                'type': 'string'
+            },
+            'date': {
+                'description': 'The date of the calendar event in ISO 8601 format.',
+                'title': 'Date',
+                'type': 'string'
+            }
+        },
+        'required': ['name', 'date'],
+        'title': 'CalendarEvent',
+        'type': 'object'
+    },
+    modality="text",
+    n_consensus=1
+)
+
+# Access extracted data
+extracted_data = result.content.choices[0].message.parsed
+likelihoods = result.content.likelihoods
+
+# Validate with Pydantic
+try:
+    event = CalendarEvent(**extracted_data)
+    print(f"Extracted Event: {event.name} on {event.date}")
+    
+    # Check confidence
+    if all(score > 0.7 for score in likelihoods.values()):
+        print("High confidence extraction - Saving to DB...")
+        # db.save(event)  # Pseudo-code for DB integration
+    else:
+        print("Low confidence - Review manually")
+except ValidationError as e:
+    print(f"Validation failed: {e}")
+
+print(f"Processed with {result.content.usage.total_tokens} tokens")
+```
+
+```javascript Javascript
+import { Retab } from '@retab/node';
+import { z } from 'zod';
+
+const client = new Retab();
+
+// Define Zod schema for validation
+const CalendarEventSchema = z.object({
+    name: z.string(),
+    date: z.string().refine((val) => {
+        return /^\d{4}-\d{2}-\d{2}$/.test(val);  // Basic ISO date check
+    }, { message: "Invalid ISO 8601 date" })
+});
+
+// Extract data
+const result = await client.documents.extract({
+    document: "freight/booking_confirmation.jpg",
+    model: "gpt-4.1-nano",
+    json_schema: {
+        "X-SystemPrompt": "You are a useful assistant.",
+        properties: {
+            name: {
+                description: "The name of the calendar event.",
+                title: "Name",
+                type: "string"
+            },
+            date: {
+                description: "The date of the calendar event in ISO 8601 format.",
+                title: "Date",
+                type: "string"
+            }
+        },
+        required: ["name", "date"],
+        title: "CalendarEvent",
+        type: "object"
+    },
+    modality: "text",
+    n_consensus: 1
+});
+
+// Access extracted data
+const extractedData = result.content.choices[0].message.parsed;
+const likelihoods = result.content.likelihoods;
+
+// Validate with Zod
+const validation = CalendarEventSchema.safeParse(extractedData);
+if (validation.success) {
+    const event = validation.data;
+    console.log(`Extracted Event: ${event.name} on ${event.date}`);
+    
+    // Check confidence
+    const minScore = Math.min(...Object.values(likelihoods));
+    if (minScore > 0.7) {
+        console.log("High confidence extraction - Saving to DB...");
+        // db.save(event);  // Pseudo-code for DB integration
+    } else {
+        console.log("Low confidence - Review manually");
+    }
+} else {
+    console.log("Validation failed:", validation.error);
+}
+
+console.log(`Processed with ${result.content.usage.total_tokens} tokens`);
+```
+</CodeGroup>
+
+## Best Practices
+
+### Model Selection
+- **`gpt-4.1-nano`**: Balanced for accuracy and cost, recommended for most extraction tasks.
+- **`gemini-2.5-pro`**: Use for complex documents requiring deep contextual understanding.
+- **`gemini-2.5-flash`**: Faster and cheaper for simple extractions or high-volume processing.
+
+### Schema Design
+- Keep schemas concise: Only include required fields to improve extraction accuracy.
+- Use descriptive `description` fields: Helps the AI model understand what to extract.
+- Add `X-SystemPrompt` for custom guidance: E.g., "Focus on freight details" for domain-specific extractions.
+
+### Confidence Handling
+- Set a threshold (e.g., 0.7) for automated processing.
+- For critical tasks, enable `n_consensus > 1` to average results and boost reliability.
+
+### Modality Choice
+- **Text**: For clean, text-heavy documents.
+- **Native**: For PDFs or images with layouts preserved.
