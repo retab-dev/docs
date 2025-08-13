@@ -66,7 +66,7 @@ Unlike other methods that focus on chat formatting or structured extraction, `pa
   - `"json"`: Tables converted to JSON format
 </ParamField>
 
-<ParamField body="image_resolution_dpi" type="integer" default="72">
+<ParamField body="image_resolution_dpi" type="integer" default="96">
   DPI (dots per inch) for image processing. Higher values (150-300) for better OCR quality.
 </ParamField>
 
@@ -196,6 +196,67 @@ result.pages.forEach((pageText, index) => {
 // Check usage information
 console.log(`Processed ${result.usage.page_count} pages`);
 ```
+
+```typescript TypeScript
+import { Retab, type ParseRequest, type ParseResult } from '@retab/node';
+
+interface ChunkData {
+    page: number;
+    chunk_id: string;
+    text: string;
+    document: string;
+}
+
+const client = new Retab();
+
+// Parse the document
+const parseRequest: ParseRequest = {
+    document: "technical-manual.pdf",
+    model: "gemini-2.5-flash",
+    table_parsing_format: "markdown",  // Better for RAG
+    image_resolution_dpi: 150  // Higher quality for technical docs
+};
+
+const result: ParseResult = await client.documents.parse(parseRequest);
+
+// Process each page
+const allChunks: ChunkData[] = [];
+result.pages.forEach((pageText: string, index: number) => {
+    const pageNum = index + 1;
+    
+    // Simple sentence-based chunking
+    const sentences: string[] = pageText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const chunks: string[] = [];
+    
+    for (let i = 0; i < sentences.length; i += 3) {
+        const chunk = sentences.slice(i, i + 3).join('. ');
+        chunks.push(chunk);
+    }
+    
+    chunks.forEach((chunk: string, chunkIdx: number) => {
+        const chunkData: ChunkData = {
+            page: pageNum,
+            chunk_id: `page_${pageNum}_chunk_${chunkIdx}`,
+            text: chunk,
+            document: result.document.name
+        };
+        allChunks.push(chunkData);
+    });
+});
+
+console.log(`Created ${allChunks.length} chunks from ${result.usage.page_count} pages`);
+
+// Access all text content
+console.log("Full document text:", result.text);
+
+// Access page-by-page content
+result.pages.forEach((pageText: string, index: number) => {
+    console.log(`Page ${index + 1}:`, pageText);
+});
+
+// Check usage information
+console.log(`Processed ${result.usage.page_count} pages`);
+```
 </CodeGroup>
 
 
@@ -207,7 +268,7 @@ console.log(`Processed ${result.usage.page_count} pages`);
 - **`gemini-2.5-flash-lite`**: Fastest and most cost-efficient, ideal for simple documents or high-volume batch processing where maximum throughput is needed.
 
 ### Image Quality Settings
-- **Standard documents**: 72-96 DPI
+- **Standard documents**: 96 DPI
 - **Technical documents**: 150 DPI  
 - **Fine print/small text**: 300+ DPI
 
@@ -297,7 +358,7 @@ client = Retab()
 doc_msg = client.documents.create_messages(
     document = "freight/booking_confirmation.jpg",
     modality = "text",
-    image_resolution_dpi = 72,
+    image_resolution_dpi = 96,
     browser_canvas = "A4"
 )
 
@@ -321,7 +382,7 @@ const client = new Retab();
 const docMsg = await client.documents.create_messages({
     document: "freight/booking_confirmation.jpg",
     modality: "text",
-    image_resolution_dpi: 72,
+    image_resolution_dpi: 96,
     browser_canvas: "A4"
 });
 
@@ -335,6 +396,34 @@ const response = await oaiClient.chat.completions.create({
             "content": "Summarize the document in 100 words."
         }
     ]
+});
+```
+
+```typescript TypeScript
+import { Retab, type CreateMessagesRequest, type DocumentMessage } from '@retab/node';
+import OpenAI, { type ChatCompletionMessageParam } from 'openai';
+
+const client = new Retab();
+
+const createMessagesRequest: CreateMessagesRequest = {
+    document: "freight/booking_confirmation.jpg",
+    modality: "text",
+    image_resolution_dpi: 96,
+    browser_canvas: "A4"
+};
+
+const docMsg: DocumentMessage = await client.documents.create_messages(createMessagesRequest);
+
+const oaiClient = new OpenAI();
+
+const additionalMessage: ChatCompletionMessageParam = {
+    role: "user",
+    content: "Summarize the document in 100 words."
+};
+
+const response = await oaiClient.chat.completions.create({
+    model: "gpt-4.1-mini",
+    messages: [...docMsg.openai_messages, additionalMessage]
 });
 ```
 ```json Response
@@ -355,7 +444,7 @@ const response = await oaiClient.chat.completions.create({
     "created": 1736524416,
     "modality": "text",
     "document": {
-        "id": "cf908729402d0796537bb91e63df5e339ce93b4cabdcac2f9a4f90592647e130",
+        "id": "cf908969402d0796537bb91e63df5e339ce93b4cabdcac2f9a4f90592647e130",
         "name": "booking_confirmation.jpg",
         "mime_type": "image/jpeg"
     }
@@ -424,7 +513,7 @@ doc_input = client.documents.create_inputs(
         "required": ["invoice_number", "total_amount", "issue_date"]
     },
     modality = "text",
-    image_resolution_dpi = 72,
+    image_resolution_dpi = 96,
     browser_canvas = "A4"
 )
 ```
@@ -452,9 +541,47 @@ const docInput = await client.documents.create_inputs({
         required: ["invoice_number", "total_amount", "issue_date"]
     },
     modality: "text",
-    image_resolution_dpi: 72,
+    image_resolution_dpi: 96,
     browser_canvas: "A4"
 });
+```
+
+```typescript TypeScript
+import { Retab, type CreateInputsRequest, type DocumentMessage } from '@retab/node';
+
+interface InvoiceSchema {
+    invoice_number: string;
+    total_amount: number;
+    issue_date: string;
+}
+
+const client = new Retab();
+
+const createInputsRequest: CreateInputsRequest = {
+    document: "freight/invoice.pdf",
+    json_schema: {
+        properties: {
+            invoice_number: {
+                type: "string",
+                description: "The invoice number"
+            },
+            total_amount: {
+                type: "number",
+                description: "The total invoice amount"
+            },
+            issue_date: {
+                type: "string",
+                description: "The date the invoice was issued"
+            }
+        },
+        required: ["invoice_number", "total_amount", "issue_date"]
+    },
+    modality: "text",
+    image_resolution_dpi: 96,
+    browser_canvas: "A4"
+};
+
+const docInput: DocumentMessage = await client.documents.create_inputs(createInputsRequest);
 ```
 ```json Response
 {
