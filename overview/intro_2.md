@@ -25,7 +25,7 @@ Our goal is to make the process of analyzing documents and unstructured data as 
 
 Large Language Models collapse entire layers of legacy OCR pipelines into a single, elegant abstraction. When a model can **read**, **reason**, and **structure text** natively, we no longer need brittle heuristics, handcrafted parsers, or heavyweight ETL jobs. 
 
-Instead, we can expose a **small, principled API**: input your document, define the output schema, and receive reliable structured data. The result is less complexity, better accuracy, faster processing, and reduced costs. By building around LLMs from the ground up, we shift the focus from tedious infrastructure to extracting meaningful answers from your data.
+Instead, we can expose a **small, principled API**: input your document, define the output schema, and receive reliable structured data. This reduces complexity, improves accuracy, speeds up processing, and lowers costs. By building around LLMs from the ground up, we shift the focus from tedious infrastructure to extracting meaningful answers from your data.
 
 
 Many people haven't yet realized how powerful LLMs have become at document processing tasks. We believe that LLMs and structured generation are among the most **impactful breakthroughs** of the 21th century. [AI is the new electricity](https://www.answer.ai/posts/2023-12-12-launch.html), and retab is here to help you tame it.

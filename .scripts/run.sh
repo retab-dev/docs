@@ -1,2 +1,5 @@
 #!/bin/bash
-mintlify dev
+
+mint dev
+
+#sudo npm i -g mint
