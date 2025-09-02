@@ -580,7 +580,6 @@
           "Chat"
         ],
         "summary": "Chat Completions",
-        "description": "Chat completions endpoint with schema optimization support.\n\nSupports both regular chat and agentic schema optimization with performance analytics.",
         "operationId": "chat_completions_v1_chats_completions_post",
         "requestBody": {
           "content": {
@@ -598,6 +597,59 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ]
+      }
+    },
+    "/v1/agent/optimize-once": {
+      "post": {
+        "tags": [
+          "Agent"
+        ],
+        "summary": "Optimize Once",
+        "description": "Create a child iteration from a parent iteration and optimize its schema once using deterministic tools.\nThe optimization strategy mirrors the preloop passes from optimizer_script.py but runs via base_chat_completions_with_tools.",
+        "operationId": "optimize_once_v1_agent_optimize_once_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OptimizeOnceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptimizeOnceResponse"
+                }
               }
             }
           },
@@ -2101,6 +2153,108 @@
         }
       }
     },
+    "/v1/schemas/field_description": {
+      "post": {
+        "tags": [
+          "Schemas"
+        ],
+        "summary": "Generate Field Description",
+        "description": "Stream an improved, concise field description using the requested model.",
+        "operationId": "generate_field_description_v1_schemas_field_description_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateFieldDescriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ]
+      }
+    },
+    "/v1/schemas/reasoning_prompt": {
+      "post": {
+        "tags": [
+          "Schemas"
+        ],
+        "summary": "Generate Reasoning Prompt",
+        "description": "Stream a short reasoning prompt to help the LLM think for this field.",
+        "operationId": "generate_reasoning_prompt_v1_schemas_reasoning_prompt_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateReasoningPromptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ]
+      }
+    },
     "/v1/schemas/extraction_count/{schema_id}": {
       "get": {
         "tags": [
@@ -2210,20 +2364,19 @@
         ]
       }
     },
-    "/v1/projects/distances/iteration_metrics_from_evaluation": {
-      "post": {
+    "/v1/schemas/compute_schema_ids": {
+      "get": {
         "tags": [
-          "Projects",
-          "distances"
+          "Schemas"
         ],
-        "summary": "Get Iteration Document Metrics From Evaluation",
-        "description": "Get optimized metrics for all documents in an iteration, comparing ground truth with predictions.",
-        "operationId": "get_iteration_document_metrics_from_evaluation_v1_projects_distances_iteration_metrics_from_evaluation_post",
+        "summary": "Compute Schema Ids",
+        "description": "Compute the schema ids for a given json schema.",
+        "operationId": "compute_schema_ids_v1_schemas_compute_schema_ids_get",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/IterationMetricsFromProjectRequest"
+                "$ref": "#/components/schemas/SchemaIdRequest"
               }
             }
           },
@@ -2235,7 +2388,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OptimizedIterationMetrics"
+                  "$ref": "#/components/schemas/SchemaIdResponse"
                 }
               }
             }
@@ -2525,6 +2678,102 @@
         }
       }
     },
+    "/v1/projects/io/{project_id}/get_payload_for_export/{iteration_id}": {
+      "get": {
+        "tags": [
+          "Projects",
+          "io"
+        ],
+        "summary": "Export ground-truths or annotation props as CSV (GET)",
+        "description": "Build one big CSV from the project's data for the requested iteration id.",
+        "operationId": "get_payload_for_export_get_v1_projects_io__project_id__get_payload_for_export__iteration_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "iteration_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "'dataset' for ground-truths, 'playground' for playground extractions, otherwise the iteration id",
+              "title": "Iteration Id"
+            },
+            "description": "'dataset' for ground-truths, 'playground' for playground extractions, otherwise the iteration id"
+          },
+          {
+            "name": "delimiter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": ",",
+              "title": "Delimiter"
+            }
+          },
+          {
+            "name": "line_delimiter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "\n",
+              "title": "Line Delimiter"
+            }
+          },
+          {
+            "name": "quote",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "\"",
+              "title": "Quote"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/main_server__services__v1__projects__io__routes__ExportToCsvResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/projects/io/get_payload_for_export/{iteration_id}": {
       "post": {
         "tags": [
@@ -2618,7 +2867,7 @@
           "documents"
         ],
         "summary": "List Evaluation Documents",
-        "description": "List documents for a specific evaluation.",
+        "description": "List documents for a specific project.",
         "operationId": "list_evaluation_documents_v1_projects__project_id__documents_get",
         "security": [
           {
@@ -2689,7 +2938,7 @@
           "documents"
         ],
         "summary": "Add Evaluation Document",
-        "description": "Add a new document to an evaluation.",
+        "description": "Add a new document to an project.",
         "operationId": "add_evaluation_document_v1_projects__project_id__documents_post",
         "security": [
           {
@@ -2754,7 +3003,7 @@
           "documents"
         ],
         "summary": "Update Evaluation Document",
-        "description": "Update the ground truth of a specific document within an evaluation with field-level conflict detection.",
+        "description": "Update the ground truth of a specific document within an project with field-level conflict detection.",
         "operationId": "update_evaluation_document_v1_projects__project_id__documents__document_id__patch",
         "security": [
           {
@@ -2826,7 +3075,7 @@
           "documents"
         ],
         "summary": "Delete Evaluation Document",
-        "description": "Delete a specific document from an evaluation.",
+        "description": "Delete a specific document from an project.",
         "operationId": "delete_evaluation_document_v1_projects__project_id__documents__document_id__delete",
         "security": [
           {
@@ -2890,7 +3139,7 @@
           "documents"
         ],
         "summary": "Get Evaluation Document",
-        "description": "Get a specific document within an evaluation by ID.",
+        "description": "Get a specific document within an project by ID.",
         "operationId": "get_evaluation_document_v1_projects__project_id__documents__document_id__get",
         "security": [
           {
@@ -3099,6 +3348,158 @@
         }
       }
     },
+    "/v1/projects/{project_id}/documents/{document_id}/playground/llm-annotate": {
+      "post": {
+        "tags": [
+          "Projects",
+          "documents"
+        ],
+        "summary": "Llm Annotate Document Playground",
+        "description": "Run LLM extraction for a single project document and store results in playground_extraction.\nStreams tokens like the standard endpoint, but persists to playground fields instead of annotation.",
+        "operationId": "llm_annotate_document_playground_v1_projects__project_id__documents__document_id__playground_llm_annotate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaygroundLLMAnnotateDocumentRequest",
+                "default": {
+                  "stream": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetabParsedChatCompletion-Output"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{project_id}/documents/{document_id}/playground/llm-annotate/stream": {
+      "post": {
+        "tags": [
+          "Projects",
+          "documents"
+        ],
+        "summary": "Llm Annotate Document Playground",
+        "description": "Run LLM extraction for a single project document and store results in playground_extraction.\nStreams tokens like the standard endpoint, but persists to playground fields instead of annotation.",
+        "operationId": "llm_annotate_document_playground_v1_projects__project_id__documents__document_id__playground_llm_annotate_stream_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaygroundLLMAnnotateDocumentRequest",
+                "default": {
+                  "stream": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/stream+json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/projects/{project_id}/documents/{document_id}/perform_ocr": {
       "post": {
         "tags": [
@@ -3219,7 +3620,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PredictionData-Output"
+                  "$ref": "#/components/schemas/PredictionData"
                 }
               }
             }
@@ -3301,7 +3702,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PredictionData-Output"
+                  "$ref": "#/components/schemas/PredictionData"
                 }
               }
             }
@@ -3640,9 +4041,9 @@
           "Projects",
           "iterations"
         ],
-        "summary": "List Evaluation Iterations",
-        "description": "List iterations for a specific evaluation.",
-        "operationId": "list_evaluation_iterations_v1_projects__project_id__iterations_get",
+        "summary": "List Project Iterations",
+        "description": "List iterations for a specific project.",
+        "operationId": "list_project_iterations_v1_projects__project_id__iterations_get",
         "security": [
           {
             "HTTPBearer": []
@@ -3712,7 +4113,7 @@
           "iterations"
         ],
         "summary": "Create Iteration",
-        "description": "Create a new iteration with custom inference settings and an optional JSON schema.\nIf no JSON schema is provided, the evaluation's current schema will be used.\nThis creates the iteration with empty predictions - use the process endpoint to run extractions.",
+        "description": "Create a new iteration with custom inference settings and an optional JSON schema.\nIf no JSON schema is provided, the project's current schema will be used.\nThis creates the iteration with empty predictions - use the process endpoint to run extractions.",
         "operationId": "create_iteration_v1_projects__project_id__iterations_post",
         "security": [
           {
@@ -3970,6 +4371,88 @@
         }
       }
     },
+    "/v1/projects/{project_id}/iterations/{iteration_id}/draft": {
+      "patch": {
+        "tags": [
+          "Projects",
+          "iterations"
+        ],
+        "summary": "Patch Iteration Draft",
+        "description": "Update the draft of an iteration. If draft is null, clears the draft.",
+        "operationId": "patch_iteration_draft_v1_projects__project_id__iterations__iteration_id__draft_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "iteration_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Iteration Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchIterationDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DraftIteration"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Patch Iteration Draft V1 Projects  Project Id  Iterations  Iteration Id  Draft Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/projects/{project_id}/iterations/{iteration_id}/status": {
       "get": {
         "tags": [
@@ -4174,14 +4657,411 @@
         }
       }
     },
+    "/v1/projects/{project_id}/iterations/{iteration_id}/schema": {
+      "get": {
+        "tags": [
+          "Projects",
+          "iterations"
+        ],
+        "summary": "Get Iteration Schema",
+        "operationId": "get_iteration_schema_v1_projects__project_id__iterations__iteration_id__schema_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "iteration_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Iteration Id"
+            }
+          },
+          {
+            "name": "use_draft",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, apply draft schema_overrides on top of iteration",
+              "default": false,
+              "title": "Use Draft"
+            },
+            "description": "If true, apply draft schema_overrides on top of iteration"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterializedSchemaResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{project_id}/history": {
+      "get": {
+        "tags": [
+          "Projects",
+          "history"
+        ],
+        "summary": "List Project History",
+        "description": "List history entries for a project in reverse chronological order.\nEach entry represents a point in time that the project can be restored to.",
+        "operationId": "list_project_history_v1_projects__project_id__history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Number of history entries to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Number of history entries to return"
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of history entries to skip",
+              "default": 0,
+              "title": "Skip"
+            },
+            "description": "Number of history entries to skip"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectHistoryListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{project_id}/history/{history_entry_id}": {
+      "get": {
+        "tags": [
+          "Projects",
+          "history"
+        ],
+        "summary": "Get History Entry",
+        "description": "Get detailed information about a specific history entry.",
+        "operationId": "get_history_entry_v1_projects__project_id__history__history_entry_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "history_entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "History Entry Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectHistoryEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{project_id}/history/{history_entry_id}/preview": {
+      "get": {
+        "tags": [
+          "Projects",
+          "history"
+        ],
+        "summary": "Get History Entry Preview",
+        "description": "Get a preview of the changes in a specific history entry by reconstructing the before/after states.",
+        "operationId": "get_history_entry_preview_v1_projects__project_id__history__history_entry_id__preview_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "history_entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "History Entry Id"
+            }
+          },
+          {
+            "name": "preview_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Preview mode: 'history' for historical changes, 'impact' for restoration impact",
+              "default": "history",
+              "title": "Preview Mode"
+            },
+            "description": "Preview mode: 'history' for historical changes, 'impact' for restoration impact"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Preview scope: 'schema' or 'annotations' to limit what is shown",
+              "title": "Scope"
+            },
+            "description": "Preview scope: 'schema' or 'annotations' to limit what is shown"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HistoryPreviewResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RestorationImpactResponse"
+                    }
+                  ],
+                  "title": "Response Get History Entry Preview V1 Projects  Project Id  History  History Entry Id  Preview Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{project_id}/history/{history_entry_id}/restore": {
+      "post": {
+        "tags": [
+          "Projects",
+          "history"
+        ],
+        "summary": "Restore Project To History Entry",
+        "description": "Restore a project to a previous state based on a dynamic history entry.\nThis reconstructs the project state at the time of the history entry.\n\nRestore scopes:\n- documents_only: Restore only document annotations\n- schema_only: Restore only the JSON schema",
+        "operationId": "restore_project_to_history_entry_v1_projects__project_id__history__history_entry_id__restore_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "history_entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "History Entry Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreProjectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/projects": {
       "post": {
         "tags": [
           "Projects"
         ],
-        "summary": "Create Evaluation",
-        "description": "Create a new evaluation with documents, schema, and ground truth.\nWill store any documents that don't already have a file_id.",
-        "operationId": "create_evaluation_v1_projects_post",
+        "summary": "Create Project",
+        "description": "Create a new project with documents, schema, and ground truth.\nWill store any documents that don't already have a file_id.",
+        "operationId": "create_project_v1_projects_post",
         "security": [
           {
             "HTTPBearer": []
@@ -4230,9 +5110,9 @@
         "tags": [
           "Projects"
         ],
-        "summary": "List Evaluations",
-        "description": "List evaluations with pagination support.",
-        "operationId": "list_evaluations_v1_projects_get",
+        "summary": "List Projects",
+        "description": "List projects with pagination support.",
+        "operationId": "list_projects_v1_projects_get",
         "security": [
           {
             "HTTPBearer": []
@@ -4347,9 +5227,9 @@
         "tags": [
           "Projects"
         ],
-        "summary": "Get Evaluation",
-        "description": "Get an evaluation by ID",
-        "operationId": "get_evaluation_v1_projects__project_id__get",
+        "summary": "Get Project",
+        "description": "Get an project by ID",
+        "operationId": "get_project_v1_projects__project_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -4399,9 +5279,9 @@
         "tags": [
           "Projects"
         ],
-        "summary": "Patch Evaluation",
-        "description": "Update specific fields of an existing evaluation with field-level conflict detection.\nSupports auto-merging non-conflicting changes and proper conflict reporting.",
-        "operationId": "patch_evaluation_v1_projects__project_id__patch",
+        "summary": "Patch Project",
+        "description": "Update specific fields of an existing project with field-level conflict detection.\nSupports auto-merging non-conflicting changes and proper conflict reporting.",
+        "operationId": "patch_project_v1_projects__project_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -4461,9 +5341,9 @@
         "tags": [
           "Projects"
         ],
-        "summary": "Delete Eval",
-        "description": "Delete an evaluation by ID",
-        "operationId": "delete_eval_v1_projects__project_id__delete",
+        "summary": "Delete Project",
+        "description": "Delete an project by ID",
+        "operationId": "delete_project_v1_projects__project_id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -4496,7 +5376,57 @@
                   "additionalProperties": {
                     "type": "string"
                   },
-                  "title": "Response Delete Eval V1 Projects  Project Id  Delete"
+                  "title": "Response Delete Project V1 Projects  Project Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/integration/{project_id}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get Project Integration",
+        "operationId": "get_project_integration_v1_projects_integration__project_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SheetsIntegration"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Project Integration V1 Projects Integration  Project Id  Get"
                 }
               }
             }
@@ -4519,9 +5449,9 @@
         "tags": [
           "Projects"
         ],
-        "summary": "Duplicate Evaluation",
-        "description": "Duplicate an existing evaluation, creating a copy with a new ID.\nThe duplicate will include all documents, schema, and iterations from the original evaluation.",
-        "operationId": "duplicate_evaluation_v1_projects__project_id__duplicate_post",
+        "summary": "Duplicate Project",
+        "description": "Duplicate an existing project, creating a copy with a new ID.\nThe duplicate will include all documents, schema, and iterations from the original project.",
+        "operationId": "duplicate_project_v1_projects__project_id__duplicate_post",
         "security": [
           {
             "HTTPBearer": []
@@ -4637,8 +5567,8 @@
         "tags": [
           "Projects"
         ],
-        "summary": "Extract Document For Extraction",
-        "operationId": "extract_document_for_extraction_v1_projects_extract__project_id___iteration_id__post",
+        "summary": "Extract Document For Iteration",
+        "operationId": "extract_document_for_iteration_v1_projects_extract__project_id___iteration_id__post",
         "security": [
           {
             "HTTPBearer": []
@@ -4670,6 +5600,16 @@
             }
           },
           {
+            "name": "write_to_sheet",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Write To Sheet"
+            }
+          },
+          {
             "name": "Idempotency-Key",
             "in": "header",
             "required": false,
@@ -4690,7 +5630,300 @@
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/Body_extract_document_for_extraction_v1_projects_extract__project_id___iteration_id__post"
+                "$ref": "#/components/schemas/Body_extract_document_for_iteration_v1_projects_extract__project_id___iteration_id__post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetabParsedChatCompletion-Output"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/extract/{project_id}": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Extract Document For Iteration",
+        "operationId": "extract_document_for_iteration_v1_projects_extract__project_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "iteration_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "base-configuration",
+              "title": "Iteration Id"
+            }
+          },
+          {
+            "name": "write_to_sheet",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Write To Sheet"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_extract_document_for_iteration_v1_projects_extract__project_id__post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetabParsedChatCompletion-Output"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/extract_sheet/{project_id}/{iteration_id}": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Extract Document For Iteration",
+        "operationId": "extract_document_for_iteration_v1_projects_extract_sheet__project_id___iteration_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "iteration_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Iteration Id"
+            }
+          },
+          {
+            "name": "write_to_sheet",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Write To Sheet"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_extract_document_for_iteration_v1_projects_extract_sheet__project_id___iteration_id__post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetabParsedChatCompletion-Output"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/extract_sheet/{project_id}": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Extract Document For Iteration",
+        "operationId": "extract_document_for_iteration_v1_projects_extract_sheet__project_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "iteration_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "base-configuration",
+              "title": "Iteration Id"
+            }
+          },
+          {
+            "name": "write_to_sheet",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Write To Sheet"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_extract_document_for_iteration_v1_projects_extract_sheet__project_id__post"
               }
             }
           }
@@ -6516,1363 +7749,6 @@
         }
       }
     },
-    "/v1/processors/automations/mailboxes/tests/forward/{mailbox_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Mailboxes"
-        ],
-        "summary": "Test Email Forwarding",
-        "description": "Mock endpoint that simulates email forwarding with sample data",
-        "operationId": "test_email_forwarding_v1_processors_automations_mailboxes_tests_forward__mailbox_id__post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DocumentUploadRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmailData-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/mailboxes/tests/process/{mailbox_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Mailboxes"
-        ],
-        "summary": "Test Document Upload",
-        "description": "Mock endpoint that simulates the complete extraction process with sample data",
-        "operationId": "test_document_upload_v1_processors_automations_mailboxes_tests_process__mailbox_id__post",
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DocumentUploadRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AutomationLog"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/mailboxes/tests/webhook/{mailbox_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Mailboxes"
-        ],
-        "summary": "Test Webhook",
-        "description": "Mock endpoint that simulates the HTTP request to the webhook endpoint",
-        "operationId": "test_webhook_v1_processors_automations_mailboxes_tests_webhook__mailbox_id__post",
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AutomationLog"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/mailboxes/tests/email-forwarding-default/{mailbox_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Mailboxes"
-        ],
-        "summary": "Test Mailbox Forwarding Default",
-        "description": "Test endpoint that sends a test email to verify mailbox configuration",
-        "operationId": "test_mailbox_forwarding_default_v1_processors_automations_mailboxes_tests_email_forwarding_default__mailbox_id__post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Test Mailbox Forwarding Default V1 Processors Automations Mailboxes Tests Email Forwarding Default  Mailbox Id  Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/mailboxes": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Mailboxes"
-        ],
-        "summary": "Create Mailbox",
-        "description": "Create a new mailbox",
-        "operationId": "create_mailbox_v1_processors_automations_mailboxes_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Mailbox-Input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Mailbox-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Mailboxes"
-        ],
-        "summary": "List Mailboxes",
-        "description": "List mailboxes with pagination support",
-        "operationId": "list_mailboxes_v1_processors_automations_mailboxes_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "processor_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Processor Id"
-            }
-          },
-          {
-            "name": "before",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Before"
-            }
-          },
-          {
-            "name": "after",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "After"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": 10,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "enum": [
-                    "asc",
-                    "desc"
-                  ],
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": "desc",
-              "title": "Order"
-            }
-          },
-          {
-            "name": "email",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Email"
-            }
-          },
-          {
-            "name": "webhook_url",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Webhook Url"
-            }
-          },
-          {
-            "name": "schema_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Schema Id"
-            }
-          },
-          {
-            "name": "schema_data_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Schema Data Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaginatedList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/mailboxes/{mailbox_id}": {
-      "get": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Mailboxes"
-        ],
-        "summary": "Get Email Config",
-        "description": "Get a mailbox by email",
-        "operationId": "get_email_config_v1_processors_automations_mailboxes__mailbox_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Mailbox-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Mailboxes"
-        ],
-        "summary": "Update Email Config",
-        "description": "Update a mailbox",
-        "operationId": "update_email_config_v1_processors_automations_mailboxes__mailbox_id__put",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateMailboxRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Mailbox-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Mailboxes"
-        ],
-        "summary": "Delete Email Config",
-        "description": "Delete a mailbox by id",
-        "operationId": "delete_email_config_v1_processors_automations_mailboxes__mailbox_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Delete Email Config V1 Processors Automations Mailboxes  Mailbox Id  Delete"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/mailboxes/webhook": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Mailboxes"
-        ],
-        "summary": "Handle Email Webhook",
-        "operationId": "handle_email_webhook_v1_processors_automations_mailboxes_webhook_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/links": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Links"
-        ],
-        "summary": "Create Link",
-        "description": "Create a new link",
-        "operationId": "create_link_v1_processors_automations_links_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Link-Input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Link-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Links"
-        ],
-        "summary": "List Links",
-        "description": "List links with pagination support",
-        "operationId": "list_links_v1_processors_automations_links_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "processor_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Processor Id"
-            }
-          },
-          {
-            "name": "before",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Before"
-            }
-          },
-          {
-            "name": "after",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "After"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 10,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "desc",
-              "title": "Order"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListLinks"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/links/{link_id}": {
-      "get": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Links"
-        ],
-        "summary": "Get Link",
-        "description": "Get a link by ID",
-        "operationId": "get_link_v1_processors_automations_links__link_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "link_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Link Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Link-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Links"
-        ],
-        "summary": "Delete Link",
-        "description": "Delete a link by ID",
-        "operationId": "delete_link_v1_processors_automations_links__link_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "link_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Link Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Delete Link V1 Processors Automations Links  Link Id  Delete"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Links"
-        ],
-        "summary": "Update Link",
-        "description": "Update a link",
-        "operationId": "update_link_v1_processors_automations_links__link_id__put",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "link_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Link Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateLinkRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Link-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/links/parse/{link_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Links"
-        ],
-        "summary": "Handle Link Webhook",
-        "operationId": "handle_link_webhook_v1_processors_automations_links_parse__link_id__post",
-        "parameters": [
-          {
-            "name": "link_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Link Id"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Idempotency-Key"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_handle_link_webhook_v1_processors_automations_links_parse__link_id__post"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AutomationLog"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/links/verify-password/{link_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Links"
-        ],
-        "summary": "Verify Link Password",
-        "operationId": "verify_link_password_v1_processors_automations_links_verify_password__link_id__post",
-        "parameters": [
-          {
-            "name": "link_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Link Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": true,
-                "title": "Password"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Verify Link Password V1 Processors Automations Links Verify Password  Link Id  Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/outlook/tests/forward/{mailbox_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Outlook"
-        ],
-        "summary": "Test Email Forwarding",
-        "description": "Mock endpoint that simulates email forwarding with sample data",
-        "operationId": "test_email_forwarding_v1_processors_automations_outlook_tests_forward__mailbox_id__post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DocumentUploadRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmailData-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/outlook/tests/process/{mailbox_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Outlook"
-        ],
-        "summary": "Test Document Upload",
-        "description": "Mock endpoint that simulates the complete extraction process with sample data",
-        "operationId": "test_document_upload_v1_processors_automations_outlook_tests_process__mailbox_id__post",
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DocumentUploadRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AutomationLog"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/outlook/tests/webhook/{mailbox_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Outlook"
-        ],
-        "summary": "Test Webhook",
-        "description": "Mock endpoint that simulates the HTTP request to the webhook endpoint",
-        "operationId": "test_webhook_v1_processors_automations_outlook_tests_webhook__mailbox_id__post",
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AutomationLog"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/outlook/tests/email-forwarding-default/{mailbox_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Outlook"
-        ],
-        "summary": "Test Mailbox Forwarding Default",
-        "description": "Test endpoint that sends a test email to verify mailbox configuration",
-        "operationId": "test_mailbox_forwarding_default_v1_processors_automations_outlook_tests_email_forwarding_default__mailbox_id__post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "mailbox_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Mailbox Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Test Mailbox Forwarding Default V1 Processors Automations Outlook Tests Email Forwarding Default  Mailbox Id  Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/processors/automations/outlook/vector_search/vector_search": {
       "post": {
         "tags": [
@@ -8774,495 +8650,6 @@
         }
       }
     },
-    "/v1/processors/automations/endpoints": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Endpoints"
-        ],
-        "summary": "Create Endpoint",
-        "description": "Create a new endpoint",
-        "operationId": "create_endpoint_v1_processors_automations_endpoints_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Endpoint-Input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Endpoint-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Endpoints"
-        ],
-        "summary": "List Endpoints",
-        "description": "List endpoints with pagination support",
-        "operationId": "list_endpoints_v1_processors_automations_endpoints_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "before",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Before"
-            }
-          },
-          {
-            "name": "after",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "After"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": 10,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "enum": [
-                    "asc",
-                    "desc"
-                  ],
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": "desc",
-              "title": "Order"
-            }
-          },
-          {
-            "name": "id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Id"
-            }
-          },
-          {
-            "name": "name",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Name"
-            }
-          },
-          {
-            "name": "webhook_url",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Webhook Url"
-            }
-          },
-          {
-            "name": "processor_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Processor Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListEndpoints"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/endpoints/{endpoint_id}": {
-      "get": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Endpoints"
-        ],
-        "summary": "Get Endpoint",
-        "description": "Get an endpoint by ID",
-        "operationId": "get_endpoint_v1_processors_automations_endpoints__endpoint_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "endpoint_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Endpoint Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Endpoint-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Endpoints"
-        ],
-        "summary": "Update Endpoint",
-        "description": "Update an endpoint",
-        "operationId": "update_endpoint_v1_processors_automations_endpoints__endpoint_id__put",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "endpoint_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Endpoint Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateEndpointRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Endpoint-Output"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Endpoints"
-        ],
-        "summary": "Delete Endpoint",
-        "description": "Delete an endpoint by ID",
-        "operationId": "delete_endpoint_v1_processors_automations_endpoints__endpoint_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "endpoint_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Endpoint Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Delete Endpoint V1 Processors Automations Endpoints  Endpoint Id  Delete"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processors/automations/endpoints/process/{endpoint_id}": {
-      "post": {
-        "tags": [
-          "Processors",
-          "Automations",
-          "Endpoints"
-        ],
-        "summary": "Handle Endpoint Processing",
-        "operationId": "handle_endpoint_processing_v1_processors_automations_endpoints_process__endpoint_id__post",
-        "parameters": [
-          {
-            "name": "endpoint_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Endpoint Id"
-            }
-          },
-          {
-            "name": "id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Id"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Idempotency-Key"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_handle_endpoint_processing_v1_processors_automations_endpoints_process__endpoint_id__post"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AutomationLog"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/processors/automations/logs": {
       "get": {
         "tags": [
@@ -9918,13 +9305,13 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/Link-Output"
+                      "$ref": "#/components/schemas/Link"
                     },
                     {
-                      "$ref": "#/components/schemas/Mailbox-Output"
+                      "$ref": "#/components/schemas/Mailbox"
                     },
                     {
-                      "$ref": "#/components/schemas/Endpoint-Output"
+                      "$ref": "#/components/schemas/Endpoint"
                     },
                     {
                       "$ref": "#/components/schemas/Outlook-Output"
@@ -9987,13 +9374,13 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/Link-Output"
+                      "$ref": "#/components/schemas/Link"
                     },
                     {
-                      "$ref": "#/components/schemas/Mailbox-Output"
+                      "$ref": "#/components/schemas/Mailbox"
                     },
                     {
-                      "$ref": "#/components/schemas/Endpoint-Output"
+                      "$ref": "#/components/schemas/Endpoint"
                     },
                     {
                       "$ref": "#/components/schemas/Outlook-Output"
@@ -10078,13 +9465,13 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/Link-Output"
+                      "$ref": "#/components/schemas/Link"
                     },
                     {
-                      "$ref": "#/components/schemas/Mailbox-Output"
+                      "$ref": "#/components/schemas/Mailbox"
                     },
                     {
-                      "$ref": "#/components/schemas/Endpoint-Output"
+                      "$ref": "#/components/schemas/Endpoint"
                     },
                     {
                       "$ref": "#/components/schemas/Outlook-Output"
@@ -10296,13 +9683,13 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/Link-Output"
+                      "$ref": "#/components/schemas/Link"
                     },
                     {
-                      "$ref": "#/components/schemas/Mailbox-Output"
+                      "$ref": "#/components/schemas/Mailbox"
                     },
                     {
-                      "$ref": "#/components/schemas/Endpoint-Output"
+                      "$ref": "#/components/schemas/Endpoint"
                     },
                     {
                       "$ref": "#/components/schemas/Outlook-Output"
@@ -10446,22 +9833,6 @@
                 }
               ],
               "title": "Name"
-            }
-          },
-          {
-            "name": "modality",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Modality"
             }
           },
           {
@@ -11376,6 +10747,70 @@
         }
       }
     },
+    "/v1/usage/time_series/project_id/{project_id}": {
+      "get": {
+        "tags": [
+          "Usage"
+        ],
+        "summary": "Get Project Time Series",
+        "description": "Get time series usage data (in dollars) for a specific project within a specified time range.\nConverts credits to dollars using the standard rate (1 credit = $0.01).",
+        "operationId": "get_project_time_series_v1_usage_time_series_project_id__project_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "time_range",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TimeRange",
+              "description": "Time range for usage calculation"
+            },
+            "description": "Time range for usage calculation"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageTimeSeries"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/usage/time_series/processor_id/{processor_id}/credits": {
       "get": {
         "tags": [
@@ -11403,6 +10838,70 @@
             "schema": {
               "type": "string",
               "title": "Processor Id"
+            }
+          },
+          {
+            "name": "time_range",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TimeRange",
+              "description": "Time range for usage calculation"
+            },
+            "description": "Time range for usage calculation"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditsTimeSeries"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usage/time_series/project_id/{project_id}/credits": {
+      "get": {
+        "tags": [
+          "Usage"
+        ],
+        "summary": "Get Project Credits Time Series",
+        "description": "Get time series credits usage data for a specific project within a specified time range.\nUses credits_count from preprocessing logs.",
+        "operationId": "get_project_credits_time_series_v1_usage_time_series_project_id__project_id__credits_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
             }
           },
           {
@@ -12797,6 +12296,59 @@
         "summary": "Parse Document",
         "description": "Parse a document and extract text content from each page.\nThis endpoint processes various document types and returns structured text content\nalong with usage information. Supports different parsing modes and formats.",
         "operationId": "parse_document_v1_documents_parse_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParseResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ]
+      }
+    },
+    "/v1/documents/parse_cached": {
+      "post": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Parse Document Cached",
+        "description": "Parse a document and extract text content from each page.\nThis endpoint processes various document types and returns structured text content\nalong with usage information. Supports different parsing modes and formats.",
+        "operationId": "parse_document_cached_v1_documents_parse_cached_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -16446,6 +15998,107 @@
         ],
         "title": "Annotation"
       },
+      "AnnotationChange": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id",
+            "description": "ID of the document"
+          },
+          "annotation_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annotation Source",
+            "description": "Source of annotation changes"
+          },
+          "first_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Timestamp",
+            "description": "Timestamp of first change"
+          },
+          "last_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Timestamp",
+            "description": "Timestamp of last change"
+          },
+          "has_before_state": {
+            "type": "boolean",
+            "title": "Has Before State",
+            "description": "Whether before state is available"
+          },
+          "before_annotation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Before Annotation",
+            "description": "Annotation before changes"
+          },
+          "after_annotation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "After Annotation",
+            "description": "Annotation after changes"
+          },
+          "field_changes": {
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            },
+            "type": "array",
+            "title": "Field Changes",
+            "description": "List of field changes"
+          },
+          "change_summary": {
+            "type": "string",
+            "title": "Change Summary",
+            "description": "Human-readable summary of changes"
+          },
+          "total_edits": {
+            "type": "integer",
+            "title": "Total Edits",
+            "description": "Total number of edits"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename",
+            "description": "Document filename (for document add/delete)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "has_before_state",
+          "change_summary",
+          "total_edits"
+        ],
+        "title": "AnnotationChange",
+        "description": "Represents annotation changes for a single document."
+      },
       "AnnotationURLCitation": {
         "properties": {
           "end_index": {
@@ -17163,22 +16816,20 @@
           "inference_settings": {
             "$ref": "#/components/schemas/InferenceSettings"
           },
-          "json_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Json Schema"
+          "schema_overrides": {
+            "$ref": "#/components/schemas/SchemaOverrides",
+            "description": "Map of field path -> non-structural schema overrides (description, reasoning_prompt)"
           },
           "updated_at": {
             "type": "string",
             "format": "date-time",
             "title": "Updated At",
-            "description": "The last update date of inference settings or json schema"
+            "description": "The last update date of inference settings or schema overrides"
           }
         },
         "type": "object",
         "required": [
-          "inference_settings",
-          "json_schema"
+          "inference_settings"
         ],
         "title": "BaseIteration"
       },
@@ -17328,7 +16979,7 @@
         "type": "object",
         "title": "Body_extract_document_for_extraction_v1_deployments_extract__project_id___iteration_id__post"
       },
-      "Body_extract_document_for_extraction_v1_projects_extract__project_id___iteration_id__post": {
+      "Body_extract_document_for_iteration_v1_projects_extract__project_id___iteration_id__post": {
         "properties": {
           "document": {
             "anyOf": [
@@ -17386,7 +17037,187 @@
           }
         },
         "type": "object",
-        "title": "Body_extract_document_for_extraction_v1_projects_extract__project_id___iteration_id__post"
+        "title": "Body_extract_document_for_iteration_v1_projects_extract__project_id___iteration_id__post"
+      },
+      "Body_extract_document_for_iteration_v1_projects_extract__project_id__post": {
+        "properties": {
+          "document": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document"
+          },
+          "documents": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documents"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "store": {
+            "type": "boolean",
+            "title": "Store",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "Body_extract_document_for_iteration_v1_projects_extract__project_id__post"
+      },
+      "Body_extract_document_for_iteration_v1_projects_extract_sheet__project_id___iteration_id__post": {
+        "properties": {
+          "document": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document"
+          },
+          "documents": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documents"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "store": {
+            "type": "boolean",
+            "title": "Store",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "Body_extract_document_for_iteration_v1_projects_extract_sheet__project_id___iteration_id__post"
+      },
+      "Body_extract_document_for_iteration_v1_projects_extract_sheet__project_id__post": {
+        "properties": {
+          "document": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document"
+          },
+          "documents": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documents"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "store": {
+            "type": "boolean",
+            "title": "Store",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "Body_extract_document_for_iteration_v1_projects_extract_sheet__project_id__post"
       },
       "Body_handle_endpoint_processing_v1_endpoints__endpoint_id__post": {
         "properties": {
@@ -17401,44 +17232,6 @@
           "document"
         ],
         "title": "Body_handle_endpoint_processing_v1_endpoints__endpoint_id__post"
-      },
-      "Body_handle_endpoint_processing_v1_processors_automations_endpoints_process__endpoint_id__post": {
-        "properties": {
-          "file": {
-            "type": "string",
-            "format": "binary",
-            "title": "File"
-          },
-          "identity": {
-            "$ref": "#/components/schemas/Identity",
-            "default": {
-              "user_id": "Anyone",
-              "organization_id": "AnyOrganization",
-              "tier": 0,
-              "auth_method": "api_key",
-              "is_billing_enabled": false
-            }
-          }
-        },
-        "type": "object",
-        "required": [
-          "file"
-        ],
-        "title": "Body_handle_endpoint_processing_v1_processors_automations_endpoints_process__endpoint_id__post"
-      },
-      "Body_handle_link_webhook_v1_processors_automations_links_parse__link_id__post": {
-        "properties": {
-          "file": {
-            "type": "string",
-            "format": "binary",
-            "title": "File"
-          }
-        },
-        "type": "object",
-        "required": [
-          "file"
-        ],
-        "title": "Body_handle_link_webhook_v1_processors_automations_links_parse__link_id__post"
       },
       "Body_import_annotations_csv_v1_projects_io__project_id__import_annotations_csv_post": {
         "properties": {
@@ -17793,18 +17586,6 @@
             "title": "Temperature",
             "default": 0.0
           },
-          "modality": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "native",
-              "image+text",
-              "native"
-            ],
-            "title": "Modality",
-            "default": "text"
-          },
           "stream": {
             "type": "boolean",
             "title": "Stream",
@@ -17813,6 +17594,55 @@
         },
         "type": "object",
         "title": "CachePreloadRequest"
+      },
+      "Change": {
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "add",
+              "remove",
+              "replace"
+            ],
+            "title": "Op"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "old_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Value",
+            "description": "JSON string representation of original value (omit for add)"
+          },
+          "new_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Value",
+            "description": "JSON string representation of replacement value (omit for remove)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "op",
+          "path"
+        ],
+        "title": "Change",
+        "description": "Single atomic edit inside a JSON Schema."
       },
       "ChatCompletion": {
         "properties": {
@@ -18125,18 +17955,6 @@
             "title": "Messages",
             "description": "List of messages in the conversation"
           },
-          "projectId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Projectid",
-            "description": "Project ID to fetch schema from"
-          },
           "context": {
             "anyOf": [
               {
@@ -18154,7 +17972,7 @@
             "type": "string",
             "title": "Model",
             "description": "Model to use for completion",
-            "default": "gpt-4.1"
+            "default": "gpt-5-mini"
           },
           "temperature": {
             "type": "number",
@@ -18193,11 +18011,10 @@
             "description": "Reasoning effort level",
             "default": "medium"
           },
-          "isAgenticOptimization": {
-            "type": "boolean",
-            "title": "Isagenticoptimization",
-            "description": "Whether this is an agentic schema optimization request",
-            "default": false
+          "tool_flags_filter": {
+            "$ref": "#/components/schemas/ToolFlagsFilter",
+            "description": "Toolbox flags filter to use for completion",
+            "default": {}
           }
         },
         "type": "object",
@@ -18920,22 +18737,12 @@
             "type": "object",
             "title": "Data",
             "description": "The data to compute field locations for (ground truth or extraction)"
-          },
-          "data_type": {
-            "type": "string",
-            "enum": [
-              "ground_truth",
-              "extraction"
-            ],
-            "title": "Data Type",
-            "description": "Type of data being processed"
           }
         },
         "type": "object",
         "required": [
           "ocr_file_id",
-          "data",
-          "data_type"
+          "data"
         ],
         "title": "ComputeFieldLocationsRequest",
         "description": "Request model for computing field locations from OCR and data."
@@ -19208,6 +19015,16 @@
             ],
             "title": "Json Schema"
           },
+          "schema_overrides": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchemaOverrides"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "parent_id": {
             "anyOf": [
               {
@@ -19225,8 +19042,7 @@
         "required": [
           "inference_settings"
         ],
-        "title": "CreateIterationRequest",
-        "description": "Request model for performing a new iteration with custom inference settings and optional JSON schema."
+        "title": "CreateIterationRequest"
       },
       "CreateOrganizationResponse": {
         "properties": {
@@ -19467,19 +19283,6 @@
             "$ref": "#/components/schemas/MIMEData-Input",
             "description": "The document to load."
           },
-          "modality": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "native",
-              "image+text",
-              "native"
-            ],
-            "title": "Modality",
-            "description": "The modality of the document to load.",
-            "default": "native"
-          },
           "image_resolution_dpi": {
             "type": "integer",
             "title": "Image Resolution Dpi",
@@ -19499,65 +19302,6 @@
           },
           "model": {
             "type": "string",
-            "enum": [
-              "gpt-4o",
-              "gpt-4o-mini",
-              "chatgpt-4o-latest",
-              "gpt-5",
-              "gpt-5-2025-08-07",
-              "gpt-5-mini",
-              "gpt-5-mini-2025-08-07",
-              "gpt-5-nano",
-              "gpt-5-nano-2025-08-07",
-              "gpt-4.1",
-              "gpt-4.1-mini",
-              "gpt-4.1-mini-2025-04-14",
-              "gpt-4.1-2025-04-14",
-              "gpt-4.1-nano",
-              "gpt-4.1-nano-2025-04-14",
-              "gpt-4o-2024-11-20",
-              "gpt-4o-2024-08-06",
-              "gpt-4o-2024-05-13",
-              "gpt-4o-mini-2024-07-18",
-              "o1",
-              "o1-2024-12-17",
-              "o3",
-              "o3-2025-04-16",
-              "o4-mini",
-              "o4-mini-2025-04-16",
-              "gpt-4o-audio-preview-2024-12-17",
-              "gpt-4o-audio-preview-2024-10-01",
-              "gpt-4o-realtime-preview-2024-12-17",
-              "gpt-4o-realtime-preview-2024-10-01",
-              "gpt-4o-mini-audio-preview-2024-12-17",
-              "gpt-4o-mini-realtime-preview-2024-12-17",
-              "claude-3-5-sonnet-latest",
-              "claude-3-5-sonnet-20241022",
-              "claude-3-opus-20240229",
-              "claude-3-sonnet-20240229",
-              "claude-3-haiku-20240307",
-              "claude-opus-4.1",
-              "claude-opus-4",
-              "claude-sonnet-4",
-              "claude-sonnet-4-20250514",
-              "grok-3",
-              "grok-3-mini",
-              "gemini-2.5-pro",
-              "gemini-2.5-flash",
-              "gemini-2.5-pro-preview-06-05",
-              "gemini-2.5-pro-preview-05-06",
-              "gemini-2.5-pro-preview-03-25",
-              "gemini-2.5-flash-preview-05-20",
-              "gemini-2.5-flash-preview-04-17",
-              "gemini-2.5-flash-lite",
-              "gemini-2.5-pro-exp-03-25",
-              "gemini-2.0-flash-lite",
-              "gemini-2.0-flash",
-              "auto-large",
-              "auto-small",
-              "auto-micro",
-              "human"
-            ],
             "title": "Model",
             "description": "The model to use for the document.",
             "default": "gemini-2.5-flash"
@@ -19581,19 +19325,6 @@
             "$ref": "#/components/schemas/MIMEData-Input",
             "description": "The document to load."
           },
-          "modality": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "native",
-              "image+text",
-              "native"
-            ],
-            "title": "Modality",
-            "description": "The modality of the document to load.",
-            "default": "native"
-          },
           "image_resolution_dpi": {
             "type": "integer",
             "title": "Image Resolution Dpi",
@@ -19613,65 +19344,6 @@
           },
           "model": {
             "type": "string",
-            "enum": [
-              "gpt-4o",
-              "gpt-4o-mini",
-              "chatgpt-4o-latest",
-              "gpt-5",
-              "gpt-5-2025-08-07",
-              "gpt-5-mini",
-              "gpt-5-mini-2025-08-07",
-              "gpt-5-nano",
-              "gpt-5-nano-2025-08-07",
-              "gpt-4.1",
-              "gpt-4.1-mini",
-              "gpt-4.1-mini-2025-04-14",
-              "gpt-4.1-2025-04-14",
-              "gpt-4.1-nano",
-              "gpt-4.1-nano-2025-04-14",
-              "gpt-4o-2024-11-20",
-              "gpt-4o-2024-08-06",
-              "gpt-4o-2024-05-13",
-              "gpt-4o-mini-2024-07-18",
-              "o1",
-              "o1-2024-12-17",
-              "o3",
-              "o3-2025-04-16",
-              "o4-mini",
-              "o4-mini-2025-04-16",
-              "gpt-4o-audio-preview-2024-12-17",
-              "gpt-4o-audio-preview-2024-10-01",
-              "gpt-4o-realtime-preview-2024-12-17",
-              "gpt-4o-realtime-preview-2024-10-01",
-              "gpt-4o-mini-audio-preview-2024-12-17",
-              "gpt-4o-mini-realtime-preview-2024-12-17",
-              "claude-3-5-sonnet-latest",
-              "claude-3-5-sonnet-20241022",
-              "claude-3-opus-20240229",
-              "claude-3-sonnet-20240229",
-              "claude-3-haiku-20240307",
-              "claude-opus-4.1",
-              "claude-opus-4",
-              "claude-sonnet-4",
-              "claude-sonnet-4-20250514",
-              "grok-3",
-              "grok-3-mini",
-              "gemini-2.5-pro",
-              "gemini-2.5-flash",
-              "gemini-2.5-pro-preview-06-05",
-              "gemini-2.5-pro-preview-05-06",
-              "gemini-2.5-pro-preview-03-25",
-              "gemini-2.5-flash-preview-05-20",
-              "gemini-2.5-flash-preview-04-17",
-              "gemini-2.5-flash-lite",
-              "gemini-2.5-pro-exp-03-25",
-              "gemini-2.0-flash-lite",
-              "gemini-2.0-flash",
-              "auto-large",
-              "auto-small",
-              "auto-micro",
-              "human"
-            ],
             "title": "Model",
             "description": "The model to use for the document.",
             "default": "gemini-2.5-flash"
@@ -19706,6 +19378,24 @@
               }
             ],
             "description": "The metadata of the annotation when the annotation is a prediction"
+          },
+          "playground_extraction": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Playground Extraction",
+            "description": "The playground extraction of the document",
+            "default": {}
+          },
+          "playground_extraction_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The metadata of the playground extraction"
           }
         },
         "type": "object",
@@ -19740,19 +19430,6 @@
             "type": "integer",
             "title": "Created",
             "description": "The Unix timestamp (in seconds) of when the document was loaded."
-          },
-          "modality": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "native",
-              "image+text",
-              "native"
-            ],
-            "title": "Modality",
-            "description": "The modality of the document to load.",
-            "default": "native"
           },
           "token_count": {
             "$ref": "#/components/schemas/TokenCount",
@@ -19818,8 +19495,7 @@
           "prediction_updated_at",
           "iteration_updated_at"
         ],
-        "title": "DocumentStatus",
-        "description": "Status of a document within an iteration."
+        "title": "DocumentStatus"
       },
       "DocumentTransformRequest": {
         "properties": {
@@ -19857,6 +19533,61 @@
         ],
         "title": "DocumentUploadRequest"
       },
+      "DraftIteration": {
+        "properties": {
+          "schema_overrides": {
+            "$ref": "#/components/schemas/SchemaOverrides"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "The last update date of draft schema overrides"
+          }
+        },
+        "type": "object",
+        "title": "DraftIteration"
+      },
+      "DraftPatchInput": {
+        "properties": {
+          "json_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Json Schema"
+          },
+          "schema_overrides": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchemaOverrides"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "title": "DraftPatchInput"
+      },
       "DuplicateProjectRequest": {
         "properties": {
           "name": {
@@ -19869,7 +19600,7 @@
               }
             ],
             "title": "Name",
-            "description": "Name for the duplicated evaluation. If not provided, uses 'Copy of [original name]'."
+            "description": "Name for the duplicated project. If not provided, uses 'Copy of [original name]'."
           }
         },
         "type": "object",
@@ -20243,24 +19974,6 @@
             "$ref": "#/components/schemas/EmailData-Input",
             "description": "Email to be analyzed"
           },
-          "modality": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "text",
-                  "image",
-                  "native",
-                  "image+text",
-                  "native"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Modality"
-          },
           "image_resolution_dpi": {
             "anyOf": [
               {
@@ -20377,64 +20090,7 @@
         ],
         "title": "EmailExtractRequest"
       },
-      "Endpoint-Input": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Unique identifier for the extraction endpoint"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Name of the automation"
-          },
-          "processor_id": {
-            "type": "string",
-            "title": "Processor Id",
-            "description": "ID of the processor to use for the automation"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At",
-            "description": "Timestamp of the last update"
-          },
-          "default_language": {
-            "type": "string",
-            "title": "Default Language",
-            "description": "Default language for the automation",
-            "default": "en"
-          },
-          "webhook_url": {
-            "type": "string",
-            "title": "Webhook Url",
-            "description": "Url of the webhook to send the data to"
-          },
-          "webhook_headers": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Webhook Headers",
-            "description": "Headers to send with the request"
-          },
-          "need_validation": {
-            "type": "boolean",
-            "title": "Need Validation",
-            "description": "If the automation needs to be validated before running",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "processor_id",
-          "webhook_url"
-        ],
-        "title": "Endpoint"
-      },
-      "Endpoint-Output": {
+      "Endpoint": {
         "properties": {
           "id": {
             "type": "string",
@@ -20571,6 +20227,9 @@
                     "dataset_membership",
                     "endpoint",
                     "evaluation",
+                    "project",
+                    "project_from",
+                    "project_history",
                     "extraction",
                     "file",
                     "files",
@@ -20887,19 +20546,6 @@
             "title": "Browser Canvas",
             "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
             "default": "A4"
-          },
-          "modality": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "native",
-              "image+text",
-              "native"
-            ],
-            "title": "Modality",
-            "description": "Modality of the extraction",
-            "default": "native"
           },
           "reasoning_effort": {
             "anyOf": [
@@ -21241,7 +20887,8 @@
                 "enum": [
                   "token",
                   "line",
-                  "block"
+                  "block",
+                  "token-windows"
                 ]
               },
               {
@@ -21249,7 +20896,7 @@
               }
             ],
             "title": "Match Level",
-            "description": "The level of the match (token, line, block)"
+            "description": "The level of the match (token, line, block, token-windows)"
           }
         },
         "type": "object",
@@ -21259,6 +20906,45 @@
           "quote"
         ],
         "title": "FieldLocation"
+      },
+      "FieldTrackerEntry": {
+        "properties": {
+          "likelihood": {
+            "type": "number",
+            "title": "Likelihood",
+            "description": "Current likelihood score for this field",
+            "default": 0.0
+          },
+          "tools_tried": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tools Tried",
+            "description": "List of tool names that have been tried on this field"
+          },
+          "edit_count": {
+            "type": "integer",
+            "title": "Edit Count",
+            "description": "Number of successful edits made to this field",
+            "default": 0
+          },
+          "last_edited": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Edited",
+            "description": "Iteration number when this field was last edited"
+          }
+        },
+        "type": "object",
+        "title": "FieldTrackerEntry",
+        "description": "Tracks optimization state for a single field"
       },
       "File": {
         "properties": {
@@ -21676,6 +21362,144 @@
         "title": "FunctionCallRecord",
         "description": "Record of a function call execution"
       },
+      "GenerateFieldDescriptionRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "gpt-5"
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperature",
+            "default": 0.0
+          },
+          "schema_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Title"
+          },
+          "field_name": {
+            "type": "string",
+            "title": "Field Name"
+          },
+          "field_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Schema"
+          },
+          "existing_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Existing Description"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_name"
+        ],
+        "title": "GenerateFieldDescriptionRequest"
+      },
+      "GenerateReasoningPromptRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "gpt-5"
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperature",
+            "default": 0.0
+          },
+          "schema_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Title"
+          },
+          "field_name": {
+            "type": "string",
+            "title": "Field Name"
+          },
+          "field_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Schema"
+          },
+          "existing_reasoning_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Existing Reasoning Prompt"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_name"
+        ],
+        "title": "GenerateReasoningPromptRequest"
+      },
       "GenerateSchemaRequest": {
         "properties": {
           "documents": {
@@ -21712,18 +21536,6 @@
             ],
             "title": "Reasoning Effort",
             "default": "minimal"
-          },
-          "modality": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "native",
-              "image+text",
-              "native"
-            ],
-            "title": "Modality",
-            "default": "native"
           },
           "instructions": {
             "anyOf": [
@@ -21827,13 +21639,46 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "Identity": {
+      "HistoryPreviewResponse": {
         "properties": {
-          "user_id": {
-            "type": "string",
-            "title": "User Id"
+          "annotation_changes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AnnotationChange"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annotation Changes",
+            "description": "Annotation changes"
           },
-          "organization_id": {
+          "schema_changes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchemaChange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Schema changes"
+          },
+          "metadata_changes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetadataChange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Metadata changes"
+          },
+          "message": {
             "anyOf": [
               {
                 "type": "string"
@@ -21842,33 +21687,37 @@
                 "type": "null"
               }
             ],
-            "title": "Organization Id",
-            "description": "Organization id of the user"
+            "title": "Message",
+            "description": "Fallback message for unsupported entry types"
           },
-          "tier": {
-            "type": "integer",
-            "title": "Tier",
-            "description": "Tier of the organization",
-            "default": 0
-          },
-          "auth_method": {
-            "type": "string",
-            "enum": [
-              "api_key",
-              "bearer_token",
-              "master_key",
-              "outlook_auth"
+          "entry_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Auth Method",
-            "description": "Authentication method used",
-            "default": "api_key"
+            "title": "Entry Type",
+            "description": "Type of history entry"
+          },
+          "event_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Count",
+            "description": "Number of events in entry"
           }
         },
         "type": "object",
-        "required": [
-          "user_id"
-        ],
-        "title": "Identity"
+        "title": "HistoryPreviewResponse",
+        "description": "Response model for history entry preview."
       },
       "ImageURL": {
         "properties": {
@@ -21946,18 +21795,6 @@
             "type": "number",
             "title": "Temperature",
             "default": 0.0
-          },
-          "modality": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "native",
-              "image+text",
-              "native"
-            ],
-            "title": "Modality",
-            "default": "native"
           },
           "reasoning_effort": {
             "anyOf": [
@@ -22045,30 +21882,39 @@
           "inference_settings": {
             "$ref": "#/components/schemas/InferenceSettings"
           },
-          "json_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Json Schema"
+          "schema_overrides": {
+            "$ref": "#/components/schemas/SchemaOverrides",
+            "description": "Map of field path -> non-structural schema overrides (description, reasoning_prompt)"
           },
           "updated_at": {
             "type": "string",
             "format": "date-time",
             "title": "Updated At",
-            "description": "The last update date of inference settings or json schema"
+            "description": "The last update date of inference settings or schema overrides"
           },
           "predictions": {
             "additionalProperties": {
-              "$ref": "#/components/schemas/PredictionData-Input"
+              "$ref": "#/components/schemas/PredictionData"
             },
             "type": "object",
             "title": "Predictions",
             "description": "The predictions of the iteration for all the documents"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftIteration"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The draft iteration of the iteration"
           }
         },
         "type": "object",
         "required": [
-          "inference_settings",
-          "json_schema"
+          "inference_settings"
         ],
         "title": "Iteration"
       },
@@ -22093,30 +21939,39 @@
           "inference_settings": {
             "$ref": "#/components/schemas/InferenceSettings"
           },
-          "json_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Json Schema"
+          "schema_overrides": {
+            "$ref": "#/components/schemas/SchemaOverrides",
+            "description": "Map of field path -> non-structural schema overrides (description, reasoning_prompt)"
           },
           "updated_at": {
             "type": "string",
             "format": "date-time",
             "title": "Updated At",
-            "description": "The last update date of inference settings or json schema"
+            "description": "The last update date of inference settings or schema overrides"
           },
           "predictions": {
             "additionalProperties": {
-              "$ref": "#/components/schemas/PredictionData-Output"
+              "$ref": "#/components/schemas/PredictionData"
             },
             "type": "object",
             "title": "Predictions",
             "description": "The predictions of the iteration for all the documents"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftIteration"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The draft iteration of the iteration"
           }
         },
         "type": "object",
         "required": [
-          "inference_settings",
-          "json_schema"
+          "inference_settings"
         ],
         "title": "Iteration"
       },
@@ -22154,8 +22009,7 @@
           "documents_needing_update",
           "documents_up_to_date"
         ],
-        "title": "IterationDocumentStatusResponse",
-        "description": "Response showing the status of all documents in an iteration."
+        "title": "IterationDocumentStatusResponse"
       },
       "IterationHistory": {
         "properties": {
@@ -22212,23 +22066,6 @@
         "title": "IterationHistory",
         "description": "Complete history of one optimization iteration"
       },
-      "IterationMetricsFromProjectRequest": {
-        "properties": {
-          "evaluation": {
-            "$ref": "#/components/schemas/Project-Input"
-          },
-          "iteration_id": {
-            "type": "string",
-            "title": "Iteration Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "evaluation",
-          "iteration_id"
-        ],
-        "title": "IterationMetricsFromProjectRequest"
-      },
       "KeyValidationResponse": {
         "properties": {
           "is_valid": {
@@ -22259,76 +22096,7 @@
         "type": "object",
         "title": "LLMAnnotateDocumentRequest"
       },
-      "Link-Input": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Unique identifier for the extraction link"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Name of the automation"
-          },
-          "processor_id": {
-            "type": "string",
-            "title": "Processor Id",
-            "description": "ID of the processor to use for the automation"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At",
-            "description": "Timestamp of the last update"
-          },
-          "default_language": {
-            "type": "string",
-            "title": "Default Language",
-            "description": "Default language for the automation",
-            "default": "en"
-          },
-          "webhook_url": {
-            "type": "string",
-            "title": "Webhook Url",
-            "description": "Url of the webhook to send the data to"
-          },
-          "webhook_headers": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Webhook Headers",
-            "description": "Headers to send with the request"
-          },
-          "need_validation": {
-            "type": "boolean",
-            "title": "Need Validation",
-            "description": "If the automation needs to be validated before running",
-            "default": false
-          },
-          "password": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Password",
-            "description": "Password to access the link"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "processor_id",
-          "webhook_url"
-        ],
-        "title": "Link"
-      },
-      "Link-Output": {
+      "Link": {
         "properties": {
           "id": {
             "type": "string",
@@ -22439,26 +22207,6 @@
         ],
         "title": "ListDomainsResponse"
       },
-      "ListEndpoints": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/Endpoint-Output"
-            },
-            "type": "array",
-            "title": "Data"
-          },
-          "list_metadata": {
-            "$ref": "#/components/schemas/ListMetadata"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data",
-          "list_metadata"
-        ],
-        "title": "ListEndpoints"
-      },
       "ListFiles": {
         "properties": {
           "data": {
@@ -22514,26 +22262,6 @@
           "data"
         ],
         "title": "ListIterationsResponse"
-      },
-      "ListLinks": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/Link-Output"
-            },
-            "type": "array",
-            "title": "Data"
-          },
-          "list_metadata": {
-            "$ref": "#/components/schemas/ListMetadata"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data",
-          "list_metadata"
-        ],
-        "title": "ListLinks"
       },
       "ListLogs": {
         "properties": {
@@ -22692,87 +22420,7 @@
         ],
         "title": "MIMEData"
       },
-      "Mailbox-Input": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Unique identifier for the mailbox"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Name of the automation"
-          },
-          "processor_id": {
-            "type": "string",
-            "title": "Processor Id",
-            "description": "ID of the processor to use for the automation"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At",
-            "description": "Timestamp of the last update"
-          },
-          "default_language": {
-            "type": "string",
-            "title": "Default Language",
-            "description": "Default language for the automation",
-            "default": "en"
-          },
-          "webhook_url": {
-            "type": "string",
-            "title": "Webhook Url",
-            "description": "Url of the webhook to send the data to"
-          },
-          "webhook_headers": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Webhook Headers",
-            "description": "Headers to send with the request"
-          },
-          "need_validation": {
-            "type": "boolean",
-            "title": "Need Validation",
-            "description": "If the automation needs to be validated before running",
-            "default": false
-          },
-          "email": {
-            "type": "string",
-            "pattern": ".*@mailbox.retab.com$",
-            "title": "Email"
-          },
-          "authorized_domains": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Authorized Domains",
-            "description": "List of authorized domains to receive the emails from"
-          },
-          "authorized_emails": {
-            "items": {
-              "type": "string",
-              "format": "email"
-            },
-            "type": "array",
-            "title": "Authorized Emails",
-            "description": "List of emails to access the link"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "processor_id",
-          "webhook_url",
-          "email"
-        ],
-        "title": "Mailbox"
-      },
-      "Mailbox-Output": {
+      "Mailbox": {
         "properties": {
           "id": {
             "type": "string",
@@ -22934,6 +22582,20 @@
         ],
         "title": "MatchResultModel"
       },
+      "MaterializedSchemaResponse": {
+        "properties": {
+          "json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Schema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "json_schema"
+        ],
+        "title": "MaterializedSchemaResponse"
+      },
       "Matrix": {
         "properties": {
           "rows": {
@@ -22966,6 +22628,39 @@
         ],
         "title": "Matrix",
         "description": "Representation for transformation matrix, compatible with OpenCV format.\n\nThis represents transformation matrices that were applied to the original\ndocument image to produce the processed page image."
+      },
+      "MetadataChange": {
+        "properties": {
+          "has_before_state": {
+            "type": "boolean",
+            "title": "Has Before State",
+            "description": "Whether before state is available"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp",
+            "description": "Timestamp of the change"
+          },
+          "change_summary": {
+            "type": "string",
+            "title": "Change Summary",
+            "description": "Human-readable summary of changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "has_before_state",
+          "change_summary"
+        ],
+        "title": "MetadataChange",
+        "description": "Represents metadata changes in a history entry."
       },
       "Model": {
         "properties": {
@@ -23141,6 +22836,17 @@
               }
             ],
             "title": "Display Name"
+          },
+          "credits": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credits"
           },
           "pricing": {
             "$ref": "#/components/schemas/Pricing"
@@ -23381,6 +23087,33 @@
         ],
         "title": "OpenAITierResponse"
       },
+      "OptimizationHistory": {
+        "properties": {
+          "current_iteration": {
+            "type": "integer",
+            "title": "Current Iteration",
+            "description": "Current iteration number",
+            "default": 1
+          },
+          "field_tracker": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FieldTrackerEntry"
+            },
+            "type": "object",
+            "title": "Field Tracker",
+            "description": "Field tracking state"
+          },
+          "total_function_calls": {
+            "type": "integer",
+            "title": "Total Function Calls",
+            "description": "Total function calls made",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "OptimizationHistory",
+        "description": "State tracking for optimization across multiple calls"
+      },
       "OptimizationResult": {
         "properties": {
           "optimized_schema": {
@@ -23434,6 +23167,96 @@
         ],
         "title": "OptimizationTool",
         "description": "Enumeration of available schema optimization tools."
+      },
+      "OptimizeOnceRequest": {
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "title": "Projectid"
+          },
+          "parentIterationId": {
+            "type": "string",
+            "title": "Parentiterationid"
+          },
+          "inferenceSettings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InferenceSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "optimizationHistory": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OptimizationHistory"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Previous optimization state for consecutive calls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "projectId",
+          "parentIterationId"
+        ],
+        "title": "OptimizeOnceRequest"
+      },
+      "OptimizeOnceResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "iterationId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iterationid"
+          },
+          "changesMade": {
+            "type": "integer",
+            "title": "Changesmade",
+            "default": 0
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "optimizationHistory": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OptimizationHistory"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Updated optimization state for next call"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "OptimizeOnceResponse"
       },
       "OptimizedDocumentMetrics": {
         "properties": {
@@ -24104,65 +23927,6 @@
           },
           "model": {
             "type": "string",
-            "enum": [
-              "gpt-4o",
-              "gpt-4o-mini",
-              "chatgpt-4o-latest",
-              "gpt-5",
-              "gpt-5-2025-08-07",
-              "gpt-5-mini",
-              "gpt-5-mini-2025-08-07",
-              "gpt-5-nano",
-              "gpt-5-nano-2025-08-07",
-              "gpt-4.1",
-              "gpt-4.1-mini",
-              "gpt-4.1-mini-2025-04-14",
-              "gpt-4.1-2025-04-14",
-              "gpt-4.1-nano",
-              "gpt-4.1-nano-2025-04-14",
-              "gpt-4o-2024-11-20",
-              "gpt-4o-2024-08-06",
-              "gpt-4o-2024-05-13",
-              "gpt-4o-mini-2024-07-18",
-              "o1",
-              "o1-2024-12-17",
-              "o3",
-              "o3-2025-04-16",
-              "o4-mini",
-              "o4-mini-2025-04-16",
-              "gpt-4o-audio-preview-2024-12-17",
-              "gpt-4o-audio-preview-2024-10-01",
-              "gpt-4o-realtime-preview-2024-12-17",
-              "gpt-4o-realtime-preview-2024-10-01",
-              "gpt-4o-mini-audio-preview-2024-12-17",
-              "gpt-4o-mini-realtime-preview-2024-12-17",
-              "claude-3-5-sonnet-latest",
-              "claude-3-5-sonnet-20241022",
-              "claude-3-opus-20240229",
-              "claude-3-sonnet-20240229",
-              "claude-3-haiku-20240307",
-              "claude-opus-4.1",
-              "claude-opus-4",
-              "claude-sonnet-4",
-              "claude-sonnet-4-20250514",
-              "grok-3",
-              "grok-3-mini",
-              "gemini-2.5-pro",
-              "gemini-2.5-flash",
-              "gemini-2.5-pro-preview-06-05",
-              "gemini-2.5-pro-preview-05-06",
-              "gemini-2.5-pro-preview-03-25",
-              "gemini-2.5-flash-preview-05-20",
-              "gemini-2.5-flash-preview-04-17",
-              "gemini-2.5-flash-lite",
-              "gemini-2.5-pro-exp-03-25",
-              "gemini-2.0-flash-lite",
-              "gemini-2.0-flash",
-              "auto-large",
-              "auto-small",
-              "auto-micro",
-              "human"
-            ],
             "title": "Model",
             "description": "Model to use for parsing",
             "default": "gemini-2.5-flash"
@@ -24524,6 +24288,23 @@
         "type": "object",
         "title": "PatchIterationDocumentPredictionRequest"
       },
+      "PatchIterationDraftRequest": {
+        "properties": {
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftPatchInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The draft iteration payload (json_schema or schema_overrides)"
+          }
+        },
+        "type": "object",
+        "title": "PatchIterationDraftRequest"
+      },
       "PatchIterationRequest": {
         "properties": {
           "inference_settings": {
@@ -24537,18 +24318,16 @@
             ],
             "description": "The new inference settings of the iteration"
           },
-          "json_schema": {
+          "schema_overrides": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/SchemaOverrides"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Json Schema",
-            "description": "The new json schema of the iteration"
+            "description": "Override map for non-structural schema changes"
           },
           "version": {
             "anyOf": [
@@ -24579,18 +24358,16 @@
             ],
             "description": "The new inference settings of the iteration"
           },
-          "json_schema": {
+          "schema_overrides": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/SchemaOverrides"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Json Schema",
-            "description": "The new json schema of the iteration"
+            "description": "Override map for non-structural schema changes"
           },
           "version": {
             "anyOf": [
@@ -24667,6 +24444,30 @@
             ],
             "title": "Ocr File Id",
             "description": "The ID of the OCR file"
+          },
+          "playground_extraction": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Playground Extraction",
+            "description": "The playground extraction of the document"
+          },
+          "playground_extraction_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The metadata of the playground extraction"
           }
         },
         "type": "object",
@@ -24709,6 +24510,30 @@
             ],
             "title": "Ocr File Id",
             "description": "The ID of the OCR file"
+          },
+          "playground_extraction": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Playground Extraction",
+            "description": "The playground extraction of the document"
+          },
+          "playground_extraction_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The metadata of the playground extraction"
           },
           "expected": {
             "anyOf": [
@@ -24762,6 +24587,16 @@
             ],
             "title": "Json Schema",
             "description": "The json schema of the project"
+          },
+          "sheets_integration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SheetsIntegration"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -24794,6 +24629,16 @@
             "title": "Json Schema",
             "description": "The json schema of the project"
           },
+          "sheets_integration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SheetsIntegration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "expected": {
             "anyOf": [
               {
@@ -24818,7 +24663,7 @@
         },
         "type": "object",
         "title": "PatchProjectWithConflictDetection",
-        "description": "Enhanced evaluation patch request with conflict detection support."
+        "description": "Enhanced project patch request with conflict detection support."
       },
       "PerformOCROnlyRequest": {
         "properties": {
@@ -24900,6 +24745,18 @@
         "type": "object",
         "title": "PerformOCRResponse"
       },
+      "PlaygroundLLMAnnotateDocumentRequest": {
+        "properties": {
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "description": "Whether to stream the response",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "PlaygroundLLMAnnotateDocumentRequest"
+      },
       "Point": {
         "properties": {
           "x": {
@@ -24918,44 +24775,7 @@
         ],
         "title": "Point"
       },
-      "PredictionData-Input": {
-        "properties": {
-          "prediction": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Prediction",
-            "description": "The result of the extraction or manual annotation",
-            "default": {}
-          },
-          "metadata": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PredictionMetadata"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The metadata of the prediction"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At",
-            "description": "The creation date of the prediction"
-          }
-        },
-        "type": "object",
-        "title": "PredictionData"
-      },
-      "PredictionData-Output": {
+      "PredictionData": {
         "properties": {
           "prediction": {
             "additionalProperties": true,
@@ -25060,17 +24880,6 @@
             ],
             "title": "Consensus Details",
             "description": "The consensus details of the extraction"
-          },
-          "api_cost": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Amount"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The cost of the API call for this document (if any -- ground truth for example)"
           }
         },
         "type": "object",
@@ -25180,8 +24989,7 @@
           }
         },
         "type": "object",
-        "title": "ProcessIterationRequest",
-        "description": "Request model for processing an iteration - running extractions on documents."
+        "title": "ProcessIterationRequest"
       },
       "ProcessorConfig": {
         "properties": {
@@ -25205,17 +25013,6 @@
             "type": "string",
             "title": "Name",
             "description": "Name of the processor"
-          },
-          "modality": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "native",
-              "image+text",
-              "native"
-            ],
-            "title": "Modality"
           },
           "image_resolution_dpi": {
             "type": "integer",
@@ -25283,7 +25080,6 @@
         "type": "object",
         "required": [
           "name",
-          "modality",
           "model",
           "json_schema"
         ],
@@ -25325,6 +25121,16 @@
             },
             "type": "array",
             "title": "Iterations"
+          },
+          "sheets_integration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SheetsIntegration"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -25366,6 +25172,16 @@
             },
             "type": "array",
             "title": "Iterations"
+          },
+          "sheets_integration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SheetsIntegration"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -25394,6 +25210,24 @@
               }
             ],
             "description": "The metadata of the annotation when the annotation is a prediction"
+          },
+          "playground_extraction": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Playground Extraction",
+            "description": "The playground extraction of the document",
+            "default": {}
+          },
+          "playground_extraction_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The metadata of the playground extraction"
           },
           "id": {
             "type": "string",
@@ -25444,6 +25278,24 @@
             ],
             "description": "The metadata of the annotation when the annotation is a prediction"
           },
+          "playground_extraction": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Playground Extraction",
+            "description": "The playground extraction of the document",
+            "default": {}
+          },
+          "playground_extraction_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The metadata of the playground extraction"
+          },
           "id": {
             "type": "string",
             "title": "Id",
@@ -25468,6 +25320,162 @@
           "id"
         ],
         "title": "ProjectDocument"
+      },
+      "ProjectHistoryEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier for the history entry"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "description": "ID of the project this history entry belongs to"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Human-readable description of this change"
+          },
+          "change_type": {
+            "type": "string",
+            "enum": [
+              "project_created",
+              "document_annotation_updated",
+              "schema_updated",
+              "batch_annotation_completed",
+              "project_metadata_updated",
+              "document_added",
+              "document_deleted",
+              "project_restored",
+              "initial_checkpoint"
+            ],
+            "title": "Change Type",
+            "description": "Type of change this entry represents"
+          },
+          "event_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Event Ids",
+            "description": "IDs of StoredEvents that contributed to this history entry"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id",
+            "description": "ID of the snapshot for restoration (from first event in group)"
+          },
+          "affected_document_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Document Ids",
+            "description": "IDs of documents that were modified (if applicable)"
+          },
+          "restore_scope": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "documents_only",
+                  "schema_only"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restore Scope",
+            "description": "Scope of restoration - what parts of the project to restore"
+          },
+          "restored_from_entry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restored From Entry Id",
+            "description": "For restore entries, the deterministic ID of the target history entry"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organization ID for data isolation"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "ID of user who made this change (if available)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "description",
+          "change_type",
+          "organization_id"
+        ],
+        "title": "ProjectHistoryEntry",
+        "description": "Represents a logical history entry point that users can restore to.\nGroups related snapshots and events into user-meaningful restore points."
+      },
+      "ProjectHistoryListResponse": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectHistoryEntry"
+            },
+            "type": "array",
+            "title": "Entries"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries",
+          "total_count",
+          "has_more"
+        ],
+        "title": "ProjectHistoryListResponse",
+        "description": "Response model for listing project history."
       },
       "PromptTokensDetails": {
         "properties": {
@@ -25519,6 +25527,111 @@
           "likelihoods"
         ],
         "title": "ReconciliationResponse"
+      },
+      "RestorationImpactResponse": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "description": "Preview mode identifier",
+            "default": "restoration_impact"
+          },
+          "preview_description": {
+            "type": "string",
+            "title": "Preview Description",
+            "description": "Description of what this preview shows"
+          },
+          "current_timestamp": {
+            "type": "string",
+            "title": "Current Timestamp",
+            "description": "Current time when impact was calculated"
+          },
+          "target_timestamp": {
+            "type": "string",
+            "title": "Target Timestamp",
+            "description": "Target time of the history entry"
+          },
+          "annotation_changes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AnnotationChange"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annotation Changes",
+            "description": "Document changes that would be applied"
+          },
+          "schema_changes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchemaChange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Schema changes that would be applied"
+          }
+        },
+        "type": "object",
+        "required": [
+          "preview_description",
+          "current_timestamp",
+          "target_timestamp"
+        ],
+        "title": "RestorationImpactResponse",
+        "description": "Response model for restoration impact preview."
+      },
+      "RestoreProjectRequest": {
+        "properties": {
+          "history_entry_id": {
+            "type": "string",
+            "title": "History Entry Id"
+          },
+          "restore_scope": {
+            "type": "string",
+            "enum": [
+              "documents_only",
+              "schema_only"
+            ],
+            "title": "Restore Scope",
+            "description": "Scope of restoration - what parts of the project to restore"
+          }
+        },
+        "type": "object",
+        "required": [
+          "history_entry_id",
+          "restore_scope"
+        ],
+        "title": "RestoreProjectRequest",
+        "description": "Request model for restoring a project to a previous state."
+      },
+      "RestoreProjectResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "restored_to_entry": {
+            "$ref": "#/components/schemas/ProjectHistoryEntry"
+          },
+          "project": {
+            "title": "Project"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "restored_to_entry",
+          "project"
+        ],
+        "title": "RestoreProjectResponse",
+        "description": "Response model for project restoration."
       },
       "RetabParsedChatCompletion-Input": {
         "properties": {
@@ -25807,17 +25920,6 @@
             ],
             "title": "Last Token At",
             "description": "Timestamp of the last token of the document"
-          },
-          "api_cost": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Amount"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "readOnly": true
           }
         },
         "additionalProperties": true,
@@ -25827,8 +25929,7 @@
           "choices",
           "created",
           "model",
-          "object",
-          "api_cost"
+          "object"
         ],
         "title": "RetabParsedChatCompletion"
       },
@@ -25966,28 +26067,6 @@
             ],
             "title": "Last Token At",
             "description": "Timestamp of the last token of the document"
-          },
-          "api_cost": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Amount"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "readOnly": true
-          },
-          "cost_breakdown": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CostBreakdown"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "readOnly": true
           }
         },
         "additionalProperties": true,
@@ -25997,9 +26076,7 @@
           "choices",
           "created",
           "model",
-          "object",
-          "api_cost",
-          "cost_breakdown"
+          "object"
         ],
         "title": "RetabParsedChatCompletionChunk"
       },
@@ -26479,6 +26556,164 @@
         ],
         "title": "RunAgentResponse"
       },
+      "SchemaChange": {
+        "properties": {
+          "has_before_state": {
+            "type": "boolean",
+            "title": "Has Before State",
+            "description": "Whether before state is available"
+          },
+          "before_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Schema",
+            "description": "Schema before changes"
+          },
+          "after_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Schema",
+            "description": "Schema after changes"
+          },
+          "field_changes": {
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            },
+            "type": "array",
+            "title": "Field Changes",
+            "description": "List of field changes"
+          },
+          "first_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Timestamp",
+            "description": "Timestamp of first change"
+          },
+          "last_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Timestamp",
+            "description": "Timestamp of last change"
+          },
+          "change_summary": {
+            "type": "string",
+            "title": "Change Summary",
+            "description": "Human-readable summary of changes"
+          },
+          "total_updates": {
+            "type": "integer",
+            "title": "Total Updates",
+            "description": "Total number of updates",
+            "default": 0
+          },
+          "no_net_changes": {
+            "type": "boolean",
+            "title": "No Net Changes",
+            "description": "Whether changes cancelled out",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "has_before_state",
+          "change_summary"
+        ],
+        "title": "SchemaChange",
+        "description": "Represents schema changes in a history entry."
+      },
+      "SchemaIdRequest": {
+        "properties": {
+          "json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Schema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "json_schema"
+        ],
+        "title": "SchemaIdRequest"
+      },
+      "SchemaIdResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "data_id": {
+            "type": "string",
+            "title": "Data Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "data_id"
+        ],
+        "title": "SchemaIdResponse"
+      },
+      "SchemaOverrides": {
+        "properties": {
+          "descriptionsOverride": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descriptionsoverride"
+          },
+          "reasoningPromptsOverride": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoningpromptsoverride",
+            "description": "Maps to X-ReasoningPrompt in schema"
+          }
+        },
+        "type": "object",
+        "title": "SchemaOverrides"
+      },
       "SetCreditUsageLimitRequest": {
         "properties": {
           "limit_credits": {
@@ -26496,6 +26731,24 @@
         },
         "type": "object",
         "title": "SetCreditUsageLimitRequest"
+      },
+      "SheetsIntegration": {
+        "properties": {
+          "sheet_id": {
+            "type": "string",
+            "title": "Sheet Id"
+          },
+          "spreadsheet_id": {
+            "type": "string",
+            "title": "Spreadsheet Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sheet_id",
+          "spreadsheet_id"
+        ],
+        "title": "SheetsIntegration"
       },
       "SpreadsheetDetails": {
         "properties": {
@@ -26628,17 +26881,6 @@
             "title": "Name",
             "description": "Name of the processor"
           },
-          "modality": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "native",
-              "image+text",
-              "native"
-            ],
-            "title": "Modality"
-          },
           "image_resolution_dpi": {
             "type": "integer",
             "title": "Image Resolution Dpi",
@@ -26722,7 +26964,6 @@
         "type": "object",
         "required": [
           "name",
-          "modality",
           "model",
           "json_schema",
           "organization_id",
@@ -26994,6 +27235,34 @@
         ],
         "title": "TokenPrice",
         "description": "Holds pricing information (price per 1M tokens) for one token category.\n(For example, for text tokens used in the prompt.)"
+      },
+      "ToolFlagsFilter": {
+        "properties": {
+          "is_agent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Agent"
+          },
+          "is_structure_modifier": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Structure Modifier"
+          }
+        },
+        "type": "object",
+        "title": "ToolFlagsFilter"
       },
       "TopLogprob": {
         "properties": {
@@ -27449,24 +27718,6 @@
             ],
             "title": "Name"
           },
-          "modality": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "text",
-                  "image",
-                  "native",
-                  "image+text",
-                  "native"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Modality"
-          },
           "image_resolution_dpi": {
             "anyOf": [
               {
@@ -27906,35 +28157,11 @@
             "description": "Documents to be analyzed (preferred over document)",
             "default": []
           },
-          "modality": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "native",
-              "image+text",
-              "native"
-            ],
-            "title": "Modality",
-            "description": "Modality of the document",
-            "default": "native"
-          },
           "image_resolution_dpi": {
             "type": "integer",
             "title": "Image Resolution Dpi",
             "description": "Resolution of the image sent to the LLM",
             "default": 96
-          },
-          "browser_canvas": {
-            "type": "string",
-            "enum": [
-              "A3",
-              "A4",
-              "A5"
-            ],
-            "title": "Browser Canvas",
-            "description": "Sets the size of the browser canvas for rendering documents in browser-based processing. Choose a size that matches the document type.",
-            "default": "A4"
           },
           "model": {
             "type": "string",
