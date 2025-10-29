@@ -1,20 +1,3 @@
-```mermaid
-graph LR
-    A["Trigger"] --> B["Processor"] --> C["Destination"]
-    
-    A1["Email"] -.-> A
-    A2["Link"] -.-> A
-    A3["Outlook Plugin"] -.-> A
-    A4["API Endpoint"] -.-> A
-
-    C -.-> C1["Webhook"]
-    C -.-> C2["Your Database"]
-    C -.-> C3["Google Sheets"]
-```
-
-An **automation** is a way to automatically send data to your processor when triggered by events like receiving an email, clicking a link, or using the Outlook plugin. Once triggered, the processor extracts structured data from your documents and sends the results to your chosen destination.
-
-## Introduction
 
 Retab uses HTTPS to send webhook events to your app as a JSON payload representing a `WebhookRequest` object.
 You will need a server with a webhook endpoint that will receive the `webhook_request` payload, allowing you to process them as you want after that.
@@ -65,7 +48,8 @@ To start receiving webhook events in your app:
 
 Start by creating a **processor** with your extraction configuration.
 
-```python
+<CodeGroup>
+```python Python
 from retab import Retab
 
 client = Retab()
@@ -75,15 +59,28 @@ processor = client.processors.create(
     model="gpt-4.1",
     json_schema="Invoice_schema.json"
 )
-
 ```
 
-## Create your FastAPI server with a webhook
+```javascript Node.js
+import Retab from 'retab';
+import { readFileSync } from 'fs';
 
-Then, set up a FastAPI route that will handle incoming webhook POST requests. You will need it to create an automation. Below is an example of a simple FastAPI application with a webhook endpoint:
+const client = new Retab();
+
+const processor = await client.processors.create({
+    name: 'Invoice Processor',
+    model: 'gpt-4.1',
+    json_schema: 'Invoice_schema.json'
+});
+```
+</CodeGroup>
+
+## Create your server with a webhook
+
+Then, set up a route that will handle incoming webhook POST requests. You will need it to create an automation. Below are examples of webhook endpoints:
 
 <CodeGroup>
-```python main.py
+```python Python (FastAPI)
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from main_server.globals.sdk.automations .webhooks import WebhookRequest
@@ -104,7 +101,34 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-You can test the webhook endpoint locally with a tool like curl or Postman. For example, using curl:
+```javascript Node.js (Express)
+import express from 'express';
+
+const app = express();
+
+// Use express.raw() to get the raw body for signature verification
+app.use(express.raw({ type: 'application/json' }));
+
+app.post('/webhook', async (req, res) => {
+    const payload = req.body;
+    
+    // Decode and parse the webhook request
+    const webhookRequest = JSON.parse(payload.toString('utf-8'));
+    
+    const invoiceObject = JSON.parse(
+        webhookRequest.completion.choices[0].message.content || '{}'
+    ); // The parsed object matches your Invoice schema
+    console.log('📬 Webhook received:', invoiceObject);
+    
+    return res.status(200).json({ status: 'success', data: invoiceObject });
+});
+
+// To run the Express app locally:
+// node your_module_name.js
+app.listen(8000, () => {
+    console.log('Webhook server listening on port 8000');
+});
+```
 
 ```bash testing locally
 curl -X POST http://localhost:8000/webhook \
@@ -122,16 +146,17 @@ To secure webhook deliveries, Retab employs a **signature verification** mechani
 
 <Warning>Make sure to set your `WEBHOOKS_SECRET` environment variable with the secret from your [Retab dashboard](https://www.retab.com/dashboard/settings).</Warning>
 
-Here's how to implement signature verification in your FastAPI webhook:
+Here's how to implement signature verification in your webhook:
 
-```python {13-26}
+<CodeGroup>
+```python Python (FastAPI)
 import os
 import json
 from fastapi import FastAPI, Request, Response, HTTPException
 from retab import Retab
 from main_server.globals.sdk.automations .webhooks import WebhookRequest
 
-reclient = Retab()
+client = Retab()
 app = FastAPI()
 
 @app.post("/webhook")
@@ -144,13 +169,13 @@ async def webhook_handler(request: Request):
         if not signature_header:
             raise HTTPException(status_code=400, detail="Missing Retab-Signature header")
         # Verify the signature using Retab SDK
-        reclient.processors.automations.verify_event(
+        client.verify_event(
             event_body=payload,
             event_signature=signature_header,
             secret=os.getenv("WEBHOOKS_SECRET"),  # Get secret from environment variable
         )
     except Exception as e:
-        return Response(status_code=400, content=f"Webhook error: {str(e)}")
+        return Response(status_code=400, content=f"Signature verification error. Please verify your signature secret. {str(e)}")
 
     json_data = json.loads(payload.decode('utf-8'))
     webhook_request = WebhookRequest.model_validate(json_data)
@@ -159,6 +184,43 @@ async def webhook_handler(request: Request):
     print("📬 Webhook received:", invoice_object)
     return {"status": "success", "data": invoice_object}
 ```
+
+```javascript Node.js (Express)
+import express from 'express';
+import Retab from 'retab';
+
+const client = new Retab();
+const app = express();
+
+app.use(express.raw({ type: 'application/json' }));
+
+app.post('/webhook', async (req, res) => {
+    const payload = req.body;
+
+    // Signature verification
+    try {
+        const signatureHeader = req.headers['retab-signature'];
+        if (!signatureHeader) {
+            return res.status(400).json({ detail: 'Missing Retab-Signature header' });
+        }
+        // Verify the signature using Retab SDK
+        await client.verifyEvent({
+            event_body: payload,
+            event_signature: signatureHeader,
+            secret: process.env.WEBHOOKS_SECRET,  // Get secret from environment variable
+        });
+    } catch (error) {
+        return res.status(400).send(`Signature verification error. Please verify your signature secret. ${error.message}`);
+    }
+
+    const webhookRequest = JSON.parse(payload.toString('utf-8'));
+    
+    const invoiceObject = JSON.parse(webhookRequest.completion.choices[0].message.content || '{}');
+    console.log('📬 Webhook received:', invoiceObject);
+    return res.status(200).json({ status: 'success', data: invoiceObject });
+});
+```
+</CodeGroup>
 
 
 
@@ -203,7 +265,8 @@ Take note of the `webhook URL`, you will need it on the next steps.
 
 Now, you can create an automation that will use your processor to extract data from emails.
 
-```python
+<CodeGroup>
+```python Python
 from retab import Retab
 
 client = Retab()
@@ -217,6 +280,21 @@ mailbox = client.processors.automations.mailboxes.create(
 )
 ```
 
+```javascript Node.js
+import Retab from 'retab';
+
+const client = new Retab();
+
+// Create a mailbox automation and attach it to the processor
+const mailbox = await client.processors.automations.mailboxes.create({
+    name: 'Invoice Mailbox',
+    email: 'invoices@mailbox.retab.com',
+    processor_id: processor.id, // The processor id you created in the previous step
+    webhook_url: 'https://your-server.com/webhook',  // Replace with your actual webhook URL
+});
+```
+</CodeGroup>
+
 At any email sent to `invoices@mailbox.retab.com`, the automation will use your processor configuration to extract data and send a POST request to your FastAPI webhook endpoint.
 
 You can see the processor and automation you just created on your [dashboard](https://www.retab.com/dashboard/processors)!
@@ -225,7 +303,8 @@ You can see the processor and automation you just created on your [dashboard](ht
 
 Finally, you can test the processor and automation rapidly with the test functions of the SDK: 
 
-```python
+<CodeGroup>
+```python Python
 from retab import Retab
 
 # Initialize the Retab client
@@ -249,11 +328,37 @@ log = client.processors.automations.mailboxes.tests.forward(
 )
 ```
 
+```javascript Node.js
+import Retab from 'retab';
+
+// Initialize the Retab client
+const client = new Retab();
+
+// If you just want to send a test request to your webhook
+const log = await client.processors.automations.tests.webhook({
+    automation_id: mailbox.id, 
+});
+
+// If you want to test the file processing logic: 
+const log2 = await client.processors.automations.tests.upload({
+    automation_id: mailbox.id, 
+    document: 'your_invoice_email.eml'
+});
+
+// If you want to test a full email forwarding
+const log3 = await client.processors.automations.mailboxes.tests.forward({
+    email: 'invoices@mailbox.retab.com', 
+    document: 'your_invoice_email.eml'
+});
+```
+</CodeGroup>
+
 <Tip>You can also test your webhook locally by overriding the webhook url set in the automation</Tip>
 
 You can also test your automation directly from the [dashboard](https://www.retab.com/dashboard/processors).
 
-```python
+<CodeGroup>
+```python Python
 from retab import Retab
 
 client = Retab()
@@ -265,6 +370,19 @@ log = client.processors.automations.tests.webhook(
 )
 ```
 
+```javascript Node.js
+import Retab from 'retab';
+
+const client = new Retab();
+
+// If you just want to send a test request to your webhook
+const log = await client.processors.automations.tests.webhook({
+    automation_id: mailbox.id, 
+    webhook_url: 'http://localhost:8000/webhook' // If you want to try your webhook locally, you can override the webhook url set in the automation
+});
+```
+</CodeGroup>
+
 
 
 
@@ -272,3 +390,4 @@ log = client.processors.automations.tests.webhook(
 
 
 That's it! You can start processing documents at scale. 
+
