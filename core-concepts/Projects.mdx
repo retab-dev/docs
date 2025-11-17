@@ -34,12 +34,11 @@ The extracted data as a JSON object matching the project's schema.
 
 <CodeGroup>
 
-```python Request (Single Document)
+```python Request
 from retab import Retab, MIMEData
 
 client = Retab()
 
-# Process a single document
 with open("invoice.pdf", "rb") as f:
     mime = MIMEData.from_bytes(f.read(), filename="invoice.pdf")
 
@@ -50,27 +49,6 @@ completion = client.projects.extract(
     temperature=0.1,  # Optional override
     seed=42,  # Optional for reproducibility
     store=True  # Whether to store results
-)
-```
-
-```python Request (Multiple Documents)
-from retab import Retab, MIMEData
-
-client = Retab()
-
-# Process multiple documents in batch
-documents = []
-for filename in ["invoice1.pdf", "invoice2.pdf", "invoice3.pdf"]:
-    with open(filename, "rb") as f:
-        mime = MIMEData.from_bytes(f.read(), filename=filename)
-        documents.append(mime)
-
-results = client.projects.extract(
-    project_id="proj_01G34H8J2K",
-    iteration_id="iter_01G34H8J2L",
-    documents=documents,  # Note: plural for batch processing
-    temperature=0.1,
-    store=True
 )
 ```
 
@@ -85,12 +63,11 @@ with open("invoice.pdf", "rb") as f:
 
 completion = client.projects.extract(
     project_id="proj_01G34H8J2K",
-    iteration_id="base-configuration",  # Use project defaults
     document=mime
 )
 ```
 
-```json Response (Single Document)
+```json Response
 {
   "object": "chat.completion",
   "id": "extr_01G34H8J2K",
@@ -120,50 +97,6 @@ completion = client.projects.extract(
 }
 ```
 
-```json Response (Multiple Documents)
-{
-  "object": "chat.completion",
-  "id": "extr_01G34H8J2K",
-  "created": 1641024000,
-  "model": "gpt-4o-mini",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": null,
-        "parsed": [
-          {
-            "invoice_number": "INV-2024-0789",
-            "total_amount": 1576.75,
-            "issue_date": "2024-04-15",
-            "vendor_name": "ACME Corporation"
-          },
-          {
-            "invoice_number": "INV-2024-0790",
-            "total_amount": 2340.50,
-            "issue_date": "2024-04-16",
-            "vendor_name": "ACME Corporation"
-          },
-          {
-            "invoice_number": "INV-2024-0791",
-            "total_amount": 890.25,
-            "issue_date": "2024-04-17",
-            "vendor_name": "ACME Corporation"
-          }
-        ]
-      },
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 3750,
-    "completion_tokens": 255,
-    "total_tokens": 4005
-  }
-}
-```
-
 </CodeGroup>
 
 ### Parameters
@@ -177,12 +110,9 @@ completion = client.projects.extract(
 </ResponseField>
 
 <ResponseField name="document" type="Path | str | bytes | IOBase | MIMEData | PIL.Image.Image | HttpUrl">
-  Single document to process (mutually exclusive with documents).
+  Document to process.
 </ResponseField>
 
-<ResponseField name="documents" type="List[Path | str | bytes | IOBase | MIMEData | PIL.Image.Image | HttpUrl]">
-  List of documents to process (mutually exclusive with document).
-</ResponseField>
 
 <ResponseField name="temperature" type="float">
   Optional temperature override for this specific request. Overrides the default temperature.
