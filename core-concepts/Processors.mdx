@@ -158,20 +158,19 @@ processor = reclient.processors.create(
 
 ### Submit
 
-Processes one or more documents using an existing processor configuration and returns the extracted structured data. This is the primary method for executing document extraction.
+Processes a document using an existing project configuration and returns the extracted structured data.
 
 <ResponseField name="Returns" type="Dict[str, Any]">
-The extracted data as a JSON object matching the processor's schema.
+The extracted data as a JSON object matching the project's schema.
 </ResponseField>
 
 <CodeGroup>
 
-```python Request (Single Document)
+```python Request
 from retab import Retab, MIMEData
 
 reclient = Retab()
 
-# Process a single document
 with open("invoice.pdf", "rb") as f:
     mime = MIMEData.from_bytes(f.read(), filename="invoice.pdf")
 
@@ -181,54 +180,14 @@ completion = reclient.processors.submit(
 )
 ```
 
-```python Request (Multiple Documents)
-from retab import Retab, MIMEData
 
-reclient = Retab()
-
-# Process multiple documents in batch
-documents = []
-for filename in ["invoice1.pdf", "invoice2.pdf", "invoice3.pdf"]:
-    with open(filename, "rb") as f:
-        mime = MIMEData.from_bytes(f.read(), filename=filename)
-        documents.append(mime)
-
-results = reclient.processors.submit(
-    processor_id="proc_01G34H8J2K",
-    documents=documents  # Note: plural for batch processing
-)
-```
-
-```json Response (Single Document)
+```json Response
 {
   "invoice_number": "INV-2024-0789",
   "total_amount": 1576.75,
   "issue_date": "2024-04-15",
   "vendor_name": "ACME Corporation"
 }
-```
-
-```json Response (Multiple Documents)
-[
-  {
-    "invoice_number": "INV-2024-0789",
-    "total_amount": 1576.75,
-    "issue_date": "2024-04-15",
-    "vendor_name": "ACME Corporation"
-  },
-  {
-    "invoice_number": "INV-2024-0790",
-    "total_amount": 2340.50,
-    "issue_date": "2024-04-16",
-    "vendor_name": "ACME Corporation"
-  },
-  {
-    "invoice_number": "INV-2024-0791",
-    "total_amount": 890.25,
-    "issue_date": "2024-04-17",
-    "vendor_name": "ACME Corporation"
-  }
-]
 ```
 
 </CodeGroup>
