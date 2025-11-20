@@ -1,7 +1,7 @@
 !function () {
     var clientId, onLoad, scriptEl;
 
-    clientId = "aec8f1727a88835"; // Replace with your actual Reo client ID 
+    clientId = "aec8f1727a88835";
 
     onLoad = function () {
         try {
