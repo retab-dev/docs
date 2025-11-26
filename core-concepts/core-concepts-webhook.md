@@ -227,7 +227,7 @@ You need to secure your integration by making sure your handler verifies that al
 You perform the verification by providing the event payload, the `Retab-Signature` header, and the endpoint's secret. If verification fails, you get an error.
 
 
-**Important:** Make sure to replace `"your_webhooks_secret_here"` with the actual secret from your [Retab dashboard](https://www.retab.dev/dashboard/settings).
+**Important:** Make sure to replace `"your_webhooks_secret_here"` with the actual secret from your [Retab dashboard](https://www.retab.com/dashboard/settings).
 
 <CodeGroup>
 ```python Python
