@@ -1,0 +1,168 @@
+---
+title: Parallel Extraction
+---
+
+Parallel Extraction is an advanced extraction mode that dramatically speeds up processing for documents containing repeating data structures, such as invoices with multiple line items, tables with many rows, or any document with arrays of similar objects.
+
+## How It Works
+
+Instead of processing an entire document in a single LLM call, Parallel Extraction:
+
+1. **Identifies array structures** in your JSON schema (e.g., `line_items`, `transactions`, `entries`)
+2. **Extracts unique keys** from the document (e.g., product names, invoice numbers, dates) that identify each item
+3. **Segments the document** by locating where each key appears
+4. **Processes items concurrently** - each array item is extracted in parallel using dedicated LLM calls
+5. **Merges results** into the final structured output while preserving order
+
+This approach is particularly effective for multi-page documents where items span across pages, as each segment can be processed independently.
+
+## Context Engineering: Why Parallel Extraction is More Accurate
+
+Beyond speed, Parallel Extraction significantly improves extraction accuracy through **Context Engineering** — the practice of optimizing what context the LLM sees for each extraction task.
+
+When processing a 50-page invoice with 200 line items in a single LLM call, the model must:
+- Hold the entire document in its context window
+- Track hundreds of items simultaneously
+- Maintain attention across thousands of tokens
+- Avoid confusing similar items that appear pages apart
+
+This leads to common failure modes: missed items, values assigned to wrong rows, and degraded accuracy toward the end of long documents.
+
+**Parallel Extraction solves this by providing focused, relevant context for each item:**
+
+| Aspect | Standard Extraction | Parallel Extraction |
+|--------|---------------------|---------------------|
+| Context per item | Entire document (all pages) | Only the relevant segment |
+| Noise level | High (hundreds of unrelated items) | Minimal (just the target item) |
+| Attention dilution | Significant on long documents | None — laser-focused extraction |
+| Position bias | Later items often less accurate | Equal accuracy for all items |
+
+By cropping the document to show only the region containing each specific item, the LLM can dedicate its full attention and reasoning capacity to extracting that single item correctly. This is the same principle behind RAG (Retrieval-Augmented Generation) — **less noise, more signal, better results**.
+
+## When to Use Parallel Extraction
+
+Parallel Extraction is ideal when:
+
+- Your schema contains arrays of objects (e.g., `line_items: [{sku, description, quantity, price}]`)
+- Documents have many repeating items (10+ items benefit most)
+- You need faster turnaround on large documents
+- Items can be uniquely identified by a key field
+
+## Usage
+
+Enable Parallel Extraction by specifying the `parallel_ocr_keys` parameter in your extraction request:
+
+```python
+from retab import Retab
+
+client = Retab()
+
+response = client.documents.extract(
+    document="invoice.pdf",
+    json_schema=my_schema,
+    parallel_ocr_keys={
+        "line_items": "product_name"  # parent_path: child_key_path
+    }
+)
+```
+
+The `parallel_ocr_keys` parameter is a dictionary mapping:
+- **Key**: The path to the array in your schema (e.g., `"line_items"`, `"transactions"`, `"items.products"`)
+- **Value**: The field within each array item that uniquely identifies it (e.g., `"product_name"`, `"sku"`, `"id"`)
+
+## Example Schema
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "invoice_number": { "type": "string" },
+    "date": { "type": "string" },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_name": { "type": "string" },
+          "quantity": { "type": "number" },
+          "unit_price": { "type": "number" },
+          "total": { "type": "number" }
+        }
+      }
+    },
+    "total_amount": { "type": "number" }
+  }
+}
+```
+
+With `parallel_ocr_keys={"line_items": "product_name"}`, Retab will:
+1. Extract all product names from the document
+2. Locate each product's position in the document
+3. Extract each line item's details in parallel
+4. Merge results and extract constants (`invoice_number`, `date`, `total_amount`) separately
+
+## Supported Document Types
+
+- PDF documents
+- Images (JPEG, PNG, etc.)
+- Office documents (DOCX, PPTX, ODT, ODP)
+- Excel spreadsheets (XLSX, XLS)
+
+## Performance Benefits
+
+| Document Size | Standard Extraction | Parallel Extraction |
+|---------------|---------------------|---------------------|
+| 5 line items  | ~3s                 | ~3s                 |
+| 20 line items | ~8s                 | ~4s                 |
+| 50 line items | ~15s                | ~5s                 |
+| 100+ items    | ~30s+               | ~6s                 |
+
+*Times are approximate and vary based on document complexity and model used.*
+
+## Consensus with Parallel Extraction
+
+Parallel Extraction fully supports the `n_consensus` parameter. When enabled, each item is extracted multiple times independently, and results are compared to improve accuracy. This is particularly useful for:
+
+- High-value documents requiring verification
+- Documents with challenging handwriting or scan quality
+- Compliance-critical extractions
+
+```python
+response = client.documents.extract(
+    document="invoice.pdf",
+    json_schema=my_schema,
+    parallel_ocr_keys={"line_items": "sku"},
+    n_consensus=3  # Each item extracted 3 times for verification
+)
+```
+
+## Pricing
+
+Parallel Extraction uses the same credit-based pricing as standard extraction. The cost is calculated per page:
+
+```
+credits/page = n_consensus × model_credits
+```
+
+Additionally, Parallel Extraction includes a **key discovery pass** that scans the document to identify and locate all items — this adds one extra extraction call at the document level.
+
+### Cost Breakdown
+
+| Component | Cost |
+|-----------|------|
+| Key discovery | 1 × model_credits × page_count |
+| Per-item extraction | n_items × n_consensus × model_credits |
+| Constants extraction | 1 × model_credits × page_count |
+
+### Example
+
+For a 10-page invoice with 25 line items using `auto-small` (1.0 credit) and `n_consensus=1`:
+
+- Key discovery: 1 × 1.0 × 10 = **10 credits**
+- Item extraction: 25 × 1 × 1.0 = **25 credits**
+- Constants: 1 × 1.0 × 10 = **10 credits**
+- **Total: 45 credits**
+
+While Parallel Extraction may cost more than standard extraction for the same document, the improved accuracy and speed often provide better value — especially when re-extractions due to errors are factored in.
+
+For detailed pricing information, see the [Pricing documentation](/core-concepts/Pricing).
