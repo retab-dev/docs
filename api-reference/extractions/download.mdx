@@ -1,0 +1,104 @@
+---
+title: 'Download Extractions'
+openapi: 'GET /v1/extractions/download'
+---
+
+<RequestExample>
+
+```python python
+from datetime import datetime
+from retab import Retab
+
+client = Retab()
+
+# Download as JSONL (default)
+result = client.extractions.download(
+    format="jsonl",
+    from_date=datetime(2024, 1, 1)
+)
+print(f"Download URL: {result['download_url']}")
+print(f"Expires at: {result['expires_at']}")
+
+# Download as CSV
+result = client.extractions.download(
+    format="csv",
+    metadata={"organization_id": "org_acme_corp"}
+)
+
+# Download as Excel with filters
+result = client.extractions.download(
+    format="xlsx",
+    human_review_status="reviewed",
+    from_date=datetime(2024, 1, 1),
+    to_date=datetime(2024, 12, 31)
+)
+```
+
+```typescript typescript
+import { Retab } from "@retab/node";
+
+const client = new Retab();
+
+// Download as JSONL (default)
+const result = await client.extractions.download({
+    format: "jsonl",
+    from_date: new Date("2024-01-01")
+});
+console.log(`Download URL: ${result.download_url}`);
+console.log(`Expires at: ${result.expires_at}`);
+
+// Download as CSV
+const result = await client.extractions.download({
+    format: "csv",
+    metadata: { organization_id: "org_acme_corp" }
+});
+
+// Download as Excel with filters
+const result = await client.extractions.download({
+    format: "xlsx",
+    human_review_status: "reviewed",
+    from_date: new Date("2024-01-01"),
+    to_date: new Date("2024-12-31")
+});
+```
+
+```bash curl
+# Download as JSONL
+curl -X 'GET' \
+  'https://api.retab.com/v1/extractions/download?format=jsonl&from_date=2024-01-01' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+
+# Download as CSV with filters
+curl -X 'GET' \
+  'https://api.retab.com/v1/extractions/download?format=csv&metadata=%7B%22organization_id%22%3A%22org_acme_corp%22%7D' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+
+# Download as Excel
+curl -X 'GET' \
+  'https://api.retab.com/v1/extractions/download?format=xlsx&human_review_status=reviewed&from_date=2024-01-01&to_date=2024-12-31' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "download_url": "https://storage.googleapis.com/retab-extractions/org_01ABC123/extractions_dump/retab_extractions_all_2024-01-01_2024-12-31.jsonl?X-Goog-Algorithm=...",
+  "filename": "retab_extractions_all_2024-01-01_2024-12-31.jsonl",
+  "expires_at": "2024-03-15T15:30:00Z"
+}
+```
+
+```json 404
+{
+  "detail": "No extractions found matching the filter criteria"
+}
+```
+
+</ResponseExample>
+

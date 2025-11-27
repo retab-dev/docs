@@ -10,7 +10,7 @@ A project consists of **documents with annotations** (your test data), **iterati
 
 ## Deployments
 
-Deployments are project-based configurations for document extraction that can be called via the API route `https://api.retab.com/v1/projects/extract/{project_id}/{iteration_id}`.
+Deployments are project-based configurations for document extraction that can be called via the API route `https://api.retab.com/v1/projects/extract/{project_id}`.
 
 ```mermaid
 graph BT
@@ -33,37 +33,26 @@ The extracted data as a JSON object matching the project's schema.
 
 <CodeGroup>
 
-```python Request
-from retab import Retab, MIMEData
+```python Python
+from retab import Retab
 
 client = Retab()
 
-with open("invoice.pdf", "rb") as f:
-    mime = MIMEData.from_bytes(f.read(), filename="invoice.pdf")
-
 completion = client.projects.extract(
     project_id="proj_01G34H8J2K",
-    iteration_id="iter_01G34H8J2L",  # or "base-configuration" for default settings
-    document=mime,
-    temperature=0.1,  # Optional override
-    seed=42,  # Optional for reproducibility
-    store=True  # Whether to store results
+    document="invoice.pdf"
 )
 ```
 
-```python Request (Base Configuration)
-from retab import Retab, MIMEData
+```javascript JavaScript
+import { Retab } from '@retab/node';
 
-client = Retab()
+const client = new Retab();
 
-# Use project's default settings with base-configuration
-with open("invoice.pdf", "rb") as f:
-    mime = MIMEData.from_bytes(f.read(), filename="invoice.pdf")
-
-completion = client.projects.extract(
-    project_id="proj_01G34H8J2K",
-    document=mime
-)
+const completion = await client.projects.extract({
+    project_id: "proj_01G34H8J2K",
+    document: "invoice.pdf"
+});
 ```
 
 ```json Response
@@ -124,6 +113,57 @@ completion = client.projects.extract(
 <ResponseField name="store" type="bool" default="True">
   Whether to store the extraction results for later retrieval and analysis.
 </ResponseField>
+
+<ResponseField name="metadata" type="dict[str, str]">
+  Custom key-value metadata to attach to the extraction for organization and filtering.
+</ResponseField>
+
+## Organizing Extractions with Metadata
+
+The `metadata` parameter allows you to attach custom key-value pairs to your extractions, making it easy to organize, filter, and retrieve results later. This is particularly useful when processing documents for multiple clients, departments, or workflows within a single project.
+
+<CodeGroup>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# Attach metadata to organize extractions by customer
+completion = client.projects.extract(
+    project_id="proj_01G34H8J2K",
+    document="invoice.pdf",
+    metadata={
+        "organization_id": "org_acme_corp",
+        "department": "accounting",
+        "batch_id": "batch_2024_04"
+    }
+)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// Attach metadata to organize extractions by customer
+const completion = await client.projects.extract({
+    project_id: "proj_01G34H8J2K",
+    document: "invoice.pdf",
+    metadata: {
+        organization_id: "org_acme_corp",
+        department: "accounting",
+        batch_id: "batch_2024_04"
+    }
+});
+```
+
+</CodeGroup>
+
+Common use cases for metadata include:
+- **Multi-tenant applications**: Tag extractions with `organization_id` or `customer_id` to separate data by client
+- **Workflow tracking**: Add `batch_id`, `pipeline_stage`, or `source_system` to trace document processing
+- **Categorization**: Include `document_type`, `region`, or `priority` for filtering and reporting
 
 Please check the [API Reference](https://docs.retab.com/api-reference/projects/extract) for complete method documentation.
 
