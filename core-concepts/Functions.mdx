@@ -1,0 +1,550 @@
+---
+title: Functions
+---
+
+Functions allow you to define computed fields in your extraction schema—fields whose values are calculated from other extracted data rather than directly pulled from the document. Use Functions to create totals, apply business rules, validate consistency, and derive new values from your extracted data.
+
+## Overview
+
+When extracting structured data from documents, you often need values that aren't explicitly stated but can be computed from other fields. For example:
+
+- **Line item totals**: `quantity * unit_price`
+- **Invoice totals**: Sum of all line item totals
+- **Reconciliation checks**: Verify that computed totals match stated totals
+- **Conditional values**: Apply different logic based on field values
+
+Functions use a formula-based expression language that supports:
+
+- **Arithmetic operations**: `+`, `-`, `*`, `/`
+- **Mathematical functions**: `ABS`, `SQRT`, `LOG`, `POW`
+- **Aggregation functions**: `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`
+- **Array operations**: `FILTER`, `FLATTEN`, `LOOKUP`, `MATCH`
+- **Logical operations**: `AND`, `OR`, `NOT`, `IF`
+- **Comparison operators**: `=`, `!=`, `>`, `>=`, `<`, `<=`
+- **String operations**: `CONCAT`
+
+---
+
+## Defining Computed Fields
+
+Computed fields are defined in the project section of the dashboard (schema editor/functions).
+
+---
+
+## Expression Syntax
+
+### Paths and Field References
+
+Use dot notation to reference fields in your extracted data:
+
+| Concept           | Syntax Example          | Description                                         |
+| ----------------- | ----------------------- | --------------------------------------------------- |
+| Field path        | `order.total`           | Field `total` inside object `order`                 |
+| Array field       | `transactions`          | Array of transaction objects                        |
+| Wildcard element  | `transactions.*`        | "Each element" of `transactions`                    |
+| Field per element | `transactions.*.amount` | `amount` field for every element in `transactions`  |
+
+### Wildcards for Arrays
+
+When working with arrays, use `*` to reference each element:
+
+```text
+# Sum the 'amount' field from each transaction
+SUM(transactions.*.amount)
+
+# Equivalent syntax using field projection
+SUM(transactions, "amount")
+```
+
+---
+
+## Arithmetic Operators
+
+All arithmetic operators work on single values (scalars) and arrays (element-wise).
+
+| Operator | Syntax    | Description                         | Example                  |
+| -------- | --------- | ----------------------------------- | ------------------------ |
+| Add      | `a + b`   | Add numbers                         | `price + tax`            |
+| Subtract | `a - b`   | Subtract `b` from `a`               | `total - discount`       |
+| Multiply | `a * b`   | Multiply numbers                    | `quantity * unit_price`  |
+| Divide   | `a / b`   | Divide `a` by `b` (null if b = 0)   | `distance / time`        |
+
+**Example: Line Item Total**
+
+```text
+quantity * unit_price
+```
+
+**Example: Discounted Price**
+
+```text
+price * (1 - discount_rate)
+```
+
+**Example: Element-wise Array Operation**
+
+```text
+# Add a $5 fee to each transaction amount
+transactions.*.amount + 5
+```
+
+---
+
+## Mathematical Functions
+
+| Function | Syntax                     | Description                               | Example              |
+| -------- | -------------------------- | ----------------------------------------- | -------------------- |
+| ABS      | `ABS(x)`                   | Absolute value                            | `ABS(-10)` → `10`    |
+| SQRT     | `SQRT(x)`                  | Square root (x must be non-negative)      | `SQRT(25)` → `5`     |
+| LOG      | `LOG(x)` or `LOG(x, base)` | Natural or custom-base logarithm          | `LOG(100, 10)` → `2` |
+| POW      | `POW(base, exponent)`      | Raise base to exponent power              | `POW(2, 3)` → `8`    |
+
+**Example: Euclidean Distance**
+
+```text
+SQRT(POW(x2 - x1, 2) + POW(y2 - y1, 2))
+```
+
+**Example: Compound Interest**
+
+```text
+principal * POW(1 + rate, years)
+```
+
+---
+
+## Aggregation Functions
+
+Aggregation functions reduce arrays to single values.
+
+| Function | Syntax                       | Description           | Example                        |
+| -------- | ---------------------------- | --------------------- | ------------------------------ |
+| SUM      | `SUM(array, "field")`        | Sum all values        | `SUM(items, "price")`          |
+| AVERAGE  | `AVERAGE(array, "field")`    | Arithmetic mean       | `AVERAGE(scores, "points")`    |
+| MIN      | `MIN(array, "field")`        | Smallest value        | `MIN(items, "price")`          |
+| MAX      | `MAX(array, "field")`        | Largest value         | `MAX(items, "rating")`         |
+| COUNT    | `COUNT(array, value)`        | Count occurrences     | `COUNT(tasks.*.status, "done")`|
+
+**Two equivalent syntaxes:**
+
+```text
+# Using wildcard path
+SUM(items.*.price)
+
+# Using field projection (recommended)
+SUM(items, "price")
+```
+
+**Example: Invoice Total**
+
+```text
+SUM(line_items, "total")
+```
+
+**Example: Average Order Value**
+
+```text
+AVERAGE(orders, "amount")
+```
+
+**Example: Count Completed Tasks**
+
+```text
+COUNT(tasks.*.status, "completed")
+```
+
+---
+
+## Array Functions
+
+| Function | Syntax                                              | Description                              | Example                                      |
+| -------- | --------------------------------------------------- | ---------------------------------------- | -------------------------------------------- |
+| FILTER   | `FILTER(array, "field", comparator, value)`         | Keep elements matching condition         | `FILTER(items, "active", "=", true)`         |
+| FLATTEN  | `FLATTEN(nestedArray)` or `FLATTEN(array, "field")` | Merge nested arrays into one             | `FLATTEN(groups, "items")`                   |
+| LOOKUP   | `LOOKUP(array, "field", comparator, value, [proj])` | Find first match, optionally project     | `LOOKUP(users, "id", "=", 5, "name")`        |
+| MATCH    | `MATCH(array, "field", comparator, value)`          | Get index of first match (-1 if none)    | `MATCH(items, "status", "=", "pending")`     |
+
+### FILTER
+
+Keep only elements that satisfy a condition.
+
+**Comparators:** `"="`, `"!="`, `">"`, `">="`, `"<"`, `"<="`, `"contains"`
+
+```text
+# All products over $100
+FILTER(products, "price", ">", 100)
+
+# All active users
+FILTER(users, "status", "=", "active")
+
+# Products containing "Pro" in name
+FILTER(products, "name", "contains", "Pro")
+```
+
+**Example: Sum Only Active Items**
+
+```text
+SUM(FILTER(items, "active", "=", true), "price")
+```
+
+### FLATTEN
+
+Merge nested arrays into a single flat array.
+
+```text
+# Flatten array of arrays
+FLATTEN([[1, 2], [3, 4]])  # → [1, 2, 3, 4]
+
+# Flatten array field from objects
+FLATTEN(orders, "items")
+# If orders = [{items: [1,2]}, {items: [3,4]}]
+# Result: [1, 2, 3, 4]
+```
+
+### LOOKUP
+
+Find the first matching element in an array.
+
+```text
+# Get full user object with id = 5
+LOOKUP(users, "id", "=", 5)
+
+# Get just the name of user with id = 5
+LOOKUP(users, "id", "=", 5, "name")
+```
+
+### MATCH
+
+Get the index (position) of the first matching element.
+
+```text
+# Index of first pending task (0-based, -1 if not found)
+MATCH(tasks, "status", "=", "pending")
+```
+
+---
+
+## Comparison Operators
+
+| Operator | Syntax          | Function Form | Description         | Example              |
+| -------- | --------------- | ------------- | ------------------- | -------------------- |
+| Equal    | `a = b`, `a == b` | `EQ(a, b)`  | True if equal       | `status = "active"`  |
+| Not Equal| `a != b`        | —             | True if different   | `role != "admin"`    |
+| Greater  | `a > b`         | `GT(a, b)`    | True if `a > b`     | `price > 100`        |
+| Greater/Equal | `a >= b`   | `GTE(a, b)`   | True if `a >= b`    | `quantity >= 10`     |
+| Less     | `a < b`         | `LT(a, b)`    | True if `a < b`     | `age < 18`           |
+| Less/Equal | `a <= b`      | `LTE(a, b)`   | True if `a <= b`    | `score <= 100`       |
+
+**Inside array functions**, use comparator strings:
+
+```text
+FILTER(users, "role", "=", "admin")
+FILTER(products, "price", ">", 100)
+FILTER(items, "name", "contains", "Pro")
+```
+
+---
+
+## Logical Operators
+
+| Function | Syntax                    | Description                 | Example                                |
+| -------- | ------------------------- | --------------------------- | -------------------------------------- |
+| AND      | `AND(cond1, cond2, ...)`  | True if all conditions true | `AND(user.active, user.verified)`      |
+| OR       | `OR(cond1, cond2, ...)`   | True if any condition true  | `OR(priority = "high", overdue)`       |
+| NOT      | `NOT(cond)` or `!cond`    | Invert boolean value        | `NOT(user.active)` or `!verified`      |
+
+**Example: Complex Condition**
+
+```text
+AND(user.active, user.verified, user.age >= 18)
+```
+
+---
+
+## Conditional Logic (IF)
+
+The `IF` function returns different values based on a condition.
+
+**Syntax:** `IF(condition, value_if_true, value_if_false)`
+
+```text
+# Label based on price
+IF(price > 100, "expensive", "affordable")
+
+# Default for missing field
+IF(discount != null, discount, 0)
+
+# Tiered pricing
+IF(quantity >= 100, price * 0.8, IF(quantity >= 50, price * 0.9, price))
+```
+
+**Array Behavior:** When the condition is an array, `IF` returns an array of results:
+
+```text
+# For each item, check if price > 50
+IF(items.*.price > 50, "premium", "standard")
+# Returns: ["premium", "standard", "premium", ...]
+```
+
+---
+
+## String Functions
+
+| Function | Syntax                            | Description                | Example                                  |
+| -------- | --------------------------------- | -------------------------- | ---------------------------------------- |
+| CONCAT   | `CONCAT(part1, part2, ..., partN)` | Join values into a string  | `CONCAT("Hello ", name, "!")` → "Hello Alice!" |
+
+Non-string values are automatically converted. Null values become empty strings.
+
+```text
+# Build order reference
+CONCAT(order.prefix, "-", order.number)
+# e.g., "ORD-12345"
+
+# Format full name
+CONCAT(first_name, " ", last_name)
+```
+
+---
+
+## Null Handling
+
+| Situation               | Behavior                                             |
+| ----------------------- | ---------------------------------------------------- |
+| Numeric op with `null`  | Treated as `0` (e.g., `5 + null` → `5`)              |
+| Logical op with `null`  | Treated as `false`                                   |
+| Missing field           | Returns `null`; use `IF` for safe defaults           |
+
+**Safe default pattern:**
+
+```text
+IF(field != null, field, 0)
+```
+
+---
+
+## Real-World Examples
+
+### Example 1: Invoice Reconciliation
+
+Verify that the sum of all property totals matches the check amount, within 1% tolerance.
+
+```text
+ABS(SUM(properties, "total_property_value") - check.amount) 
+<= 0.01 * check.amount
+```
+
+**Breakdown:**
+1. `SUM(properties, "total_property_value")` — Sum all property totals
+2. `- check.amount` — Subtract the check amount
+3. `ABS(...)` — Get absolute difference (error)
+4. `<= 0.01 * check.amount` — Check if error is within 1%
+
+### Example 2: Filtered Aggregation
+
+Sum only deposits from a transaction list:
+
+```text
+SUM(FILTER(transactions, "type", "=", "deposit"), "amount")
+```
+
+**Breakdown:**
+1. `FILTER(transactions, "type", "=", "deposit")` — Get only deposit transactions
+2. `SUM(..., "amount")` — Sum their amounts
+
+### Example 3: Line Item Validation
+
+For each line item, check if `owner_value` matches computed value (within 1%):
+
+```text
+IF(
+    line_items.*.owner_value <= 0,
+    true,
+    ABS(
+        line_items.*.property_value * line_items.*.distribution_interest
+        - line_items.*.owner_value
+    ) <= line_items.*.owner_value * 0.01
+)
+```
+
+**Breakdown:**
+1. Skip validation for non-positive values (taxes, deductions)
+2. Compute expected value: `property_value * distribution_interest`
+3. Compare to actual `owner_value` with 1% tolerance
+
+### Example 4: Nested Array Aggregation
+
+Sum values across all nested arrays:
+
+```text
+SUM(FLATTEN(orders, "items"), "price")
+```
+
+**Breakdown:**
+1. `FLATTEN(orders, "items")` — Collect all items from all orders
+2. `SUM(..., "price")` — Sum all prices
+
+### Example 5: Conditional Labeling
+
+Categorize orders by size:
+
+```text
+IF(
+    total >= 10000,
+    "enterprise",
+    IF(total >= 1000, "business", "personal")
+)
+```
+
+---
+
+## Best Practices
+
+### 1. Use Field Projection Syntax
+
+Prefer `SUM(items, "price")` over `SUM(items.*.price)` for clarity.
+
+### 2. Handle Nulls Explicitly
+
+```text
+# Bad: may fail on null
+quantity * unit_price
+
+# Good: safe default
+IF(quantity != null, quantity, 0) * IF(unit_price != null, unit_price, 0)
+```
+
+### 3. Use Tolerance for Comparisons
+
+Floating-point arithmetic can cause tiny differences. Use tolerance checks:
+
+```text
+# Bad: exact comparison
+computed_total = stated_total
+
+# Good: tolerance comparison
+ABS(computed_total - stated_total) <= stated_total * 0.01
+```
+
+### 4. Build Complex Expressions Incrementally
+
+Define intermediate computed fields for readability:
+
+```text
+# In line_item schema:
+line_total: "quantity * unit_price"
+
+# In order schema:
+subtotal: "SUM(line_items, \"line_total\")"
+tax: "subtotal * tax_rate"
+total: "subtotal + tax"
+```
+
+### 5. Use FILTER for Conditional Aggregation
+
+```text
+# Sum only active items
+SUM(FILTER(items, "active", "=", true), "price")
+
+# Count items by status
+COUNT(FILTER(items, "status", "=", "pending"), "_")
+```
+
+---
+
+## Common Patterns
+
+### Header vs. Detail Reconciliation
+
+```text
+# Check: sum of line items = header total
+ABS(SUM(line_items, "amount") - header_total) <= header_total * 0.01
+```
+
+### Cross-Reference Validation
+
+```text
+# Check: computed value matches stated value
+ABS(price * quantity * interest - owner_value) <= owner_value * 0.01
+```
+
+### Conditional Processing
+
+```text
+# Different calculation based on type
+IF(
+    type = "percentage",
+    base_amount * rate / 100,
+    rate
+)
+```
+
+### Aggregate with Multiple Conditions
+
+```text
+# Sum only active, taxable items over $100
+SUM(
+    FILTER(
+        FILTER(items, "active", "=", true),
+        "price", ">", 100
+    ),
+    "price"
+)
+```
+
+---
+
+## Quick Reference
+
+### Arithmetic
+| Operation | Example | Result |
+|-----------|---------|--------|
+| Add | `5 + 3` | `8` |
+| Subtract | `10 - 4` | `6` |
+| Multiply | `6 * 7` | `42` |
+| Divide | `15 / 3` | `5` |
+
+### Math Functions
+| Function | Example | Result |
+|----------|---------|--------|
+| ABS | `ABS(-10)` | `10` |
+| SQRT | `SQRT(16)` | `4` |
+| POW | `POW(2, 3)` | `8` |
+| LOG | `LOG(100, 10)` | `2` |
+
+### Aggregation
+| Function | Example | Description |
+|----------|---------|-------------|
+| SUM | `SUM(items, "price")` | Total of all prices |
+| AVERAGE | `AVERAGE(scores, "value")` | Mean of all values |
+| MIN | `MIN(items, "price")` | Lowest price |
+| MAX | `MAX(items, "rating")` | Highest rating |
+| COUNT | `COUNT(tasks.*.status, "done")` | Count of "done" |
+
+### Array Functions
+| Function | Example | Description |
+|----------|---------|-------------|
+| FILTER | `FILTER(items, "active", "=", true)` | Keep active items |
+| FLATTEN | `FLATTEN(orders, "items")` | Merge all items |
+| LOOKUP | `LOOKUP(users, "id", "=", 5)` | Find user by id |
+| MATCH | `MATCH(items, "status", "=", "pending")` | Index of first match |
+
+### Comparators for Array Functions
+| Comparator | Meaning | Example |
+|------------|---------|---------|
+| `"="` | Equal | `FILTER(users, "role", "=", "admin")` |
+| `"!="` | Not equal | `FILTER(users, "role", "!=", "admin")` |
+| `">"` | Greater than | `FILTER(items, "price", ">", 100)` |
+| `">="` | Greater or equal | `FILTER(orders, "total", ">=", 1000)` |
+| `"<"` | Less than | `FILTER(items, "priority", "<", 3)` |
+| `"<="` | Less or equal | `FILTER(scores, "value", "<=", 50)` |
+| `"contains"` | Substring match | `FILTER(products, "name", "contains", "Pro")` |
+
+---
+
+## Go Further
+
+- [Extraction](https://docs.retab.com/core-concepts/Extraction) - Learn how to extract structured data
+- [Reasoning](https://docs.retab.com/core-concepts/Reasoning) - Add step-by-step reasoning for complex calculations
+- [Schema](https://docs.retab.com/core-concepts/Schema) - Design your extraction schemas
+

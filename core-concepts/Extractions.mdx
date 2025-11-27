@@ -1,0 +1,270 @@
+---
+
+## title: Extractions
+
+---
+
+Extractions are the results of document processing. Each extraction contains the structured data extracted from a document, along with metadata about the extraction process. You can list, filter, retrieve, update, and download extractions programmatically.
+
+## Listing Extractions
+
+Retrieve a paginated list of extractions with optional filtering by date, origin, review status, or custom metadata.
+
+<CodeGroup>
+
+```python Python
+from datetime import datetime
+from retab import Retab
+
+client = Retab()
+
+# List recent extractions
+extractions = client.extractions.list(
+    limit=10,
+    order="desc"
+)
+
+# Filter by metadata
+extractions = client.extractions.list(
+    metadata={"organization_id": "org_acme_corp"},
+    limit=50
+)
+
+# Filter by date range
+extractions = client.extractions.list(
+    from_date=datetime(2024, 1, 1),
+    to_date=datetime(2024, 12, 31)
+)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// List recent extractions
+const extractions = await client.extractions.list({
+    limit: 10,
+    order: "desc"
+});
+
+// Filter by metadata
+const extractions = await client.extractions.list({
+    metadata: { organization_id: "org_acme_corp" },
+    limit: 50
+});
+
+// Filter by date range
+const extractions = await client.extractions.list({
+    from_date: new Date("2024-01-01"),
+    to_date: new Date("2024-12-31")
+});
+```
+
+</CodeGroup>
+
+### Parameters
+
+<ResponseField name="limit" type="int" default="10">
+  Maximum number of extractions to return per page.
+</ResponseField>
+
+<ResponseField name="order" type="string" default="desc">
+  Sort order by creation date. Either `"asc"` or `"desc"`.
+</ResponseField>
+
+<ResponseField name="before" type="string">
+  Cursor for pagination - return extractions before this ID.
+</ResponseField>
+
+<ResponseField name="after" type="string">
+  Cursor for pagination - return extractions after this ID.
+</ResponseField>
+
+<ResponseField name="from_date" type="datetime">
+  Filter extractions created on or after this date. Use `datetime` in Python or `Date` in JavaScript.
+</ResponseField>
+
+<ResponseField name="to_date" type="datetime">
+  Filter extractions created on or before this date. Use `datetime` in Python or `Date` in JavaScript.
+</ResponseField>
+
+<ResponseField name="metadata" type="dict[str, str]">
+  Filter by custom metadata key-value pairs.
+</ResponseField>
+
+<ResponseField name="human_review_status" type="string">
+  Filter by review status: `"success"`, `"review_required"`, or `"reviewed"`.
+</ResponseField>
+
+## Getting an Extraction
+
+Retrieve a single extraction by its ID.
+
+<CodeGroup>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+extraction = client.extractions.get("extr_01G34H8J2K")
+print(extraction)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const extraction = await client.extractions.get("extr_01G34H8J2K");
+console.log(extraction);
+```
+
+</CodeGroup>
+
+## Updating an Extraction
+
+Update an extraction's predictions, review status, or other properties.
+
+<CodeGroup>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# Update predictions after human review
+updated = client.extractions.update(
+    extraction_id="extr_01G34H8J2K",
+    predictions={
+        "invoice_number": "INV-2024-0789-CORRECTED",
+        "total_amount": 1576.75
+    },
+    human_review_status="reviewed"
+)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// Update predictions after human review
+const updated = await client.extractions.update("extr_01G34H8J2K", {
+    predictions: {
+        invoice_number: "INV-2024-0789-CORRECTED",
+        total_amount: 1576.75
+    },
+    human_review_status: "reviewed"
+});
+```
+
+</CodeGroup>
+
+## Downloading Extractions
+
+Download extractions in bulk as JSONL, CSV, or XLSX format.
+
+<CodeGroup>
+
+```python Python
+from datetime import datetime
+from retab import Retab
+
+client = Retab()
+
+# Get download URL for JSONL export
+result = client.extractions.download(
+    format="jsonl",
+    from_date=datetime(2024, 1, 1),
+    metadata={"organization_id": "org_acme_corp"}
+)
+
+print(f"Download URL: {result['download_url']}")
+print(f"Expires at: {result['expires_at']}")
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// Get download URL for JSONL export
+const result = await client.extractions.download({
+    format: "jsonl",
+    from_date: new Date("2024-01-01"),
+    metadata: { organization_id: "org_acme_corp" }
+});
+
+console.log(`Download URL: ${result.download_url}`);
+console.log(`Expires at: ${result.expires_at}`);
+```
+
+</CodeGroup>
+
+### Download Parameters
+
+<ResponseField name="format" type="string" default="jsonl">
+  Export format: `"jsonl"`, `"csv"`, or `"xlsx"`.
+</ResponseField>
+
+<ResponseField name="from_date" type="datetime">
+  Filter extractions created on or after this date. Use `datetime` in Python or `Date` in JavaScript.
+</ResponseField>
+
+<ResponseField name="to_date" type="datetime">
+  Filter extractions created on or before this date. Use `datetime` in Python or `Date` in JavaScript.
+</ResponseField>
+
+<ResponseField name="metadata" type="dict[str, str]">
+  Filter by custom metadata.
+</ResponseField>
+
+## Filtering by Metadata
+
+Metadata filtering is powerful for organizing extractions across multiple clients or workflows. When you attach metadata during extraction, you can later filter by those same keys.
+
+<CodeGroup>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# List all extractions for a specific organization
+org_extractions = client.extractions.list(
+    metadata={"organization_id": "org_acme_corp"},
+    limit=100
+)
+
+
+# Download all extractions from a specific batch
+batch_download = client.extractions.download(
+    format="csv",
+    metadata={"batch_id": "batch_2024_04"}
+)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// List all extractions for a specific organization
+const orgExtractions = await client.extractions.list({
+    metadata: { organization_id: "org_acme_corp" },
+    limit: 100
+});
+
+// Download all extractions from a specific batch
+const batchDownload = await client.extractions.download({
+    format: "csv",
+    metadata: { batch_id: "batch_2024_04" }
+});
+```
+
+</CodeGroup>
+
+Please check the [API Reference](https://docs.retab.com/api-reference/extractions) for complete method documentation.
+

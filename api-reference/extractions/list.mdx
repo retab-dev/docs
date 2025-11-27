@@ -1,0 +1,118 @@
+---
+title: 'List Extractions'
+openapi: 'GET /v1/extractions'
+---
+
+<RequestExample>
+
+```python python
+from datetime import datetime
+from retab import Retab
+
+client = Retab()
+
+# List recent extractions
+extractions = client.extractions.list(
+    limit=10,
+    order="desc"
+)
+
+# Filter by date range
+extractions = client.extractions.list(
+    from_date=datetime(2024, 1, 1),
+    to_date=datetime(2024, 12, 31),
+    limit=50
+)
+
+# Filter by metadata
+extractions = client.extractions.list(
+    metadata={"organization_id": "org_acme_corp"},
+    human_review_status="review_required"
+)
+```
+
+```typescript typescript
+import { Retab } from "@retab/node";
+
+const client = new Retab();
+
+// List recent extractions
+const extractions = await client.extractions.list({
+    limit: 10,
+    order: "desc"
+});
+
+// Filter by date range
+const extractions = await client.extractions.list({
+    from_date: new Date("2024-01-01"),
+    to_date: new Date("2024-12-31"),
+    limit: 50
+});
+
+// Filter by metadata
+const extractions = await client.extractions.list({
+    metadata: { organization_id: "org_acme_corp" },
+    human_review_status: "review_required"
+});
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/extractions?limit=10&order=desc' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+
+# With filters
+curl -X 'GET' \
+  'https://api.retab.com/v1/extractions?limit=50&from_date=2024-01-01&to_date=2024-12-31&human_review_status=review_required&metadata=%7B%22organization_id%22%3A%22org_acme_corp%22%7D' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "id": "extr_01G34H8J2K",
+      "created_at": "2024-03-15T10:30:00Z",
+      "updated_at": "2024-03-15T10:30:00Z",
+      "organization_id": "org_01ABC123",
+      "origin": {
+        "type": "project",
+        "id": "proj_F0FE8DFqyouQdZXDTWRg0"
+      },
+      "file": {
+        "id": "file_6dd6eb00688ad8d1",
+        "filename": "invoice.pdf"
+      },
+      "predictions": {
+        "invoice_number": "INV-2024-0042",
+        "total_amount": 1234.56
+      },
+      "human_review_status": "success",
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "invoice_number": { "type": "string" },
+          "total_amount": { "type": "number" }
+        }
+      },
+      "metadata": {
+        "organization_id": "org_acme_corp"
+      }
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": "extr_01G34H8J2K",
+    "total_count": 150
+  }
+}
+```
+
+</ResponseExample>
+
