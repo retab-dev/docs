@@ -62,8 +62,25 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
   The JSON schema defining the structure of the extracted data. Includes properties, required fields, and optional `X-SystemPrompt` for custom instructions.
 </ParamField>
 
-<ParamField body="modality" type="string" default="text">
-  The processing modality: `"text"` for text-based extraction, `"native"` for handling native document formats like PDF.
+
+<ParamField body="image_resolution_dpi" type="integer" default="192">
+  The DPI of the image sent to the LLM. Defaults to 192.
+</ParamField>
+
+<ParamField body="temperature" type="float" default="0.0">
+  The temperature for sampling. Defaults to 0.0.
+</ParamField>
+
+<ParamField body="reasoning_effort" type="ChatCompletionReasoningEffort" default="minimal">
+  The effort level for the model to reason about the input data. Defaults to "minimal".
+</ParamField>
+
+<ParamField body="parallel_ocr_keys" type="dict[str, str] | None" default="None">
+  If set, keys to be used for the extraction of long lists of data using Parallel OCR. Defaults to None.
+</ParamField>
+
+<ParamField body="metadata" type="dict[str, str]" default="{}">
+  User-defined metadata to associate with this extraction. Defaults to {}.
 </ParamField>
 
 <ParamField body="n_consensus" type="integer" default="1">
@@ -146,7 +163,6 @@ doc_msg = client.documents.extract(
       'title': 'CalendarEvent',
       'type': 'object'
     },
-    modality="text",
     n_consensus=1 # 1 means disabled (default), if greater than 1 it will run the extraction with n-consensus mode
 )
 ```
@@ -177,7 +193,6 @@ const docMsg = await client.documents.extract({
         title: "CalendarEvent",
         type: "object"
     },
-    modality: "text",
     n_consensus: 1 // 1 means disabled (default), if greater than 1 it will run the extraction with n-consensus mode
 });
 ```
@@ -303,7 +318,6 @@ result = client.documents.extract(
         'title': 'CalendarEvent',
         'type': 'object'
     },
-    modality="text",
     n_consensus=1
 )
 
@@ -364,7 +378,6 @@ const result = await client.documents.extract({
         title: "CalendarEvent",
         type: "object"
     },
-    modality: "text",
     n_consensus: 1
 });
 
@@ -523,10 +536,6 @@ curl -X POST https://api.retab.com/v1/documents/extract \
 ### Confidence Handling
 - Set a threshold (e.g., 0.7) for automated processing.
 - For critical tasks, enable `n_consensus > 1` to average results and boost reliability.
-
-### Modality Choice
-- **Text**: For clean, text-heavy documents.
-- **Native**: For PDFs or images with layouts preserved.
 
 ### Using Additional Messages
 - Use `additional_messages` to provide domain-specific context or clarifications.
