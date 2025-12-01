@@ -20241,6 +20241,77 @@
         }
       }
     },
+    "/v1/beta/deepresearch/extract": {
+      "post": {
+        "tags": [
+          "Beta",
+          "DeepResearch"
+        ],
+        "summary": "Extract",
+        "operationId": "extract_v1_beta_deepresearch_extract_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeepResearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeepResearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/test_ingest_completion": {
       "post": {
         "summary": "Passive Webhook",
@@ -24252,77 +24323,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeepResearchResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/internal/deepresearch/extract-copper-mines": {
-      "post": {
-        "tags": [
-          "DeepResearch"
-        ],
-        "summary": "Extract Copper Mines",
-        "description": "Extract copper mine production data using specialized schema.",
-        "operationId": "extract_copper_mines_internal_deepresearch_extract_copper_mines_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeepResearchRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CopperMineResponse"
                 }
               }
             }
@@ -29454,7 +29454,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion__ChoiceLogprobs"
+                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
               },
               {
                 "type": "null"
@@ -30078,72 +30078,6 @@
         },
         "type": "object",
         "title": "ConversionConfig"
-      },
-      "CopperMineProductionTableAndSummariesSchema": {
-        "properties": {
-          "production_table": {
-            "items": {
-              "$ref": "#/components/schemas/ProductionTable"
-            },
-            "type": "array",
-            "title": "Production Table",
-            "description": "A table where each row represents a mine and product type, with production and guidance details."
-          },
-          "mine_summaries": {
-            "items": {
-              "$ref": "#/components/schemas/MineSummary"
-            },
-            "type": "array",
-            "title": "Mine Summaries",
-            "description": "A list of summary paragraphs for each mine, including underperformance reasons and guidance context."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "production_table",
-          "mine_summaries"
-        ],
-        "title": "CopperMineProductionTableAndSummariesSchema",
-        "X-SchemaType": "generic",
-        "X-SystemPrompt": "You are a highly skilled data extraction assistant specializing in mining company reports. Your task is to extract structured data on copper production volumes at specific copper mines, following the provided schema. The goal is to create a detailed, accurate, and consistent dataset suitable for Excel analysis and downstream applications.\n\n**Context and Document Types:**\nYou will work with company reports from BHP and Teck, which contain tables and narrative sections describing copper production at various mines. These reports may present data in different formats, including summary tables, detailed asset breakdowns, and explanatory text. Production may be reported as total, attributable, or by product type (e.g., cathode, concentrate).\n\n**Extraction Rules and Guidelines:**\n\n1. **Mine and Owner Identification:**\n   - Extract the mine name exactly as presented in the report.\n   - Identify the mine owner(s) as stated or implied in the document. If multiple owners are listed, include all.\n\n2. **Product Type Classification:**\n   - Classify copper production as \"Cathode\" if described as cathode, SX-EW, or copper metal.\n   - Classify as \"Concentrate\" if described as contained copper in concentrate, mill production, or payable copper.\n   - If the type is unclear, use \"Unknown\" and check the report text for clarification.\n\n3. **Production Volumes:**\n   - Extract the reported production volume for the most recent quarter (Q4 2024).\n   - Only use production data, not sales data. Carefully distinguish between the two, as both may appear in tables.\n   - Ensure the correct units are captured (e.g., kt, t).\n\n4. **Annual Guidance:**\n   - Extract the annual production guidance or forecast for 2025 for each mine and product type, with units.\n   - If guidance is not provided, leave the field blank or indicate \"None\".\n\n5. **Attributable Adjustments:**\n   - If production or guidance is reported as an attributable share (e.g., 22.5% for Antamina), recalculate to a 100% basis.\n   - Note in the \"attributable_adjustment_note\" field if such a recalculation was performed; otherwise, use \"None\".\n   - For mines reported by both Teck and BHP (e.g., Antamina), ensure 100% basis figures are consistent between sources.\n\n6. **Mine Summaries:**\n   - For each mine, provide a brief summary of any reasons for underperformance in the latest quarter, based on narrative or footnotes.\n   - Summarize any changes to 2025 guidance, including whether guidance was revised and the reasons for any change.\n\n7. **Data Validation and Disambiguation:**\n   - Double-check that production and guidance units match and are correctly labeled.\n   - Avoid mixing up sales and production data\u2014cross-reference table headers and footnotes.\n   - If a mine produces both cathode and concentrate, create separate rows for each product type.\n   - If information is missing or ambiguous, use \"Unknown\" or \"None\" and note any uncertainty in the relevant field.\n\n8. **Formatting and Structure:**\n   - Output data strictly according to the provided JSON schema.\n   - Each row in the production_table should represent a unique combination of mine, owner, and product type.\n   - All required fields must be present; do not add extra properties.\n\n9. **Common Pitfalls to Avoid:**\n   - Do not use sales data in place of production data.\n   - Do not assume 100% ownership unless explicitly stated; check for attributable reporting.\n   - Do not infer product type without evidence; use \"Unknown\" if necessary.\n   - Do not merge data from different quarters or years.\n\n10. **Handling Uncertainty and Edge Cases:**\n    - If production is reported as a range, use the midpoint unless otherwise instructed, and note this in the adjustment note.\n    - If multiple sources report different figures for the same mine, reconcile using the 100% basis and document the approach.\n    - If guidance is revised, clearly state the previous and current guidance and the reason for change.\n\n**Your output must be comprehensive, accurate, and ready for use in Excel or further analysis. Prioritize data quality, clarity, and adherence to the schema. If any extraction decision is uncertain, err on the side of transparency and document your reasoning in the appropriate note fields.**"
-      },
-      "CopperMineResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success",
-            "default": false
-          },
-          "message": {
-            "type": "string",
-            "title": "Message",
-            "default": ""
-          },
-          "data": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CopperMineProductionTableAndSummariesSchema"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          }
-        },
-        "type": "object",
-        "title": "CopperMineResponse"
       },
       "CostBreakdown": {
         "properties": {
@@ -31090,120 +31024,16 @@
         "title": "DatasetValidationStats",
         "description": "Statistics about validation status of dataset documents"
       },
-      "DeepResearchData": {
-        "properties": {
-          "total_investment": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Total amount invested by parent company in dollars. Hints to find:\n    - Investor Presentation: Capital Plan, Long-Term Investment Outlook.\n    - 10-K / MD&A: Capex tables, segment investment disclosures.\n    - Earnings Call Deck: Capital Spending slide."
-          },
-          "total_capex": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Total capital expenditures of parent company in dollars for the most recent fiscal year (2024). Hints to find:\n    - 10-K: Cash Flows section under Investing Activities.\n    - 10-Q: Same as above, but quarter-to-date and YTD.\n    - Investor Presentation: Capex Plan slides.\n    "
-          },
-          "total_distribution_spent": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Total amount spent on distribution infrastructure in dollars. Hints to find:\n    - Investor Presentation: Grid modernization or distribution investment slides.\n    - Rate Case Filings: Utility distribution spending schedules.\n    - 10-K: \u201cRegulated Operations \u2013 Capital Expenditures.\u201d\n    "
-          },
-          "investment_in_renewable": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Total investment in clean/renewable energy projects and infrastructure in dollars. Hints to find:\n    - Investor Presentation: Clean Energy Transition, Renewable Pipeline.\n    - 10-K: Segment reporting or sustainability disclosures.\n    - Sustainability/ESG Report: Renewable investments detailed explicitly.\n    "
-          },
-          "investment_breakdown_by_key_drivers": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Flat text summary of investment breakdown by key drivers/projects"
-          },
-          "earnings_per_share": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Earnings per share (EPS) for parent company in dollars. Hints to find:\n    - Earnings Release: Always on page 1.\n    - 10-Q/10-K: Statement of Income.\n    "
-          },
-          "annual_revenue": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Total annual revenue in dollars. Hints to find:\n    - 10-K: Consolidated Statements of Operations or Income.\n    - Investor Presentation: Highlights.\n    "
-          },
-          "current_quarter_revenue": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Revenue for the current quarter in dollars. Hints to find:\n    - 10-Q: Income Statement.\n    - Earnings Release: Quarterly Financial Results.\n    "
-          },
-          "rate_base": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Regulatory rate base value in dollars - the value of assets on which the utility is permitted to earn a return. Hints to find:\n    - Rate Case Filings: Explicit numeric disclosure.\n    - Investor Presentation: \u201cRate Base Growth.\u201d\n    - 10-K (Regulated Utilities): Often in MD&A.\n    "
-          },
-          "rate_base_cagr": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Compound annual growth rate (CAGR) of rate base as a percentage. Hints to find:\n    - Investor Presentation: \u201cRate Base CAGR 2024\u20132028\u201d slide.\n    - Analyst Day Materials: Forecast metrics.\n    "
-          },
-          "strategic_moves": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Summary of strategic initiatives, acquisitions, partnerships, or other major business moves"
-          },
-          "undergrounding_targets": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Targets and goals for undergrounding power lines, including timelines and scope"
-          },
-          "grid_modernization": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Details on grid modernization efforts including technology upgrades and infrastructure improvements"
-          },
-          "ami_smart_meter_penetration": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Advanced Metering Infrastructure (AMI) smart meter penetration as a percentage (0-100)"
-          },
-          "ev_electrification_enablement": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Initiatives and infrastructure to support electric vehicle (EV) adoption and electrification"
-          },
-          "wildfire_storm_resilience_projects_and_investment": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Projects and investment amounts related to wildfire prevention, storm hardening, and resilience improvements"
-          },
-          "future_project_announcements_with_cost_breakup": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Announced future projects with detailed cost breakdown and timeline information"
-          },
-          "customer_count": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Total number of customers served"
-          },
-          "customer_growth": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Customer growth rate as a percentage or absolute number"
-          },
-          "saidi": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "System Average Interruption Duration Index - average outage duration per customer in minutes"
-          },
-          "saifi": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "System Average Interruption Frequency Index - average number of interruptions per customer"
-          },
-          "undergrounding_hardening_progress": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Progress updates on undergrounding and infrastructure hardening programs including miles completed and investment"
-          },
-          "transformer_pole_programs": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Programs related to transformer and utility pole maintenance, replacement, and upgrades"
-          },
-          "regulatory_capital_employed": {
-            "$ref": "#/components/schemas/NumericFieldWithSource",
-            "description": "Regulatory capital employed in dollars - total capital invested in rate-regulated operations"
-          },
-          "rate_cases_filed": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Summary of rate cases filed with regulatory bodies including amounts requested and status"
-          },
-          "trackers_riders": {
-            "$ref": "#/components/schemas/StringFieldWithSource",
-            "description": "Rate adjustment mechanisms, trackers, and riders that allow for automatic rate adjustments"
-          }
-        },
-        "type": "object",
-        "title": "DeepResearchData"
-      },
       "DeepResearchRequest": {
         "properties": {
           "document": {
             "$ref": "#/components/schemas/MIMEData-Input"
+          },
+          "json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Schema",
+            "description": "JSON schema defining the structure of data to extract"
           },
           "inference_settings": {
             "$ref": "#/components/schemas/InferenceSettings"
@@ -31216,7 +31046,7 @@
           },
           "max_tool_calls": {
             "type": "integer",
-            "maximum": 50.0,
+            "maximum": 10.0,
             "minimum": 1.0,
             "title": "Max Tool Calls",
             "description": "Maximum number of tool calls per step",
@@ -31226,6 +31056,7 @@
         "type": "object",
         "required": [
           "document",
+          "json_schema",
           "inference_settings"
         ],
         "title": "DeepResearchRequest"
@@ -31245,12 +31076,14 @@
           "data": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/DeepResearchData"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Data"
           },
           "error": {
             "anyOf": [
@@ -32422,38 +32255,6 @@
         ],
         "title": "ExistingComputation",
         "description": "Model for an existing computation"
-      },
-      "ExplanationField": {
-        "properties": {
-          "quote": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Quote",
-            "description": "Direct quote from document if value was found (20-50 words)"
-          },
-          "explanation": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Explanation",
-            "description": "Qualitative explanation if value not found but related information exists"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "ExplanationField",
-        "description": "Contains either a direct quote (if value found) or an explanation (if value not found)."
       },
       "ExportToCsvRequest": {
         "properties": {
@@ -34141,7 +33942,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2025-11-28T11:41:00.102838Z",
+              "updated_at": "2025-12-01T14:58:09.551279Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "modality": "native",
@@ -34793,33 +34594,6 @@
         "title": "MetadataChange",
         "description": "Represents dataset metadata changes in a history entry."
       },
-      "MineSummary": {
-        "properties": {
-          "mine_name": {
-            "type": "string",
-            "title": "Mine Name",
-            "description": "The name of the copper mine."
-          },
-          "underperformance_summary": {
-            "type": "string",
-            "title": "Underperformance Summary",
-            "description": "Brief note on reasons for underperformance in the latest reported quarter."
-          },
-          "guidance_change_summary": {
-            "type": "string",
-            "title": "Guidance Change Summary",
-            "description": "Brief note on any changes to 2025 guidance and the reasons for those changes."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "mine_name",
-          "underperformance_summary",
-          "guidance_change_summary"
-        ],
-        "title": "MineSummary"
-      },
       "Model": {
         "properties": {
           "id": {
@@ -35137,54 +34911,6 @@
           "files"
         ],
         "title": "MultipleUploadResponse"
-      },
-      "NumericFieldWithSource": {
-        "properties": {
-          "value": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Value",
-            "description": "The extracted numeric value"
-          },
-          "unit": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Unit",
-            "description": "Unit: 'dollars', 'billion dollars', 'percent', 'minutes', etc."
-          },
-          "page": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Page",
-            "description": "Page number where found"
-          },
-          "explanation": {
-            "$ref": "#/components/schemas/ExplanationField",
-            "description": "Quote if found, or explanation if not found"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "NumericFieldWithSource",
-        "description": "Numeric value with source citation."
       },
       "OptimizedDocumentMetrics": {
         "properties": {
@@ -37426,63 +37152,6 @@
         ],
         "title": "ProcessorConfig"
       },
-      "ProductionTable": {
-        "properties": {
-          "mine_name": {
-            "type": "string",
-            "title": "Mine Name",
-            "description": "The name of the copper mine."
-          },
-          "mine_owner": {
-            "type": "string",
-            "title": "Mine Owner",
-            "description": "The company or companies that own the mine."
-          },
-          "product_type": {
-            "type": "string",
-            "title": "Product Type",
-            "description": "The type of copper product (Cathode, Concentrate, or Unknown)."
-          },
-          "quarterly_production_q4_2024": {
-            "type": "number",
-            "title": "Quarterly Production Q4 2024",
-            "description": "Reported production volume for Q4 2024."
-          },
-          "production_units": {
-            "type": "string",
-            "title": "Production Units",
-            "description": "The units in which production is reported (e.g., kt, t)."
-          },
-          "annual_guidance_2025": {
-            "type": "string",
-            "title": "Annual Guidance 2025",
-            "description": "Annual production guidance or forecast for 2025 for the mine and product type."
-          },
-          "guidance_units": {
-            "type": "string",
-            "title": "Guidance Units",
-            "description": "The units in which the annual guidance is reported (e.g., kt, t)."
-          },
-          "attributable_adjustment_note": {
-            "type": "string",
-            "title": "Attributable Adjustment Note",
-            "description": "A note if the production or guidance was recalculated to 100% basis due to attributable reporting, or 'None' if not applicable."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "mine_name",
-          "mine_owner",
-          "product_type",
-          "quarterly_production_q4_2024",
-          "production_units",
-          "annual_guidance_2025",
-          "guidance_units",
-          "attributable_adjustment_note"
-        ],
-        "title": "ProductionTable"
-      },
       "Project": {
         "properties": {
           "id": {
@@ -38495,7 +38164,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion__ChoiceLogprobs"
+                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
               },
               {
                 "type": "null"
@@ -38566,7 +38235,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion__ChoiceLogprobs"
+                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
               },
               {
                 "type": "null"
@@ -39240,41 +38909,6 @@
           "schema_id"
         ],
         "title": "StoredProcessor"
-      },
-      "StringFieldWithSource": {
-        "properties": {
-          "value": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Value",
-            "description": "The extracted text summary"
-          },
-          "pages": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pages",
-            "description": "Page numbers where information was found"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "StringFieldWithSource",
-        "description": "Text value with source citations."
       },
       "SubscriptionStatus": {
         "properties": {
@@ -40849,6 +40483,24 @@
         ],
         "title": "Page"
       },
+      "main_server__services__custom__bert__cubemimedata__Point": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "Point"
+      },
       "main_server__services__custom__bertfake__routes__User": {
         "properties": {
           "object": {
@@ -41208,6 +40860,41 @@
         "type": "object",
         "title": "ChoiceLogprobs"
       },
+      "openai__types__chat__chat_completion_chunk__ChoiceLogprobs": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "refusal": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "ChoiceLogprobs"
+      },
       "openai__types__chat__chat_completion_message_function_tool_call_param__Function": {
         "properties": {
           "arguments": {
@@ -41420,24 +41107,6 @@
         ],
         "title": "Page"
       },
-      "retab__types__mime__Point": {
-        "properties": {
-          "x": {
-            "type": "integer",
-            "title": "X"
-          },
-          "y": {
-            "type": "integer",
-            "title": "Y"
-          }
-        },
-        "type": "object",
-        "required": [
-          "x",
-          "y"
-        ],
-        "title": "Point"
-      },
       "retab__types__mime__TextBox": {
         "properties": {
           "width": {
@@ -41449,21 +41118,21 @@
             "title": "Height"
           },
           "center": {
-            "$ref": "#/components/schemas/retab__types__mime__Point"
+            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
           },
           "vertices": {
             "prefixItems": [
               {
-                "$ref": "#/components/schemas/retab__types__mime__Point"
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
               },
               {
-                "$ref": "#/components/schemas/retab__types__mime__Point"
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
               },
               {
-                "$ref": "#/components/schemas/retab__types__mime__Point"
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
               },
               {
-                "$ref": "#/components/schemas/retab__types__mime__Point"
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
               }
             ],
             "type": "array",
