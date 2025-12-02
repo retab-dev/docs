@@ -1,0 +1,311 @@
+---
+title: Consensus Algorithm
+---
+
+After alignment, the Consensus Engine merges values from multiple extractions into a single result with **confidence scores** (`likelihoods`) for each field.
+
+## Type-Specific Strategies
+
+The algorithm uses different strategies based on value type:
+
+| Type | Strategy | Example |
+|------|----------|---------|
+| Boolean | Majority vote | `[True, True, False]` → `True` |
+| Number | Clustering | `[100, 101, 200]` → `100.5` |
+| String | Semantic clustering | `["Acme Corp", "Acme Corporation"]` → `"Acme Corp"` |
+| Object | Recursive by field | Each field processed independently |
+| Array | Element-wise (after alignment) | Each item processed independently |
+
+---
+
+## Boolean Consensus
+
+Simple **majority voting**:
+
+```
+Values: [True, True, False, None]
+
+Count: True=2, False=1, None=1
+Winner: True
+Confidence: 2/4 = 0.50
+```
+
+| Input | Result | Confidence |
+|-------|--------|------------|
+| `[True, True, True]` | `True` | 1.00 |
+| `[True, True, False]` | `True` | 0.67 |
+| `[True, False, None]` | `True` | 0.33 |
+
+---
+
+## Numeric Consensus
+
+Numbers are **clustered** with a 3% tolerance, then the largest cluster wins.
+
+### Clustering Rule
+
+Two numbers are in the **same cluster** if:
+```
+|a - b| ≤ 3% of max(|a|, |b|)
+```
+
+### Example 1: Clear winner
+
+```
+Values: [100, 101, 100, 200]
+
+Clusters:
+  Cluster A: [100, 101, 100] → mean = 100.3
+  Cluster B: [200]           → mean = 200
+
+Winner: Cluster A (3 values)
+Result: 100.3
+Confidence: 3/4 = 0.75
+```
+
+### Example 2: With None values
+
+```
+Values: [50, 50, None, None]
+
+Clusters:
+  Cluster A: [50, 50] → mean = 50
+  None count: 2
+
+Winner: Cluster A (2 values > 2 Nones... tie!)
+Result: 50 (prefer numeric over None)
+Confidence: 0.50
+```
+
+### Why 3%?
+
+| a | b | Difference | 3% of max | Same cluster? |
+|---|---|------------|-----------|---------------|
+| 100 | 103 | 3 | 3.09 | ✅ Yes |
+| 100 | 104 | 4 | 3.12 | ❌ No |
+| 1.00 | 1.02 | 0.02 | 0.03 | ✅ Yes |
+
+---
+
+## String Consensus
+
+Strings use **semantic clustering** with embeddings.
+
+### How it works
+
+1. Compute pairwise similarity using embeddings
+2. Group similar strings into clusters
+3. Pick the **medoid** (most central value) of the largest cluster
+
+### Example
+
+```
+Values: ["Science Fair", "Science Exhibition", "Science Fair"]
+
+Similarity matrix:
+                    Science Fair  Science Exhibition
+Science Fair              1.00            0.85
+Science Exhibition        0.85            1.00
+
+With threshold 0.80: All cluster together
+Medoid: "Science Fair" (appears 2x, more central)
+Confidence: 0.85
+```
+
+### Handling variations
+
+The engine compares strings under multiple "views":
+
+| View | `"Product ABC-123"` becomes |
+|------|------------------------------|
+| Original | `"Product ABC-123"` |
+| Digits only | `"123"` |
+| Letters only | `"productabc"` |
+| Sorted tokens | `"abc-123 product"` |
+
+The **maximum similarity** across views is used, catching cases like:
+- `"ABC-123"` vs `"ABC 123"` (same digits)
+- `"ProductName"` vs `"PRODUCTNAME"` (same letters)
+
+---
+
+## Nested Objects
+
+Objects are processed **recursively**, field by field:
+
+```
+Sources:
+  {"vendor": "Acme Corp", "total": 100}
+  {"vendor": "Acme Corp", "total": 101}
+  {"vendor": "Acme Corp", "total": 100}
+
+Consensus:
+  vendor: "Acme Corp"  (3/3 exact match)
+  total:  100.3        (mean of cluster [100, 101, 100])
+
+Likelihoods:
+  vendor: 1.0     (all identical)
+  total:  1.0     (all 3 in same cluster: |101-100|=1 ≤ 3%×101=3.03)
+```
+
+> **Note**: Strings like `"Acme"` vs `"ACME"` are treated as identical because multi-view comparison includes an alpha-only view that normalizes to lowercase.
+
+---
+
+## Arrays (After Alignment)
+
+Arrays are processed **element by element** after alignment:
+
+```
+Aligned arrays:
+  Source 1: [{"sku": "A", "qty": 10}, {"sku": "B", "qty": 20}]
+  Source 2: [{"sku": "A", "qty": 10}, {"sku": "B", "qty": 20}]
+  Source 3: [{"sku": "A", "qty": 10}, {"sku": "B", "qty": 21}]
+
+Consensus per element:
+  Item 0: {sku: "A", qty: 10}  → confidence: {sku: 1.0, qty: 1.0}
+  Item 1: {sku: "B", qty: 20}  → confidence: {sku: 1.0, qty: 0.67}
+```
+
+---
+
+## Reading Confidence Scores
+
+The `likelihoods` object mirrors the structure of your extracted data:
+
+```json
+{
+  "data": {
+    "invoice_number": "INV-001",
+    "total": 150.0,
+    "items": [
+      {"sku": "A", "qty": 10},
+      {"sku": "B", "qty": 20}
+    ]
+  },
+  "likelihoods": {
+    "invoice_number": 1.0,
+    "total": 1.0,
+    "items": [
+      {"sku": 1.0, "qty": 1.0},
+      {"sku": 1.0, "qty": 0.67}
+    ]
+  }
+}
+```
+
+### Interpretation Guide
+
+| Score | Meaning | Action |
+|-------|---------|--------|
+| **1.0** | All sources agreed exactly | ✅ High confidence |
+| **0.8-0.99** | Minor variations, strong consensus | ✅ Generally reliable |
+| **0.6-0.79** | Some disagreement | ⚠️ Review recommended |
+| **0.4-0.59** | Significant disagreement | ⚠️ Flag for human review |
+| **< 0.4** | Major disagreement | ❌ Likely ambiguous |
+
+---
+
+## Full Example
+
+```
+3 model extractions of an invoice:
+
+Source 1:
+  invoice_number: "INV-001"
+  vendor: "Acme Corp"
+  total: 150.00
+  items: [{sku: "A", qty: 10}, {sku: "B", qty: 20}]
+
+Source 2:
+  invoice_number: "INV-001"
+  vendor: "ACME Corporation"    ← Different format
+  total: 151.00                 ← Slight variation (within 3% → same cluster)
+  items: [{sku: "B", qty: 20}, {sku: "A", qty: 10}]  ← Different order!
+
+Source 3:
+  invoice_number: "INV-001"
+  vendor: "Acme Corp"
+  total: 150.00
+  items: [{sku: "A", qty: 10}, {sku: "B", qty: 25}]  ← qty differs significantly
+
+─────────────────────────────────────
+
+After alignment + consensus:
+
+Result:
+  invoice_number: "INV-001"     ← 3/3 agreed
+  vendor: "Acme Corp"           ← 2/3 exact, 1 similar
+  total: 150.3                  ← Mean of cluster [150, 151, 150]
+  items:
+    [{sku: "A", qty: 10},       ← Aligned correctly
+     {sku: "B", qty: 20}]       ← 2/3 in cluster [20, 20], 1 outlier [25]
+
+Likelihoods:
+  invoice_number: 1.0
+  vendor: 0.85
+  total: 1.0                    ← All 3 in same cluster (|151-150|=1 ≤ 3%×151≈4.5)
+  items:
+    [{sku: 1.0, qty: 1.0},
+     {sku: 1.0, qty: 0.67}]     ← qty: [20, 20, 25] → 2/3 in cluster, |25-20|=5 > 3%×25=0.75
+```
+
+---
+
+## Summary
+
+| Type | Method | Confidence Formula |
+|------|--------|-------------------|
+| Boolean | Majority vote | `winner_count / total` |
+| Number | 3% clustering | `cluster_size / total` |
+| String | Semantic clustering | `dominance × cohesion` |
+| Object | Recursive | Per-field confidence |
+| Array | Element-wise | Per-element confidence |
+
+These confidence scores help you identify which fields might need human review.
+
+---
+
+## Special Case: n=2 (Similarity Mode)
+
+When you have exactly **2 sources**, the system can operate in two modes:
+
+### Consensus Mode (default)
+
+Same as n > 2: merge values, output a single result with likelihoods.
+
+```
+Source 1: {qty: 100}
+Source 2: {qty: 101}
+
+Consensus: {qty: 100.5}
+Likelihood: {qty: 1.0}  (both in same cluster: |101-100|=1 ≤ 3%×101=3.03)
+```
+
+> **Note**: If values are in **different clusters** (e.g., `[10, 20]`), tie-breaking picks one value (preferring larger absolute values), not the mean.
+
+### Similarity Mode (for evaluation)
+
+Instead of merging, compute **how similar** each field is between the two sources. This is useful when comparing a model's extraction against a ground truth.
+
+```
+Reference:  {qty: 10,  vendor: "Acme Corp"}
+Prediction: {qty: 10,  vendor: "ACME"}
+
+Similarity per field:
+  qty:    1.0    (exact match)
+  vendor: 0.92   (semantically similar)
+
+Total similarity: 0.96
+```
+
+### When to Use Which?
+
+| Use Case | Mode | Output |
+|----------|------|--------|
+| Multiple model runs (`n_consensus=3`) | Consensus | Merged value + confidence |
+| Compare extraction vs ground truth | Similarity | Per-field similarity score |
+| A/B test two models | Similarity | Per-field similarity to reference |
+| Quality evaluation | Similarity | Total similarity score |
+
+> **Key difference**: Consensus produces a **merged value**. Similarity produces a **score** (0-1) measuring how close the values are.
