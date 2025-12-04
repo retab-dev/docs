@@ -5,6 +5,98 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/v1/auth/session": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Create Session Token",
+        "description": "Exchange an API key for a short-lived session token.\n    \n    This endpoint allows server-side applications to create temporary tokens\n    that can be safely used in client-side code without exposing the API key.\n    \n    **Use case**: Your backend calls this endpoint with your API key, then passes\n    the returned session token to your frontend. The frontend uses this token\n    for authenticated requests.\n    \n    **Security**: The session token is a JWT that expires after the specified TTL.\n    It contains the organization context but not the API key itself.",
+        "operationId": "create_session_token_v1_auth_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionTokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/auth/session/verify": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Verify Session Token",
+        "description": "Verify a session token and return its claims (for debugging/testing).",
+        "operationId": "verify_session_token_v1_auth_session_verify_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Verify Session Token V1 Auth Session Verify Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/chats": {
       "get": {
         "tags": [
@@ -2934,6 +3026,367 @@
         }
       }
     },
+    "/v1/projects/templates": {
+      "get": {
+        "tags": [
+          "Projects",
+          "Templates"
+        ],
+        "summary": "List Project Templates",
+        "description": "List project templates with pagination support.\nProject templates are public blueprints stored without organization ownership.",
+        "operationId": "list_project_templates_v1_projects_templates_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fields"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListProjectTemplates"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/templates/{template_id}": {
+      "get": {
+        "tags": [
+          "Projects",
+          "Templates"
+        ],
+        "summary": "Get Project Template",
+        "description": "Get a project template by ID",
+        "operationId": "get_project_template_v1_projects_templates__template_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/templates/{template_id}/builder-documents": {
+      "get": {
+        "tags": [
+          "Projects",
+          "Templates"
+        ],
+        "summary": "List Template Builder Documents",
+        "description": "List builder documents for a given project template.",
+        "operationId": "list_template_builder_documents_v1_projects_templates__template_id__builder_documents_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BuilderDocument"
+                  },
+                  "title": "Response List Template Builder Documents V1 Projects Templates  Template Id  Builder Documents Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/templates/{template_id}/clone": {
+      "post": {
+        "tags": [
+          "Projects",
+          "Templates"
+        ],
+        "summary": "Clone Project Template",
+        "description": "Clone a project template to create a new project for the user's organization.\nCopies draft configuration and builder documents; no datasets or iterations are created.",
+        "operationId": "clone_project_template_v1_projects_templates__template_id__clone_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloneProjectTemplateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloneProjectTemplateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/projects": {
       "post": {
         "tags": [
@@ -3009,7 +3462,7 @@
           "Projects"
         ],
         "summary": "List Projects",
-        "description": "List projects with pagination support.",
+        "description": "List projects with pagination support.\n\nArgs:\n    organization_id: Optional. If provided, fetch projects from this organization.\n                    User must have access (be a member or it's their parent org).",
         "operationId": "list_projects_v1_projects_get",
         "security": [
           {
@@ -3109,6 +3562,22 @@
                 }
               ],
               "title": "Published"
+            }
+          },
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Organization Id"
             }
           },
           {
@@ -9636,363 +10105,6 @@
         }
       }
     },
-    "/v1/project-templates": {
-      "get": {
-        "tags": [
-          "Project Templates"
-        ],
-        "summary": "List Project Templates",
-        "description": "List project templates with pagination support.\nProject templates are public blueprints stored without organization ownership.",
-        "operationId": "list_project_templates_v1_project_templates_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "before",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Before"
-            }
-          },
-          {
-            "name": "after",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "After"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 10,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "desc",
-              "title": "Order"
-            }
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Fields"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListProjectTemplates"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/project-templates/{template_id}": {
-      "get": {
-        "tags": [
-          "Project Templates"
-        ],
-        "summary": "Get Project Template",
-        "description": "Get a project template by ID",
-        "operationId": "get_project_template_v1_project_templates__template_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "template_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Template Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Project"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/project-templates/{template_id}/builder-documents": {
-      "get": {
-        "tags": [
-          "Project Templates"
-        ],
-        "summary": "List Template Builder Documents",
-        "description": "List builder documents for a given project template.",
-        "operationId": "list_template_builder_documents_v1_project_templates__template_id__builder_documents_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "template_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Template Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/BuilderDocument"
-                  },
-                  "title": "Response List Template Builder Documents V1 Project Templates  Template Id  Builder Documents Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/project-templates/{template_id}/clone": {
-      "post": {
-        "tags": [
-          "Project Templates"
-        ],
-        "summary": "Clone Project Template",
-        "description": "Clone a project template to create a new project for the user's organization.\nCopies draft configuration and builder documents; no datasets or iterations are created.",
-        "operationId": "clone_project_template_v1_project_templates__template_id__clone_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "template_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Template Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CloneProjectTemplateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CloneProjectTemplateResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/integrations/check_oauth_token/{application_name}": {
       "get": {
         "tags": [
@@ -11415,10 +11527,7 @@
                     "documents.extract",
                     "documents.parse",
                     "schemas.generate",
-                    "automation.mailbox",
-                    "automation.cron",
                     "automation.outlook",
-                    "automation.endpoint",
                     "documents.create_messages",
                     "documents.create_inputs",
                     "documents.correct_image_orientation",
@@ -11606,10 +11715,7 @@
                     "documents.extract",
                     "documents.parse",
                     "schemas.generate",
-                    "automation.mailbox",
-                    "automation.cron",
                     "automation.outlook",
-                    "automation.endpoint",
                     "documents.create_messages",
                     "documents.create_inputs",
                     "documents.correct_image_orientation",
@@ -12201,6 +12307,76 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/extractions/{extraction_id}/usage": {
+      "get": {
+        "tags": [
+          "Extractions"
+        ],
+        "summary": "Get Extraction Usage",
+        "description": "Get the aggregated usage (total credits) for a specific extraction.\n\nFor parallel extractions, multiple processing logs may be created.\nThis endpoint sums the credit usage across all of them.",
+        "operationId": "get_extraction_usage_v1_extractions__extraction_id__usage_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "extraction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Extraction Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionUsageResponse"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -16636,10 +16812,7 @@
                     "documents.extract",
                     "documents.parse",
                     "schemas.generate",
-                    "automation.mailbox",
-                    "automation.cron",
                     "automation.outlook",
-                    "automation.endpoint",
                     "documents.create_messages",
                     "documents.create_inputs",
                     "documents.correct_image_orientation",
@@ -16788,74 +16961,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProcessingLogResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/endpoints/{endpoint_id}": {
-      "post": {
-        "tags": [
-          "Endpoints"
-        ],
-        "summary": "Handle Endpoint Processing",
-        "operationId": "handle_endpoint_processing_v1_endpoints__endpoint_id__post",
-        "parameters": [
-          {
-            "name": "endpoint_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Endpoint Id"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Idempotency-Key"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_handle_endpoint_processing_v1_endpoints__endpoint_id__post"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AutomationLog"
                 }
               }
             }
@@ -18793,7 +18898,8 @@
                 "xAI",
                 "GeminiOai",
                 "OpenRouter",
-                "Retab"
+                "Retab",
+                "Parallel"
               ],
               "type": "string",
               "title": "Provider"
@@ -18882,7 +18988,8 @@
                 "xAI",
                 "GeminiOai",
                 "OpenRouter",
-                "Retab"
+                "Retab",
+                "Parallel"
               ],
               "type": "string",
               "title": "Provider"
@@ -19263,10 +19370,7 @@
                     "documents.extract",
                     "documents.parse",
                     "schemas.generate",
-                    "automation.mailbox",
-                    "automation.cron",
                     "automation.outlook",
-                    "automation.endpoint",
                     "documents.create_messages",
                     "documents.create_inputs",
                     "documents.correct_image_orientation",
@@ -20067,93 +20171,6 @@
         }
       }
     },
-    "/v1/aggregations/generate": {
-      "post": {
-        "tags": [
-          "Aggregations"
-        ],
-        "summary": "Generate Aggregation",
-        "description": "Generates a MongoDB aggregation command from a JSON schema with optional instructions.",
-        "operationId": "generate_aggregation_v1_aggregations_generate_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Idempotency-Key"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GenerateAggregationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AggregationResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/expressions/generate-expression": {
       "post": {
         "tags": [
@@ -20922,6 +20939,554 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workos/multi-tenant": {
+      "post": {
+        "tags": [
+          "WorkOS",
+          "Multi-Tenant"
+        ],
+        "summary": "Create Child Organization",
+        "description": "Create a new child organization under the current parent organization.\n\nThis creates a new WorkOS Organization and links it to the parent\nin the multi_tenant_orgs collection.",
+        "operationId": "create_child_organization_internal_workos_multi_tenant_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChildOrganizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateChildOrganizationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "WorkOS",
+          "Multi-Tenant"
+        ],
+        "summary": "List Child Organizations",
+        "description": "List all child organizations for the current parent organization.",
+        "operationId": "list_child_organizations_internal_workos_multi_tenant_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListChildOrganizationsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workos/multi-tenant/parent": {
+      "get": {
+        "tags": [
+          "WorkOS",
+          "Multi-Tenant"
+        ],
+        "summary": "Get Parent Organization",
+        "description": "Get the parent organization of the current organization (if any).\n\nReturns null if the current organization has no parent (is a root org).",
+        "operationId": "get_parent_organization_internal_workos_multi_tenant_parent_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Parent Organization Internal Workos Multi Tenant Parent Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workos/multi-tenant/accessible": {
+      "get": {
+        "tags": [
+          "WorkOS",
+          "Multi-Tenant"
+        ],
+        "summary": "List Accessible Organizations",
+        "description": "List all organizations the user can access (own + child organizations).\n\nThis is useful for building an organization switcher UI.",
+        "operationId": "list_accessible_organizations_internal_workos_multi_tenant_accessible_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Accessible Organizations Internal Workos Multi Tenant Accessible Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workos/multi-tenant/{child_org_id}": {
+      "get": {
+        "tags": [
+          "WorkOS",
+          "Multi-Tenant"
+        ],
+        "summary": "Get Child Organization",
+        "description": "Get details of a specific child organization.",
+        "operationId": "get_child_organization_internal_workos_multi_tenant__child_org_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "child_org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Child Org Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Child Organization Internal Workos Multi Tenant  Child Org Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "WorkOS",
+          "Multi-Tenant"
+        ],
+        "summary": "Delete Child Organization",
+        "description": "Delete (soft-delete) a child organization.\n\nThis marks the relationship as deleted but does not delete the WorkOS organization.",
+        "operationId": "delete_child_organization_internal_workos_multi_tenant__child_org_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "child_org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Child Org Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteChildOrganizationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workos/multi-tenant/{child_org_id}/suspend": {
+      "post": {
+        "tags": [
+          "WorkOS",
+          "Multi-Tenant"
+        ],
+        "summary": "Suspend Child Organization",
+        "description": "Suspend a child organization (soft disable).",
+        "operationId": "suspend_child_organization_internal_workos_multi_tenant__child_org_id__suspend_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "child_org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Child Org Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Suspend Child Organization Internal Workos Multi Tenant  Child Org Id  Suspend Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workos/multi-tenant/{child_org_id}/reactivate": {
+      "post": {
+        "tags": [
+          "WorkOS",
+          "Multi-Tenant"
+        ],
+        "summary": "Reactivate Child Organization",
+        "description": "Reactivate a suspended child organization.",
+        "operationId": "reactivate_child_organization_internal_workos_multi_tenant__child_org_id__reactivate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "child_org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Child Org Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reactivate Child Organization Internal Workos Multi Tenant  Child Org Id  Reactivate Post"
+                }
               }
             }
           },
@@ -25187,7 +25752,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SinariOrganization"
+                  "$ref": "#/components/schemas/StoredSinariOrganization"
                 }
               }
             }
@@ -25209,7 +25774,7 @@
           "Sinari Organizations"
         ],
         "summary": "List Sinari Organizations",
-        "description": "List all Sinari organizations with optional filters.",
+        "description": "List all Sinari organizations with optional filters.\nOnly returns organizations belonging to the authenticated user's WorkOS organization.",
         "operationId": "list_sinari_organizations_custom_sinari_organizations_get",
         "security": [
           {
@@ -25366,14 +25931,14 @@
         }
       }
     },
-    "/custom/sinari/organizations/{organization_id}": {
+    "/custom/sinari/organizations/{sinari_organization_id}": {
       "get": {
         "tags": [
           "Sinari Organizations"
         ],
         "summary": "Get Sinari Organization",
-        "description": "Get a specific Sinari organization by ID.",
-        "operationId": "get_sinari_organization_custom_sinari_organizations__organization_id__get",
+        "description": "Get a specific Sinari organization by ID.\nOnly returns the organization if it belongs to the authenticated user's WorkOS organization.",
+        "operationId": "get_sinari_organization_custom_sinari_organizations__sinari_organization_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -25387,12 +25952,12 @@
         ],
         "parameters": [
           {
-            "name": "organization_id",
+            "name": "sinari_organization_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Organization Id"
+              "title": "Sinari Organization Id"
             }
           },
           {
@@ -25418,7 +25983,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SinariOrganization"
+                  "$ref": "#/components/schemas/StoredSinariOrganization"
                 }
               }
             }
@@ -25440,8 +26005,8 @@
           "Sinari Organizations"
         ],
         "summary": "Update Sinari Organization",
-        "description": "Update a Sinari organization.",
-        "operationId": "update_sinari_organization_custom_sinari_organizations__organization_id__put",
+        "description": "Update a Sinari organization.\nOnly updates the organization if it belongs to the authenticated user's WorkOS organization.",
+        "operationId": "update_sinari_organization_custom_sinari_organizations__sinari_organization_id__put",
         "security": [
           {
             "HTTPBearer": []
@@ -25455,12 +26020,12 @@
         ],
         "parameters": [
           {
-            "name": "organization_id",
+            "name": "sinari_organization_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Organization Id"
+              "title": "Sinari Organization Id"
             }
           },
           {
@@ -25496,7 +26061,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SinariOrganization"
+                  "$ref": "#/components/schemas/StoredSinariOrganization"
                 }
               }
             }
@@ -25518,8 +26083,8 @@
           "Sinari Organizations"
         ],
         "summary": "Delete Sinari Organization",
-        "description": "Delete a Sinari organization.",
-        "operationId": "delete_sinari_organization_custom_sinari_organizations__organization_id__delete",
+        "description": "Delete a Sinari organization.\nOnly deletes the organization if it belongs to the authenticated user's WorkOS organization.",
+        "operationId": "delete_sinari_organization_custom_sinari_organizations__sinari_organization_id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -25533,12 +26098,12 @@
         ],
         "parameters": [
           {
-            "name": "organization_id",
+            "name": "sinari_organization_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Organization Id"
+              "title": "Sinari Organization Id"
             }
           },
           {
@@ -25581,7 +26146,7 @@
           "Sinari Organizations"
         ],
         "summary": "Get Sinari Organization By Code",
-        "description": "Get a Sinari organization by organization code.",
+        "description": "Get a Sinari organization by organization code.\nOnly returns the organization if it belongs to the authenticated user's WorkOS organization.",
         "operationId": "get_sinari_organization_by_code_custom_sinari_organizations_by_code__organization_code__get",
         "security": [
           {
@@ -25627,7 +26192,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SinariOrganization"
+                  "$ref": "#/components/schemas/StoredSinariOrganization"
                 }
               }
             }
@@ -25670,7 +26235,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SinariOrganization"
+                  "$ref": "#/components/schemas/StoredSinariOrganization"
                 }
               }
             }
@@ -26770,21 +27335,6 @@
         ],
         "title": "AgenticOptimizeOnceResponse"
       },
-      "AggregationResponse": {
-        "properties": {
-          "aggregation": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Aggregation"
-          }
-        },
-        "type": "object",
-        "required": [
-          "aggregation"
-        ],
-        "title": "AggregationResponse",
-        "description": "Complete aggregation response"
-      },
       "AlignDictsRequest": {
         "properties": {
           "list_dicts": {
@@ -27480,12 +28030,12 @@
             "description": "The HTML body of the email"
           },
           "sender": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData",
+            "$ref": "#/components/schemas/retab__types__mime__EmailAddressData",
             "description": "The sender's email address information"
           },
           "recipients_to": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/retab__types__mime__EmailAddressData"
             },
             "type": "array",
             "title": "Recipients To",
@@ -27493,7 +28043,7 @@
           },
           "recipients_cc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/retab__types__mime__EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Cc",
@@ -27502,7 +28052,7 @@
           },
           "recipients_bcc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/retab__types__mime__EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Bcc",
@@ -28153,20 +28703,6 @@
         "type": "object",
         "title": "Body_extract_for_project_v1_projects_extract__project_id__post"
       },
-      "Body_handle_endpoint_processing_v1_endpoints__endpoint_id__post": {
-        "properties": {
-          "document": {
-            "type": "string",
-            "format": "binary",
-            "title": "Document"
-          }
-        },
-        "type": "object",
-        "required": [
-          "document"
-        ],
-        "title": "Body_handle_endpoint_processing_v1_endpoints__endpoint_id__post"
-      },
       "Body_submit_to_processor_v1_processors__processor_id__submit_post": {
         "properties": {
           "document": {
@@ -28479,6 +29015,29 @@
         },
         "type": "object",
         "title": "BrandingUpdateRequest"
+      },
+      "BreakdownPerKey": {
+        "properties": {
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          },
+          "credits_per_page": {
+            "type": "number",
+            "title": "Credits Per Page"
+          },
+          "credits_total": {
+            "type": "number",
+            "title": "Credits Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pages",
+          "credits_per_page",
+          "credits_total"
+        ],
+        "title": "BreakdownPerKey"
       },
       "BrowserCanvas": {
         "type": "string",
@@ -29434,6 +29993,52 @@
         ],
         "title": "ChatSession"
       },
+      "ChildOrganization": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Multi-tenant relationship ID"
+          },
+          "workos_organization_id": {
+            "type": "string",
+            "title": "Workos Organization Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "deleted"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workos_organization_id",
+          "name",
+          "created_at",
+          "created_by",
+          "status"
+        ],
+        "title": "ChildOrganization",
+        "description": "Child organization details for listing."
+      },
       "Choice": {
         "properties": {
           "finish_reason": {
@@ -29454,7 +30059,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
+                "$ref": "#/components/schemas/openai__types__chat__chat_completion__ChoiceLogprobs"
               },
               {
                 "type": "null"
@@ -30254,6 +30859,64 @@
         },
         "type": "object",
         "title": "CreateChatRequest"
+      },
+      "CreateChildOrganizationRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name for the new organization"
+          },
+          "domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domains",
+            "description": "Optional domains for auto-join"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CreateChildOrganizationRequest",
+        "description": "Request to create a new child organization."
+      },
+      "CreateChildOrganizationResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "multi_tenant_org": {
+            "$ref": "#/components/schemas/MultiTenantOrg"
+          },
+          "workos_organization_id": {
+            "type": "string",
+            "title": "Workos Organization Id"
+          },
+          "workos_organization_name": {
+            "type": "string",
+            "title": "Workos Organization Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "multi_tenant_org",
+          "workos_organization_id",
+          "workos_organization_name"
+        ],
+        "title": "CreateChildOrganizationResponse",
+        "description": "Response after creating a child organization."
       },
       "CreateDatasetRequest": {
         "properties": {
@@ -31143,6 +31806,30 @@
         "type": "object",
         "title": "DeepResearchResponse"
       },
+      "DeleteChildOrganizationResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "deleted_organization_id": {
+            "type": "string",
+            "title": "Deleted Organization Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "deleted_organization_id",
+          "message"
+        ],
+        "title": "DeleteChildOrganizationResponse",
+        "description": "Response after deleting a child organization."
+      },
       "DetachProcessorRequest": {
         "properties": {
           "new_processor_name": {
@@ -31345,6 +32032,12 @@
               }
             ]
           },
+          "web_search": {
+            "type": "boolean",
+            "title": "Web Search",
+            "description": "Enable web search enrichment with Parallel AI to add external context during extraction",
+            "default": false
+          },
           "metadata": {
             "additionalProperties": {
               "type": "string"
@@ -31477,7 +32170,8 @@
               "temperature": 0.5,
               "reasoning_effort": "minimal",
               "image_resolution_dpi": 192,
-              "n_consensus": 1
+              "n_consensus": 1,
+              "web_search": false
             }
           },
           "json_schema": {
@@ -31511,7 +32205,8 @@
               "temperature": 0.5,
               "reasoning_effort": "minimal",
               "image_resolution_dpi": 192,
-              "n_consensus": 1
+              "n_consensus": 1,
+              "web_search": false
             }
           },
           "json_schema": {
@@ -31649,12 +32344,12 @@
             "description": "The HTML body of the email"
           },
           "sender": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData",
+            "$ref": "#/components/schemas/retab__types__mime__EmailAddressData",
             "description": "The sender's email address information"
           },
           "recipients_to": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/retab__types__mime__EmailAddressData"
             },
             "type": "array",
             "title": "Recipients To",
@@ -31662,7 +32357,7 @@
           },
           "recipients_cc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/retab__types__mime__EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Cc",
@@ -31671,7 +32366,7 @@
           },
           "recipients_bcc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/retab__types__mime__EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Bcc",
@@ -31808,12 +32503,12 @@
             "description": "The HTML body of the email"
           },
           "sender": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData",
+            "$ref": "#/components/schemas/retab__types__mime__EmailAddressData",
             "description": "The sender's email address information"
           },
           "recipients_to": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/retab__types__mime__EmailAddressData"
             },
             "type": "array",
             "title": "Recipients To",
@@ -31821,7 +32516,7 @@
           },
           "recipients_cc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/retab__types__mime__EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Cc",
@@ -31830,7 +32525,7 @@
           },
           "recipients_bcc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/retab__types__mime__EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Bcc",
@@ -32345,7 +33040,8 @@
               "xAI",
               "GeminiOai",
               "OpenRouter",
-              "Retab"
+              "Retab",
+              "Parallel"
             ],
             "title": "Provider"
           },
@@ -32386,7 +33082,8 @@
               "xAI",
               "GeminiOai",
               "OpenRouter",
-              "Retab"
+              "Retab",
+              "Parallel"
             ],
             "title": "Provider"
           },
@@ -32710,6 +33407,44 @@
           "total"
         ],
         "title": "ExtractionCount"
+      },
+      "ExtractionUsageResponse": {
+        "properties": {
+          "extraction_id": {
+            "type": "string",
+            "title": "Extraction Id"
+          },
+          "total_credits": {
+            "type": "number",
+            "title": "Total Credits"
+          },
+          "total_page_count": {
+            "type": "integer",
+            "title": "Total Page Count"
+          },
+          "breakdown_per_source": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/BreakdownPerKey"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Breakdown Per Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "extraction_id",
+          "total_credits",
+          "total_page_count"
+        ],
+        "title": "ExtractionUsageResponse",
+        "description": "Aggregated usage information for an extraction."
       },
       "ExtractionsCount": {
         "properties": {
@@ -33346,64 +34081,6 @@
         ],
         "title": "FunctionCall"
       },
-      "GenerateAggregationRequest": {
-        "properties": {
-          "json_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Json Schema",
-            "description": "The JSON schema to generate aggregations for"
-          },
-          "instructions": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Instructions",
-            "description": "Optional instructions for the aggregation generation"
-          },
-          "model": {
-            "type": "string",
-            "title": "Model",
-            "description": "The model to use for generation",
-            "default": "gpt-4o"
-          },
-          "temperature": {
-            "type": "number",
-            "title": "Temperature",
-            "description": "Temperature for generation",
-            "default": 0.0
-          },
-          "reasoning_effort": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reasoning Effort",
-            "description": "Reasoning effort for o1 models"
-          },
-          "stream": {
-            "type": "boolean",
-            "title": "Stream",
-            "description": "Whether to stream the response",
-            "default": true
-          }
-        },
-        "type": "object",
-        "required": [
-          "json_schema"
-        ],
-        "title": "GenerateAggregationRequest",
-        "description": "Request model for generating aggregations"
-      },
       "GenerateExpressionRequest": {
         "properties": {
           "json_schema": {
@@ -33893,6 +34570,12 @@
                 "properties": "ID"
               }
             ]
+          },
+          "web_search": {
+            "type": "boolean",
+            "title": "Web Search",
+            "description": "Enable web search enrichment with Parallel AI to add external context during extraction",
+            "default": false
           }
         },
         "type": "object",
@@ -33962,13 +34645,14 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2025-12-01T18:42:27.960256Z",
+              "updated_at": "2025-12-04T11:45:26.441010Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "gpt-5-mini",
                 "n_consensus": 1,
                 "reasoning_effort": "minimal",
-                "temperature": 0.0
+                "temperature": 0.0,
+                "web_search": false
               }
             }
           }
@@ -34153,6 +34837,28 @@
           "list_metadata"
         ],
         "title": "ListAutomations"
+      },
+      "ListChildOrganizationsResponse": {
+        "properties": {
+          "organizations": {
+            "items": {
+              "$ref": "#/components/schemas/ChildOrganization"
+            },
+            "type": "array",
+            "title": "Organizations"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organizations",
+          "total"
+        ],
+        "title": "ListChildOrganizationsResponse",
+        "description": "Response for listing child organizations."
       },
       "ListDatasets": {
         "properties": {
@@ -34915,6 +35621,60 @@
           "data"
         ],
         "title": "ModelsResponse"
+      },
+      "MultiTenantOrg": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier for the relationship"
+          },
+          "parent_organization_id": {
+            "type": "string",
+            "title": "Parent Organization Id",
+            "description": "WorkOS organization ID of the parent (provider)"
+          },
+          "child_organization_id": {
+            "type": "string",
+            "title": "Child Organization Id",
+            "description": "WorkOS organization ID of the child (customer)"
+          },
+          "child_organization_name": {
+            "type": "string",
+            "title": "Child Organization Name",
+            "description": "Name of the child organization"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "User ID who created this relationship"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "deleted"
+            ],
+            "title": "Status",
+            "default": "active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parent_organization_id",
+          "child_organization_id",
+          "child_organization_name",
+          "created_by"
+        ],
+        "title": "MultiTenantOrg",
+        "description": "Represents a multi-tenant organization relationship.\n\nThis model links WorkOS organizations in a parent-child hierarchy\nfor B2B2B (reseller) architectures.\n\nExample:\n- Enertel (parent org) creates workspaces for Client A and Client B\n- Client A and Client B are separate WorkOS organizations\n- This collection tracks that Client A and Client B are children of Enertel"
       },
       "MultipleUploadResponse": {
         "properties": {
@@ -36861,6 +37621,18 @@
             "description": "Whether the extraction has been billed or not",
             "default": false
           },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Source of the processing log (e.g., 'keys', 'chunk', or key path for parallel extraction)"
+          },
           "preprocessing_credits_per_page": {
             "type": "number",
             "title": "Preprocessing Credits Per Page",
@@ -37042,10 +37814,7 @@
               "documents.extract",
               "documents.parse",
               "schemas.generate",
-              "automation.mailbox",
-              "automation.cron",
               "automation.outlook",
-              "automation.endpoint",
               "documents.create_messages",
               "documents.create_inputs",
               "documents.correct_image_orientation",
@@ -37426,7 +38195,8 @@
               "temperature": 0.5,
               "reasoning_effort": "minimal",
               "image_resolution_dpi": 192,
-              "n_consensus": 1
+              "n_consensus": 1,
+              "web_search": false
             }
           },
           "json_schema": {
@@ -37466,7 +38236,8 @@
               "temperature": 0.5,
               "reasoning_effort": "minimal",
               "image_resolution_dpi": 192,
-              "n_consensus": 1
+              "n_consensus": 1,
+              "web_search": false
             }
           },
           "json_schema": {
@@ -38182,7 +38953,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
+                "$ref": "#/components/schemas/openai__types__chat__chat_completion__ChoiceLogprobs"
               },
               {
                 "type": "null"
@@ -38253,7 +39024,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
+                "$ref": "#/components/schemas/openai__types__chat__chat_completion__ChoiceLogprobs"
               },
               {
                 "type": "null"
@@ -38569,6 +39340,64 @@
         "title": "SchemaOverrides",
         "description": "Schema override for a field path. Only supports non-structural metadata.\n\n- description: JSON Schema description string\n- reasoning_prompt: value mapped to schema key \"X-ReasoningPrompt\""
       },
+      "SessionTokenRequest": {
+        "properties": {
+          "ttl": {
+            "type": "integer",
+            "maximum": 86400.0,
+            "minimum": 60.0,
+            "title": "Ttl",
+            "description": "Token time-to-live in seconds (min: 60, max: 86400 = 24 hours)",
+            "default": 3600
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata",
+            "description": "Optional metadata to include in the token (e.g., user context for audit logging)"
+          }
+        },
+        "type": "object",
+        "title": "SessionTokenRequest",
+        "description": "Request body for creating a session token."
+      },
+      "SessionTokenResponse": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "JWT session token"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "Token expiration timestamp"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "description": "Token type for Authorization header",
+            "default": "Bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "title": "SessionTokenResponse",
+        "description": "Response containing the session token."
+      },
       "SetCreditUsageLimitRequest": {
         "properties": {
           "limit_credits": {
@@ -38586,59 +39415,6 @@
         },
         "type": "object",
         "title": "SetCreditUsageLimitRequest"
-      },
-      "SinariOrganization": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "organization_code": {
-            "type": "string",
-            "title": "Organization Code"
-          },
-          "users_whitelist": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Users Whitelist"
-          },
-          "domains_whitelist": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Domains Whitelist"
-          },
-          "processor_id": {
-            "type": "string",
-            "title": "Processor Id"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "organization_code",
-          "users_whitelist",
-          "domains_whitelist",
-          "processor_id"
-        ],
-        "title": "SinariOrganization"
       },
       "SinariSubmitRequest": {
         "properties": {
@@ -38927,6 +39703,64 @@
           "schema_id"
         ],
         "title": "StoredProcessor"
+      },
+      "StoredSinariOrganization": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "organization_code": {
+            "type": "string",
+            "title": "Organization Code"
+          },
+          "users_whitelist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Users Whitelist"
+          },
+          "domains_whitelist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domains Whitelist"
+          },
+          "processor_id": {
+            "type": "string",
+            "title": "Processor Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "WorkOS organization ID that owns this Sinari organization"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "organization_code",
+          "processor_id",
+          "organization_id"
+        ],
+        "title": "StoredSinariOrganization",
+        "description": "SinariOrganization model with organization_id for database storage"
       },
       "SubscriptionStatus": {
         "properties": {
@@ -40403,32 +41237,6 @@
         ],
         "title": "BaseMIMEData"
       },
-      "main_server__services__custom__bert__cubemimedata__EmailAddressData": {
-        "properties": {
-          "email": {
-            "type": "string",
-            "title": "Email",
-            "description": "The email address"
-          },
-          "display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Display Name",
-            "description": "The display name associated with the email address"
-          }
-        },
-        "type": "object",
-        "required": [
-          "email"
-        ],
-        "title": "EmailAddressData"
-      },
       "main_server__services__custom__bert__cubemimedata__MIMEData": {
         "properties": {
           "id": {
@@ -40504,14 +41312,14 @@
           },
           "blocks": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__TextBox"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
             },
             "type": "array",
             "title": "Blocks"
           },
           "lines": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__TextBox"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
             },
             "type": "array",
             "title": "Lines"
@@ -40526,6 +41334,73 @@
           "lines"
         ],
         "title": "Page"
+      },
+      "main_server__services__custom__bert__cubemimedata__Point": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "Point"
+      },
+      "main_server__services__custom__bert__cubemimedata__TextBox": {
+        "properties": {
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "center": {
+            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
+          },
+          "vertices": {
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
+              },
+              {
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
+              },
+              {
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
+              },
+              {
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
+              }
+            ],
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Vertices",
+            "description": "(top-left, top-right, bottom-right, bottom-left)"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "width",
+          "height",
+          "center",
+          "vertices",
+          "text"
+        ],
+        "title": "TextBox"
       },
       "main_server__services__custom__bertfake__routes__User": {
         "properties": {
@@ -40886,41 +41761,6 @@
         "type": "object",
         "title": "ChoiceLogprobs"
       },
-      "openai__types__chat__chat_completion_chunk__ChoiceLogprobs": {
-        "properties": {
-          "content": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "refusal": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refusal"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "title": "ChoiceLogprobs"
-      },
       "openai__types__chat__chat_completion_message_function_tool_call_param__Function": {
         "properties": {
           "arguments": {
@@ -41001,6 +41841,32 @@
         ],
         "title": "BaseMIMEData"
       },
+      "retab__types__mime__EmailAddressData": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "The email address"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name",
+            "description": "The display name associated with the email address"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "EmailAddressData"
+      },
       "retab__types__mime__MIMEData": {
         "properties": {
           "filename": {
@@ -41067,21 +41933,21 @@
           },
           "blocks": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__TextBox"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
             },
             "type": "array",
             "title": "Blocks"
           },
           "lines": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__TextBox"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
             },
             "type": "array",
             "title": "Lines"
           },
           "tokens": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__TextBox"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
             },
             "type": "array",
             "title": "Tokens"
@@ -41106,73 +41972,6 @@
           "tokens"
         ],
         "title": "Page"
-      },
-      "retab__types__mime__Point": {
-        "properties": {
-          "x": {
-            "type": "integer",
-            "title": "X"
-          },
-          "y": {
-            "type": "integer",
-            "title": "Y"
-          }
-        },
-        "type": "object",
-        "required": [
-          "x",
-          "y"
-        ],
-        "title": "Point"
-      },
-      "retab__types__mime__TextBox": {
-        "properties": {
-          "width": {
-            "type": "integer",
-            "title": "Width"
-          },
-          "height": {
-            "type": "integer",
-            "title": "Height"
-          },
-          "center": {
-            "$ref": "#/components/schemas/retab__types__mime__Point"
-          },
-          "vertices": {
-            "prefixItems": [
-              {
-                "$ref": "#/components/schemas/retab__types__mime__Point"
-              },
-              {
-                "$ref": "#/components/schemas/retab__types__mime__Point"
-              },
-              {
-                "$ref": "#/components/schemas/retab__types__mime__Point"
-              },
-              {
-                "$ref": "#/components/schemas/retab__types__mime__Point"
-              }
-            ],
-            "type": "array",
-            "maxItems": 4,
-            "minItems": 4,
-            "title": "Vertices",
-            "description": "(top-left, top-right, bottom-right, bottom-left)"
-          },
-          "text": {
-            "type": "string",
-            "title": "Text"
-          }
-        },
-        "type": "object",
-        "required": [
-          "width",
-          "height",
-          "center",
-          "vertices",
-          "text"
-        ],
-        "title": "TextBox"
       }
     },
     "securitySchemes": {
