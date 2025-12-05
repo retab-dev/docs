@@ -1,0 +1,330 @@
+---
+title: Widgets Reference
+---
+
+This page documents all available widget components in the `@retab/react` package.
+
+## DataComponent
+
+Display and edit extracted data in form, table, or code view. Supports real-time streaming during extraction.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `extraction` | `Extraction \| null` | required | The extraction object to display |
+| `onFieldPathChange` | `(fieldPath: string) => void` | - | Callback when a field is focused (for source highlighting) |
+| `extractionDisplayOptions` | `ExtractionDisplayOptions` | - | Display configuration options |
+| `continueButtonOptions` | `ContinueButtonOptions` | - | Continue/review button configuration |
+| `extractionStreamingOptions` | `ExtractionStreamingOptions` | - | Streaming state options |
+
+### ExtractionDisplayOptions
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `view` | `"form" \| "table" \| "code"` | `"form"` | Initial view mode |
+| `allowEditing` | `boolean` | `false` | Enable editing of prediction values |
+| `showReasoning` | `boolean` | `false` | Show AI reasoning fields |
+| `showTabs` | `boolean` | `false` | Show tabs to switch between views |
+
+### Example
+
+```tsx DataComponent Example
+import { DataComponent, useExtractions } from "@retab/react";
+
+function ExtractionViewer() {
+  const { extractions } = useExtractions();
+  const extraction = extractions[0];
+
+  return (
+    <DataComponent
+      extraction={extraction}
+      extractionDisplayOptions={{
+        view: "form",
+        showTabs: true,
+        allowEditing: true,
+      }}
+    />
+  );
+}
+```
+
+---
+
+## FileComponent
+
+Preview documents with PDF rendering, image zoom, and OCR source highlighting. Supports streaming state for real-time extraction display.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `extraction` | `Extraction \| null` | required | The extraction containing the file to display |
+| `fieldPath` | `string \| null` | `null` | Currently focused field path (for source highlighting) |
+| `extractionStreamingOptions` | `ExtractionStreamingOptions` | - | Streaming state options |
+
+### Example
+
+```tsx FileComponent Example
+import { FileComponent, useExtractions } from "@retab/react";
+import { useState } from "react";
+
+function DocumentViewer() {
+  const { extractions } = useExtractions();
+  const [fieldPath, setFieldPath] = useState<string | null>(null);
+
+  return (
+    <FileComponent
+      extraction={extractions[0]}
+      fieldPath={fieldPath}
+    />
+  );
+}
+```
+
+---
+
+## ExtractionsList
+
+Browse and manage extractions with search, filtering, pagination, and thumbnails.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `title` | `string` | - | Title displayed in the list header |
+| `onSelectExtraction` | `(extraction: Extraction) => void` | - | Callback when an extraction is selected |
+| `onNewExtractionClick` | `() => void` | - | Callback when "new extraction" is clicked |
+| `visibility` | `VisibilityOptions` | - | Control which features are visible |
+| `initialFilters` | `FilterType[]` | `[]` | Initial filters to apply |
+
+### VisibilityOptions
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `search` | `boolean` | `true` | Show search input |
+| `displayPopover` | `boolean` | `true` | Show display settings popover |
+| `statusColumn` | `boolean` | `false` | Show status column |
+| `dateColumn` | `boolean` | `true` | Show date column |
+| `filters` | `boolean` | `false` | Show filter controls |
+| `metadataFilter` | `boolean` | `false` | Show metadata filter option |
+
+### Example
+
+```tsx ExtractionsList Example
+import { ExtractionsList } from "@retab/react";
+
+function ExtractionsPage() {
+  const handleSelect = (extraction) => {
+    console.log("Selected:", extraction.id);
+  };
+
+  return (
+    <ExtractionsList
+      title="Recent Extractions"
+      onSelectExtraction={handleSelect}
+      visibility={{
+        statusColumn: true,
+        dateColumn: true,
+        search: true,
+        filters: true,
+      }}
+    />
+  );
+}
+```
+
+---
+
+## ExtractionReviewer
+
+Complete review interface that combines an extraction list, file preview, and data editor. Ideal for human-in-the-loop workflows.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `projectId` | `string` | required | The project ID to filter extractions |
+| `extractionId` | `string` | - | Currently selected extraction ID |
+| `onNavigate` | `(params: { extractionId?: string }) => void` | required | Callback for navigation |
+| `initialFilters` | `FilterType[]` | `[]` | Initial filters to apply |
+| `visibility` | `ExtractionReviewerVisibilityOptions` | - | Control visibility of features |
+| `defaultView` | `"form" \| "table" \| "code"` | `"form"` | Default view mode |
+
+### ExtractionReviewerVisibilityOptions
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `search` | `boolean` | `false` | Show search input |
+| `metadataFilter` | `boolean` | `false` | Show metadata filter option |
+| `filterMenu` | `boolean` | `true` | Show filter menu |
+| `displayMenu` | `boolean` | `true` | Show display settings menu |
+| `exportMenu` | `boolean` | `true` | Show export menu |
+| `uploadButton` | `boolean` | `true` | Show upload button |
+| `extractionDisplayOptions` | `ExtractionDisplayOptions` | - | Display options for the data viewer |
+
+### Example
+
+```tsx ExtractionReviewer Example
+import { ExtractionReviewer } from "@retab/react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+function ReviewPage({ projectId }: { projectId: string }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const extractionId = searchParams.get("extractionId");
+
+  const handleNavigate = ({ extractionId }) => {
+    const url = extractionId
+      ? `/review?extractionId=${extractionId}`
+      : `/review`;
+    router.push(url);
+  };
+
+  return (
+    <ExtractionReviewer
+      projectId={projectId}
+      extractionId={extractionId}
+      onNavigate={handleNavigate}
+      visibility={{
+        search: true,
+        uploadButton: true,
+        extractionDisplayOptions: {
+          allowEditing: true,
+          showTabs: true,
+        },
+      }}
+      initialFilters={[
+        {
+          id: "status_filter",
+          field: "status",
+          operator: "is",
+          value: "review_required",
+        },
+      ]}
+    />
+  );
+}
+```
+
+---
+
+## ExtractionComponent
+
+Side-by-side file preview and data display with resizable panels. Supports file upload and real-time streaming extraction.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `extractionId` | `string` | - | The extraction ID to display |
+| `projectId` | `string` | - | The project ID |
+| `isNewExtraction` | `boolean` | `false` | Whether this is a new extraction (shows upload UI) |
+| `extractionDisplayOptions` | `ExtractionDisplayOptions` | - | Display options for the data viewer |
+| `continueButtonOptions` | `ContinueButtonOptions` | - | Continue button configuration |
+
+### ContinueButtonOptions
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `onClick` | `() => void` | - | Callback when continue button is clicked |
+| `label` | `string` | `"Continue"` | Button label text |
+
+### Example
+
+```tsx ExtractionComponent Example
+import { ExtractionComponent } from "@retab/react";
+
+function ExtractionView({ extractionId, projectId }) {
+  return (
+    <ExtractionComponent
+      extractionId={extractionId}
+      projectId={projectId}
+      extractionDisplayOptions={{
+        view: "form",
+        allowEditing: true,
+        showTabs: true,
+      }}
+      continueButtonOptions={{
+        onClick: () => console.log("Marked as reviewed"),
+        label: "Mark as Reviewed",
+      }}
+    />
+  );
+}
+```
+
+---
+
+## UploadJobsList
+
+Upload files and track processing jobs. Supports drag-and-drop, batch uploads, and progress tracking.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `metadata` | `Record<string, string>` | - | Optional metadata to associate with uploads |
+
+### Example
+
+```tsx UploadJobsList Example
+import { UploadJobsList } from "@retab/react";
+
+function UploadPage() {
+  return (
+    <UploadJobsList
+      metadata={{
+        source: "web-upload",
+        user_id: "user_123",
+      }}
+    />
+  );
+}
+```
+
+---
+
+## Filter Types
+
+Filters can be used with `ExtractionsList` and `ExtractionReviewer` to control which extractions are displayed.
+
+### FilterType
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Unique identifier for the filter |
+| `field` | `"created_date" \| "status" \| "metadata"` | Field to filter on |
+| `operator` | `"after" \| "before" \| "within" \| "is" \| "is_not" \| "contains"` | Filter operator |
+| `value` | `string \| Date` | Filter value |
+| `endValue` | `Date` | End date for "within" operator |
+| `metadataKey` | `string` | Key for metadata filters |
+
+### Example Filters
+
+```tsx Filter Examples
+const filters = [
+  // Status filter
+  {
+    id: "status_filter",
+    field: "status",
+    operator: "is",
+    value: "review_required",
+  },
+  // Date filter
+  {
+    id: "date_filter",
+    field: "created_date",
+    operator: "after",
+    value: new Date("2024-01-01"),
+  },
+  // Metadata filter
+  {
+    id: "metadata_filter",
+    field: "metadata",
+    operator: "is",
+    metadataKey: "department",
+    value: "finance",
+  },
+];
+```
