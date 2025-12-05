@@ -1,0 +1,350 @@
+---
+title: Hooks Reference
+---
+
+The `@retab/react` package exports several React hooks for accessing Retab context and data. These hooks must be used within a `RetabProvider`.
+
+## useProject
+
+Access the current project's data and configuration.
+
+### Returns
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `project` | `Project` | The current project object |
+| `applyComputations` | `(data: any) => Promise<any>` | Apply computed fields to extraction data |
+
+### Example
+
+```tsx useProject Example
+import { useProject } from "@retab/react";
+
+function ProjectInfo() {
+  const { project } = useProject();
+
+  return (
+    <div>
+      <h2>{project.name}</h2>
+      <p>Schema: {project.published_config.json_schema.title}</p>
+    </div>
+  );
+}
+```
+
+---
+
+## useExtractions
+
+Access the extractions list and selection state. This hook requires the `ExtractionsProvider` to be enabled (default).
+
+### Returns
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `extractions` | `Extraction[]` | List of extractions |
+| `selectedExtractionId` | `string \| null` | Currently selected extraction ID |
+| `setSelectedExtractionId` | `(id: string \| null) => void` | Set the selected extraction |
+
+### Example
+
+```tsx useExtractions Example
+import { useExtractions } from "@retab/react";
+
+function ExtractionSelector() {
+  const { extractions, selectedExtractionId, setSelectedExtractionId } = useExtractions();
+
+  return (
+    <ul>
+      {extractions.map((extraction) => (
+        <li
+          key={extraction.id}
+          onClick={() => setSelectedExtractionId(extraction.id)}
+          style={{
+            fontWeight: extraction.id === selectedExtractionId ? "bold" : "normal",
+          }}
+        >
+          {extraction.file.filename}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+---
+
+## useOptionalExtractions
+
+Same as `useExtractions`, but returns `null` if the extractions context is not available. Useful for components that may be used outside the extractions provider.
+
+### Example
+
+```tsx useOptionalExtractions Example
+import { useOptionalExtractions } from "@retab/react";
+
+function OptionalExtractionInfo() {
+  const extractionsContext = useOptionalExtractions();
+
+  if (!extractionsContext) {
+    return <p>Extractions context not available</p>;
+  }
+
+  return <p>Selected: {extractionsContext.selectedExtractionId}</p>;
+}
+```
+
+---
+
+## useExtraction
+
+Fetch a single extraction by ID. Returns the extraction data and loading state.
+
+### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `extractionId` | `string \| null` | The extraction ID to fetch |
+
+### Returns
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `data` | `Extraction \| null` | The extraction object |
+| `isLoading` | `boolean` | Whether the extraction is loading |
+| `error` | `Error \| null` | Error if the fetch failed |
+
+### Example
+
+```tsx useExtraction Example
+import { useExtraction } from "@retab/react";
+
+function ExtractionDetails({ extractionId }: { extractionId: string }) {
+  const { data: extraction, isLoading, error } = useExtraction(extractionId);
+
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+  if (!extraction) return <p>Not found</p>;
+
+  return (
+    <div>
+      <h3>{extraction.file.filename}</h3>
+      <p>Status: {extraction.human_review_status}</p>
+      <pre>{JSON.stringify(extraction.predictions, null, 2)}</pre>
+    </div>
+  );
+}
+```
+
+---
+
+## useExtractionList
+
+Query extractions with filters, pagination, and sorting. Returns a React Query result.
+
+### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `options` | `ExtractionListOptions` | Query options |
+
+### ExtractionListOptions
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `origin_dot_id` | `string` | Project ID to filter by |
+| `limit` | `number` | Number of items per page |
+| `order` | `"asc" \| "desc"` | Sort order |
+| `before` | `string` | Cursor for previous page |
+| `after` | `string` | Cursor for next page |
+| `filename` | `string` | Filter by filename (search) |
+| `human_review_status` | `string` | Filter by review status |
+| `from_date` | `string` | Filter by start date (YYYY-MM-DD) |
+| `to_date` | `string` | Filter by end date (YYYY-MM-DD) |
+| `metadata` | `Record<string, string>` | Filter by metadata |
+
+### Returns
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `data` | `{ data: Extraction[], list_metadata: PaginationMetadata }` | Query result |
+| `isLoading` | `boolean` | Whether the query is loading |
+| `error` | `Error \| null` | Error if the query failed |
+| `refetch` | `() => void` | Refetch the data |
+
+### Example
+
+```tsx useExtractionList Example
+import { useExtractionList } from "@retab/react";
+import { useState } from "react";
+
+function FilteredExtractions({ projectId }: { projectId: string }) {
+  const [cursor, setCursor] = useState<string | null>(null);
+
+  const { data, isLoading } = useExtractionList({
+    origin_dot_id: projectId,
+    limit: 10,
+    order: "desc",
+    after: cursor || undefined,
+    human_review_status: "review_required",
+  });
+
+  if (isLoading) return <p>Loading...</p>;
+
+  const extractions = data?.data || [];
+  const metadata = data?.list_metadata;
+
+  return (
+    <div>
+      <ul>
+        {extractions.map((ext) => (
+          <li key={ext.id}>{ext.file.filename}</li>
+        ))}
+      </ul>
+      {metadata?.after && (
+        <button onClick={() => setCursor(metadata.after)}>
+          Next Page
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## useJsonSchema
+
+Access the current project's JSON schema, including computed fields.
+
+### Returns
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `computedSchema` | `ExtendedJSONSchema7` | Schema with computed fields included |
+| `jsonSchema` | `ExtendedJSONSchema7` | Original schema without computed fields |
+
+### Example
+
+```tsx useJsonSchema Example
+import { useJsonSchema } from "@retab/react";
+
+function SchemaViewer() {
+  const { computedSchema, jsonSchema } = useJsonSchema();
+
+  return (
+    <div>
+      <h3>Schema Properties</h3>
+      <ul>
+        {Object.keys(computedSchema.properties || {}).map((key) => (
+          <li key={key}>
+            {key}: {computedSchema.properties[key].type}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+---
+
+## useAuth
+
+Access the authentication context for making authenticated API requests.
+
+### Returns
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `fetchWithAuth` | `(url: string, options?: RequestInit) => Promise<Response>` | Fetch function with auth headers |
+| `isAuthenticated` | `boolean` | Whether the user is authenticated |
+
+### Example
+
+```tsx useAuth Example
+import { useAuth } from "@retab/react";
+
+function CustomApiCall() {
+  const { fetchWithAuth } = useAuth();
+
+  const handleClick = async () => {
+    const response = await fetchWithAuth("/v1/extractions");
+    const data = await response.json();
+    console.log(data);
+  };
+
+  return <button onClick={handleClick}>Fetch Extractions</button>;
+}
+```
+
+---
+
+## useOCR
+
+Access OCR context for field location detection and source highlighting.
+
+### Returns
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `getFieldSources` | `(extractionId: string, fieldPath: string) => Source[]` | Get OCR sources for a field |
+| `isLoading` | `boolean` | Whether OCR data is loading |
+
+### Example
+
+```tsx useOCR Example
+import { useOCR } from "@retab/react";
+
+function FieldSources({ extractionId, fieldPath }) {
+  const { getFieldSources, isLoading } = useOCR();
+
+  if (isLoading) return <p>Loading sources...</p>;
+
+  const sources = getFieldSources(extractionId, fieldPath);
+
+  return (
+    <div>
+      <h4>Sources for {fieldPath}</h4>
+      <ul>
+        {sources.map((source, i) => (
+          <li key={i}>
+            Page {source.page}: "{source.text}"
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+---
+
+## Type Definitions
+
+### Extraction
+
+```typescript Extraction
+interface Extraction {
+  id: string;
+  file: {
+    id: string;
+    filename: string;
+    mime_type: string;
+  };
+  predictions: Record<string, any>;
+  predictions_draft?: Record<string, any>;
+  human_review_status: "success" | "review_required" | "reviewed";
+  metadata?: Record<string, string>;
+  created_at: string;
+}
+```
+
+### PaginationMetadata
+
+```typescript PaginationMetadata
+interface PaginationMetadata {
+  before?: string | null;
+  after?: string | null;
+}
+```
