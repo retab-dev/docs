@@ -31,7 +31,7 @@ Unlike manual form filling or template-based approaches, `edit` provides:
 - **Zero Configuration**: No need to pre-define field positions or create templates
 - **Natural Language Instructions**: Describe what to fill in plain English
 - **Automatic Field Matching**: LLM intelligently maps your data to form fields
-- **Multiple Output Formats**: Get the filled PDF, annotated versions, and structured field data
+- **MIMEData Output**: Get the filled PDF as MIMEData with filename and base64 content
 - **Checkbox Support**: Handles both text fields and checkboxes
 
 ## Edit API
@@ -39,8 +39,10 @@ Unlike manual form filling or template-based approaches, `edit` provides:
 <ParamField body="EditRequest" type="EditRequest">
   <Expandable title="properties">
 
-<ParamField body="pdf_base64" type="string" required>
-  Base64-encoded PDF file to edit. The PDF should contain fillable form fields or areas where text can be added.
+<ParamField body="document" type="MIMEData" required>
+  The document to edit. Can be a file path, URL, or MIMEData object containing:
+  - `filename`: Name of the file (e.g., "form.pdf")
+  - `url`: Data URI with base64 content (e.g., "data:application/pdf;base64,...")
 </ParamField>
 
 <ParamField body="filling_instructions" type="string" required>
@@ -51,41 +53,22 @@ Unlike manual form filling or template-based approaches, `edit` provides:
   The AI model to use for form field detection and filling. Recommended: `gemini-2.5-pro` for accuracy.
 </ParamField>
 
-<ParamField body="annotation_level" type="string" default="line">
-  OCR annotation granularity level:
-  - `"line"` (default): Group text by lines - best for most forms
-  - `"block"`: Group text by paragraphs/blocks - for dense documents
-  - `"token"`: Individual words - for precise field detection
-</ParamField>
-
 </Expandable>
 </ParamField>
 
 <ResponseField name="Returns" type="EditResponse Object">
-An EditResponse object containing the filled PDF and form schema information.
+An EditResponse object containing the filled PDF and form data.
   <Expandable title="properties">
-    <ResponseField name="form_schema" type="FormSchema Object">
-      The detected form schema with all identified fillable fields and their positions.
-    </ResponseField>
-
-    <ResponseField name="filled_form_schema" type="FilledFormSchema Object">
-      The form schema with filled values based on your instructions.
-    </ResponseField>
-
     <ResponseField name="ocr_result" type="OCRResult Object">
-      Raw OCR results including all detected text elements and their bounding boxes.
+      Raw OCR results including all detected text elements, their bounding boxes, and an annotated PDF (as MIMEData).
     </ResponseField>
 
-    <ResponseField name="ocr_annotated_pdf_base64" type="string">
-      Base64-encoded PDF with OCR bounding boxes drawn (useful for debugging).
+    <ResponseField name="form_data" type="list[FilledFormField]">
+      List of form fields with filled values based on your instructions. Each field includes bbox, description, type, and value.
     </ResponseField>
 
-    <ResponseField name="form_fields_pdf_base64" type="string">
-      Base64-encoded PDF with detected form field bounding boxes highlighted.
-    </ResponseField>
-
-    <ResponseField name="filled_pdf_base64" type="string">
-      Base64-encoded PDF with form fields filled with the provided values.
+    <ResponseField name="filled_pdf" type="MIMEData">
+      The filled PDF as MIMEData containing filename and url (data URI with base64 content).
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -96,18 +79,15 @@ Fill PDF forms programmatically using natural language instructions.
 
 <CodeGroup>
 ```python Python
-import base64
 from retab import Retab
+import base64
 
 client = Retab()
 
-# Read the PDF form
-with open("application-form.pdf", "rb") as f:
-    pdf_base64 = base64.b64encode(f.read()).decode("utf-8")
-
 # Fill the form with natural language instructions
+# The SDK accepts file paths directly
 result = client.documents.edit(
-    pdf_base64=pdf_base64,
+    document="application-form.pdf",
     filling_instructions="""
     Full Name: Jane Smith
     Date of Birth: March 15, 1985
@@ -120,26 +100,22 @@ result = client.documents.edit(
     I agree to the terms and conditions: checked
     """,
     model="gemini-2.5-pro",
-    annotation_level="line"
 )
 
 # Save the filled PDF
-if result.filled_pdf_base64:
-    filled_bytes = base64.b64decode(result.filled_pdf_base64)
+if result.filled_pdf:
+    # Extract base64 content from data URI
+    base64_content = result.filled_pdf.url.split(",")[1]
+    filled_bytes = base64.b64decode(base64_content)
     with open("filled-application.pdf", "wb") as f:
         f.write(filled_bytes)
     print("Filled form saved!")
 
-# Review what was detected and filled
-print(f"Detected {len(result.form_schema.form_fields)} form fields:")
-for field in result.form_schema.form_fields:
-    print(f"  - {field.type}: {field.description}")
-
-if result.filled_form_schema:
-    print("\nFilled values:")
-    for field in result.filled_form_schema.form_schema:
-        if field.value:
-            print(f"  - {field.description}: {field.value}")
+# Review what was filled
+print(f"Filled {len(result.form_data)} form fields:")
+for field in result.form_data:
+    if field.value:
+        print(f"  - {field.description}: {field.value}")
 ```
 
 ```javascript Javascript
@@ -154,7 +130,10 @@ const pdfBase64 = pdfBuffer.toString('base64');
 
 // Fill the form with natural language instructions
 const result = await client.documents.edit({
-    pdf_base64: pdfBase64,
+    document: {
+        filename: "application-form.pdf",
+        url: `data:application/pdf;base64,${pdfBase64}`
+    },
     filling_instructions: `
         Full Name: Jane Smith
         Date of Birth: March 15, 1985
@@ -167,30 +146,23 @@ const result = await client.documents.edit({
         I agree to the terms and conditions: checked
     `,
     model: "gemini-2.5-pro",
-    annotation_level: "line"
 });
 
 // Save the filled PDF
-if (result.filled_pdf_base64) {
-    const filledBuffer = Buffer.from(result.filled_pdf_base64, 'base64');
+if (result.filled_pdf) {
+    const base64Content = result.filled_pdf.url.split(",")[1];
+    const filledBuffer = Buffer.from(base64Content, 'base64');
     writeFileSync("filled-application.pdf", filledBuffer);
     console.log("Filled form saved!");
 }
 
-// Review what was detected and filled
-console.log(`Detected ${result.form_schema.form_fields.length} form fields:`);
-result.form_schema.form_fields.forEach(field => {
-    console.log(`  - ${field.type}: ${field.description}`);
+// Review what was filled
+console.log(`Filled ${result.form_data.length} form fields:`);
+result.form_data.forEach(field => {
+    if (field.value) {
+        console.log(`  - ${field.description}: ${field.value}`);
+    }
 });
-
-if (result.filled_form_schema) {
-    console.log("\nFilled values:");
-    result.filled_form_schema.form_schema.forEach(field => {
-        if (field.value) {
-            console.log(`  - ${field.description}: ${field.value}`);
-        }
-    });
-}
 ```
 
 ```typescript TypeScript
@@ -204,7 +176,10 @@ const pdfBuffer = readFileSync("application-form.pdf");
 const pdfBase64 = pdfBuffer.toString('base64');
 
 const editRequest: EditRequest = {
-    pdf_base64: pdfBase64,
+    document: {
+        filename: "application-form.pdf",
+        url: `data:application/pdf;base64,${pdfBase64}`
+    },
     filling_instructions: `
         Full Name: Jane Smith
         Date of Birth: March 15, 1985
@@ -217,32 +192,25 @@ const editRequest: EditRequest = {
         I agree to the terms and conditions: checked
     `,
     model: "gemini-2.5-pro",
-    annotation_level: "line"
 };
 
 const result: EditResponse = await client.documents.edit(editRequest);
 
 // Save the filled PDF
-if (result.filled_pdf_base64) {
-    const filledBuffer = Buffer.from(result.filled_pdf_base64, 'base64');
+if (result.filled_pdf) {
+    const base64Content = result.filled_pdf.url.split(",")[1];
+    const filledBuffer = Buffer.from(base64Content, 'base64');
     writeFileSync("filled-application.pdf", filledBuffer);
     console.log("Filled form saved!");
 }
 
-// Review what was detected and filled
-console.log(`Detected ${result.form_schema.form_fields.length} form fields:`);
-result.form_schema.form_fields.forEach(field => {
-    console.log(`  - ${field.type}: ${field.description}`);
+// Review what was filled
+console.log(`Filled ${result.form_data.length} form fields:`);
+result.form_data.forEach(field => {
+    if (field.value) {
+        console.log(`  - ${field.description}: ${field.value}`);
+    }
 });
-
-if (result.filled_form_schema) {
-    console.log("\nFilled values:");
-    result.filled_form_schema.form_schema.forEach(field => {
-        if (field.value) {
-            console.log(`  - ${field.description}: ${field.value}`);
-        }
-    });
-}
 ```
 </CodeGroup>
 
@@ -279,11 +247,7 @@ applicants = [
     }
 ]
 
-# Read the template form once
-with open("template-form.pdf", "rb") as f:
-    template_base64 = base64.b64encode(f.read()).decode("utf-8")
-
-# Process each applicant
+# Process each applicant using file path directly
 for i, applicant in enumerate(applicants):
     instructions = f"""
     Full Name: {applicant['name']}
@@ -293,15 +257,16 @@ for i, applicant in enumerate(applicants):
     """
     
     result = client.documents.edit(
-        pdf_base64=template_base64,
+        document="template-form.pdf",
         filling_instructions=instructions,
         model="gemini-2.5-pro"
     )
     
-    if result.filled_pdf_base64:
+    if result.filled_pdf:
         output_filename = f"filled-form-{i+1}-{applicant['name'].replace(' ', '-')}.pdf"
+        base64_content = result.filled_pdf.url.split(",")[1]
         with open(output_filename, "wb") as f:
-            f.write(base64.b64decode(result.filled_pdf_base64))
+            f.write(base64.b64decode(base64_content))
         print(f"Created: {output_filename}")
 
 print(f"Processed {len(applicants)} forms successfully!")
@@ -350,14 +315,18 @@ for (let i = 0; i < applicants.length; i++) {
     `;
     
     const result = await client.documents.edit({
-        pdf_base64: templateBase64,
+        document: {
+            filename: "template-form.pdf",
+            url: `data:application/pdf;base64,${templateBase64}`
+        },
         filling_instructions: instructions,
         model: "gemini-2.5-pro"
     });
     
-    if (result.filled_pdf_base64) {
+    if (result.filled_pdf) {
         const outputFilename = `filled-form-${i+1}-${applicant.name.replace(/ /g, '-')}.pdf`;
-        writeFileSync(outputFilename, Buffer.from(result.filled_pdf_base64, 'base64'));
+        const base64Content = result.filled_pdf.url.split(",")[1];
+        writeFileSync(outputFilename, Buffer.from(base64Content, 'base64'));
         console.log(`Created: ${outputFilename}`);
     }
 }
@@ -383,7 +352,8 @@ console.log(`Processed ${applicants.length} forms successfully!`);
 - **For checkboxes**: Use "checked" or "unchecked" as the value
 - **Include context**: If a form has multiple similar fields, add context like "Section A - Name: John"
 
-### Debugging Tips
-- Use `ocr_annotated_pdf_base64` to verify OCR detected all text correctly
-- Use `form_fields_pdf_base64` to see which fields were identified
-- Review `form_schema.form_fields` to understand what the LLM detected before filling
+### Working with MIMEData
+- The `filled_pdf` response is a MIMEData object with `filename` and `url` properties
+- The `url` is a data URI: `data:application/pdf;base64,<base64_content>`
+- Extract base64 content by splitting on comma: `url.split(",")[1]`
+- Python SDK accepts file paths directly and handles MIMEData conversion automatically
