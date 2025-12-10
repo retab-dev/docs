@@ -6,34 +6,30 @@ openapi: 'POST /v1/documents/edit'
 <RequestExample>
 
 ```python python
-import base64
 from retab import Retab
 
 client = Retab()
 
-# Read and encode PDF
-with open("form.pdf", "rb") as f:
-    pdf_base64 = base64.b64encode(f.read()).decode("utf-8")
-
 # Edit the form by inferring fields and filling them
 result = client.documents.edit(
-    pdf_base64=pdf_base64,
+    document="form.pdf",  # Can be a file path, URL, or MIMEData
     filling_instructions="Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street, City: New York",
     model="gemini-2.5-pro",
-    annotation_level="line",
 )
 
-# Access the filled PDF
-if result.filled_pdf_base64:
-    filled_pdf_bytes = base64.b64decode(result.filled_pdf_base64)
+# Access the filled PDF (MIMEData with filename and url containing base64 data)
+if result.filled_pdf:
+    import base64
+    # Extract base64 content from data URI
+    base64_content = result.filled_pdf.url.split(",")[1]
+    filled_pdf_bytes = base64.b64decode(base64_content)
     with open("filled_form.pdf", "wb") as f:
         f.write(filled_pdf_bytes)
 
-# Access form schema and filled values
-print(f"Found {len(result.form_schema.form_fields)} form fields")
-if result.filled_form_schema:
-    for field in result.filled_form_schema.form_schema:
-        print(f"Field: {field.description} = {field.value}")
+# Access form data with filled values
+print(f"Filled {len(result.form_data)} form fields")
+for field in result.form_data:
+    print(f"Field: {field.description} = {field.value}")
 ```
 
 ```javascript javascript
@@ -45,30 +41,31 @@ config();
 
 const client = new Retab();
 
-// Read and encode PDF
+// Read and encode PDF as MIMEData
 const pdfBuffer = readFileSync("form.pdf");
 const pdfBase64 = pdfBuffer.toString('base64');
 
 const result = await client.documents.edit({
-    pdf_base64: pdfBase64,
+    document: {
+        filename: "form.pdf",
+        url: `data:application/pdf;base64,${pdfBase64}`
+    },
     filling_instructions: "Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street, City: New York",
     model: "gemini-2.5-pro",
-    annotation_level: "line",
 });
 
 // Save the filled PDF
-if (result.filled_pdf_base64) {
-    const filledPdfBuffer = Buffer.from(result.filled_pdf_base64, 'base64');
+if (result.filled_pdf) {
+    const base64Content = result.filled_pdf.url.split(",")[1];
+    const filledPdfBuffer = Buffer.from(base64Content, 'base64');
     writeFileSync("filled_form.pdf", filledPdfBuffer);
 }
 
-// Access form schema and filled values
-console.log(`Found ${result.form_schema.form_fields.length} form fields`);
-if (result.filled_form_schema) {
-    result.filled_form_schema.form_schema.forEach(field => {
-        console.log(`Field: ${field.description} = ${field.value}`);
-    });
-}
+// Access form data with filled values
+console.log(`Filled ${result.form_data.length} form fields`);
+result.form_data.forEach(field => {
+    console.log(`Field: ${field.description} = ${field.value}`);
+});
 ```
 
 ```typescript typescript
@@ -80,32 +77,33 @@ config();
 
 const client = new Retab();
 
-// Read and encode PDF
+// Read and encode PDF as MIMEData
 const pdfBuffer = readFileSync("form.pdf");
 const pdfBase64 = pdfBuffer.toString('base64');
 
 const editRequest: EditRequest = {
-    pdf_base64: pdfBase64,
+    document: {
+        filename: "form.pdf",
+        url: `data:application/pdf;base64,${pdfBase64}`
+    },
     filling_instructions: "Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street, City: New York",
     model: "gemini-2.5-pro",
-    annotation_level: "line",
 };
 
 const result: EditResponse = await client.documents.edit(editRequest);
 
 // Save the filled PDF
-if (result.filled_pdf_base64) {
-    const filledPdfBuffer = Buffer.from(result.filled_pdf_base64, 'base64');
+if (result.filled_pdf) {
+    const base64Content = result.filled_pdf.url.split(",")[1];
+    const filledPdfBuffer = Buffer.from(base64Content, 'base64');
     writeFileSync("filled_form.pdf", filledPdfBuffer);
 }
 
-// Access form schema and filled values
-console.log(`Found ${result.form_schema.form_fields.length} form fields`);
-if (result.filled_form_schema) {
-    result.filled_form_schema.form_schema.forEach(field => {
-        console.log(`Field: ${field.description} = ${field.value}`);
-    });
-}
+// Access form data with filled values
+console.log(`Filled ${result.form_data.length} form fields`);
+result.form_data.forEach(field => {
+    console.log(`Field: ${field.description} = ${field.value}`);
+});
 ```
 
 ```bash curl
@@ -114,10 +112,12 @@ curl -X 'POST' \
   -H "Api-Key: $RETAB_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{
-  "pdf_base64": "JVBERi0xLjQKJcOkw7zDtsO...",
+  "document": {
+    "filename": "form.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsO..."
+  },
   "filling_instructions": "Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street",
   "model": "gemini-2.5-pro",
-  "annotation_level": "line"
 }'
 ```
 
@@ -127,86 +127,6 @@ curl -X 'POST' \
 
 ```json 200
 {
-  "form_schema": {
-    "form_fields": [
-      {
-        "bbox": {
-          "left": 0.15,
-          "top": 0.20,
-          "width": 0.35,
-          "height": 0.03,
-          "page": 1
-        },
-        "description": "Full Name - text input field for applicant's legal name",
-        "type": "text",
-        "value": null
-      },
-      {
-        "bbox": {
-          "left": 0.15,
-          "top": 0.28,
-          "width": 0.20,
-          "height": 0.03,
-          "page": 1
-        },
-        "description": "Date of Birth - date field in MM/DD/YYYY format",
-        "type": "text",
-        "value": null
-      },
-      {
-        "bbox": {
-          "left": 0.55,
-          "top": 0.45,
-          "width": 0.02,
-          "height": 0.02,
-          "page": 1
-        },
-        "description": "Agreement checkbox - confirms acceptance of terms",
-        "type": "checkbox",
-        "value": null
-      }
-    ]
-  },
-  "filled_form_schema": {
-    "form_schema": [
-      {
-        "bbox": {
-          "left": 0.15,
-          "top": 0.20,
-          "width": 0.35,
-          "height": 0.03,
-          "page": 1
-        },
-        "description": "Full Name - text input field for applicant's legal name",
-        "type": "text",
-        "value": "John Doe"
-      },
-      {
-        "bbox": {
-          "left": 0.15,
-          "top": 0.28,
-          "width": 0.20,
-          "height": 0.03,
-          "page": 1
-        },
-        "description": "Date of Birth - date field in MM/DD/YYYY format",
-        "type": "text",
-        "value": "01/15/1990"
-      },
-      {
-        "bbox": {
-          "left": 0.55,
-          "top": 0.45,
-          "width": 0.02,
-          "height": 0.02,
-          "page": 1
-        },
-        "description": "Agreement checkbox - confirms acceptance of terms",
-        "type": "checkbox",
-        "value": "unchecked"
-      }
-    ]
-  },
   "ocr_result": {
     "elements": [
       {
@@ -222,11 +142,53 @@ curl -X 'POST' \
       }
     ],
     "formatted_text": "--- Page 1 ---\n[1, 0.350, 0.050, 0.300, 0.040] \"Application Form\"",
-    "annotated_pdf_base64": "JVBERi0xLjQK..."
+    "annotated_pdf": {
+      "filename": "annotated.pdf",
+      "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    }
   },
-  "ocr_annotated_pdf_base64": "JVBERi0xLjQK...",
-  "form_fields_pdf_base64": "JVBERi0xLjQK...",
-  "filled_pdf_base64": "JVBERi0xLjQK..."
+  "form_data": [
+    {
+      "bbox": {
+        "left": 0.15,
+        "top": 0.20,
+        "width": 0.35,
+        "height": 0.03,
+        "page": 1
+      },
+      "description": "Full Name - text input field for applicant's legal name",
+      "type": "text",
+      "value": "John Doe"
+    },
+    {
+      "bbox": {
+        "left": 0.15,
+        "top": 0.28,
+        "width": 0.20,
+        "height": 0.03,
+        "page": 1
+      },
+      "description": "Date of Birth - date field in MM/DD/YYYY format",
+      "type": "text",
+      "value": "01/15/1990"
+    },
+    {
+      "bbox": {
+        "left": 0.55,
+        "top": 0.45,
+        "width": 0.02,
+        "height": 0.02,
+        "page": 1
+      },
+      "description": "Agreement checkbox - confirms acceptance of terms",
+      "type": "checkbox",
+      "value": "unchecked"
+    }
+  ],
+  "filled_pdf": {
+    "filename": "filled_form.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  }
 }
 ```
 

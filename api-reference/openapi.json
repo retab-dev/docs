@@ -12242,6 +12242,7 @@
                     "projects.extract",
                     "documents.extract",
                     "documents.parse",
+                    "documents.edit",
                     "schemas.generate",
                     "automation.outlook",
                     "documents.create_messages",
@@ -12432,6 +12433,7 @@
                     "projects.extract",
                     "documents.extract",
                     "documents.parse",
+                    "documents.edit",
                     "schemas.generate",
                     "automation.outlook",
                     "documents.create_messages",
@@ -17531,6 +17533,7 @@
                     "projects.extract",
                     "documents.extract",
                     "documents.parse",
+                    "documents.edit",
                     "schemas.generate",
                     "automation.outlook",
                     "documents.create_messages",
@@ -20162,6 +20165,7 @@
                     "projects.extract",
                     "documents.extract",
                     "documents.parse",
+                    "documents.edit",
                     "schemas.generate",
                     "automation.outlook",
                     "documents.create_messages",
@@ -26565,7 +26569,7 @@
           "Edit"
         ],
         "summary": "Annotate Pdf Route",
-        "description": "Annotate a local PDF file with OCR bounding boxes.\n\nThis endpoint:\n1. Reads the PDF from the specified input path\n2. Performs OCR using Google Document AI\n3. Draws bounding boxes around detected text elements\n4. Saves the annotated PDF to the specified output path\n\nUseful for debugging and visualizing what the OCR detects.",
+        "description": "Annotate a local PDF file with OCR bounding boxes.\n\nThis endpoint:\n1. Reads the PDF from the specified input path\n2. Performs OCR using Google Document AI\n3. Draws bounding boxes around detected text elements\n4. Saves the annotated PDF to the specified output path\n\nUseful for debugging and visualizing what the OCR detects.\n\nNote: This endpoint is only available in dev environment.",
         "operationId": "annotate_pdf_route_internal_edit_annotate_pdf_post",
         "security": [
           {
@@ -28529,12 +28533,6 @@
             "type": "string",
             "title": "Output Path",
             "description": "Absolute path where the annotated PDF will be saved"
-          },
-          "annotation_level": {
-            "type": "string",
-            "title": "Annotation Level",
-            "description": "OCR annotation level: 'block', 'line', or 'token'",
-            "default": "line"
           }
         },
         "type": "object",
@@ -31259,7 +31257,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
+                "$ref": "#/components/schemas/openai__types__chat__chat_completion__ChoiceLogprobs"
               },
               {
                 "type": "null"
@@ -33535,22 +33533,15 @@
       },
       "EditRequest": {
         "properties": {
-          "pdf_base64": {
-            "type": "string",
-            "title": "Pdf Base64",
-            "description": "Base64-encoded PDF file"
+          "document": {
+            "$ref": "#/components/schemas/MIMEData-Input",
+            "description": "Input document (PDF)"
           },
           "model": {
             "type": "string",
             "title": "Model",
             "description": "LLM model to use for inference",
             "default": "gemini-2.5-pro"
-          },
-          "annotation_level": {
-            "type": "string",
-            "title": "Annotation Level",
-            "description": "OCR annotation level: 'block', 'line', or 'token'",
-            "default": "line"
           },
           "filling_instructions": {
             "type": "string",
@@ -33560,7 +33551,7 @@
         },
         "type": "object",
         "required": [
-          "pdf_base64",
+          "document",
           "filling_instructions"
         ],
         "title": "EditRequest",
@@ -33568,54 +33559,34 @@
       },
       "EditResponse": {
         "properties": {
-          "form_schema": {
-            "$ref": "#/components/schemas/FormSchema",
-            "description": "The inferred form schema"
-          },
           "ocr_result": {
             "$ref": "#/components/schemas/OCRResult",
             "description": "The OCR results used for inference"
           },
-          "ocr_annotated_pdf_base64": {
-            "type": "string",
-            "title": "Ocr Annotated Pdf Base64",
-            "description": "Base64-encoded PDF with OCR text bounding boxes"
+          "form_data": {
+            "items": {
+              "$ref": "#/components/schemas/FilledFormField"
+            },
+            "type": "array",
+            "title": "Form Data",
+            "description": "List of form fields (with positions, descriptions, and metadata) that define the structure of the form."
           },
-          "form_fields_pdf_base64": {
-            "type": "string",
-            "title": "Form Fields Pdf Base64",
-            "description": "Base64-encoded PDF with form field bounding boxes"
-          },
-          "filled_form_schema": {
+          "filled_pdf": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/FilledFormSchema"
+                "$ref": "#/components/schemas/retab__types__mime__MIMEData"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Filled form schema (step 2)"
-          },
-          "filled_pdf_base64": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Filled Pdf Base64",
-            "description": "Base64-encoded PDF with filled form values"
+            "description": "PDF with filled form values"
           }
         },
         "type": "object",
         "required": [
-          "form_schema",
           "ocr_result",
-          "ocr_annotated_pdf_base64",
-          "form_fields_pdf_base64"
+          "form_data"
         ],
         "title": "EditResponse",
         "description": "Response from the fill_form endpoint.\n    "
@@ -35234,24 +35205,6 @@
         "title": "FilledFormField",
         "description": "Single field in the form schema (text input, checkbox, etc.)."
       },
-      "FilledFormSchema": {
-        "properties": {
-          "form_schema": {
-            "items": {
-              "$ref": "#/components/schemas/FilledFormField"
-            },
-            "type": "array",
-            "title": "Form Schema",
-            "description": "List of form fields (with positions, descriptions, and metadata) that define the structure of the form."
-          }
-        },
-        "type": "object",
-        "required": [
-          "form_schema"
-        ],
-        "title": "FilledFormSchema",
-        "description": "Top-level object holding the list of fields for a given form template."
-      },
       "FinetunedModel": {
         "properties": {
           "object": {
@@ -35994,27 +35947,20 @@
       },
       "InferFormSchemaRequest": {
         "properties": {
-          "pdf_base64": {
-            "type": "string",
-            "title": "Pdf Base64",
-            "description": "Base64-encoded PDF file"
+          "document": {
+            "$ref": "#/components/schemas/MIMEData-Input",
+            "description": "Input document (PDF)"
           },
           "model": {
             "type": "string",
             "title": "Model",
             "description": "LLM model to use for inference",
             "default": "gemini-2.5-pro"
-          },
-          "annotation_level": {
-            "type": "string",
-            "title": "Annotation Level",
-            "description": "OCR annotation level: 'block', 'line', or 'token'",
-            "default": "line"
           }
         },
         "type": "object",
         "required": [
-          "pdf_base64"
+          "document"
         ],
         "title": "InferFormSchemaRequest",
         "description": "Request to infer form schema from a PDF."
@@ -36029,23 +35975,16 @@
             "$ref": "#/components/schemas/OCRResult",
             "description": "The OCR results used for inference"
           },
-          "ocr_annotated_pdf_base64": {
-            "type": "string",
-            "title": "Ocr Annotated Pdf Base64",
-            "description": "Base64-encoded PDF with OCR text bounding boxes"
-          },
-          "form_fields_pdf_base64": {
-            "type": "string",
-            "title": "Form Fields Pdf Base64",
-            "description": "Base64-encoded PDF with form field bounding boxes"
+          "form_fields_pdf": {
+            "$ref": "#/components/schemas/retab__types__mime__MIMEData",
+            "description": "PDF with form field bounding boxes"
           }
         },
         "type": "object",
         "required": [
           "form_schema",
           "ocr_result",
-          "ocr_annotated_pdf_base64",
-          "form_fields_pdf_base64"
+          "form_fields_pdf"
         ],
         "title": "InferFormSchemaResponse",
         "description": "Response containing the inferred form schema."
@@ -36193,7 +36132,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2025-12-10T12:31:43.765778Z",
+              "updated_at": "2025-12-10T14:44:26.907467Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "gpt-5-mini",
@@ -37297,16 +37236,15 @@
             "title": "Formatted Text",
             "description": "Human-readable formatted string of all elements"
           },
-          "annotated_pdf_base64": {
-            "type": "string",
-            "title": "Annotated Pdf Base64",
-            "description": "Base64-encoded PDF with bbox annotations"
+          "annotated_pdf": {
+            "$ref": "#/components/schemas/retab__types__mime__MIMEData",
+            "description": "PDF with bbox annotations"
           }
         },
         "type": "object",
         "required": [
           "formatted_text",
-          "annotated_pdf_base64"
+          "annotated_pdf"
         ],
         "title": "OCRResult",
         "description": "Result of OCR processing on a document."
@@ -39162,21 +39100,14 @@
       },
       "ProcessOCRRequest": {
         "properties": {
-          "pdf_base64": {
-            "type": "string",
-            "title": "Pdf Base64",
-            "description": "Base64-encoded PDF file"
-          },
-          "annotation_level": {
-            "type": "string",
-            "title": "Annotation Level",
-            "description": "OCR annotation level: 'block', 'line', or 'token'",
-            "default": "line"
+          "document": {
+            "$ref": "#/components/schemas/MIMEData-Input",
+            "description": "Input document (PDF)"
           }
         },
         "type": "object",
         "required": [
-          "pdf_base64"
+          "document"
         ],
         "title": "ProcessOCRRequest",
         "description": "Request to process a PDF with OCR only (step 1)."
@@ -39370,6 +39301,17 @@
             ],
             "description": "Project context if extraction triggered from a project endpoint"
           },
+          "edit_props": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessingLogEditProps"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Properties of the edit operation if operation=edit"
+          },
           "billed": {
             "type": "boolean",
             "title": "Billed",
@@ -39398,6 +39340,11 @@
             "title": "Extraction Credits Per Page",
             "readOnly": true
           },
+          "edit_credits_per_page": {
+            "type": "number",
+            "title": "Edit Credits Per Page",
+            "readOnly": true
+          },
           "credits_count": {
             "type": "number",
             "title": "Credits Count",
@@ -39409,10 +39356,25 @@
           "origin",
           "preprocessing_credits_per_page",
           "extraction_credits_per_page",
+          "edit_credits_per_page",
           "credits_count"
         ],
         "title": "ProcessingLog",
         "description": "Model for processing logs."
+      },
+      "ProcessingLogEditProps": {
+        "properties": {
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_name"
+        ],
+        "title": "ProcessingLogEditProps",
+        "description": "Properties for edit operations (form filling)."
       },
       "ProcessingLogExtractionProps": {
         "properties": {
@@ -39553,7 +39515,8 @@
           "correct_image_orientation",
           "extraction",
           "parse",
-          "schema_generation"
+          "schema_generation",
+          "edit"
         ],
         "title": "ProcessingOperation",
         "description": "Enum for processing operations."
@@ -39568,6 +39531,7 @@
               "projects.extract",
               "documents.extract",
               "documents.parse",
+              "documents.edit",
               "schemas.generate",
               "automation.outlook",
               "documents.create_messages",
@@ -40962,7 +40926,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
+                "$ref": "#/components/schemas/openai__types__chat__chat_completion__ChoiceLogprobs"
               },
               {
                 "type": "null"
@@ -41033,7 +40997,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
+                "$ref": "#/components/schemas/openai__types__chat__chat_completion__ChoiceLogprobs"
               },
               {
                 "type": "null"
@@ -43305,14 +43269,14 @@
           },
           "blocks": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__TextBox"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
             },
             "type": "array",
             "title": "Blocks"
           },
           "lines": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__TextBox"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
             },
             "type": "array",
             "title": "Lines"
@@ -43345,6 +43309,55 @@
           "y"
         ],
         "title": "Point"
+      },
+      "main_server__services__custom__bert__cubemimedata__TextBox": {
+        "properties": {
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "center": {
+            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
+          },
+          "vertices": {
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
+              },
+              {
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
+              },
+              {
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
+              },
+              {
+                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
+              }
+            ],
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Vertices",
+            "description": "(top-left, top-right, bottom-right, bottom-left)"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "width",
+          "height",
+          "center",
+          "vertices",
+          "text"
+        ],
+        "title": "TextBox"
       },
       "main_server__services__custom__bertfake__routes__User": {
         "properties": {
@@ -43705,41 +43718,6 @@
         "type": "object",
         "title": "ChoiceLogprobs"
       },
-      "openai__types__chat__chat_completion_chunk__ChoiceLogprobs": {
-        "properties": {
-          "content": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "refusal": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refusal"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "title": "ChoiceLogprobs"
-      },
       "openai__types__chat__chat_completion_message_function_tool_call_param__Function": {
         "properties": {
           "arguments": {
@@ -43912,21 +43890,21 @@
           },
           "blocks": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__TextBox"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
             },
             "type": "array",
             "title": "Blocks"
           },
           "lines": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__TextBox"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
             },
             "type": "array",
             "title": "Lines"
           },
           "tokens": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__TextBox"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
             },
             "type": "array",
             "title": "Tokens"
@@ -43951,55 +43929,6 @@
           "tokens"
         ],
         "title": "Page"
-      },
-      "retab__types__mime__TextBox": {
-        "properties": {
-          "width": {
-            "type": "integer",
-            "title": "Width"
-          },
-          "height": {
-            "type": "integer",
-            "title": "Height"
-          },
-          "center": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
-          },
-          "vertices": {
-            "prefixItems": [
-              {
-                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
-              },
-              {
-                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
-              },
-              {
-                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
-              },
-              {
-                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
-              }
-            ],
-            "type": "array",
-            "maxItems": 4,
-            "minItems": 4,
-            "title": "Vertices",
-            "description": "(top-left, top-right, bottom-right, bottom-left)"
-          },
-          "text": {
-            "type": "string",
-            "title": "Text"
-          }
-        },
-        "type": "object",
-        "required": [
-          "width",
-          "height",
-          "center",
-          "vertices",
-          "text"
-        ],
-        "title": "TextBox"
       }
     },
     "securitySchemes": {
