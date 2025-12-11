@@ -64,7 +64,7 @@ An EditResponse object containing the filled PDF and form data.
       List of form fields with filled values based on your instructions. Each field includes bbox, description, type, and value.
     </ResponseField>
 
-    <ResponseField name="filled_pdf" type="MIMEData">
+    <ResponseField name="filled_document" type="MIMEData">
       The filled PDF as MIMEData containing filename and url (data URI with base64 content).
     </ResponseField>
   </Expandable>
@@ -100,9 +100,9 @@ result = client.documents.edit(
 )
 
 # Save the filled PDF
-if result.filled_pdf:
+if result.filled_document:
     # Extract base64 content from data URI
-    base64_content = result.filled_pdf.url.split(",")[1]
+    base64_content = result.filled_document.url.split(",")[1]
     filled_bytes = base64.b64decode(base64_content)
     with open("filled-application.pdf", "wb") as f:
         f.write(filled_bytes)
@@ -146,8 +146,8 @@ const result = await client.documents.edit({
 });
 
 // Save the filled PDF
-if (result.filled_pdf) {
-    const base64Content = result.filled_pdf.url.split(",")[1];
+if (result.filled_document) {
+    const base64Content = result.filled_document.url.split(",")[1];
     const filledBuffer = Buffer.from(base64Content, 'base64');
     writeFileSync("filled-application.pdf", filledBuffer);
     console.log("Filled form saved!");
@@ -194,8 +194,8 @@ const editRequest: EditRequest = {
 const result: EditResponse = await client.documents.edit(editRequest);
 
 // Save the filled PDF
-if (result.filled_pdf) {
-    const base64Content = result.filled_pdf.url.split(",")[1];
+if (result.filled_document) {
+    const base64Content = result.filled_document.url.split(",")[1];
     const filledBuffer = Buffer.from(base64Content, 'base64');
     writeFileSync("filled-application.pdf", filledBuffer);
     console.log("Filled form saved!");
@@ -259,9 +259,9 @@ for i, applicant in enumerate(applicants):
         model="gemini-2.5-pro"
     )
     
-    if result.filled_pdf:
+    if result.filled_document:
         output_filename = f"filled-form-{i+1}-{applicant['name'].replace(' ', '-')}.pdf"
-        base64_content = result.filled_pdf.url.split(",")[1]
+        base64_content = result.filled_document.url.split(",")[1]
         with open(output_filename, "wb") as f:
             f.write(base64.b64decode(base64_content))
         print(f"Created: {output_filename}")
@@ -320,9 +320,9 @@ for (let i = 0; i < applicants.length; i++) {
         model: "gemini-2.5-pro"
     });
     
-    if (result.filled_pdf) {
+    if (result.filled_document) {
         const outputFilename = `filled-form-${i+1}-${applicant.name.replace(/ /g, '-')}.pdf`;
-        const base64Content = result.filled_pdf.url.split(",")[1];
+        const base64Content = result.filled_document.url.split(",")[1];
         writeFileSync(outputFilename, Buffer.from(base64Content, 'base64'));
         console.log(`Created: ${outputFilename}`);
     }
@@ -350,7 +350,7 @@ console.log(`Processed ${applicants.length} forms successfully!`);
 - **Include context**: If a form has multiple similar fields, add context like "Section A - Name: John"
 
 ### Working with MIMEData
-- The `filled_pdf` response is a MIMEData object with `filename` and `url` properties
+- The `filled_document` response is a MIMEData object with `filename` and `url` properties
 - The `url` is a data URI: `data:application/pdf;base64,<base64_content>`
 - Extract base64 content by splitting on comma: `url.split(",")[1]`
 - Python SDK accepts file paths directly and handles MIMEData conversion automatically
