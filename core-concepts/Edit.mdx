@@ -6,33 +6,50 @@
 
 ### Introduction
 
-The `edit` method in Retab's document processing pipeline enables intelligent PDF form filling. It automatically detects form fields in any PDF document using OCR and LLM inference, then fills them based on natural language instructions. This is ideal for automating form completion workflows, document generation, and batch processing of standardized forms.
+The `edit` method in Retab's document processing pipeline enables intelligent document form filling. It supports **PDF, Word (DOCX), Excel (XLSX), and PowerPoint (PPTX)** files, automatically detecting fillable elements and populating them based on natural language instructions. This is ideal for automating form completion workflows, document generation, and batch processing of standardized forms.
 
-The edit workflow follows these steps:
+### Supported Formats
 
+| Format | Extension | Processing Method |
+|--------|-----------|------------------|
+| **PDF** | `.pdf` | OCR + LLM form field detection |
+| **Word** | `.docx`, `.doc`, `.odt` | Native XML editing (preserves formatting) |
+| **Excel** | `.xlsx`, `.xls`, `.ods` | Native cell editing |
+| **PowerPoint** | `.pptx`, `.ppt`, `.odp` | Native shape/text editing |
+
+### How It Works
+
+**For PDF files:**
 1. **OCR Processing**: Extract text elements with precise bounding box coordinates
 2. **Form Field Detection**: Use LLM to identify fillable fields (text inputs, checkboxes)
 3. **Intelligent Filling**: Match your instructions to the appropriate form fields
 4. **PDF Generation**: Create a new PDF with the filled values
 
+**For Office files (DOCX, XLSX, PPTX):**
+1. **Structure Extraction**: Parse the document's XML structure to identify all text elements
+2. **Element Detection**: LLM identifies fillable placeholders (empty cells, whitespace after labels, placeholder text)
+3. **Native Editing**: Apply edits directly to the XML, preserving all original formatting and styles
+4. **Document Generation**: Return the filled document in its original format
+
 ```mermaid
 flowchart LR
-    A[PDF Form] --> B
+    A[Document] --> B
     
     subgraph Retab["Retab Edit API"]
-        B[1. OCR Processing] --> C[2. Field Detection]
-        C --> D[3. Form Filling]
+        B[1. Structure Analysis] --> C[2. Element Detection]
+        C --> D[3. Intelligent Filling]
     end
     
-    D --> E[Filled PDF]
+    D --> E[Filled Document]
 ```
 
 Unlike manual form filling or template-based approaches, `edit` provides:
+- **Multi-Format Support**: PDF, Word, Excel, and PowerPoint files
 - **Zero Configuration**: No need to pre-define field positions or create templates
-- **Natural Language Instructions**: Describe what to fill in plain English
+- **Natural Language Instructions**: Describe what to fill in plain English or JSON
+- **Format Preservation**: Office files retain all original formatting, styles, and layout
 - **Automatic Field Matching**: LLM intelligently maps your data to form fields
-- **MIMEData Output**: Get the filled PDF as MIMEData with filename and base64 content
-- **Checkbox Support**: Handles both text fields and checkboxes
+- **MIMEData Output**: Get the filled document as MIMEData with filename and base64 content
 
 ## Edit API
 
@@ -40,37 +57,37 @@ Unlike manual form filling or template-based approaches, `edit` provides:
   <Expandable title="properties">
 
 <ParamField body="document" type="MIMEData" required>
-  The document to edit. Can be a file path, URL, or MIMEData object containing:
-  - `filename`: Name of the file (e.g., "form.pdf")
+  The document to edit. Supports PDF, DOCX, XLSX, and PPTX files. Can be a file path, URL, or MIMEData object containing:
+  - `filename`: Name of the file (e.g., "form.pdf", "template.docx", "data.xlsx")
   - `url`: Data URI with base64 content (e.g., "data:application/pdf;base64,...")
 </ParamField>
 
 <ParamField body="filling_instructions" type="string" required>
-  Natural language instructions describing how to fill the form. Include the field values you want to populate, e.g., "Name: John Doe, Date: 2025-01-15, Address: 123 Main St".
+  Natural language or JSON instructions describing how to fill the document. Include the field values you want to populate, e.g., "Name: John Doe, Date: 2025-01-15" or `{"name": "John Doe", "date": "2025-01-15"}`.
 </ParamField>
 
 <ParamField body="model" type="LLMModel" default="gemini-2.5-pro">
-  The AI model to use for form field detection and filling. Recommended: `gemini-2.5-pro` for accuracy.
+  The AI model to use for element detection and filling. Recommended: `gemini-2.5-pro` for accuracy.
 </ParamField>
 
 </Expandable>
 </ParamField>
 
 <ResponseField name="Returns" type="EditResponse Object">
-An EditResponse object containing the filled PDF and form data.
+An EditResponse object containing the filled document and form data.
   <Expandable title="properties">
 
     <ResponseField name="form_data" type="list[FilledFormField]">
-      List of form fields with filled values based on your instructions. Each field includes bbox, description, type, and value.
+      List of form fields with filled values (primarily for PDF). Each field includes bbox, description, type, and value.
     </ResponseField>
 
     <ResponseField name="filled_document" type="MIMEData">
-      The filled PDF as MIMEData containing filename and url (data URI with base64 content).
+      The filled document as MIMEData containing filename and url (data URI with base64 content). Returns the same format as the input (PDF → PDF, DOCX → DOCX, etc.).
     </ResponseField>
   </Expandable>
 </ResponseField>
 
-## Use Case: Automated Form Filling
+## Use Case: PDF Form Filling
 
 Fill PDF forms programmatically using natural language instructions.
 
@@ -332,25 +349,248 @@ console.log(`Processed ${applicants.length} forms successfully!`);
 ```
 </CodeGroup>
 
+## Use Case: Word Document Filling
+
+Fill Word documents (DOCX) while preserving all original formatting and styles.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+import base64
+
+client = Retab()
+
+# Fill a Word document with JSON data
+result = client.documents.edit(
+    document="contract-template.docx",
+    filling_instructions="""
+    {
+        "client_name": "Acme Corporation",
+        "contract_date": "January 15, 2025",
+        "project_description": "Website redesign and development",
+        "total_amount": "$25,000",
+        "payment_terms": "Net 30"
+    }
+    """,
+    model="gemini-2.5-pro",
+)
+
+# Save the filled DOCX (preserves original formatting)
+if result.filled_document:
+    base64_content = result.filled_document.url.split(",")[1]
+    filled_bytes = base64.b64decode(base64_content)
+    with open("filled-contract.docx", "wb") as f:
+        f.write(filled_bytes)
+    print("Filled Word document saved!")
+```
+
+```javascript Javascript
+import { Retab } from '@retab/node';
+import { readFileSync, writeFileSync } from 'fs';
+
+const client = new Retab();
+
+const docxBuffer = readFileSync("contract-template.docx");
+const docxBase64 = docxBuffer.toString('base64');
+
+const result = await client.documents.edit({
+    document: {
+        filename: "contract-template.docx",
+        url: `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${docxBase64}`
+    },
+    filling_instructions: JSON.stringify({
+        client_name: "Acme Corporation",
+        contract_date: "January 15, 2025",
+        project_description: "Website redesign and development",
+        total_amount: "$25,000",
+        payment_terms: "Net 30"
+    }),
+    model: "gemini-2.5-pro",
+});
+
+if (result.filled_document) {
+    const base64Content = result.filled_document.url.split(",")[1];
+    writeFileSync("filled-contract.docx", Buffer.from(base64Content, 'base64'));
+    console.log("Filled Word document saved!");
+}
+```
+</CodeGroup>
+
+## Use Case: Excel Spreadsheet Filling
+
+Fill Excel spreadsheets by targeting specific cells with data.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+import base64
+
+client = Retab()
+
+# Fill an Excel spreadsheet
+result = client.documents.edit(
+    document="invoice-template.xlsx",
+    filling_instructions="""
+    {
+        "invoice_number": "INV-2025-001",
+        "customer_name": "Tech Solutions Inc.",
+        "invoice_date": "2025-01-15",
+        "items": [
+            {"description": "Consulting Services", "quantity": 10, "rate": 150},
+            {"description": "Software License", "quantity": 1, "rate": 500}
+        ],
+        "total": "$2,000"
+    }
+    """,
+    model="gemini-2.5-pro",
+)
+
+if result.filled_document:
+    base64_content = result.filled_document.url.split(",")[1]
+    with open("filled-invoice.xlsx", "wb") as f:
+        f.write(base64.b64decode(base64_content))
+    print("Filled Excel spreadsheet saved!")
+```
+
+```javascript Javascript
+import { Retab } from '@retab/node';
+import { readFileSync, writeFileSync } from 'fs';
+
+const client = new Retab();
+
+const xlsxBuffer = readFileSync("invoice-template.xlsx");
+const xlsxBase64 = xlsxBuffer.toString('base64');
+
+const result = await client.documents.edit({
+    document: {
+        filename: "invoice-template.xlsx",
+        url: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${xlsxBase64}`
+    },
+    filling_instructions: JSON.stringify({
+        invoice_number: "INV-2025-001",
+        customer_name: "Tech Solutions Inc.",
+        invoice_date: "2025-01-15",
+        items: [
+            { description: "Consulting Services", quantity: 10, rate: 150 },
+            { description: "Software License", quantity: 1, rate: 500 }
+        ],
+        total: "$2,000"
+    }),
+    model: "gemini-2.5-pro",
+});
+
+if (result.filled_document) {
+    const base64Content = result.filled_document.url.split(",")[1];
+    writeFileSync("filled-invoice.xlsx", Buffer.from(base64Content, 'base64'));
+    console.log("Filled Excel spreadsheet saved!");
+}
+```
+</CodeGroup>
+
+## Use Case: PowerPoint Presentation Filling
+
+Fill PowerPoint presentations with dynamic content.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+import base64
+
+client = Retab()
+
+# Fill a PowerPoint presentation
+result = client.documents.edit(
+    document="sales-deck-template.pptx",
+    filling_instructions="""
+    {
+        "company_name": "Acme Corp",
+        "presenter_name": "Jane Smith",
+        "presentation_date": "Q1 2025",
+        "revenue_figure": "$1.2M",
+        "growth_percentage": "25%",
+        "key_highlights": ["Expanded to 3 new markets", "Launched 2 new products", "Increased team by 40%"]
+    }
+    """,
+    model="gemini-2.5-pro",
+)
+
+if result.filled_document:
+    base64_content = result.filled_document.url.split(",")[1]
+    with open("filled-sales-deck.pptx", "wb") as f:
+        f.write(base64.b64decode(base64_content))
+    print("Filled PowerPoint presentation saved!")
+```
+
+```javascript Javascript
+import { Retab } from '@retab/node';
+import { readFileSync, writeFileSync } from 'fs';
+
+const client = new Retab();
+
+const pptxBuffer = readFileSync("sales-deck-template.pptx");
+const pptxBase64 = pptxBuffer.toString('base64');
+
+const result = await client.documents.edit({
+    document: {
+        filename: "sales-deck-template.pptx",
+        url: `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,${pptxBase64}`
+    },
+    filling_instructions: JSON.stringify({
+        company_name: "Acme Corp",
+        presenter_name: "Jane Smith",
+        presentation_date: "Q1 2025",
+        revenue_figure: "$1.2M",
+        growth_percentage: "25%",
+        key_highlights: ["Expanded to 3 new markets", "Launched 2 new products", "Increased team by 40%"]
+    }),
+    model: "gemini-2.5-pro",
+});
+
+if (result.filled_document) {
+    const base64Content = result.filled_document.url.split(",")[1];
+    writeFileSync("filled-sales-deck.pptx", Buffer.from(base64Content, 'base64'));
+    console.log("Filled PowerPoint presentation saved!");
+}
+```
+</CodeGroup>
+
 ## Best Practices
 
 ### Model Selection
-- **`gemini-2.5-pro`**: Most accurate for complex forms with many fields or ambiguous layouts. Recommended for production use.
-- **`gemini-2.5-flash`**: Faster and more cost-effective, suitable for simple forms with clear field labels.
+- **`gemini-2.5-pro`**: Most accurate for complex documents with many fields or ambiguous layouts. Recommended for production use.
+- **`gemini-2.5-flash`**: Faster and more cost-effective, suitable for simple documents with clear field labels.
 
-### Annotation Level Selection
-- **`line`** (default): Best for most standard forms where fields are organized in rows
-- **`block`**: Better for forms with dense text or multi-line field descriptions
-- **`token`**: Use when you need precise word-level detection for tightly packed forms
+### Format-Specific Tips
+
+**PDF Forms:**
+- Works best with forms that have clear field labels
+- Supports both text fields and checkboxes
+- For checkboxes, use "checked" or "unchecked" as the value
+
+**Word Documents (DOCX):**
+- Best for documents with placeholders like `[Enter name]` or blank spaces after labels
+- All formatting (fonts, styles, colors) is preserved
+- Tables are fully supported
+
+**Excel Spreadsheets (XLSX):**
+- Ideal for templates with empty cells next to labels
+- Supports multiple sheets
+- Cell references use standard Excel notation (Sheet1!A1)
+
+**PowerPoint Presentations (PPTX):**
+- Works with text placeholders in shapes
+- Tables within slides are supported
+- Preserves all slide formatting and layouts
 
 ### Writing Effective Filling Instructions
-- **Be explicit**: Use field labels that match or closely resemble those in the form
+- **Use JSON for structured data**: `{"name": "John", "date": "2025-01-15"}` works great
+- **Be explicit**: Use field labels that match or closely resemble those in the document
 - **Use key-value pairs**: Format as "Field Name: Value" for best matching
-- **For checkboxes**: Use "checked" or "unchecked" as the value
-- **Include context**: If a form has multiple similar fields, add context like "Section A - Name: John"
+- **Include context**: If a document has multiple similar fields, add context like "Section A - Name: John"
 
 ### Working with MIMEData
 - The `filled_document` response is a MIMEData object with `filename` and `url` properties
-- The `url` is a data URI: `data:application/pdf;base64,<base64_content>`
+- The `url` is a data URI with format-appropriate MIME type
 - Extract base64 content by splitting on comma: `url.split(",")[1]`
 - Python SDK accepts file paths directly and handles MIMEData conversion automatically
+- Output format matches input format (DOCX in → DOCX out, XLSX in → XLSX out)
