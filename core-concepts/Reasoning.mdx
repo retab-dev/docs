@@ -55,24 +55,39 @@ class TemperatureReport(BaseModel):
 ```
 ```typescript Javascript {10-12}
 import { z } from "zod";
+import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-openapi";
+
+// Extend Zod with OpenAPI support
+extendZodWithOpenApi(z);
 
 // You can define custom annotations by extending the schema with openapi metadata
 
 const TemperatureReportSchema = z.object({
-  date: z.string().date(),
-  location: z.string(),
-  temperature: z.number()
-    .describe("temperature in Fahrenheit")
-    .openapi({
-      "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is."
-    }),
-  humidity: z.number(),
-  conditions: z.string()
-});
+    date: z.string().date(),
+    location: z.string(),
+    temperature: z.number()
+        .describe("temperature in Fahrenheit")
+        .openapi({
+            "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is."
+        } as any),
+    humidity: z.number(),
+    conditions: z.string()
+}).openapi("TemperatureReport");
 
 type TemperatureReport = z.infer<typeof TemperatureReportSchema>;
 
-// Generate JSON schema with: TemperatureReportSchema.openapi()
+// Register and generate the schema
+const registry = new OpenAPIRegistry();
+registry.register("TemperatureReport", TemperatureReportSchema);
+
+const generator = new OpenApiGeneratorV31(registry.definitions);
+const document = generator.generateDocument({
+    openapi: "3.1.0",
+    info: { title: "Temperature API", version: "1.0.0" }
+});
+
+// Print the schema in the console
+console.log(JSON.stringify(document.components?.schemas?.TemperatureReport, null, 2));
 ```
 ```json json_schema.json {13}
 {
