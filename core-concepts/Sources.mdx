@@ -1,0 +1,191 @@
+---
+
+## title: Sources
+
+---
+
+When extracting data from documents, it's often important to track where each piece of information came from. Source quotes help by capturing the exact text from the document that supports each extracted value.
+
+Source quotes use a special JSON Schema annotation to create auxiliary fields that store verbatim quotes from the source document:
+
+- **`X-SourceQuote`** - Generates source quote fields alongside data fields, capturing the exact text from the document that justifies each extracted value.
+
+This approach improves traceability and verification while keeping your original schema structure intact.
+
+
+## Source Quote
+
+A `X-SourceQuote: true` tag in the schema generates a source quote field alongside the data field. This is particularly useful for auditing, compliance, or when you need to verify where data came from.
+
+**Example: Contract Information Extraction**
+
+```markdown Contract.md
+This Service Agreement ("Agreement") is entered into as of March 15, 2024.
+
+PARTIES:
+- Provider: TechCorp Solutions Inc., a Delaware corporation
+- Client: Global Industries LLC, with principal offices at 123 Main Street, Boston, MA 02101
+
+TERMS:
+The initial term of this Agreement shall be twenty-four (24) months, commencing on April 1, 2024.
+The monthly service fee shall be $15,000 USD, payable within 30 days of invoice.
+```
+
+
+
+
+Let's say we want to extract contract details and track exactly where each value was found in the document:
+
+<CodeGroup>
+```python Python {9-11, 15-17}
+from pydantic import BaseModel, Field
+from datetime import date
+
+# You can define the custom annotations in the `pydantic.Field` class using the `json_schema_extra` field.
+
+class ContractInfo(BaseModel):
+    provider_name: str = Field(...,
+        description="Name of the service provider",
+        json_schema_extra={
+            "X-SourceQuote": True,
+        }
+    )
+    contract_value: float = Field(...,
+        description="Monthly contract value in USD",
+        json_schema_extra={
+            "X-SourceQuote": True,
+        }
+    )
+    start_date: date
+    duration_months: int
+
+# If you need a json_schema, you can call ContractInfo.model_json_schema()
+```
+```typescript Javascript {8-10, 14-16}
+import { z } from "zod";
+import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-openapi";
+
+// Extend Zod with OpenAPI support
+extendZodWithOpenApi(z);
+
+// You can define custom annotations by extending the schema with openapi metadata
+
+const ContractInfoSchema = z.object({
+    provider_name: z.string()
+        .describe("Name of the service provider")
+        .openapi({
+            "X-SourceQuote": true
+        } as any),
+    contract_value: z.number()
+        .describe("Monthly contract value in USD")
+        .openapi({
+            "X-SourceQuote": true
+        } as any),
+    start_date: z.string().date(),
+    duration_months: z.number()
+}).openapi("ContractInfo");
+
+type ContractInfo = z.infer<typeof ContractInfoSchema>;
+
+// Register and generate the schema
+const registry = new OpenAPIRegistry();
+registry.register("ContractInfo", ContractInfoSchema);
+
+const generator = new OpenApiGeneratorV31(registry.definitions);
+const document = generator.generateDocument({
+    openapi: "3.1.0",
+    info: { title: "Contract API", version: "1.0.0" }
+});
+
+// Print the schema in the console
+console.log(JSON.stringify(document.components?.schemas?.ContractInfo, null, 2));
+```
+```json json_schema.json {6, 12}
+{
+  "properties": {
+    "provider_name": {
+      "X-SourceQuote": true,
+      "description": "Name of the service provider",
+      "title": "Provider Name",
+      "type": "string"
+    },
+    "contract_value": {
+      "X-SourceQuote": true,
+      "description": "Monthly contract value in USD",
+      "title": "Contract Value",
+      "type": "number"
+    },
+    "start_date": {
+      "format": "date",
+      "title": "Start Date",
+      "type": "string"
+    },
+    "duration_months": {
+      "title": "Duration Months",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "provider_name",
+    "contract_value",
+    "start_date",
+    "duration_months"
+  ],
+  "title": "ContractInfo",
+  "type": "object"
+}
+```
+
+</CodeGroup>
+
+With source quotes enabled, the extraction includes the exact text from the document that supports each value:
+
+<CodeGroup>
+```json With source quotes
+{
+  "source___provider_name": "Provider: TechCorp Solutions Inc., a Delaware corporation",
+  "provider_name": "TechCorp Solutions Inc.",
+  "source___contract_value": "The monthly service fee shall be $15,000 USD",
+  "contract_value": 15000,
+  "start_date": "2024-04-01",
+  "duration_months": 24
+}
+```
+```json Without source quotes
+{
+  "provider_name": "TechCorp Solutions Inc.",
+  "contract_value": 15000,
+  "start_date": "2024-04-01",
+  "duration_months": 24
+}
+```
+</CodeGroup>
+
+
+As you can see, the `source___` fields capture the exact verbatim text from the document, allowing you to verify each extracted value against its source.
+
+
+
+---
+
+
+## Key Benefits
+
+1. **Traceability**: Know exactly where each piece of extracted data came from
+2. **Verification**: Users can verify extracted values against the original text
+3. **Compliance**: Meet audit requirements by documenting data provenance
+4. **Debugging**: Quickly identify extraction errors by comparing source quotes with extracted values
+5. **Trust**: Build confidence in automated extractions with transparent sourcing
+
+## Best Practices
+
+- Use source quotes for fields that require verification or audit trails
+- Apply to high-value or legally significant data points
+- Combine with [Reasoning](/core-concepts/Reasoning) for complex extractions that involve both calculation and source verification
+- Source quotes work best on leaf fields (strings, numbers, dates) rather than nested objects
+
+
+## Go further
+
+- [Reasoning](/core-concepts/Reasoning)
+- [Schema](/core-concepts/Schema)
