@@ -1,174 +1,94 @@
 ---
-
-## title: Pricing
-
+title: Pricing
 ---
 
-Retab uses a credit-based pricing system for AI model usage. Different models have different credit costs based on their capabilities and performance characteristics.
+Retab uses a credit-based pricing system. Different models have different credit costs based on their capabilities.
 
-## Credit price
+## Credit Price
 
-`1 Credit = 0.01$`
+`1 Credit = $0.01`
 
-## Model Pricing
+## Model Credits
 
-| Model Family | Model Variant | Credits | Tier |
-|--------------|---------------|---------|------|
-| **GPT-5** | nano | 0.2 | Micro |
-| | mini | 1.0 | Small |
-| | base | 3.0 | Large |
-| **Gemini 2.5 / 3.0** | flash-lite | 0.2 | Micro |
-| | flash | 1.0 | Small |
-| | pro | 3.0 | Large |
-| **Claude 4.0 / 4.5** | haiku | 1.0 | Small |
-| | sonnet | 3.0 | Large |
-| 
-| **Retab router** | auto-micro | 0.2 | Micro |
-| | auto-small | 1.0 | Small |
-| | auto-large | 3.0 | Large | 
+| Model Family | Model Variant | Credits |
+|--------------|---------------|---------|
+| **GPT-5** | nano | 0.2 |
+| | mini | 1.0 |
+| | base | 3.0 |
+| **Gemini 2.5 / 3.0** | flash-lite | 0.2 |
+| | flash | 1.0 |
+| | pro | 3.0 |
+| **Claude 4.0 / 4.5** | haiku | 1.0 |
+| | sonnet | 3.0 |
+| **Retab router** | auto-micro | 0.2 |
+| | auto-small | 1.0 |
+| | auto-large | 3.0 |
 
+## Pricing Formulas
 
-## Extraction API Pricing
-
-This concerns the following endpoints:
-
-- [`v1/documents/extract`](https://docs.retab.com/api-reference/documents/extract)
-- [`v1/processors/{processor_id}/submit`](https://docs.retab.com/api-reference/processors/submit)
-- [automation runs](https://docs.retab.com/core-concepts/automations)
-
-### Pricing Formula
-
-The total cost for an extract request is calculated as:
+### Extract, Split, Parse, Schema Generation
 
 ```
-credits/page = n_consensus × model_credits
+total_credits = model_credits × page_count
 ```
 
-### Credit Tiers
-
-- **0.2 credits**: Micro models (fastest, most efficient)
-- **0.5 credits**: Small models (balanced performance)
-- **3.0 credits**: Large models (highest capability)
-
-Where:
-- **n_consensus**: Number of consensus runs (typically 1-5, depending on your accuracy requirements)
-- **model_credits**: The credit cost of the specific model you're using (see table above)
-
-
-### Examples
-
-**Example 1: Text PDF extraction with GPT-5-Mini**
-- Model usage: 1 run × 1.0 credits = 1.0 credits
-- **Total: 1.0 credits**
-
-**Example 2: Scanned document with Gemini-2.5-Pro (3 consensus)**
-- Model usage: 3 runs × 3.0 credits = 9.0 credits
-- **Total: 6.0 credits**
-
-**Example 3: JSON extraction with Auto-Micro**
-- Model usage: 1 run × 0.2 credits = 0.2 credits  
-- **Total: 0.2 credits**
-
-**Example 4: Scanned invoice with Auto-Micro**
-- Model usage: 1 run × 0.2 credits = 0.2 credits
-- **Total: 0.2 credits**
-
-### Model Selection Guide
-
-**Choose Micro models (0.2 credit)** when:
-- You need fast, efficient processing
-- Working with simple extraction tasks
-- Cost efficiency is the primary concern
-
-**Choose Small models (1.0 credit)** when:
-- You need balanced performance and cost
-- Working with moderate complexity tasks
-- Good balance of speed and capability
-
-**Choose Large models (3.0 credits)** when:
-- You need maximum capability and accuracy
-- Working with complex reasoning tasks
-- Quality is more important than cost
-
-
-## Parsing API Pricing
-
-This concerns the following endpoints:
-
-- [`v1/documents/parse`](https://docs.retab.com/api-reference/documents/parse)
-- [`v1/documents/create_messages`](https://docs.retab.com/api-reference/documents/create_messages)
-- [`v1/documents/create_inputs`](https://docs.retab.com/api-reference/documents/create_inputs)
-
-### Pricing Formula
-
-The total cost for a parse request is calculated as:
+For **Extract** with consensus:
 
 ```
-credits/page = model_credits
+total_credits = model_credits × page_count × n_consensus
 ```
 
-The Parse API follows the same pricing structure as extraction:
-- **0 credits**: For text-based documents
-- **model_credits**: The credit cost of the specific model you're using (see table above)
+### Edit
 
-### Examples
-
-**Example 1: PDF parsing with GPT-5-Mini**
-- Model usage: 1.0 credits
-- **Total: 0.5 credit**
-
-**Example 2: Scanned document with Gemini-2.5-Flash-Lite**
-- Model usage: 0.2 credits
-- **Total: 0.2 credit**
-
-**Example 3: JSON parsing with Auto-Micro**
-- Model usage: 0.0 credit
-- **Total: 0.0 credit**
-
-**Example 3: Text parsing with Auto-Small**
-- Model usage: 0.0 credit
-- **Total: 0.0 credit**
-
-
-## Edit API Pricing
-
-This concerns the following endpoint:
-
-- [`v1/documents/edit`](https://docs.retab.com/api-reference/documents/edit)
-
-The Edit API allows you to fill PDF forms by inferring form fields and populating them with values based on provided instructions.
-
-### Pricing Formula
-
-The total cost for an edit request is calculated as:
+The Edit API charges 3× the base rate because it performs multiple LLM operations (OCR, form field inference, and form filling):
 
 ```
-credits/page = 3 × model_credits
+total_credits = 3 × model_credits × page_count
 ```
 
-The Edit API charges 3× the model credits per page because it performs multiple LLM operations:
-1. OCR processing to extract text elements
-2. Form field inference to identify fillable areas
-3. Form filling based on your instructions
+## Examples
 
-### Examples
+### Extract
 
-**Example 1: Single-page form with Gemini-2.5-Pro**
-- Model usage: 3 × 3.0 credits = 9.0 credits
-- **Total: 9.0 credits**
+| Document | Model | Pages | Consensus | Calculation | Total |
+|----------|-------|-------|-----------|-------------|-------|
+| Invoice | GPT-5-mini | 1 | 1 | 1.0 × 1 × 1 | **1.0 credits** |
+| Contract | Gemini-2.5-pro | 5 | 1 | 3.0 × 5 × 1 | **15.0 credits** |
+| Receipt | auto-micro | 1 | 3 | 0.2 × 1 × 3 | **0.6 credits** |
 
-**Example 2: 5-page document with Gemini-2.5-Flash**
-- Model usage: 3 × 1.0 credits × 5 pages = 15.0 credits
-- **Total: 15.0 credits**
+### Split
 
-**Example 3: 10-page form with Auto-Large**
-- Model usage: 3 × 3.0 credits × 10 pages = 90.0 credits
-- **Total: 90.0 credits**
+| Document | Model | Pages | Calculation | Total |
+|----------|-------|-------|-------------|-------|
+| Multi-invoice PDF | GPT-5-mini | 10 | 1.0 × 10 | **10.0 credits** |
+| Document batch | auto-micro | 50 | 0.2 × 50 | **10.0 credits** |
 
-### Use Cases
+### Parse
 
-The Edit API is ideal for:
-- Automatically filling PDF forms with structured data
-- Processing government or legal documents
-- Batch form completion workflows
-- Any scenario requiring programmatic PDF form filling
+| Document | Model | Pages | Calculation | Total |
+|----------|-------|-------|-------------|-------|
+| Scanned PDF | Gemini-2.5-flash | 3 | 1.0 × 3 | **3.0 credits** |
+| Image | auto-micro | 1 | 0.2 × 1 | **0.2 credits** |
+
+### Schema Generation
+
+| Document | Model | Pages | Calculation | Total |
+|----------|-------|-------|-------------|-------|
+| Sample invoice | GPT-5-mini | 1 | 1.0 × 1 | **1.0 credits** |
+| Complex form | Gemini-2.5-pro | 2 | 3.0 × 2 | **6.0 credits** |
+
+### Edit
+
+| Document | Model | Pages | Calculation | Total |
+|----------|-------|-------|-------------|-------|
+| Tax form | Gemini-2.5-flash | 1 | 3 × 1.0 × 1 | **3.0 credits** |
+| Application | GPT-5-mini | 5 | 3 × 1.0 × 5 | **15.0 credits** |
+| Legal document | auto-large | 10 | 3 × 3.0 × 10 | **90.0 credits** |
+
+## Model Selection Guide
+
+| Tier | Models | Best For |
+|------|--------|----------|
+| **Micro** (0.2 credits) | GPT-5-nano, Gemini flash-lite, auto-micro | Simple tasks, high volume, cost-sensitive |
+| **Small** (1.0 credits) | GPT-5-mini, Gemini flash, Claude haiku, auto-small | Balanced performance and cost |
+| **Large** (3.0 credits) | GPT-5-base, Gemini pro, Claude sonnet, auto-large | Complex tasks, maximum accuracy |
