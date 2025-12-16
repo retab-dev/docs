@@ -1,0 +1,129 @@
+---
+title: 'Split'
+openapi: 'POST /v1/documents/split'
+---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Split a multi-page document into sections based on categories
+result = client.documents.split(
+    document="invoice_batch.pdf",
+    model="gemini-2.5-flash",
+    categories=[
+        {"name": "invoice", "description": "Invoice documents with billing information"},
+        {"name": "receipt", "description": "Receipt documents for payments"},
+        {"name": "contract", "description": "Legal contract documents"},
+    ]
+)
+
+# Access split results
+for split in result.splits:
+    print(f"{split.name}: pages {split.start_page}-{split.end_page}")
+
+# Example output:
+# invoice: pages 1-3
+# receipt: pages 4-5
+# invoice: pages 6-8
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+import { config } from 'dotenv';
+
+config();
+
+const client = new Retab();
+
+const result = await client.documents.split({
+    document: "invoice_batch.pdf",
+    model: "gemini-2.5-flash",
+    categories: [
+        { name: "invoice", description: "Invoice documents with billing information" },
+        { name: "receipt", description: "Receipt documents for payments" },
+        { name: "contract", description: "Legal contract documents" },
+    ]
+});
+
+// Access split results
+result.splits.forEach(split => {
+    console.log(`${split.name}: pages ${split.start_page}-${split.end_page}`);
+});
+```
+
+```typescript typescript
+import { Retab, type SplitRequest, type SplitResponse } from '@retab/node';
+import { config } from 'dotenv';
+
+config();
+
+const client = new Retab();
+
+const splitRequest: SplitRequest = {
+    document: "invoice_batch.pdf",
+    model: "gemini-2.5-flash",
+    categories: [
+        { name: "invoice", description: "Invoice documents with billing information" },
+        { name: "receipt", description: "Receipt documents for payments" },
+        { name: "contract", description: "Legal contract documents" },
+    ]
+};
+
+const result: SplitResponse = await client.documents.split(splitRequest);
+
+// Access split results
+result.splits.forEach(split => {
+    console.log(`${split.name}: pages ${split.start_page}-${split.end_page}`);
+});
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/documents/split' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "invoice_batch.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsO..."
+  },
+  "model": "gemini-2.5-flash",
+  "categories": [
+    {"name": "invoice", "description": "Invoice documents with billing information"},
+    {"name": "receipt", "description": "Receipt documents for payments"},
+    {"name": "contract", "description": "Legal contract documents"}
+  ]
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "splits": [
+    {
+      "name": "invoice",
+      "start_page": 1,
+      "end_page": 3
+    },
+    {
+      "name": "receipt",
+      "start_page": 4,
+      "end_page": 5
+    },
+    {
+      "name": "invoice",
+      "start_page": 6,
+      "end_page": 8
+    }
+  ]
+}
+```
+
+</ResponseExample>
