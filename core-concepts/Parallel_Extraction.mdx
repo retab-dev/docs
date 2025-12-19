@@ -50,7 +50,7 @@ Parallel Extraction is ideal when:
 
 ## Usage
 
-Enable Parallel Extraction by specifying the `parallel_ocr_keys` parameter in your extraction request:
+Enable Parallel Extraction by specifying the `chunking_keys` parameter in your extraction request:
 
 ```python
 from retab import Retab
@@ -60,13 +60,13 @@ client = Retab()
 response = client.documents.extract(
     document="invoice.pdf",
     json_schema=my_schema,
-    parallel_ocr_keys={
+    chunking_keys={
         "line_items": "product_name"  # parent_path: child_key_path
     }
 )
 ```
 
-The `parallel_ocr_keys` parameter is a dictionary mapping:
+The `chunking_keys` parameter is a dictionary mapping:
 - **Key**: The path to the array in your schema (e.g., `"line_items"`, `"transactions"`, `"items.products"`)
 - **Value**: The field within each array item that uniquely identifies it (e.g., `"product_name"`, `"sku"`, `"id"`)
 
@@ -95,7 +95,7 @@ The `parallel_ocr_keys` parameter is a dictionary mapping:
 }
 ```
 
-With `parallel_ocr_keys={"line_items": "product_name"}`, Retab will:
+With `chunking_keys={"line_items": "product_name"}`, Retab will:
 1. Extract all product names from the document
 2. Locate each product's position in the document
 3. Extract each line item's details in parallel
@@ -131,7 +131,7 @@ Parallel Extraction fully supports the `n_consensus` parameter. When enabled, ea
 response = client.documents.extract(
     document="invoice.pdf",
     json_schema=my_schema,
-    parallel_ocr_keys={"line_items": "sku"},
+    chunking_keys={"line_items": "sku"},
     n_consensus=3  # Each item extracted 3 times for verification
 )
 ```
