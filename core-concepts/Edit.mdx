@@ -56,18 +56,24 @@ Unlike manual form filling or template-based approaches, `edit` provides:
 <ParamField body="EditRequest" type="EditRequest">
   <Expandable title="properties">
 
-<ParamField body="document" type="MIMEData" required>
-  The document to edit. Supports PDF, DOCX, XLSX, and PPTX files. Can be a file path, URL, or MIMEData object containing:
-  - `filename`: Name of the file (e.g., "form.pdf", "template.docx", "data.xlsx")
-  - `url`: Data URI with base64 content (e.g., "data:application/pdf;base64,...")
-</ParamField>
-
 <ParamField body="filling_instructions" type="string" required>
   Natural language or JSON instructions describing how to fill the document. Include the field values you want to populate, e.g., "Name: John Doe, Date: 2025-01-15" or `{"name": "John Doe", "date": "2025-01-15"}`.
 </ParamField>
 
+<ParamField body="document" type="MIMEData">
+  The document to edit. Supports PDF, DOCX, XLSX, and PPTX files. Can be a file path, URL, or MIMEData object containing:
+  - `filename`: Name of the file (e.g., "form.pdf", "template.docx", "data.xlsx")
+  - `url`: Data URI with base64 content (e.g., "data:application/pdf;base64,...")
+  
+  **Note**: Either `document` OR `template_id` must be provided, but not both.
+</ParamField>
+
 <ParamField body="model" type="LLMModel" default="retab-small">
   The AI model to use for element detection and filling. Recommended: `retab-small` for accuracy.
+</ParamField>
+
+<ParamField body="template_id" type="string">
+  Template ID to use for filling. When provided, uses the template's pre-defined form fields and empty PDF instead of detecting fields dynamically. Only works for PDF documents. Mutually exclusive with `document`.
 </ParamField>
 
 </Expandable>
@@ -78,7 +84,7 @@ An EditResponse object containing the filled document and form data.
   <Expandable title="properties">
 
     <ResponseField name="form_data" type="list[FilledFormField]">
-      List of form fields with filled values (primarily for PDF). Each field includes bbox, description, type, and value.
+      List of form fields with filled values (primarily for PDF). Each field includes bbox, description, type, key, and value.
     </ResponseField>
 
     <ResponseField name="filled_document" type="MIMEData">
@@ -129,7 +135,7 @@ if result.filled_document:
 print(f"Filled {len(result.form_data)} form fields:")
 for field in result.form_data:
     if field.value:
-        print(f"  - {field.description}: {field.value}")
+        print(f"  - {field.key}: {field.value}")
 ```
 
 ```javascript Javascript
@@ -174,7 +180,7 @@ if (result.filled_document) {
 console.log(`Filled ${result.form_data.length} form fields:`);
 result.form_data.forEach(field => {
     if (field.value) {
-        console.log(`  - ${field.description}: ${field.value}`);
+        console.log(`  - ${field.key}: ${field.value}`);
     }
 });
 ```
@@ -222,11 +228,76 @@ if (result.filled_document) {
 console.log(`Filled ${result.form_data.length} form fields:`);
 result.form_data.forEach(field => {
     if (field.value) {
-        console.log(`  - ${field.description}: ${field.value}`);
+        console.log(`  - ${field.key}: ${field.value}`);
     }
 });
 ```
 </CodeGroup>
+
+## Use Case: Template-Based Form Filling
+
+Use pre-defined templates for consistent form filling without re-detecting fields each time.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+import base64
+
+client = Retab()
+
+# Use a pre-defined template instead of providing a document
+# The template contains the empty PDF and pre-defined form fields
+result = client.documents.edit(
+    template_id="tmpl_abc123",  # Your template ID
+    filling_instructions="""
+    Full Name: Jane Smith
+    Date of Birth: March 15, 1985
+    Email: jane.smith@example.com
+    """,
+    model="retab-small",
+)
+
+# Save the filled PDF
+if result.filled_document:
+    base64_content = result.filled_document.url.split(",")[1]
+    with open("filled-from-template.pdf", "wb") as f:
+        f.write(base64.b64decode(base64_content))
+    print("Template-based form filled and saved!")
+```
+
+```javascript Javascript
+import { Retab } from '@retab/node';
+import { writeFileSync } from 'fs';
+
+const client = new Retab();
+
+// Use a pre-defined template instead of providing a document
+const result = await client.documents.edit({
+    template_id: "tmpl_abc123",  // Your template ID
+    filling_instructions: `
+        Full Name: Jane Smith
+        Date of Birth: March 15, 1985
+        Email: jane.smith@example.com
+    `,
+    model: "retab-small",
+});
+
+// Save the filled PDF
+if (result.filled_document) {
+    const base64Content = result.filled_document.url.split(",")[1];
+    writeFileSync("filled-from-template.pdf", Buffer.from(base64Content, 'base64'));
+    console.log("Template-based form filled and saved!");
+}
+```
+</CodeGroup>
+
+<Note>
+Templates are useful when you need to:
+- Fill the same form multiple times with different data
+- Avoid re-running OCR and field detection for each request
+- Ensure consistent field detection across multiple fills
+- Reduce processing time and costs for batch operations
+</Note>
 
 ## Use Case: Batch Form Processing
 
