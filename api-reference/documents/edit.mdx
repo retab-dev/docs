@@ -10,12 +10,19 @@ from retab import Retab
 
 client = Retab()
 
-# Edit the form by inferring fields and filling them
+# Option 1: Edit with a document (detects fields automatically)
 result = client.documents.edit(
-    document="form.pdf",  # Can be a file path, URL, or MIMEData
     filling_instructions="Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street, City: New York",
-    model="retab-small",
+    document="form.pdf",  # Can be a file path, URL, or MIMEData
+    model="retab-small"
 )
+
+# Option 2: Edit with a template (uses pre-defined fields)
+# result = client.documents.edit(
+#     filling_instructions="Name: John Doe, Date of Birth: 1990-01-15",
+#     template_id="tmpl_abc123",  # Use template instead of document
+#     model="retab-small",
+# )
 
 # Access the filled PDF (MIMEData with filename and url containing base64 data)
 if result.filled_document:
@@ -29,7 +36,7 @@ if result.filled_document:
 # Access form data with filled values
 print(f"Filled {len(result.form_data)} form fields")
 for field in result.form_data:
-    print(f"Field: {field.description} = {field.value}")
+    print(f"Field: {field.key} ({field.description}) = {field.value}")
 ```
 
 ```javascript javascript
@@ -46,12 +53,12 @@ const pdfBuffer = readFileSync("form.pdf");
 const pdfBase64 = pdfBuffer.toString('base64');
 
 const result = await client.documents.edit({
+    filling_instructions: "Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street, City: New York",
     document: {
         filename: "form.pdf",
         url: `data:application/pdf;base64,${pdfBase64}`
     },
-    filling_instructions: "Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street, City: New York",
-    model: "retab-small",
+    model: "retab-small"
 });
 
 // Save the filled PDF
@@ -64,7 +71,7 @@ if (result.filled_document) {
 // Access form data with filled values
 console.log(`Filled ${result.form_data.length} form fields`);
 result.form_data.forEach(field => {
-    console.log(`Field: ${field.description} = ${field.value}`);
+    console.log(`Field: ${field.key} (${field.description}) = ${field.value}`);
 });
 ```
 
@@ -82,12 +89,12 @@ const pdfBuffer = readFileSync("form.pdf");
 const pdfBase64 = pdfBuffer.toString('base64');
 
 const editRequest: EditRequest = {
+    filling_instructions: "Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street, City: New York",
     document: {
         filename: "form.pdf",
         url: `data:application/pdf;base64,${pdfBase64}`
     },
-    filling_instructions: "Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street, City: New York",
-    model: "retab-small",
+    model: "retab-small"
 };
 
 const result: EditResponse = await client.documents.edit(editRequest);
@@ -102,22 +109,34 @@ if (result.filled_document) {
 // Access form data with filled values
 console.log(`Filled ${result.form_data.length} form fields`);
 result.form_data.forEach(field => {
-    console.log(`Field: ${field.description} = ${field.value}`);
+    console.log(`Field: ${field.key} (${field.description}) = ${field.value}`);
 });
 ```
 
 ```bash curl
+# Option 1: With document
 curl -X 'POST' \
   'https://api.retab.com/v1/documents/edit' \
   -H "Api-Key: $RETAB_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{
+  "filling_instructions": "Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street",
   "document": {
     "filename": "form.pdf",
     "url": "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsO..."
   },
-  "filling_instructions": "Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street",
-  "model": "retab-small",
+  "model": "retab-small"
+}'
+
+# Option 2: With template_id (uses pre-defined form fields)
+curl -X 'POST' \
+  'https://api.retab.com/v1/documents/edit' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "filling_instructions": "Name: John Doe, Date of Birth: 1990-01-15",
+  "template_id": "tmpl_abc123",
+  "model": "retab-small"
 }'
 ```
 
@@ -138,6 +157,7 @@ curl -X 'POST' \
       },
       "description": "Full Name - text input field for applicant's legal name",
       "type": "text",
+      "key": "full_name",
       "value": "John Doe"
     },
     {
@@ -150,6 +170,7 @@ curl -X 'POST' \
       },
       "description": "Date of Birth - date field in MM/DD/YYYY format",
       "type": "text",
+      "key": "date_of_birth",
       "value": "01/15/1990"
     },
     {
@@ -162,6 +183,7 @@ curl -X 'POST' \
       },
       "description": "Agreement checkbox - confirms acceptance of terms",
       "type": "checkbox",
+      "key": "agreement_checkbox",
       "value": "unchecked"
     }
   ],
