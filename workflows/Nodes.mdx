@@ -1,0 +1,427 @@
+---
+title: Node Reference
+description: Complete reference for all workflow node types
+---
+
+## Overview
+
+Workflow nodes are the building blocks of document processing pipelines. Each node has specific inputs, outputs, and configuration options.
+
+## Node Categories
+
+Nodes are organized into three categories:
+
+| Category | Purpose |
+|----------|---------|
+| **Core** | Workflow entry/exit points and utilities |
+| **Tools** | Document processing operations |
+| **Logic** | Conditional flows and data transformations |
+
+---
+
+## Core Nodes
+
+### Document (Start)
+
+<Card title="Document" icon="paperclip" color="#22c55e">
+The entry point for your workflow. Upload documents here for processing.
+</Card>
+
+**Outputs:** File
+
+**Configuration:** None (just upload your document in Run mode)
+
+**Supported Formats:**
+- PDF documents
+- Images (PNG, JPG, JPEG, GIF, WebP, TIFF, BMP)
+- Microsoft Word (.docx, .doc)
+- Microsoft Excel (.xlsx, .xls)
+- Microsoft PowerPoint (.pptx, .ppt)
+
+**Usage:**
+- Drag multiple Document nodes for workflows that combine multiple inputs
+- Each Document node can receive one file per workflow run
+- Files are automatically converted to PDF when required by downstream nodes
+
+---
+
+### Webhook (End)
+
+<Card title="Webhook" icon="webhook" color="#ef4444">
+Send workflow outputs to an external HTTP endpoint.
+</Card>
+
+**Inputs:** File, JSON
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Webhook URL** | The HTTPS endpoint to receive the data |
+| **Headers** | Custom HTTP headers (e.g., authentication tokens) |
+
+**Example Configuration:**
+```json
+{
+  "webhook_url": "https://api.yourapp.com/webhook",
+  "webhook_headers": {
+    "Authorization": "Bearer your-token",
+    "X-Custom-Header": "value"
+  }
+}
+```
+
+See [Webhooks](/workflows/Webhooks) for details on securing and handling webhook requests.
+
+---
+
+### Note
+
+<Card title="Note" icon="sticky-note" color="#eab308">
+Add comments and documentation to your workflow.
+</Card>
+
+**Inputs:** None  
+**Outputs:** None
+
+Notes don't affect workflow execution—they're purely for documentation. Use them to:
+- Explain complex logic
+- Document configuration choices
+- Leave instructions for teammates
+
+---
+
+## Tools Nodes
+
+### Extract
+
+<Card title="Raw Extract" icon="layers" color="#8b5cf6">
+Extract structured data from documents using a JSON schema.
+</Card>
+
+**Inputs:** File  
+**Outputs:** JSON (data), JSON (likelihoods when using consensus)
+
+**Configuration:**
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| **Schema** | JSON Schema defining fields to extract | `{}` |
+| **Model** | AI model for extraction | `retab-small` |
+| **Temperature** | Randomness in extraction (0-1) | `0` |
+| **Image Resolution** | DPI for document rendering | `150` |
+| **Consensus** | Number of parallel extractions (1-10) | `1` |
+| **Reasoning Effort** | How much the model "thinks" | `minimal` |
+
+**Schema Example:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "invoice_number": { "type": "string" },
+    "total_amount": { "type": "number" },
+    "vendor": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "address": { "type": "string" }
+      }
+    }
+  }
+}
+```
+
+**Consensus Mode:**  
+When `n_consensus > 1`, the node runs multiple extractions in parallel and returns:
+- **data**: The consensus result
+- **likelihoods**: Confidence scores for each field
+
+---
+
+### Project Extract
+
+<Card title="Project Extract" icon="layers" color="#8b5cf6">
+Extract data using a pre-configured project's settings.
+</Card>
+
+**Inputs:** File  
+**Outputs:** JSON
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Project ID** | The published project to use for extraction |
+
+This node uses all the schema, model, and settings from an existing project. Perfect for:
+- Reusing validated extraction configurations
+- Ensuring consistency across workflows
+- Leveraging project-specific fine-tuning
+
+---
+
+### Parse
+
+<Card title="Parse" icon="scan-text" color="#06b6d4">
+Convert documents to structured text/markdown using AI vision.
+</Card>
+
+**Inputs:** File  
+**Outputs:** File (parsed document)
+
+**Configuration:**
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| **Model** | AI model for parsing | `retab-small` |
+| **Image Resolution** | DPI for document rendering | `150` |
+
+**Use Cases:**
+- Pre-process documents before extraction
+- Convert scanned PDFs to searchable text
+- Extract text from images
+
+---
+
+### Split
+
+<Card title="Split" icon="scissors" color="#f59e0b">
+Split multi-page documents into separate PDFs by category.
+</Card>
+
+**Inputs:** File (PDF)  
+**Outputs:** Multiple File outputs (one per category)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Categories** | List of document categories with names and descriptions |
+| **Model** | AI model for classification |
+
+**Category Example:**
+```json
+{
+  "categories": [
+    {
+      "name": "Invoice",
+      "description": "Pages containing invoice details, line items, and totals"
+    },
+    {
+      "name": "Contract",
+      "description": "Legal agreement pages with terms and signatures"
+    },
+    {
+      "name": "Supporting Documents",
+      "description": "Receipts, certificates, and other attachments"
+    }
+  ]
+}
+```
+
+Each category creates a separate output handle. Connect downstream nodes to process each category differently.
+
+<Note>
+Non-PDF documents are automatically converted to PDF before splitting.
+</Note>
+
+---
+
+### Agent Edit
+
+<Card title="Agent Edit" icon="pen-square" color="#10b981">
+Fill PDF forms using AI with natural language instructions.
+</Card>
+
+**Inputs:** File, JSON  
+**Outputs:** File (filled document)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Instructions** | Natural language instructions for filling the form |
+
+**Example Instructions:**
+```
+Fill this W-9 form with the company information from the input data.
+Use the vendor_name for "Name" and vendor_address for the address fields.
+Leave signature fields blank.
+```
+
+The JSON input provides the data to use for filling. Connect this to an Extract node's output.
+
+---
+
+### Template Edit
+
+<Card title="Template Edit" icon="pen-square" color="#10b981">
+Fill documents using a pre-defined template.
+</Card>
+
+**Inputs:** Text (instructions/data)  
+**Outputs:** File (filled document)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Template ID** | The template to use for filling |
+
+Templates define a mapping between data fields and form fields. Create templates in the Templates section of your dashboard.
+
+---
+
+### Merge PDF
+
+<Card title="Merge PDF" icon="file-stack" color="#6366f1">
+Combine multiple PDF documents into a single file.
+</Card>
+
+**Inputs:** Multiple File inputs (configurable)  
+**Outputs:** File (merged PDF)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Inputs** | Named input slots for PDFs to merge |
+
+**Example Configuration:**
+```json
+{
+  "inputs": [
+    { "name": "Cover Page" },
+    { "name": "Invoice" },
+    { "name": "Terms and Conditions" }
+  ]
+}
+```
+
+PDFs are merged in the order defined by the inputs list.
+
+---
+
+## Logic Nodes
+
+### Human in the Loop (HIL)
+
+<Card title="Human in the Loop" icon="user-check" color="#ec4899">
+Route data for human review based on confidence conditions.
+</Card>
+
+**Inputs:** JSON  
+**Outputs:** JSON (verified data)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Review Conditions** | Boolean fields that trigger review when `false` |
+
+**How It Works:**
+1. Connect to an Extract node (schema is automatically inherited)
+2. Add boolean fields from your schema as conditions
+3. If any condition is `false`, the extraction is flagged for human review
+4. After review, the verified data continues through the workflow
+
+**Example:**  
+If your schema includes `is_signature_present: boolean`, you can add it as a condition. When the AI detects no signature, a human reviewer verifies the document.
+
+<Note>
+The HIL node must be connected to an Extract or Project Extract node to access the schema's boolean fields.
+</Note>
+
+---
+
+### Functions
+
+<Card title="Functions" icon="function-square" color="#6366f1">
+Add computed fields using Excel-like formulas.
+</Card>
+
+**Inputs:** JSON  
+**Outputs:** JSON (with computed fields)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Functions** | List of computed fields with target paths and expressions |
+
+**Supported Functions:**
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `SUM` | Sum of values | `SUM(items.*.price)` |
+| `AVERAGE` | Average of values | `AVERAGE(scores.*)` |
+| `COUNT` | Count of items | `COUNT(line_items.*)` |
+| `MIN` / `MAX` | Minimum/maximum value | `MAX(items.*.quantity)` |
+| `IF` | Conditional | `IF(total > 1000, "Large", "Small")` |
+| `CONCAT` | Join strings | `CONCAT(first_name, " ", last_name)` |
+| `ROUND` | Round number | `ROUND(amount, 2)` |
+
+**Example Configuration:**
+```
+Target: subtotal
+Expression: SUM(line_items.*.amount)
+
+Target: tax
+Expression: subtotal * 0.1
+
+Target: total
+Expression: subtotal + tax
+```
+
+<Note>
+Functions are evaluated in dependency order. You can reference other computed fields in expressions.
+</Note>
+
+See [Functions Documentation](/projects/Functions) for the complete formula reference.
+
+---
+
+## Node I/O Types
+
+Understanding input/output types helps you connect nodes correctly:
+
+| Type | Color | Description |
+|------|-------|-------------|
+| **File** | Blue (📎) | Documents, PDFs, images |
+| **JSON** | Purple (`{ }`) | Structured data objects |
+| **Text** | Cyan (📄) | Plain text strings |
+
+### Compatibility Matrix
+
+| Source → Target | File | JSON | Text |
+|-----------------|------|------|------|
+| **File** | ✅ | ❌ | ❌ |
+| **JSON** | ❌ | ✅ | ✅ |
+| **Text** | ❌ | ❌ | ✅ |
+
+---
+
+## Tips for Building Workflows
+
+<AccordionGroup>
+  <Accordion title="Start with the output in mind">
+    Identify what data you need at the end, then work backwards to determine which nodes you need.
+  </Accordion>
+  
+  <Accordion title="Use Project Extract for consistency">
+    If you have a validated project with good extraction accuracy, use Project Extract instead of Raw Extract to ensure consistent results.
+  </Accordion>
+  
+  <Accordion title="Add Functions for calculations">
+    Instead of computing values after receiving webhook data, use Functions nodes to add totals, percentages, and derived fields directly in the workflow.
+  </Accordion>
+  
+  <Accordion title="Split before specialized processing">
+    When handling mixed document bundles (e.g., invoice + contract), use Split first, then apply specific Extract schemas to each category.
+  </Accordion>
+  
+  <Accordion title="Test edge cases">
+    Run your workflow with documents that have missing fields, poor scan quality, or unusual formats to ensure robust handling.
+  </Accordion>
+</AccordionGroup>
+

@@ -1,0 +1,293 @@
+---
+title: Workflows
+description: Build visual document processing pipelines with drag-and-drop nodes
+---
+
+## What are Workflows?
+
+Workflows are visual, node-based pipelines that let you chain together multiple document processing operations. Instead of writing code for each step, you can drag and drop nodes onto a canvas, connect them, and create powerful document automation flows.
+
+A workflow typically consists of:
+- **Input nodes** (Document) - Entry points where documents are uploaded
+- **Processing nodes** - Operations like Extract, Parse, Split, Edit
+- **Logic nodes** - Conditional flows like Human-in-the-Loop and Functions
+- **Output nodes** (Webhook) - Destinations for your processed data
+
+<Frame>
+  <img src="/images/workflow-canvas.png" alt="Workflow Canvas" />
+</Frame>
+
+## Creating a Workflow
+
+### Using the Dashboard
+
+1. Navigate to the **Workflows** section in your dashboard
+2. Click **Create Workflow** to open a new canvas
+3. Drag nodes from the sidebar onto the canvas
+4. Connect nodes by dragging from output handles to input handles
+5. Configure each node by clicking on it
+6. Your workflow auto-saves as you build
+
+### Using the SDK
+
+You can also create and manage workflows programmatically:
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# Create a new workflow
+workflow = client.workflows.create(
+    name="Invoice Processing Pipeline",
+    description="Extract data from invoices and validate with human review",
+)
+
+print(f"Created workflow: {workflow.id}")
+```
+
+```typescript Node.js
+import Retab from 'retab';
+
+const client = new Retab();
+
+// Create a new workflow
+const workflow = await client.workflows.create({
+    name: 'Invoice Processing Pipeline',
+    description: 'Extract data from invoices and validate with human review',
+});
+
+console.log(`Created workflow: ${workflow.id}`);
+```
+</CodeGroup>
+
+## Connecting Nodes
+
+Nodes communicate through **handles** that define the type of data they accept or produce:
+
+| Handle Type | Icon | Description |
+|-------------|------|-------------|
+| **File** | 📎 | Document files (PDF, images, Word, Excel) |
+| **JSON** | `{ }` | Structured data extracted from documents |
+| **Text** | 📄 | Plain text or instruction strings |
+
+### Connection Rules
+
+- **File → File**: Pass documents between processing nodes
+- **JSON → JSON**: Pass extracted data between logic nodes
+- **JSON → Text**: JSON data can connect to text inputs (e.g., for template instructions)
+- Each input handle accepts only **one connection**
+- Connections validate automatically to prevent incompatible links
+
+## Edit Mode vs Run Mode
+
+Workflows have two operational modes:
+
+### Edit Mode
+- Add, remove, and configure nodes
+- Create and delete connections
+- Rename the workflow
+- View generated Python code
+
+### Run Mode
+- Upload documents to input nodes
+- Execute the workflow step-by-step
+- View results at each stage
+- Download processed files and extracted data
+
+Toggle between modes using the switch at the top of the canvas.
+
+## Running a Workflow
+
+### From the Dashboard
+
+1. Switch to **Run Mode**
+2. Upload a document to each **Document** input node
+3. Click **Run Workflow**
+4. Watch as each node processes (status indicators show progress)
+5. Click on output handles to view results
+
+### Using the SDK
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# Run a workflow with a document
+result = client.workflows.run(
+    workflow_id="wf_abc123",
+    documents={
+        "document-1": "path/to/invoice.pdf"
+    }
+)
+
+# Access the results
+print(result.outputs)
+```
+
+```typescript Node.js
+import Retab from 'retab';
+
+const client = new Retab();
+
+// Run a workflow with a document
+const result = await client.workflows.run({
+    workflow_id: 'wf_abc123',
+    documents: {
+        'document-1': 'path/to/invoice.pdf'
+    }
+});
+
+// Access the results
+console.log(result.outputs);
+```
+</CodeGroup>
+
+## Workflow Execution Order
+
+Workflows execute in **topological order** based on the node connections:
+
+1. Start from Document input nodes
+2. Process each node once all its inputs are ready
+3. Continue until all nodes are processed or an error occurs
+4. Send results to any Webhook output nodes
+
+If a node fails, execution stops and the error is displayed on that node.
+
+## Viewing Generated Code
+
+Every workflow can be exported as Python code. Click **View Python Code** in the sidebar to see the equivalent SDK calls for your workflow. This is useful for:
+
+- Integrating workflows into your existing codebase
+- Running workflows in production environments
+- Understanding how the visual nodes translate to API calls
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Start simple">
+    Begin with a single Extract or Parse node, then gradually add complexity. Test each addition before moving on.
+  </Accordion>
+  
+  <Accordion title="Use descriptive labels">
+    Rename nodes to describe their purpose (e.g., "Invoice Data" instead of "Extract 1"). This makes complex workflows easier to understand.
+  </Accordion>
+  
+  <Accordion title="Add notes for documentation">
+    Use Note nodes to document sections of your workflow. They don't affect execution but help explain the logic.
+  </Accordion>
+  
+  <Accordion title="Validate with Human-in-the-Loop">
+    For critical data, add a HIL node after extraction. This ensures a human reviews low-confidence results before they proceed.
+  </Accordion>
+  
+  <Accordion title="Test with sample documents">
+    Before deploying, run your workflow with representative sample documents to catch edge cases.
+  </Accordion>
+</AccordionGroup>
+
+## Example: Invoice Processing Workflow
+
+Here's a common workflow pattern for processing invoices:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Document   │────▶│   Extract   │────▶│   HIL       │────▶│  Webhook    │
+│  (Invoice)  │     │  (Fields)   │     │  (Review)   │     │  (Output)   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+```
+
+1. **Document** node accepts the invoice PDF
+2. **Extract** node pulls out vendor, amount, date, line items
+3. **HIL** node flags low-confidence extractions for human review
+4. **Webhook** node sends verified data to your system
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# Equivalent SDK code
+invoice_schema = {
+    "type": "object",
+    "properties": {
+        "vendor_name": {"type": "string"},
+        "invoice_number": {"type": "string"},
+        "total_amount": {"type": "number"},
+        "invoice_date": {"type": "string", "format": "date"},
+        "line_items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "description": {"type": "string"},
+                    "quantity": {"type": "number"},
+                    "unit_price": {"type": "number"}
+                }
+            }
+        }
+    }
+}
+
+# Extract data from invoice
+result = client.documents.extract(
+    document="invoice.pdf",
+    json_schema=invoice_schema,
+    model="retab-small"
+)
+
+# Send to webhook
+import requests
+requests.post(
+    "https://your-server.com/webhook",
+    json=result.model_dump()
+)
+```
+
+```typescript Node.js
+import Retab from 'retab';
+
+const client = new Retab();
+
+// Equivalent SDK code
+const invoiceSchema = {
+    type: 'object',
+    properties: {
+        vendor_name: { type: 'string' },
+        invoice_number: { type: 'string' },
+        total_amount: { type: 'number' },
+        invoice_date: { type: 'string', format: 'date' },
+        line_items: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    description: { type: 'string' },
+                    quantity: { type: 'number' },
+                    unit_price: { type: 'number' }
+                }
+            }
+        }
+    }
+};
+
+// Extract data from invoice
+const result = await client.documents.extract({
+    document: 'invoice.pdf',
+    json_schema: invoiceSchema,
+    model: 'retab-small'
+});
+
+// Send to webhook
+await fetch('https://your-server.com/webhook', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(result)
+});
+```
+</CodeGroup>
+
