@@ -1,0 +1,123 @@
+---
+title: 'Get Run'
+openapi: 'GET /v1/workflows/runs/{run_id}'
+---
+
+Get a single workflow run by ID. Use this endpoint to check the status of a running workflow or retrieve the results of a completed workflow.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+run = client.workflows.get_run("run_abc123xyz")
+
+print(f"Status: {run.status}")
+if run.status == "completed":
+    print(f"Duration: {run.duration_ms}ms")
+    print(f"Outputs: {run.final_outputs}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const run = await client.workflows.getRun("run_abc123xyz");
+
+console.log(`Status: ${run.status}`);
+if (run.status === "completed") {
+    console.log(`Duration: ${run.duration_ms}ms`);
+    console.log("Outputs:", run.final_outputs);
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/runs/run_abc123xyz' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "run_abc123xyz",
+  "workflow_id": "wf_abc123xyz",
+  "workflow_name": "Invoice Processing",
+  "organization_id": "org_123",
+  "status": "completed",
+  "started_at": "2024-01-15T10:30:00Z",
+  "completed_at": "2024-01-15T10:30:15Z",
+  "duration_ms": 15000,
+  "steps": [
+    {
+      "node_id": "start-node-1",
+      "node_type": "start",
+      "node_label": "Invoice Input",
+      "status": "completed",
+      "started_at": "2024-01-15T10:30:00Z",
+      "completed_at": "2024-01-15T10:30:01Z",
+      "duration_ms": 1000
+    },
+    {
+      "node_id": "extract-node-1",
+      "node_type": "extract",
+      "node_label": "Extract Data",
+      "status": "completed",
+      "started_at": "2024-01-15T10:30:01Z",
+      "completed_at": "2024-01-15T10:30:10Z",
+      "duration_ms": 9000,
+      "output": {
+        "invoice_number": "INV-2024-001",
+        "total_amount": 1234.56,
+        "vendor_name": "Acme Corp"
+      }
+    },
+    {
+      "node_id": "end-node-1",
+      "node_type": "end",
+      "node_label": "Output",
+      "status": "completed",
+      "started_at": "2024-01-15T10:30:10Z",
+      "completed_at": "2024-01-15T10:30:15Z",
+      "duration_ms": 5000
+    }
+  ],
+  "input_documents": {
+    "start-node-1": {
+      "file_id": "file_123",
+      "filename": "invoice.pdf",
+      "mime_type": "application/pdf"
+    }
+  },
+  "final_outputs": {
+    "end-node-1": {
+      "label": "Output",
+      "json_data": {
+        "invoice_number": "INV-2024-001",
+        "total_amount": 1234.56,
+        "vendor_name": "Acme Corp"
+      }
+    }
+  },
+  "error": null,
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:15Z",
+  "waiting_for_node_ids": []
+}
+```
+
+```json 404
+{
+  "detail": "Workflow run not found"
+}
+```
+
+</ResponseExample>
+

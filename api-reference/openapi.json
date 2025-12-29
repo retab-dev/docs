@@ -1763,7 +1763,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__v1__schemas__default_templates__routes__ListTemplates"
+                  "$ref": "#/components/schemas/ListTemplates"
                 }
               }
             }
@@ -1822,7 +1822,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/main_server__services__v1__schemas__templates__routes__CreateTemplateRequest"
+                "$ref": "#/components/schemas/CreateTemplateRequest"
               }
             }
           }
@@ -2305,7 +2305,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__v1__schemas__default_templates__routes__ListTemplates"
+                  "$ref": "#/components/schemas/ListTemplates"
                 }
               }
             }
@@ -11095,7 +11095,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApplyComputationsResponse"
+                  "$ref": "#/components/schemas/main_server__services__v1__projects__routes__ApplyComputationsResponse"
                 }
               }
             }
@@ -13607,7 +13607,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__v1__extractions__models__ExportToCsvResponse"
+                  "$ref": "#/components/schemas/ExportToCsvResponse"
                 }
               }
             }
@@ -23393,6 +23393,847 @@
         }
       }
     },
+    "/v1/workflows/runs": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "List Workflow Runs",
+        "description": "List workflow runs with pagination and optional filtering.\n\nFilters:\n- workflow_id: Filter runs for a specific workflow\n- status: Filter by run status (pending, running, completed, error, waiting_for_human)\n- exclude_status: Exclude runs with this status\n- from_date: Filter runs created on or after this date (YYYY-MM-DD)\n- to_date: Filter runs created on or before this date (YYYY-MM-DD)",
+        "operationId": "list_workflow_runs_v1_workflows_runs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by workflow ID",
+              "title": "Workflow Id"
+            },
+            "description": "Filter by workflow ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "running",
+                    "completed",
+                    "error",
+                    "waiting_for_human"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by run status",
+              "title": "Status"
+            },
+            "description": "Filter by run status"
+          },
+          {
+            "name": "exclude_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "running",
+                    "completed",
+                    "error",
+                    "waiting_for_human"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exclude runs with this status",
+              "title": "Exclude Status"
+            },
+            "description": "Exclude runs with this status"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs created on or after this date (YYYY-MM-DD)",
+              "title": "From Date"
+            },
+            "description": "Filter runs created on or after this date (YYYY-MM-DD)"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs created on or before this date (YYYY-MM-DD)",
+              "title": "To Date"
+            },
+            "description": "Filter runs created on or before this date (YYYY-MM-DD)"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "created_at",
+              "title": "Sort By"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Delete Workflow Runs",
+        "description": "Delete all runs for a specific workflow.",
+        "operationId": "delete_workflow_runs_v1_workflows_runs_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Workflow ID to delete runs for",
+              "title": "Workflow Id"
+            },
+            "description": "Workflow ID to delete runs for"
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Get Workflow Run",
+        "description": "Get a single workflow run by ID.",
+        "operationId": "get_workflow_run_v1_workflows_runs__run_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Delete Workflow Run",
+        "description": "Delete a workflow run.",
+        "operationId": "delete_workflow_run_v1_workflows_runs__run_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{run_id}/resume": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Resume Workflow Run",
+        "description": "Resume a workflow run by approving or rejecting a specific HIL node.\n\nThis endpoint is called after a human has reviewed the data at a HIL node.\nThe workflow will continue executing nodes that depend on the approved node,\nor mark the node as rejected if not approved.\n\nArgs:\n    run_id: The ID of the run to resume\n    request: The resume request containing node_id, approval status, and optional modified data\n    \nReturns:\n    WorkflowRun with updated execution status",
+        "operationId": "resume_workflow_run_v1_workflows_runs__run_id__resume_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeWorkflowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{run_id}/documents/{node_id}": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Get Run Document",
+        "description": "Get a signed URL for downloading a document from a workflow run step.\n\nUse doc_type to specify whether to get the input or output document.\nFor split nodes, use the category parameter to get a specific split document.",
+        "operationId": "get_run_document_v1_workflows_runs__run_id__documents__node_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Node Id"
+            }
+          },
+          {
+            "name": "doc_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "input",
+                "output"
+              ],
+              "type": "string",
+              "description": "Document type: input or output",
+              "default": "output",
+              "title": "Doc Type"
+            },
+            "description": "Document type: input or output"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "For split nodes: the category name",
+              "title": "Category"
+            },
+            "description": "For split nodes: the category name"
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentSignedUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{run_id}/rerun-webhook": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Rerun Webhook",
+        "description": "Rerun the webhook for a completed workflow run.\n\nThis endpoint allows you to resend the webhook payload that was sent when the\nworkflow completed. Useful for testing or when the original webhook failed.\n\nArgs:\n    run_id: The ID of the workflow run to rerun the webhook for\n    \nReturns:\n    RerunWebhookResponse with the webhook status and response",
+        "operationId": "rerun_webhook_v1_workflows_runs__run_id__rerun_webhook_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RerunWebhookResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{run_id}/restart": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Restart Workflow Run",
+        "description": "Restart a workflow run by creating a new run with the same input documents.\n\nThis endpoint:\n1. Retrieves the original run's input documents from GCS\n2. Creates a new workflow run with those same documents\n3. Starts execution in the background\n\nArgs:\n    run_id: The ID of the workflow run to restart\n    \nReturns:\n    WorkflowRun: The newly created run with status \"running\"",
+        "operationId": "restart_workflow_run_v1_workflows_runs__run_id__restart_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/apply-computations": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Apply Computations Endpoint",
+        "description": "Apply computations to the provided data using the overlay computation engine.\n\nThis endpoint accepts a computation spec and data, and returns the data with\ncomputed fields applied. Useful for HIL nodes to preview computed values\nwhen editing extraction data.",
+        "operationId": "apply_computations_endpoint_v1_workflows_apply_computations_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/main_server__services__v1__workflows__routes__ApplyComputationsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyComputationsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workflows": {
       "get": {
         "tags": [
@@ -23806,6 +24647,86 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflow_id}/run": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Run Workflow",
+        "description": "Run a workflow with the provided input documents.\n\nThis endpoint creates a workflow run and starts execution in the background:\n1. Loading the workflow configuration\n2. Validating that all start nodes have corresponding input documents\n3. Creating the run record and returning immediately\n4. Executing nodes in topological order in the background\n\nArgs:\n    workflow_id: The ID of the workflow to run\n    request: The run request containing input documents for each start node\n    \nReturns:\n    WorkflowRun with status \"running\" - check the run details endpoint for updates",
+        "operationId": "run_workflow_v1_workflows__workflow_id__run_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunWorkflowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRun"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -25956,7 +26877,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__internal__blog__models__User"
+                  "$ref": "#/components/schemas/User"
                 }
               }
             }
@@ -29712,148 +30633,6 @@
         }
       }
     },
-    "/internal/edit/process_ocr": {
-      "post": {
-        "tags": [
-          "Edit"
-        ],
-        "summary": "Process Ocr Route",
-        "description": "Step 1: Process a document (PDF or DOCX) with OCR to extract text elements and bounding boxes.\n\nDOCX files are automatically converted to PDF before processing.\n\nReturns the OCR results including:\n- All detected text elements with coordinates\n- A formatted text representation for LLM consumption\n- An annotated PDF with bounding boxes drawn",
-        "operationId": "process_ocr_route_internal_edit_process_ocr_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProcessOCRRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OCRResult"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/internal/edit/convert_docx_to_pdf": {
-      "post": {
-        "tags": [
-          "Edit"
-        ],
-        "summary": "Convert Docx To Pdf Route",
-        "description": "Convert a DOCX document to PDF.\n\nThis endpoint converts DOCX files to PDF format using LibreOffice.\nUseful for previewing DOCX files in the frontend before further processing.\n\nReturns the converted PDF as a MIMEData object.",
-        "operationId": "convert_docx_to_pdf_route_internal_edit_convert_docx_to_pdf_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConvertDocxToPdfRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConvertDocxToPdfResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/internal/edit/infer_form_schema": {
       "post": {
         "tags": [
@@ -29979,77 +30758,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EditResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/internal/edit/annotate_pdf": {
-      "post": {
-        "tags": [
-          "Edit"
-        ],
-        "summary": "Annotate Pdf Route",
-        "description": "Annotate a local PDF file with OCR bounding boxes.\n\nThis endpoint:\n1. Reads the PDF from the specified input path\n2. Performs OCR using Google Document AI\n3. Draws bounding boxes around detected text elements\n4. Saves the annotated PDF to the specified output path\n\nUseful for debugging and visualizing what the OCR detects.\n\nNote: This endpoint is only available in dev environment.",
-        "operationId": "annotate_pdf_route_internal_edit_annotate_pdf_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AnnotatePdfRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AnnotatePdfResponse"
                 }
               }
             }
@@ -31955,72 +32663,6 @@
         ],
         "title": "AnalysesChartResponse"
       },
-      "AnnotatePdfRequest": {
-        "properties": {
-          "input_path": {
-            "type": "string",
-            "title": "Input Path",
-            "description": "Absolute path to the input PDF file"
-          },
-          "output_path": {
-            "type": "string",
-            "title": "Output Path",
-            "description": "Absolute path where the annotated PDF will be saved"
-          }
-        },
-        "type": "object",
-        "required": [
-          "input_path",
-          "output_path"
-        ],
-        "title": "AnnotatePdfRequest",
-        "description": "Request to annotate a PDF with OCR bounding boxes."
-      },
-      "AnnotatePdfResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status",
-            "description": "Status of the operation"
-          },
-          "output_path": {
-            "type": "string",
-            "title": "Output Path",
-            "description": "Path to the annotated PDF"
-          },
-          "num_elements": {
-            "type": "integer",
-            "title": "Num Elements",
-            "description": "Number of elements annotated"
-          },
-          "num_blocks": {
-            "type": "integer",
-            "title": "Num Blocks",
-            "description": "Number of block-level elements found"
-          },
-          "num_lines": {
-            "type": "integer",
-            "title": "Num Lines",
-            "description": "Number of line-level elements found"
-          },
-          "num_tokens": {
-            "type": "integer",
-            "title": "Num Tokens",
-            "description": "Number of token-level elements found"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "output_path",
-          "num_elements",
-          "num_blocks",
-          "num_lines",
-          "num_tokens"
-        ],
-        "title": "AnnotatePdfResponse",
-        "description": "Response after annotating a PDF."
-      },
       "Annotation": {
         "properties": {
           "type": {
@@ -32091,7 +32733,8 @@
           "data": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Data"
+            "title": "Data",
+            "description": "The data with computations applied"
           }
         },
         "type": "object",
@@ -32272,7 +32915,7 @@
             ]
           },
           "metadata": {
-            "$ref": "#/components/schemas/retab__types__mime__AttachmentMetadata",
+            "$ref": "#/components/schemas/AttachmentMetadata-Input",
             "description": "Additional metadata about the attachment.",
             "default": {
               "is_inline": false
@@ -32307,7 +32950,7 @@
             ]
           },
           "metadata": {
-            "$ref": "#/components/schemas/retab__types__mime__AttachmentMetadata",
+            "$ref": "#/components/schemas/AttachmentMetadata",
             "description": "Additional metadata about the attachment.",
             "default": {
               "is_inline": false
@@ -32320,6 +32963,78 @@
           "url"
         ],
         "title": "AttachmentMIMEData"
+      },
+      "AttachmentMetadata": {
+        "properties": {
+          "is_inline": {
+            "type": "boolean",
+            "title": "Is Inline",
+            "description": "Whether the attachment is inline or not.",
+            "default": false
+          },
+          "inline_cid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inline Cid",
+            "description": "CID reference for inline attachments."
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Source of the attachment in dot notation attachment_id, or email_id.attachment_id, allow us to keep track of the origin of the attachment, for search purposes. "
+          }
+        },
+        "type": "object",
+        "title": "AttachmentMetadata"
+      },
+      "AttachmentMetadata-Input": {
+        "properties": {
+          "is_inline": {
+            "type": "boolean",
+            "title": "Is Inline",
+            "description": "Whether the attachment is inline or not.",
+            "default": false
+          },
+          "inline_cid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inline Cid",
+            "description": "CID reference for inline attachments."
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Source of the attachment in dot notation attachment_id, or email_id.attachment_id, allow us to keep track of the origin of the attachment, for search purposes. "
+          }
+        },
+        "type": "object",
+        "title": "AttachmentMetadata"
       },
       "AutomationConfig": {
         "properties": {
@@ -32662,12 +33377,12 @@
             "description": "The HTML body of the email"
           },
           "sender": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData",
+            "$ref": "#/components/schemas/EmailAddressData",
             "description": "The sender's email address information"
           },
           "recipients_to": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/EmailAddressData"
             },
             "type": "array",
             "title": "Recipients To",
@@ -32675,7 +33390,7 @@
           },
           "recipients_cc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Cc",
@@ -32684,7 +33399,7 @@
           },
           "recipients_bcc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Bcc",
@@ -32754,7 +33469,7 @@
           },
           "attachments": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__BaseMIMEData"
+              "$ref": "#/components/schemas/BaseMIMEData"
             },
             "type": "array",
             "title": "Attachments",
@@ -32771,6 +33486,43 @@
           "sent_at"
         ],
         "title": "BaseEmailData"
+      },
+      "BaseMIMEData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Original filename of the attachment."
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "Size of the base64-encoded content in bytes."
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the attachment, determining how it should be handled."
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__AttachmentMetadata",
+            "description": "Additional metadata about the attachment."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "size",
+          "mime_type",
+          "metadata"
+        ],
+        "title": "BaseMIMEData"
       },
       "BaseModel": {
         "properties": {},
@@ -34722,7 +35474,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
+                "$ref": "#/components/schemas/ChoiceLogprobs-Output"
               },
               {
                 "type": "null"
@@ -34847,6 +35599,78 @@
         "additionalProperties": true,
         "type": "object",
         "title": "ChoiceDeltaToolCallFunction"
+      },
+      "ChoiceLogprobs-Input": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "refusal": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "ChoiceLogprobs",
+        "description": "Log probability information for the choice."
+      },
+      "ChoiceLogprobs-Output": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "refusal": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "ChoiceLogprobs",
+        "description": "Log probability information for the choice."
       },
       "CloneProjectTemplateRequest": {
         "properties": {
@@ -34991,6 +35815,21 @@
         ],
         "title": "Computation"
       },
+      "ComputationEntry": {
+        "properties": {
+          "expression": {
+            "type": "string",
+            "title": "Expression",
+            "description": "The computation expression"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expression"
+        ],
+        "title": "ComputationEntry",
+        "description": "A single computation entry."
+      },
       "ComputationSpec": {
         "properties": {
           "computations": {
@@ -35004,6 +35843,21 @@
         },
         "type": "object",
         "title": "ComputationSpec"
+      },
+      "ComputationSpecInput": {
+        "properties": {
+          "computations": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ComputationEntry"
+            },
+            "type": "object",
+            "title": "Computations",
+            "description": "Map of target path to computation entry"
+          }
+        },
+        "type": "object",
+        "title": "ComputationSpecInput",
+        "description": "Computation specification for the request."
       },
       "ComputeChunkFieldLocationsRequest": {
         "properties": {
@@ -35449,34 +36303,6 @@
         },
         "type": "object",
         "title": "ConversionConfig"
-      },
-      "ConvertDocxToPdfRequest": {
-        "properties": {
-          "document": {
-            "$ref": "#/components/schemas/MIMEData-Input",
-            "description": "Input DOCX document to convert to PDF."
-          }
-        },
-        "type": "object",
-        "required": [
-          "document"
-        ],
-        "title": "ConvertDocxToPdfRequest",
-        "description": "Request to convert a DOCX document to PDF."
-      },
-      "ConvertDocxToPdfResponse": {
-        "properties": {
-          "pdf": {
-            "$ref": "#/components/schemas/retab__types__mime__MIMEData",
-            "description": "The converted PDF document."
-          }
-        },
-        "type": "object",
-        "required": [
-          "pdf"
-        ],
-        "title": "ConvertDocxToPdfResponse",
-        "description": "Response containing the converted PDF."
       },
       "CostBreakdown": {
         "properties": {
@@ -35970,6 +36796,47 @@
         ],
         "title": "CreateSpreadsheetWithStoredTokenRequest",
         "description": "Request to create a new Google Spreadsheet with a stored OAuth token"
+      },
+      "CreateTemplateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Schema"
+          },
+          "python_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Python Code"
+          },
+          "sample_document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "json_schema"
+        ],
+        "title": "CreateTemplateRequest",
+        "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
       },
       "CreateWorkflowRequest": {
         "properties": {
@@ -37079,6 +37946,39 @@
         ],
         "title": "DocumentMessage"
       },
+      "DocumentSignedUrlResponse": {
+        "properties": {
+          "signed_url": {
+            "type": "string",
+            "title": "Signed Url",
+            "description": "Signed URL for downloading the document"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Original filename"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type",
+            "description": "MIME type of the document"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signed_url",
+          "filename"
+        ],
+        "title": "DocumentSignedUrlResponse",
+        "description": "Response containing a signed URL for document download"
+      },
       "DocumentTransformRequest": {
         "properties": {
           "document": {
@@ -37444,6 +38344,32 @@
         ],
         "title": "EditTemplate"
       },
+      "EmailAddressData": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "The email address"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name",
+            "description": "The display name associated with the email address"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "EmailAddressData"
+      },
       "EmailConversionRequest": {
         "properties": {
           "bytes": {
@@ -37506,12 +38432,12 @@
             "description": "The HTML body of the email"
           },
           "sender": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData",
+            "$ref": "#/components/schemas/EmailAddressData",
             "description": "The sender's email address information"
           },
           "recipients_to": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/EmailAddressData"
             },
             "type": "array",
             "title": "Recipients To",
@@ -37519,7 +38445,7 @@
           },
           "recipients_cc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Cc",
@@ -37528,7 +38454,7 @@
           },
           "recipients_bcc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Bcc",
@@ -37665,12 +38591,12 @@
             "description": "The HTML body of the email"
           },
           "sender": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData",
+            "$ref": "#/components/schemas/EmailAddressData",
             "description": "The sender's email address information"
           },
           "recipients_to": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/EmailAddressData"
             },
             "type": "array",
             "title": "Recipients To",
@@ -37678,7 +38604,7 @@
           },
           "recipients_cc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Cc",
@@ -37687,7 +38613,7 @@
           },
           "recipients_bcc": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__EmailAddressData"
+              "$ref": "#/components/schemas/EmailAddressData"
             },
             "type": "array",
             "title": "Recipients Bcc",
@@ -38176,6 +39102,29 @@
         ],
         "title": "ExportToCsvRequest",
         "description": "Request parameters for the export-to-csv endpoint"
+      },
+      "ExportToCsvResponse": {
+        "properties": {
+          "csv_data": {
+            "type": "string",
+            "title": "Csv Data"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "columns": {
+            "type": "integer",
+            "title": "Columns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "csv_data",
+          "rows",
+          "columns"
+        ],
+        "title": "ExportToCsvResponse"
       },
       "ExpressionResponse": {
         "properties": {
@@ -39384,10 +40333,10 @@
             "items": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__BaseMIMEData"
+                  "$ref": "#/components/schemas/BaseMIMEData"
                 },
                 {
-                  "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__MIMEData"
+                  "$ref": "#/components/schemas/MIMEData"
                 }
               ]
             },
@@ -39781,6 +40730,62 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HandlePayload": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "file",
+              "json",
+              "text"
+            ],
+            "title": "Type",
+            "description": "Type of payload"
+          },
+          "document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepIOReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For file handles: document reference"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data",
+            "description": "For JSON handles: structured data"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "For text handles: text content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "HandlePayload",
+        "description": "Payload for a single output handle.\n\nEach output handle on a node produces a typed payload that can be:\n- file: A document reference (PDF, image, etc.)\n- json: Structured JSON data (extracted data, etc.)\n- text: Plain text content\n\nHandle IDs follow the convention: \"output-{type}-{index_or_name}\"\nExamples: \"output-file-0\", \"output-json-0\", \"output-file-CategoryName\""
+      },
       "HilCriterion": {
         "properties": {
           "path": {
@@ -40120,7 +41125,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2025-12-21T15:19:48.832509Z",
+              "updated_at": "2025-12-27T16:21:33.421286Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "gpt-5-mini",
@@ -40566,6 +41571,69 @@
         "title": "ListReconciliations",
         "description": "Paginated list of reconciliations"
       },
+      "ListTemplates": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateSchema"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "ListTemplates"
+      },
+      "MIMEData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Original filename of the attachment."
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "Size of the base64-encoded content in bytes."
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the attachment, determining how it should be handled."
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__AttachmentMetadata",
+            "description": "Additional metadata about the attachment."
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Base64-encoded content of the attachment."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "size",
+          "mime_type",
+          "metadata",
+          "content"
+        ],
+        "title": "MIMEData"
+      },
       "MIMEData-Input": {
         "properties": {
           "filename": {
@@ -40593,6 +41661,33 @@
           "url"
         ],
         "title": "MIMEData"
+      },
+      "MIMEDataInput": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "The filename of the file"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Base64 encoded content"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the file"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "content",
+          "mime_type"
+        ],
+        "title": "MIMEDataInput",
+        "description": "Input format for documents from the frontend.\n\nThis accepts the content and mime_type separately and converts to MIMEData."
       },
       "Mailbox": {
         "properties": {
@@ -41219,6 +42314,22 @@
           "files"
         ],
         "title": "MultipleUploadResponse"
+      },
+      "OCR": {
+        "properties": {
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/Page"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pages"
+        ],
+        "title": "OCR"
       },
       "OCRResult": {
         "properties": {
@@ -41877,6 +42988,68 @@
           "metadata"
         ],
         "title": "OutlookSubmitRequest"
+      },
+      "Page": {
+        "properties": {
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "The unit of the page dimensions",
+            "default": "pixels"
+          },
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/TextBox"
+            },
+            "type": "array",
+            "title": "Blocks"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/TextBox"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "tokens": {
+            "items": {
+              "$ref": "#/components/schemas/TextBox"
+            },
+            "type": "array",
+            "title": "Tokens"
+          },
+          "transforms": {
+            "items": {
+              "$ref": "#/components/schemas/Matrix"
+            },
+            "type": "array",
+            "title": "Transforms",
+            "description": "Transformation matrices applied to the original document image",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "page_number",
+          "width",
+          "height",
+          "blocks",
+          "lines",
+          "tokens"
+        ],
+        "title": "Page"
       },
       "PageBounds": {
         "properties": {
@@ -42942,7 +44115,7 @@
           "ocr_result": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/retab__types__mime__OCR"
+                "$ref": "#/components/schemas/OCR"
               },
               {
                 "type": "null"
@@ -42960,6 +44133,24 @@
         ],
         "title": "PerformOCROnlyResponse",
         "description": "Response model for OCR-only results."
+      },
+      "Point": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "Point"
       },
       "PredictionChange": {
         "properties": {
@@ -43350,20 +44541,6 @@
         "type": "object",
         "title": "ProcessIterationDocumentRequest",
         "description": "Request to process an iteration document with extraction."
-      },
-      "ProcessOCRRequest": {
-        "properties": {
-          "document": {
-            "$ref": "#/components/schemas/MIMEData-Input",
-            "description": "Input document (PDF or DOCX). DOCX files will be converted to PDF."
-          }
-        },
-        "type": "object",
-        "required": [
-          "document"
-        ],
-        "title": "ProcessOCRRequest",
-        "description": "Request to process a document with OCR only (step 1)."
       },
       "ProcessUploadResponse": {
         "properties": {
@@ -44613,6 +45790,97 @@
         ],
         "title": "RenameProjectRequest"
       },
+      "RerunWebhookResponse": {
+        "properties": {
+          "webhook_sent": {
+            "type": "boolean",
+            "title": "Webhook Sent",
+            "description": "Whether the webhook was sent successfully"
+          },
+          "webhook_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Status Code",
+            "description": "HTTP status code from the webhook response"
+          },
+          "webhook_response_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Response Text",
+            "description": "Response text from the webhook (truncated)"
+          },
+          "webhook_response_headers": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Response Headers",
+            "description": "Response headers from the webhook"
+          },
+          "webhook_request_body": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Request Body",
+            "description": "Request body sent to the webhook"
+          },
+          "webhook_duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Duration Ms",
+            "description": "Duration of the webhook request in milliseconds"
+          },
+          "webhook_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Error",
+            "description": "Error message if webhook failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "webhook_sent"
+        ],
+        "title": "RerunWebhookResponse",
+        "description": "Response from rerunning a webhook"
+      },
       "RestorationImpactResponse": {
         "properties": {
           "mode": {
@@ -44741,6 +46009,40 @@
         ],
         "title": "RestoreDatasetResponse",
         "description": "Response model for dataset restoration."
+      },
+      "ResumeWorkflowRequest": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "title": "Node Id",
+            "description": "ID of the HIL node being approved/rejected"
+          },
+          "approved": {
+            "type": "boolean",
+            "title": "Approved",
+            "description": "Whether the human approved the data"
+          },
+          "modified_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified Data",
+            "description": "Optional modified data if human made changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_id",
+          "approved"
+        ],
+        "title": "ResumeWorkflowRequest",
+        "description": "Request to resume a workflow after human review for a specific HIL node"
       },
       "RetabParsedChatCompletion-Input": {
         "properties": {
@@ -45196,7 +46498,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion__ChoiceLogprobs"
+                "$ref": "#/components/schemas/ChoiceLogprobs-Input"
               },
               {
                 "type": "null"
@@ -45264,7 +46566,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
+                "$ref": "#/components/schemas/ChoiceLogprobs-Output"
               },
               {
                 "type": "null"
@@ -45335,7 +46637,7 @@
           "logprobs": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/openai__types__chat__chat_completion_chunk__ChoiceLogprobs"
+                "$ref": "#/components/schemas/ChoiceLogprobs-Output"
               },
               {
                 "type": "null"
@@ -45465,6 +46767,19 @@
             ],
             "title": "Key Mapping",
             "description": "Mapping of consensus keys to original model keys"
+          },
+          "full_parsed": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Parsed",
+            "description": "Complete parsed object from LLM, used instead of unflatten_dict when available"
           }
         },
         "additionalProperties": true,
@@ -45491,6 +46806,24 @@
         ],
         "title": "RetabUsage",
         "description": "Usage information for document processing."
+      },
+      "RunWorkflowRequest": {
+        "properties": {
+          "documents": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MIMEDataInput"
+            },
+            "type": "object",
+            "title": "Documents",
+            "description": "Mapping of start node IDs to their input documents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documents"
+        ],
+        "title": "RunWorkflowRequest",
+        "description": "Request to run a workflow with input documents.\n\nDocuments are provided as a dict mapping start node IDs to document inputs.\n\nExample:\n    {\n        \"documents\": {\n            \"start-node-1\": {\n                \"filename\": \"invoice.pdf\",\n                \"mime_type\": \"application/pdf\",\n                \"content\": \"base64_encoded_content...\"\n            },\n            \"start-node-2\": {\n                \"filename\": \"receipt.pdf\",\n                \"mime_type\": \"application/pdf\", \n                \"content\": \"base64_encoded_content...\"\n            }\n        }\n    }"
       },
       "SchemaChange": {
         "properties": {
@@ -46036,6 +47369,275 @@
         "title": "SpreadsheetDetails",
         "description": "Response from the get-spreadsheet-details endpoint"
       },
+      "StepIOReference": {
+        "properties": {
+          "file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Id",
+            "description": "File ID for document storage lookup"
+          },
+          "gcs_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gcs Path",
+            "description": "GCS path to the stored file"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename",
+            "description": "Original filename"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type",
+            "description": "MIME type of the file"
+          }
+        },
+        "type": "object",
+        "title": "StepIOReference",
+        "description": "Reference to step input/output stored in GCS"
+      },
+      "StepStatus": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "title": "Node Id",
+            "description": "ID of the node"
+          },
+          "node_type": {
+            "type": "string",
+            "enum": [
+              "start",
+              "end",
+              "note",
+              "parse",
+              "agent_edit",
+              "template_edit",
+              "extract",
+              "split",
+              "file_search",
+              "guardrails",
+              "agent",
+              "if_else",
+              "while",
+              "user_approval",
+              "transform",
+              "set_state",
+              "hil",
+              "project_extract",
+              "merge_pdf",
+              "functions"
+            ],
+            "title": "Node Type",
+            "description": "Type of the node"
+          },
+          "node_label": {
+            "type": "string",
+            "title": "Node Label",
+            "description": "Label of the node"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "error",
+              "waiting_for_human"
+            ],
+            "title": "Status",
+            "description": "Current status"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At",
+            "description": "When the step started"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At",
+            "description": "When the step completed"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "Duration in milliseconds"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Error message if failed"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output",
+            "description": "Output data from the step"
+          },
+          "handle_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/HandlePayload"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Outputs",
+            "description": "Output payloads keyed by handle ID (e.g., 'output-file-0', 'output-json-0', 'output-file-CategoryName')"
+          },
+          "input_document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepIOReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Reference to input document"
+          },
+          "output_document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepIOReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Reference to output document"
+          },
+          "split_documents": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/StepIOReference"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split Documents",
+            "description": "For split nodes: category -> document reference"
+          },
+          "requires_human_review": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requires Human Review",
+            "description": "Whether this step requires human review"
+          },
+          "human_reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Reviewed At",
+            "description": "When human review was completed"
+          },
+          "human_review_approved": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Review Approved",
+            "description": "Whether human approved or rejected"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_id",
+          "node_type",
+          "node_label",
+          "status"
+        ],
+        "title": "StepStatus",
+        "description": "Status of a single step in workflow execution"
+      },
       "StoredDBFile": {
         "properties": {
           "object": {
@@ -46084,7 +47686,7 @@
           "ocr_result": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/retab__types__mime__OCR"
+                "$ref": "#/components/schemas/OCR"
               },
               {
                 "type": "null"
@@ -46433,6 +48035,55 @@
         ],
         "title": "TemplateSchema",
         "description": "A full Schema object with validation."
+      },
+      "TextBox": {
+        "properties": {
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "center": {
+            "$ref": "#/components/schemas/Point"
+          },
+          "vertices": {
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/Point"
+              },
+              {
+                "$ref": "#/components/schemas/Point"
+              },
+              {
+                "$ref": "#/components/schemas/Point"
+              },
+              {
+                "$ref": "#/components/schemas/Point"
+              }
+            ],
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Vertices",
+            "description": "(top-left, top-right, bottom-right, bottom-left)"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "width",
+          "height",
+          "center",
+          "vertices",
+          "text"
+        ],
+        "title": "TextBox"
       },
       "TimeRange": {
         "type": "string",
@@ -47442,6 +49093,62 @@
         ],
         "title": "UsageTimeSeries"
       },
+      "User": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "louis-de-benoist",
+              "sacha-ichbiah",
+              "victor-plaisance"
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "avatarUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatarurl"
+          },
+          "bio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bio"
+          },
+          "organization_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "User"
+      },
       "UserParameters": {
         "properties": {
           "language": {
@@ -47832,7 +49539,8 @@
               "end",
               "note",
               "parse",
-              "edit",
+              "agent_edit",
+              "template_edit",
               "extract",
               "split",
               "file_search",
@@ -47842,7 +49550,11 @@
               "while",
               "user_approval",
               "transform",
-              "set_state"
+              "set_state",
+              "hil",
+              "project_extract",
+              "merge_pdf",
+              "functions"
             ],
             "title": "Type"
           },
@@ -47870,6 +49582,30 @@
             ],
             "title": "Config",
             "description": "Node-specific configuration"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width",
+            "description": "Node width for resizable nodes"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height",
+            "description": "Node height for resizable nodes"
           }
         },
         "type": "object",
@@ -47897,6 +49633,160 @@
           "y"
         ],
         "title": "WorkflowNodePosition"
+      },
+      "WorkflowRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique ID for this run"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "ID of the workflow that was run"
+          },
+          "workflow_name": {
+            "type": "string",
+            "title": "Workflow Name",
+            "description": "Name of the workflow at time of execution"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organization that owns this run"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "error",
+              "waiting_for_human"
+            ],
+            "title": "Status",
+            "description": "Overall status",
+            "default": "pending"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At",
+            "description": "When the workflow completed"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "Total duration in milliseconds"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepStatus"
+            },
+            "type": "array",
+            "title": "Steps",
+            "description": "Status of each step"
+          },
+          "input_documents": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/StepIOReference"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Documents",
+            "description": "Start node ID -> input document reference"
+          },
+          "final_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Outputs",
+            "description": "Final outputs from end nodes"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Error message if workflow failed"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "waiting_for_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Waiting For Node Ids",
+            "description": "Node IDs that are waiting for human review"
+          },
+          "pending_node_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Node Outputs",
+            "description": "Serialized node outputs to resume from"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "workflow_name",
+          "organization_id"
+        ],
+        "title": "WorkflowRun",
+        "description": "A stored workflow run record"
       },
       "main_server__services__custom__bert__cubemimedata__AttachmentMetadata": {
         "properties": {
@@ -47968,112 +49858,6 @@
         "type": "object",
         "title": "AttachmentMetadata"
       },
-      "main_server__services__custom__bert__cubemimedata__BaseMIMEData": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Original filename of the attachment."
-          },
-          "size": {
-            "type": "integer",
-            "title": "Size",
-            "description": "Size of the base64-encoded content in bytes."
-          },
-          "mime_type": {
-            "type": "string",
-            "title": "Mime Type",
-            "description": "MIME type of the attachment, determining how it should be handled."
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__AttachmentMetadata",
-            "description": "Additional metadata about the attachment."
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "size",
-          "mime_type",
-          "metadata"
-        ],
-        "title": "BaseMIMEData"
-      },
-      "main_server__services__custom__bert__cubemimedata__EmailAddressData": {
-        "properties": {
-          "email": {
-            "type": "string",
-            "title": "Email",
-            "description": "The email address"
-          },
-          "display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Display Name",
-            "description": "The display name associated with the email address"
-          }
-        },
-        "type": "object",
-        "required": [
-          "email"
-        ],
-        "title": "EmailAddressData"
-      },
-      "main_server__services__custom__bert__cubemimedata__MIMEData": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Original filename of the attachment."
-          },
-          "size": {
-            "type": "integer",
-            "title": "Size",
-            "description": "Size of the base64-encoded content in bytes."
-          },
-          "mime_type": {
-            "type": "string",
-            "title": "Mime Type",
-            "description": "MIME type of the attachment, determining how it should be handled."
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__AttachmentMetadata",
-            "description": "Additional metadata about the attachment."
-          },
-          "content": {
-            "type": "string",
-            "title": "Content",
-            "description": "Base64-encoded content of the attachment."
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "size",
-          "mime_type",
-          "metadata",
-          "content"
-        ],
-        "title": "MIMEData"
-      },
       "main_server__services__custom__bert__cubemimedata__OCR": {
         "properties": {
           "pages": {
@@ -48106,14 +49890,14 @@
           },
           "blocks": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
+              "$ref": "#/components/schemas/TextBox"
             },
             "type": "array",
             "title": "Blocks"
           },
           "lines": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
+              "$ref": "#/components/schemas/TextBox"
             },
             "type": "array",
             "title": "Lines"
@@ -48128,73 +49912,6 @@
           "lines"
         ],
         "title": "Page"
-      },
-      "main_server__services__custom__bert__cubemimedata__Point": {
-        "properties": {
-          "x": {
-            "type": "integer",
-            "title": "X"
-          },
-          "y": {
-            "type": "integer",
-            "title": "Y"
-          }
-        },
-        "type": "object",
-        "required": [
-          "x",
-          "y"
-        ],
-        "title": "Point"
-      },
-      "main_server__services__custom__bert__cubemimedata__TextBox": {
-        "properties": {
-          "width": {
-            "type": "integer",
-            "title": "Width"
-          },
-          "height": {
-            "type": "integer",
-            "title": "Height"
-          },
-          "center": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
-          },
-          "vertices": {
-            "prefixItems": [
-              {
-                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
-              },
-              {
-                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
-              },
-              {
-                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
-              },
-              {
-                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Point"
-              }
-            ],
-            "type": "array",
-            "maxItems": 4,
-            "minItems": 4,
-            "title": "Vertices",
-            "description": "(top-left, top-right, bottom-right, bottom-left)"
-          },
-          "text": {
-            "type": "string",
-            "title": "Text"
-          }
-        },
-        "type": "object",
-        "required": [
-          "width",
-          "height",
-          "center",
-          "vertices",
-          "text"
-        ],
-        "title": "TextBox"
       },
       "main_server__services__custom__bertfake__routes__User": {
         "properties": {
@@ -48312,85 +50029,6 @@
         ],
         "title": "User"
       },
-      "main_server__services__internal__blog__models__User": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "enum": [
-              "louis-de-benoist",
-              "sacha-ichbiah",
-              "victor-plaisance"
-            ],
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "avatarUrl": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avatarurl"
-          },
-          "bio": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bio"
-          },
-          "organization_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Organization Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name"
-        ],
-        "title": "User"
-      },
-      "main_server__services__v1__extractions__models__ExportToCsvResponse": {
-        "properties": {
-          "csv_data": {
-            "type": "string",
-            "title": "Csv Data"
-          },
-          "rows": {
-            "type": "integer",
-            "title": "Rows"
-          },
-          "columns": {
-            "type": "integer",
-            "title": "Columns"
-          }
-        },
-        "type": "object",
-        "required": [
-          "csv_data",
-          "rows",
-          "columns"
-        ],
-        "title": "ExportToCsvResponse"
-      },
       "main_server__services__v1__integrations__google_sheets__routes__ExportToCsvResponse": {
         "properties": {
           "csv_data": {
@@ -48414,6 +50052,21 @@
         ],
         "title": "ExportToCsvResponse",
         "description": "Response from the export-to-csv endpoint"
+      },
+      "main_server__services__v1__projects__routes__ApplyComputationsResponse": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ApplyComputationsResponse",
+        "description": "Response containing computed data."
       },
       "main_server__services__v1__schemas__default_templates__routes__CreateTemplateRequest": {
         "properties": {
@@ -48459,138 +50112,26 @@
         ],
         "title": "CreateTemplateRequest"
       },
-      "main_server__services__v1__schemas__default_templates__routes__ListTemplates": {
+      "main_server__services__v1__workflows__routes__ApplyComputationsRequest": {
         "properties": {
           "data": {
-            "items": {
-              "$ref": "#/components/schemas/TemplateSchema"
-            },
-            "type": "array",
-            "title": "Data"
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "The data to apply computations to"
           },
-          "list_metadata": {
-            "$ref": "#/components/schemas/ListMetadata"
+          "computation_spec": {
+            "$ref": "#/components/schemas/ComputationSpecInput",
+            "description": "The computation specification"
           }
         },
         "type": "object",
         "required": [
           "data",
-          "list_metadata"
+          "computation_spec"
         ],
-        "title": "ListTemplates"
-      },
-      "main_server__services__v1__schemas__templates__routes__CreateTemplateRequest": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "json_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Json Schema"
-          },
-          "python_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Python Code"
-          },
-          "sample_document": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/MIMEData-Input"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "json_schema"
-        ],
-        "title": "CreateTemplateRequest",
-        "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
-      },
-      "openai__types__chat__chat_completion__ChoiceLogprobs": {
-        "properties": {
-          "content": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "refusal": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refusal"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "title": "ChoiceLogprobs",
-        "description": "Log probability information for the choice."
-      },
-      "openai__types__chat__chat_completion_chunk__ChoiceLogprobs": {
-        "properties": {
-          "content": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "refusal": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ChatCompletionTokenLogprob"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refusal"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "title": "ChoiceLogprobs",
-        "description": "Log probability information for the choice."
+        "title": "ApplyComputationsRequest",
+        "description": "Request to apply computations to data."
       },
       "openai__types__chat__chat_completion_message_function_tool_call_param__Function": {
         "properties": {
@@ -48610,42 +50151,6 @@
         ],
         "title": "Function",
         "description": "The function that the model called."
-      },
-      "retab__types__mime__AttachmentMetadata": {
-        "properties": {
-          "is_inline": {
-            "type": "boolean",
-            "title": "Is Inline",
-            "description": "Whether the attachment is inline or not.",
-            "default": false
-          },
-          "inline_cid": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Inline Cid",
-            "description": "CID reference for inline attachments."
-          },
-          "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source",
-            "description": "Source of the attachment in dot notation attachment_id, or email_id.attachment_id, allow us to keep track of the origin of the attachment, for search purposes. "
-          }
-        },
-        "type": "object",
-        "title": "AttachmentMetadata"
       },
       "retab__types__mime__BaseMIMEData": {
         "properties": {
@@ -48700,84 +50205,6 @@
           "url"
         ],
         "title": "MIMEData"
-      },
-      "retab__types__mime__OCR": {
-        "properties": {
-          "pages": {
-            "items": {
-              "$ref": "#/components/schemas/retab__types__mime__Page"
-            },
-            "type": "array",
-            "title": "Pages"
-          }
-        },
-        "type": "object",
-        "required": [
-          "pages"
-        ],
-        "title": "OCR"
-      },
-      "retab__types__mime__Page": {
-        "properties": {
-          "page_number": {
-            "type": "integer",
-            "title": "Page Number"
-          },
-          "width": {
-            "type": "integer",
-            "title": "Width"
-          },
-          "height": {
-            "type": "integer",
-            "title": "Height"
-          },
-          "unit": {
-            "type": "string",
-            "title": "Unit",
-            "description": "The unit of the page dimensions",
-            "default": "pixels"
-          },
-          "blocks": {
-            "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
-            },
-            "type": "array",
-            "title": "Blocks"
-          },
-          "lines": {
-            "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
-            },
-            "type": "array",
-            "title": "Lines"
-          },
-          "tokens": {
-            "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__TextBox"
-            },
-            "type": "array",
-            "title": "Tokens"
-          },
-          "transforms": {
-            "items": {
-              "$ref": "#/components/schemas/Matrix"
-            },
-            "type": "array",
-            "title": "Transforms",
-            "description": "Transformation matrices applied to the original document image",
-            "default": []
-          }
-        },
-        "type": "object",
-        "required": [
-          "page_number",
-          "width",
-          "height",
-          "blocks",
-          "lines",
-          "tokens"
-        ],
-        "title": "Page"
       }
     },
     "securitySchemes": {
