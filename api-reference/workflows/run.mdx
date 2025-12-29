@@ -1,0 +1,126 @@
+---
+title: 'Run Workflow'
+openapi: 'POST /v1/workflows/{workflow_id}/run'
+---
+
+Run a workflow with the provided input documents. This endpoint creates a workflow run and starts execution in the background. The response returns immediately with status "running" - use the Get Run endpoint to check for updates.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+run = client.workflows.run(
+    workflow_id="wf_abc123xyz",
+    documents={
+        "start-node-1": "invoice.pdf",
+        "start-node-2": "receipt.pdf",
+    }
+)
+
+print(f"Run started: {run.id}")
+print(f"Status: {run.status}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const run = await client.workflows.run({
+    workflowId: "wf_abc123xyz",
+    documents: {
+        "start-node-1": "./invoice.pdf",
+        "start-node-2": "./receipt.pdf",
+    }
+});
+
+console.log(`Run started: ${run.id}`);
+console.log(`Status: ${run.status}`);
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/run' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "documents": {
+      "start-node-1": {
+        "filename": "invoice.pdf",
+        "content": "<BASE64_ENCODED_FILE_CONTENT>",
+        "mime_type": "application/pdf"
+      },
+      "start-node-2": {
+        "filename": "receipt.pdf",
+        "content": "<BASE64_ENCODED_FILE_CONTENT>",
+        "mime_type": "application/pdf"
+      }
+    }
+  }'
+```
+
+</RequestExample>
+
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "run_abc123xyz",
+  "workflow_id": "wf_abc123xyz",
+  "workflow_name": "Invoice Processing",
+  "organization_id": "org_123",
+  "status": "running",
+  "started_at": "2024-01-15T10:30:00Z",
+  "completed_at": null,
+  "duration_ms": null,
+  "steps": [
+    {
+      "node_id": "start-node-1",
+      "node_type": "start",
+      "node_label": "Invoice Input",
+      "status": "completed",
+      "started_at": "2024-01-15T10:30:00Z",
+      "completed_at": "2024-01-15T10:30:01Z",
+      "duration_ms": 1000
+    },
+    {
+      "node_id": "extract-node-1",
+      "node_type": "extract",
+      "node_label": "Extract Data",
+      "status": "running",
+      "started_at": "2024-01-15T10:30:01Z"
+    }
+  ],
+  "input_documents": {
+    "start-node-1": {
+      "file_id": "file_123",
+      "filename": "invoice.pdf",
+      "mime_type": "application/pdf"
+    }
+  },
+  "final_outputs": null,
+  "error": null,
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:01Z",
+  "waiting_for_node_ids": []
+}
+```
+
+```json 400
+{
+  "detail": "Missing input documents for start nodes: Invoice Input, Receipt Input"
+}
+```
+
+```json 404
+{
+  "detail": "Workflow not found"
+}
+```
+
+</ResponseExample>
+
