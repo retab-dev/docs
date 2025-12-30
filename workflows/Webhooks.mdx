@@ -1,368 +1,330 @@
+---
+title: Webhooks
+description: Receive workflow results via HTTP webhooks
+---
 
-----
+## Overview
 
-## Webhooks
+Retab uses HTTPS to send webhook events to your app as a JSON payload. When a workflow completes, the End (Webhook) node sends the processed data to your configured endpoint.
 
-Retab uses HTTPS to send webhook events to your app as a JSON payload representing a `WebhookRequest` object.
+## Webhook Payload
 
-The `WebhookRequest` object contains the following fields:
+The webhook sends a standardized JSON payload with the following structure:
 
-- `completion`: The parsed chat completion object, containing the extracted data.
-- `user`: The user email address.
-- `file_payload`: The file payload object, containing the file name, url and other metadata.
-- `metadata`: Some additional metadata.
+| Field | Type | Description |
+|-------|------|-------------|
+| `document` | `MIMEData \| null` | Document data (if a file was passed to the End node) |
+| `json` | `object \| null` | Extracted JSON data (if JSON was passed to the End node) |
 
+### MIMEData Structure
+
+The `document` field uses the `MIMEData` format:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `filename` | `string` | Original filename (e.g., `"invoice.pdf"`, `"scan.png"`) |
+| `url` | `string` | Base64 data URL containing the file content |
+
+The `url` field is a [data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs) in the format:
+```
+data:<mime_type>;base64,<base64_encoded_content>
+```
+
+**Example Payload:**
+
+```json
+{
+  "document": {
+    "filename": "invoice.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQKJeLjz9..."
+  },
+  "json": {
+    "invoice_number": "INV-2024-001",
+    "vendor_name": "Acme Corp",
+    "total_amount": 1250.00,
+    "line_items": [
+      { "description": "Widget A", "quantity": 10, "unit_price": 100.00 },
+      { "description": "Widget B", "quantity": 5, "unit_price": 50.00 }
+    ]
+  }
+}
+```
+
+<Note>
+Either `document` or `json` (or both) will be present depending on what's connected to the End node. If only an Extract node is connected, you'll receive `json` with the extracted data. If a document is also passed through, you'll receive both.
+</Note>
+
+### Parsing the Payload
 
 <CodeGroup>
 ```python Python
-from openai.types.chat.parsed_chat_completion import ParsedChatCompletion
+from pydantic import BaseModel, Field
+from typing import Any
+import base64
 
 class MIMEData(BaseModel):
-    filename: str = Field(description="The filename of the file", examples=["file.pdf", "image.png", "data.txt"])
-    url: str = Field(description="The URL of the file in base64 format", examples=["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."])
-    ##... other fields
+    """Document data in base64 data URL format."""
+    filename: str = Field(description="Original filename of the document")
+    url: str = Field(description="Base64 data URL of the file content")
+    
+    @property
+    def mime_type(self) -> str:
+        """Extract MIME type from the data URL."""
+        if self.url.startswith("data:"):
+            return self.url.split(";")[0].split(":")[1]
+        return "application/octet-stream"
+    
+    @property
+    def content(self) -> bytes:
+        """Decode the base64 content."""
+        if self.url.startswith("data:"):
+            base64_data = self.url.split(",")[1]
+            return base64.b64decode(base64_data)
+        raise ValueError("URL is not a data URL")
 
-class WebhookRequest(BaseModel):
-    completion: ParsedChatCompletion
-    user: Optional[EmailStr] = None
-    file_payload: MIMEData
-    metadata: Optional[dict[str, Any]] = None
-
+class WebhookPayload(BaseModel):
+    document: MIMEData | None = None
+    json: dict[str, Any] | None = Field(default=None)
 ```
 
 ```typescript Node.js
-import { ParsedChatCompletion } from 'openai/resources/chat/completions';
-
 interface MIMEData {
-    filename: string; // The filename of the file, e.g., "file.pdf", "image.png", "data.txt"
-    url: string; // The URL of the file in base64 format, e.g., "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
-    // ... other fields
+    filename: string;
+    url: string;
 }
 
-interface WebhookRequest {
-    completion: ParsedChatCompletion;
-    user?: string; // User email address
-    file_payload: MIMEData;
-    metadata?: Record<string, any>;
+interface WebhookPayload {
+    document: MIMEData | null;
+    json: Record<string, any> | null;
 }
 
+// Helper to extract MIME type from data URL
+function getMimeType(dataUrl: string): string {
+    if (dataUrl.startsWith('data:')) {
+        return dataUrl.split(';')[0].split(':')[1];
+    }
+    return 'application/octet-stream';
+}
+
+// Helper to decode base64 content
+function getContent(dataUrl: string): Buffer {
+    if (dataUrl.startsWith('data:')) {
+        const base64Data = dataUrl.split(',')[1];
+        return Buffer.from(base64Data, 'base64');
+    }
+    throw new Error('URL is not a data URL');
+}
 ```
 </CodeGroup>
 
-To start receiving webhook events in your app:
+## Setting Up Webhooks
 
-- Create a webhook endpoint handler to receive event data POST requests.
-- Create a new deployment sending data to your webhook endpoint.
-- Test your webhook endpoint handler locally using the Retab SDK.
-- Secure your webhook endpoint.
+To start receiving webhook events:
 
+1. Create a webhook endpoint handler to receive POST requests
+2. Configure the End node in your workflow with your webhook URL
+3. Test your endpoint locally using the Retab SDK
+4. Secure your webhook endpoint with signature verification
 
-### Create a webhook endpoint handler
+### Create a Webhook Endpoint Handler
 
-Set up an HTTPS endpoint function that can accept webhook requests with a POST method.
-
-Set up your endpoint function so that it:
-
-- Handles POST requests with a JSON payload consisting of an event object.
-- Quickly returns a successful status code (2xx) prior to any complex logic that might cause a timeout.
+Set up an HTTPS endpoint that:
+- Handles POST requests with a JSON payload
+- Returns a successful status code (2xx) quickly before complex processing
+- Validates the webhook signature for security
 
 <CodeGroup>
-```python Python
-import os
+```python FastAPI (Python)
+import base64
+from fastapi import FastAPI, Request
+from pydantic import BaseModel
+from typing import Any
 
-from fastapi import FastAPI, Request, Response, HTTPException
-from retab import Retab
-
-client = Retab()
 app = FastAPI()
+
+class Invoice(BaseModel):
+    invoice_number: str
+    vendor_name: str
+    total_amount: float
 
 @app.post("/webhook")
 async def webhook_handler(request: Request):
+    payload = await request.json()
+    
+    # Extract the JSON data
+    json_data = payload.get("json")
+    document = payload.get("document")
+    
+    if json_data:
+        invoice = Invoice.model_validate(json_data)
+        print(f"📬 Received invoice: {invoice.invoice_number} - ${invoice.total_amount}")
+    
+    if document:
+        filename = document.get("filename")
+        url = document.get("url", "")
+        print(f"📎 Document: {filename}")
+        
+        # Optionally save the file
+        if url.startswith("data:"):
+            base64_content = url.split(",")[1]
+            file_bytes = base64.b64decode(base64_content)
+            with open(f"/tmp/{filename}", "wb") as f:
+                f.write(file_bytes)
+            print(f"   Saved to /tmp/{filename} ({len(file_bytes)} bytes)")
+    
+    return {"status": "success"}
 
-    payload = await request.body()
-
-    # Decode and parse the webhook request from the verified payload
-    json_data = json.loads(payload.decode('utf-8'))
-    webhook_request = WebhookRequest.model_validate(json_data)
-
-    invoice_object = Invoice.model_validate_json(webhook_request.completion.choices[0].message.content or "{}") # The parsed object is the same Invoice object as the one you defined in the Pydantic model
-    print("📬 Webhook received:", invoice_object)
-    return {"status": "success", "data": invoice_object}
-
-
-# To run the FastAPI app locally, use the command:
-# uvicorn your_module_name:app --reload
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-```javascript Node.js
+```javascript Express (Node.js)
 import express from 'express';
+import fs from 'fs';
 
 const app = express();
-
-// Use express.raw() to get the raw body for signature verification
-app.use(express.raw({ type: 'application/json' }));
+app.use(express.json({ limit: '50mb' })); // Increase limit for base64 files
 
 app.post('/webhook', async (req, res) => {
-    const payload = req.body;
-
-    // Decode and parse the webhook request from the verified payload
-    const webhookRequest = JSON.parse(payload.toString('utf-8'));
-
-    const invoiceObject = JSON.parse(
-        webhookRequest.completion.choices[0].message.content || '{}'
-    ); // The parsed object matches your Invoice schema
-    console.log('📬 Webhook received:', invoiceObject);
+    const { document, json } = req.body;
     
-    res.status(200).json({ status: 'success', data: invoiceObject });
+    if (json) {
+        console.log(`📬 Received invoice: ${json.invoice_number} - $${json.total_amount}`);
+    }
+    
+    if (document) {
+        console.log(`📎 Document: ${document.filename}`);
+        
+        // Optionally save the file
+        if (document.url.startsWith('data:')) {
+            const base64Content = document.url.split(',')[1];
+            const fileBuffer = Buffer.from(base64Content, 'base64');
+            fs.writeFileSync(`/tmp/${document.filename}`, fileBuffer);
+            console.log(`   Saved to /tmp/${document.filename} (${fileBuffer.length} bytes)`);
+        }
+    }
+    
+    res.status(200).json({ status: 'success' });
 });
 
-// To run the Express app locally:
-// node your_module_name.js
 app.listen(8000, () => {
     console.log('Webhook server listening on port 8000');
 });
 ```
 </CodeGroup>
 
-### Create a new deployment sending data to your webhook endpoint
+### Configure the End Node
 
-Let's create a new processor and automation to send data to your webhook endpoint.
+In your workflow:
 
-First, create a processor:
+1. Add an **End** (Webhook) node
+2. Connect your Extract or Functions node to the End node
+3. Configure the webhook URL and any custom headers
+
+```json
+{
+  "webhook_url": "https://api.yourapp.com/workflow-results",
+  "webhook_headers": {
+    "Authorization": "Bearer your-api-key",
+    "X-Workflow-ID": "wf_abc123"
+  }
+}
+```
+
+### Test Your Webhook
+
+Before deploying, test your webhook endpoint using the SDK:
 
 <CodeGroup>
 ```python Python
-class Invoice(BaseModel):
-    amount: int
-    currency: str
-    customer_email: EmailStr
-
-
 from retab import Retab
 
 client = Retab()
 
-# Step 1: Create a processor
+# Create a test processor and automation
 processor = client.processors.create(
-    name="Invoice Processor",
+    name="Test Processor",
     model="gpt-4.1",
     json_schema=Invoice.model_json_schema(),
 )
 
-# Step 2: Create an automation and attach it to the processor
-extraction_link = client.processors.automations.links.create(
-    name="Invoices",
+# Create an automation with your webhook
+automation = client.processors.automations.links.create(
+    name="Test Automation",
     processor_id=processor.id,
-    webhook_url="https://your_server.com/invoices/webhook",
+    webhook_url="https://your-server.com/webhook",
 )
+
+# Test with a document
+result = client.processors.automations.links.test_document_upload(
+    link_id=automation.id,
+    document="test_invoice.pdf"
+)
+
+print(f"Test result: {result}")
 ```
 
-```javascript Node.js
+```typescript Node.js
 import Retab from 'retab';
-
-// Define your Invoice schema
-const invoiceSchema = {
-    type: 'object',
-    properties: {
-        amount: { type: 'integer' },
-        currency: { type: 'string' },
-        customer_email: { type: 'string', format: 'email' }
-    },
-    required: ['amount', 'currency', 'customer_email']
-};
 
 const client = new Retab();
 
-// Step 1: Create a processor
+// Create a test processor and automation
 const processor = await client.processors.create({
-    name: 'Invoice Processor',
+    name: 'Test Processor',
     model: 'gpt-4.1',
     json_schema: invoiceSchema,
 });
 
-// Step 2: Create an automation and attach it to the processor
-const extractionLink = await client.processors.automations.links.create({
-    name: 'Invoices',
+const automation = await client.processors.automations.links.create({
+    name: 'Test Automation',
     processor_id: processor.id,
-    webhook_url: 'https://your_server.com/invoices/webhook',
+    webhook_url: 'https://your-server.com/webhook',
 });
+
+// Test with a document
+const result = await client.processors.automations.links.testDocumentUpload({
+    link_id: automation.id,
+    document: 'test_invoice.pdf'
+});
+
+console.log('Test result:', result);
 ```
 </CodeGroup>
 
-### Test your webhook endpoint handler locally using the Retab SDK
+## Securing Your Webhook
 
-Before you go-live with your webhook endpoint function, we recommend that you test your application integration.
+<Warning>
+An unsecured webhook endpoint is vulnerable to forged requests. Always verify the signature before processing webhook data.
+</Warning>
 
-You can do so by sending a test request to your webhook endpoint using the Retab SDK.
+### How Signature Verification Works
 
-<CodeGroup>
-```python Python
-from retab import Retab
+Retab uses HMAC-SHA256 to sign webhook payloads:
 
-client = Retab()
-link_log = client.processors.automations.links.test_document_upload(
-    link_id=extraction_link.id,
-    document = "invoice.pdf"
-)
-```
+1. **Signature Generation**: Retab computes an HMAC-SHA256 signature of the payload using your webhook secret
+2. **Signature Header**: The signature is included in the `Retab-Signature` header
+3. **Verification**: Your server recomputes the signature and compares it to the header
 
-```javascript Node.js
-import Retab from 'retab';
+If the signatures match, the request is authentic and unmodified.
 
-const client = new Retab();
-const linkLog = await client.processors.automations.links.testDocumentUpload({
-    link_id: extractionLink.id,
-    document: 'invoice.pdf'
-});
-```
-</CodeGroup>
+### Getting Your Webhook Secret
 
-### Secure your webhook endpoint
+You can create a webhook security key directly from the End node in the workflow editor:
 
-You need to secure your integration by making sure your handler verifies that all webhook requests are generated by Retab. 
+1. Click the **key icon** (🔑) in the End node header
+2. Click **Create Security Key** if you don't have one
+3. Copy the generated secret
+4. Store it securely as an environment variable (e.g., `WEBHOOKS_SECRET`)
 
-You perform the verification by providing the event payload, the `Retab-Signature` header, and the endpoint's secret. If verification fails, you get an error.
+Alternatively, you can manage keys in your [Retab Dashboard](https://www.retab.com/dashboard/settings) under **Settings** → **Security**.
 
-
-**Important:** Make sure to replace `"your_webhooks_secret_here"` with the actual secret from your [Retab dashboard](https://www.retab.com/dashboard/settings).
-
-<CodeGroup>
-```python Python
-import os
-
-from fastapi import FastAPI, Request, Response, HTTPException
-from retab import Retab
-
-client = Retab()
-app = FastAPI()
-
-@app.post("/webhook")
-async def webhook_handler(request: Request):
-
-    payload = await request.body()
-
-    #########################################################
-    # SIGNATURE VERIFICATION
-    #########################################################
-    try:
-        # Read the signature from the request headers
-        
-        signature_header = request.headers.get("Retab-Signature")
-
-        if not signature_header:
-            raise HTTPException(status_code=400, detail="Missing Retab-Signature header")
-
-        # Verify the signature and process the event
-        client.verify_event(
-            event_body=payload,
-            event_signature=signature_header,
-            secret=os.getenv("WEBHOOKS_SECRET"),
-        )
-
-        return Response(status_code=200)
-    except Exception as e:
-        # Handle errors (optional: log the error)
-        return Response(status_code=400, content=f"Signature verification error. Please verify your signature secret. {str(e)}")
-
-    ########################################################   
-    # END OF SIGNATURE VERIFICATION
-    #########################################################
-
-    # Decode and parse the webhook request from the verified payload
-    json_data = json.loads(payload.decode('utf-8'))
-    webhook_request = WebhookRequest.model_validate(json_data)
-
-    #Then continue with your webhook handler logic .....
-    invoice_object = Invoice.model_validate_json(webhook_request.completion.choices[0].message.content or "{}") # The parsed object is the same Invoice object as the one you defined in the Pydantic model
-    print("📬 Webhook received:", invoice_object)
-    return {"status": "success", "data": invoice_object}
-
-
-```
-
-```javascript Node.js
-import express from 'express';
-import Retab from 'retab';
-
-const client = new Retab();
-const app = express();
-
-// Use express.raw() to get the raw body for signature verification
-app.use(express.raw({ type: 'application/json' }));
-
-app.post('/webhook', async (req, res) => {
-    const payload = req.body;
-
-    //////////////////////////////////////////////////////////
-    // SIGNATURE VERIFICATION
-    //////////////////////////////////////////////////////////
-    try {
-        // Read the signature from the request headers
-        const signatureHeader = req.headers['retab-signature'];
-
-        if (!signatureHeader) {
-            return res.status(400).json({ detail: 'Missing Retab-Signature header' });
-        }
-
-        // Verify the signature and process the event
-        await client.verifyEvent({
-            event_body: payload,
-            event_signature: signatureHeader,
-            secret: process.env.WEBHOOKS_SECRET,
-        });
-
-    } catch (error) {
-        // Handle errors (optional: log the error)
-        return res.status(400).send(`Signature verification error. Please verify your signature secret. ${error.message}`);
-    }
-
-    //////////////////////////////////////////////////////////
-    // END OF SIGNATURE VERIFICATION
-    //////////////////////////////////////////////////////////
-
-    // Decode and parse the webhook request from the verified payload
-    const webhookRequest = JSON.parse(payload.toString('utf-8'));
-
-    // Then continue with your webhook handler logic .....
-    const invoiceObject = JSON.parse(
-        webhookRequest.completion.choices[0].message.content || '{}'
-    ); // The parsed object matches your Invoice schema
-    console.log('📬 Webhook received:', invoiceObject);
-    
-    return res.status(200).json({ status: 'success', data: invoiceObject });
-});
-```
-</CodeGroup>
-
-#### Vulnerability
-
-When you set up a webhook, you provide an **HTTP endpoint** on your server for Retab to send data to. If this endpoint is not secured (i.e., it accepts unauthenticated `POST` requests from anywhere), it essentially becomes a public door into your system. **Any actor** could attempt to call this URL and send fake data. This is inherently dangerous: a malicious party might send **forged webhook requests** that masquerade as Retab, but contain bogus or harmful data. Without verification, your server might accept these fake events and perform unintended actions. In short, an open webhook endpoint without authentication is **highly vulnerable** to abuse.
-
-#### Mitigation
-
-To secure webhook deliveries, Retab employs a **signature verification** mechanism using an HMAC-like scheme (similar to the approach used by [Stripe](https://docs.stripe.com/webhooks#verify-official-libraries), [WorkOS](https://workos.com/docs/events/data-syncing/webhooks/1-set-up-your-webhook-endpoint), and other providers). HMAC stands for *Hash-Based Message Authentication Code*, a method that uses a secret key to create a cryptographic signature for each message. In fact, HMAC signing is by far the most popular strategy for webhook security (used in \~65% of webhook implementations), because it ensures that only the trusted source (with knowledge of the secret) could have sent the request.
-
-**How it works:** Retab and your application share a **webhook secret** (a random string known only to Retab and you). This secret is available in your Retab dashboard (often labeled as `WEBHOOKS_SECRET`). Retab uses this secret to include a special signature header with every webhook request:
-
-* **Signature Generation (Retab):** When Retab prepares to send a webhook, it computes an HMAC-SHA256 signature of the webhook's payload using your secret key, and includes this signature in the request headers (specifically in the `Retab-Signature` header).
-* **Signature Verification (Your Server):** When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret. Then, compare your computed signature to the value in the `Retab-Signature` header.
-* **Comparison Result:** If the two signatures **match**, it means the request truly came from Retab (since only Retab knows the secret) and that the payload was not altered in transit. You can then safely trust and process the webhook. If the signatures **do not match**, the request is illegitimate – either coming from an impostor or corrupted – and you should reject it (e.g. respond with an HTTP 400 Bad Request or 401 Unauthorized).
-
-By using this HMAC signature validation, we achieve both **authentication** and **integrity** for webhook messages: only the genuine sender (Retab) can produce a matching signature, and any change to the data would break the signature verification. In other words, a valid `Retab-Signature` proves that the webhook content is exactly what Retab sent and has not been tampered with.
-
-
-
-#### Code Snippets
----
-Here are some code snippets for different frameworks.
+### Implementation Examples
 
 <CodeGroup>
 ```python FastAPI (Python)
 import os
-
 from fastapi import FastAPI, Request, Response, HTTPException
 from retab import Retab
 
@@ -371,73 +333,103 @@ app = FastAPI()
 
 @app.post("/webhook")
 async def webhook_handler(request: Request):
+    payload = await request.body()
+    signature_header = request.headers.get("Retab-Signature")
+
+    if not signature_header:
+        raise HTTPException(status_code=400, detail="Missing Retab-Signature header")
+
     try:
-        # Read payload and signature from request
-        payload = await request.body()
-        signature_header = request.headers.get("Retab-Signature")
-
-        if not signature_header:
-            raise HTTPException(status_code=400, detail="Missing Retab-Signature header")
-
-        # Verify the signature and process the event
+        # Verify the signature
         client.verify_event(
             event_body=payload,
             event_signature=signature_header,
             secret=os.getenv("WEBHOOKS_SECRET"),
         )
-
-        return Response(status_code=200)
     except Exception as e:
-        # Handle errors (optional: log the error)
-        return Response(status_code=400, content=f"Signature verification error. Please verify your signature secret. {str(e)}")
-```
+        return Response(
+            status_code=400, 
+            content=f"Signature verification failed: {str(e)}"
+        )
 
-```python Django (Python)
-import os
-
-from django import Response
-from retab import Retab
-
-client = Retab()
-
-def webhook_handler(request):
-    payload = request.get_data()
-    signature_header = request.headers["Retab-Signature"]
-
-    # Verify the signature and process the event
-    response = client.verify_event(
-        event_body=payload,
-        event_signature=signature_header,
-        secret=os.getenv("WEBHOOKS_SECRET"),
-    )
-
-    return Response(status=200)
+    # Signature verified - process the webhook
+    import json
+    data = json.loads(payload.decode('utf-8'))
+    json_data = data.get("json")
+    document = data.get("document")
+    
+    # Process your data...
+    
+    return Response(status_code=200)
 ```
 
 ```python Flask (Python)
 import os
-
 from flask import Flask, Response, request
 from retab import Retab
 
 client = Retab()
-
 app = Flask(__name__)
-
 
 @app.route("/webhook", methods=["POST"])
 def webhook_handler():
     payload = request.get_data()
-    signature_header = request.headers["Retab-Signature"]
+    signature_header = request.headers.get("Retab-Signature")
 
-    # Verify the signature and process the event
-    response = client.verify_event(
-        event_body=payload,
-        event_signature=signature_header,
-        secret=os.getenv("WEBHOOKS_SECRET"),
-    )
+    if not signature_header:
+        return Response("Missing Retab-Signature header", status=400)
 
+    try:
+        client.verify_event(
+            event_body=payload,
+            event_signature=signature_header,
+            secret=os.getenv("WEBHOOKS_SECRET"),
+        )
+    except Exception as e:
+        return Response(f"Signature verification failed: {str(e)}", status=400)
+
+    # Process the webhook...
+    import json
+    data = json.loads(payload)
+    # ...
+    
     return Response(status=200)
+```
+
+```python Django (Python)
+import os
+import json
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from retab import Retab
+
+client = Retab()
+
+@csrf_exempt
+def webhook_handler(request):
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    
+    payload = request.body
+    signature_header = request.headers.get("Retab-Signature")
+
+    if not signature_header:
+        return JsonResponse({"error": "Missing Retab-Signature header"}, status=400)
+
+    try:
+        client.verify_event(
+            event_body=payload,
+            event_signature=signature_header,
+            secret=os.getenv("WEBHOOKS_SECRET"),
+        )
+    except Exception as e:
+        return HttpResponse(f"Signature verification failed: {str(e)}", status=400)
+
+    # Process the webhook...
+    data = json.loads(payload)
+    # ...
+    
+    return HttpResponse(status=200)
 ```
 
 ```javascript Express (Node.js)
@@ -450,26 +442,33 @@ const app = express();
 app.use(express.raw({ type: 'application/json' }));
 
 app.post('/webhook', async (req, res) => {
+    const payload = req.body;
+    const signatureHeader = req.headers['retab-signature'];
+
+    if (!signatureHeader) {
+        return res.status(400).json({ detail: 'Missing Retab-Signature header' });
+    }
+
     try {
-        const payload = req.body;
-        const signatureHeader = req.headers['retab-signature'];
-
-        if (!signatureHeader) {
-            return res.status(400).json({ detail: 'Missing Retab-Signature header' });
-        }
-
-        // Verify the signature and process the event
         await client.verifyEvent({
             event_body: payload,
             event_signature: signatureHeader,
             secret: process.env.WEBHOOKS_SECRET,
         });
-
-        return res.status(200).send();
     } catch (error) {
-        return res.status(400).send(`Signature verification error. Please verify your signature secret. ${error.message}`);
+        return res.status(400).send(`Signature verification failed: ${error.message}`);
     }
+
+    // Process the webhook...
+    const data = JSON.parse(payload.toString('utf-8'));
+    const { document, json } = data;
+    
+    console.log('Verified webhook:', { document, json });
+    
+    return res.status(200).send();
 });
+
+app.listen(8000);
 ```
 
 ```javascript Fastify (Node.js)
@@ -479,27 +478,37 @@ import Retab from 'retab';
 const client = new Retab();
 const fastify = Fastify();
 
+// Enable raw body parsing
+fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => {
+    done(null, body);
+});
+
 fastify.post('/webhook', async (request, reply) => {
+    const payload = request.body;
+    const signatureHeader = request.headers['retab-signature'];
+
+    if (!signatureHeader) {
+        return reply.status(400).send({ detail: 'Missing Retab-Signature header' });
+    }
+
     try {
-        const payload = request.rawBody;
-        const signatureHeader = request.headers['retab-signature'];
-
-        if (!signatureHeader) {
-            return reply.status(400).send({ detail: 'Missing Retab-Signature header' });
-        }
-
-        // Verify the signature and process the event
         await client.verifyEvent({
             event_body: payload,
             event_signature: signatureHeader,
             secret: process.env.WEBHOOKS_SECRET,
         });
-
-        return reply.status(200).send();
     } catch (error) {
-        return reply.status(400).send(`Signature verification error. Please verify your signature secret. ${error.message}`);
+        return reply.status(400).send(`Signature verification failed: ${error.message}`);
     }
+
+    // Process the webhook...
+    const data = JSON.parse(payload.toString('utf-8'));
+    // ...
+    
+    return reply.status(200).send();
 });
+
+fastify.listen({ port: 8000 });
 ```
 
 ```javascript Next.js (Node.js)
@@ -508,31 +517,78 @@ import Retab from 'retab';
 const client = new Retab();
 
 export async function POST(request) {
+    const payload = await request.arrayBuffer();
+    const signatureHeader = request.headers.get('retab-signature');
+
+    if (!signatureHeader) {
+        return new Response(
+            JSON.stringify({ detail: 'Missing Retab-Signature header' }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
     try {
-        const payload = await request.arrayBuffer();
-        const signatureHeader = request.headers.get('retab-signature');
-
-        if (!signatureHeader) {
-            return new Response(
-                JSON.stringify({ detail: 'Missing Retab-Signature header' }),
-                { status: 400 }
-            );
-        }
-
-        // Verify the signature and process the event
         await client.verifyEvent({
             event_body: Buffer.from(payload),
             event_signature: signatureHeader,
             secret: process.env.WEBHOOKS_SECRET,
         });
-
-        return new Response(null, { status: 200 });
     } catch (error) {
         return new Response(
-            `Signature verification error. Please verify your signature secret. ${error.message}`,
+            `Signature verification failed: ${error.message}`,
             { status: 400 }
         );
     }
+
+    // Process the webhook...
+    const data = JSON.parse(Buffer.from(payload).toString('utf-8'));
+    const { document, json } = data;
+    
+    console.log('Verified webhook:', { document, json });
+
+    return new Response(null, { status: 200 });
 }
 ```
 </CodeGroup>
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always verify signatures">
+    Never process webhook data without verifying the `Retab-Signature` header. This prevents attackers from sending forged requests to your endpoint.
+  </Accordion>
+  
+  <Accordion title="Use HTTPS only">
+    Always use HTTPS endpoints for webhooks. HTTP endpoints expose your webhook data to interception.
+  </Accordion>
+  
+  <Accordion title="Respond quickly">
+    Return a 2xx status code as soon as you receive and verify the webhook. Perform long-running processing asynchronously.
+  </Accordion>
+  
+  <Accordion title="Handle retries">
+    Retab may retry failed webhook deliveries. Implement idempotency to handle duplicate events gracefully.
+  </Accordion>
+  
+  <Accordion title="Rotate secrets periodically">
+    Regularly rotate your webhook secret to minimize the impact of potential secret exposure.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| **Missing signature header** | Ensure you're checking for `Retab-Signature` (case-insensitive) |
+| **Signature mismatch** | Verify you're using the raw request body, not parsed JSON |
+| **Timeout errors** | Return 200 immediately, process data asynchronously |
+| **404 errors** | Check your webhook URL is accessible from the internet |
+
+### Debugging Tips
+
+1. **Log incoming requests**: Temporarily log the raw payload and headers to verify what you're receiving
+2. **Test locally**: Use a tool like [ngrok](https://ngrok.com) to expose your local server for testing
+3. **Check dashboard**: View webhook delivery logs in your Retab dashboard
+4. **Verify secret**: Ensure your `WEBHOOKS_SECRET` matches the one in your dashboard

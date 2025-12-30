@@ -9,17 +9,12 @@ Workflows are visual, node-based pipelines that let you chain together multiple 
 
 A workflow typically consists of:
 - **Input nodes** (Document) - Entry points where documents are uploaded
-- **Processing nodes** - Operations like Extract, Parse, Split, Edit
-- **Logic nodes** - Conditional flows like Human-in-the-Loop and Functions
+- **Processing nodes** - Operations like Extract, Parse, Split, Classifier
+- **Logic nodes** - Conditional flows like Human-in-the-Loop, Functions, and If/Else routing
 - **Output nodes** (Webhook) - Destinations for your processed data
 
-<Frame>
-  <img src="/images/workflow-canvas.png" alt="Workflow Canvas" />
-</Frame>
 
 ## Creating a Workflow
-
-### Using the Dashboard
 
 1. Navigate to the **Workflows** section in your dashboard
 2. Click **Create Workflow** to open a new canvas
@@ -27,40 +22,6 @@ A workflow typically consists of:
 4. Connect nodes by dragging from output handles to input handles
 5. Configure each node by clicking on it
 6. Your workflow auto-saves as you build
-
-### Using the SDK
-
-You can also create and manage workflows programmatically:
-
-<CodeGroup>
-```python Python
-from retab import Retab
-
-client = Retab()
-
-# Create a new workflow
-workflow = client.workflows.create(
-    name="Invoice Processing Pipeline",
-    description="Extract data from invoices and validate with human review",
-)
-
-print(f"Created workflow: {workflow.id}")
-```
-
-```typescript Node.js
-import Retab from 'retab';
-
-const client = new Retab();
-
-// Create a new workflow
-const workflow = await client.workflows.create({
-    name: 'Invoice Processing Pipeline',
-    description: 'Extract data from invoices and validate with human review',
-});
-
-console.log(`Created workflow: ${workflow.id}`);
-```
-</CodeGroup>
 
 ## Connecting Nodes
 
@@ -117,15 +78,24 @@ from retab import Retab
 client = Retab()
 
 # Run a workflow with a document
-result = client.workflows.run(
+run = client.workflows.runs.create(
     workflow_id="wf_abc123",
     documents={
-        "document-1": "path/to/invoice.pdf"
+        "document-node-id": "path/to/invoice.pdf"
     }
 )
 
+# Poll for completion
+import time
+while run.status in ["pending", "running"]:
+    time.sleep(1)
+    run = client.workflows.runs.retrieve(run.id)
+
 # Access the results
-print(result.outputs)
+for step in run.steps:
+    print(f"{step.node_id}: {step.status}")
+    if step.output:
+        print(f"  Output: {step.output}")
 ```
 
 ```typescript Node.js
@@ -134,15 +104,27 @@ import Retab from 'retab';
 const client = new Retab();
 
 // Run a workflow with a document
-const result = await client.workflows.run({
+const run = await client.workflows.runs.create({
     workflow_id: 'wf_abc123',
     documents: {
-        'document-1': 'path/to/invoice.pdf'
+        'document-node-id': 'path/to/invoice.pdf'
     }
 });
 
+// Poll for completion
+let currentRun = run;
+while (currentRun.status === 'pending' || currentRun.status === 'running') {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    currentRun = await client.workflows.runs.retrieve(currentRun.id);
+}
+
 // Access the results
-console.log(result.outputs);
+for (const step of currentRun.steps) {
+    console.log(`${step.node_id}: ${step.status}`);
+    if (step.output) {
+        console.log(`  Output: ${JSON.stringify(step.output)}`);
+    }
+}
 ```
 </CodeGroup>
 
@@ -157,9 +139,13 @@ Workflows execute in **topological order** based on the node connections:
 
 If a node fails, execution stops and the error is displayed on that node.
 
+### Conditional Routing
+
+When using **Classifier** or **If/Else** nodes, only the branches that receive data are executed. Nodes on skipped branches are marked as "skipped" rather than failed.
+
 ## Viewing Generated Code
 
-Every workflow can be exported as Python code. Click **View Python Code** in the sidebar to see the equivalent SDK calls for your workflow. This is useful for:
+Every workflow can be exported as Python code. Click **View Code** in the sidebar to see the equivalent SDK calls for your workflow. This is useful for:
 
 - Integrating workflows into your existing codebase
 - Running workflows in production environments
@@ -184,6 +170,10 @@ Every workflow can be exported as Python code. Click **View Python Code** in the
     For critical data, add a HIL node after extraction. This ensures a human reviews low-confidence results before they proceed.
   </Accordion>
   
+  <Accordion title="Use Classifier for document routing">
+    When processing different document types, use a Classifier node to route each document to the appropriate extraction schema.
+  </Accordion>
+  
   <Accordion title="Test with sample documents">
     Before deploying, run your workflow with representative sample documents to catch edge cases.
   </Accordion>
@@ -193,101 +183,58 @@ Every workflow can be exported as Python code. Click **View Python Code** in the
 
 Here's a common workflow pattern for processing invoices:
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Document   │────▶│   Extract   │────▶│   HIL       │────▶│  Webhook    │
-│  (Invoice)  │     │  (Fields)   │     │  (Review)   │     │  (Output)   │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+```mermaid
+flowchart LR
+    A[Start\nDocument] --> B[Extract\nInvoice Fields]
+    B --> C[HIL\nHuman Review]
+    C --> D[End\nWebhook]
+
+    style A fill:#e8f5e9,stroke:#4caf50,color:#1b5e20
+    style B fill:#e3f2fd,stroke:#2196f3,color:#0d47a1
+    style C fill:#fff3e0,stroke:#ff9800,color:#e65100
+    style D fill:#fce4ec,stroke:#e91e63,color:#880e4f
 ```
 
-1. **Document** node accepts the invoice PDF
+1. **Start** node accepts the invoice PDF
 2. **Extract** node pulls out vendor, amount, date, line items
 3. **HIL** node flags low-confidence extractions for human review
-4. **Webhook** node sends verified data to your system
+4. **End** node sends verified data to your webhook
 
-<CodeGroup>
-```python Python
-from retab import Retab
+## Example: Multi-Document Classification Workflow
 
-client = Retab()
+For workflows that process mixed document bundles:
 
-# Equivalent SDK code
-invoice_schema = {
-    "type": "object",
-    "properties": {
-        "vendor_name": {"type": "string"},
-        "invoice_number": {"type": "string"},
-        "total_amount": {"type": "number"},
-        "invoice_date": {"type": "string", "format": "date"},
-        "line_items": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "description": {"type": "string"},
-                    "quantity": {"type": "number"},
-                    "unit_price": {"type": "number"}
-                }
-            }
-        }
-    }
-}
+```mermaid
+flowchart TD
+    A[Start\nDocument Bundle] --> B{Classifier}
+    
+    B -->|Invoice| C[Extract\nInvoice Schema]
+    B -->|Contract| D[Extract\nContract Schema]
+    B -->|Receipt| E[Extract\nReceipt Schema]
+    
+    C --> F[Functions\nCalculate Totals]
+    D --> G[Functions\nExtract Dates]
+    E --> H[Functions\nCategorize Items]
+    
+    F --> I[Merge JSON]
+    G --> I
+    H --> I
+    
+    I --> J[End\nWebhook]
 
-# Extract data from invoice
-result = client.documents.extract(
-    document="invoice.pdf",
-    json_schema=invoice_schema,
-    model="retab-small"
-)
-
-# Send to webhook
-import requests
-requests.post(
-    "https://your-server.com/webhook",
-    json=result.model_dump()
-)
+    style A fill:#e8f5e9,stroke:#4caf50,color:#1b5e20
+    style B fill:#f3e5f5,stroke:#9c27b0,color:#4a148c
+    style C fill:#e3f2fd,stroke:#2196f3,color:#0d47a1
+    style D fill:#e3f2fd,stroke:#2196f3,color:#0d47a1
+    style E fill:#e3f2fd,stroke:#2196f3,color:#0d47a1
+    style F fill:#fff8e1,stroke:#ffc107,color:#ff6f00
+    style G fill:#fff8e1,stroke:#ffc107,color:#ff6f00
+    style H fill:#fff8e1,stroke:#ffc107,color:#ff6f00
+    style I fill:#e0f2f1,stroke:#009688,color:#004d40
+    style J fill:#fce4ec,stroke:#e91e63,color:#880e4f
 ```
 
-```typescript Node.js
-import Retab from 'retab';
-
-const client = new Retab();
-
-// Equivalent SDK code
-const invoiceSchema = {
-    type: 'object',
-    properties: {
-        vendor_name: { type: 'string' },
-        invoice_number: { type: 'string' },
-        total_amount: { type: 'number' },
-        invoice_date: { type: 'string', format: 'date' },
-        line_items: {
-            type: 'array',
-            items: {
-                type: 'object',
-                properties: {
-                    description: { type: 'string' },
-                    quantity: { type: 'number' },
-                    unit_price: { type: 'number' }
-                }
-            }
-        }
-    }
-};
-
-// Extract data from invoice
-const result = await client.documents.extract({
-    document: 'invoice.pdf',
-    json_schema: invoiceSchema,
-    model: 'retab-small'
-});
-
-// Send to webhook
-await fetch('https://your-server.com/webhook', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(result)
-});
-```
-</CodeGroup>
-
+1. **Classifier** routes documents by category (Invoice, Contract, Receipt)
+2. Each **Extract** node uses a document-specific schema
+3. **Functions** nodes compute derived fields for each document type
+4. **Merge JSON** combines results from all branches into a single output
