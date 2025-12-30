@@ -71,6 +71,14 @@ Send workflow outputs to an external HTTP endpoint.
 }
 ```
 
+**Webhook Payload:**
+
+The webhook receives a JSON payload containing:
+- `completion`: The extraction result with parsed data
+- `file_payload`: Document metadata including filename and URL
+- `user`: User email address (if authenticated)
+- `metadata`: Additional workflow metadata
+
 See [Webhooks](/workflows/Webhooks) for details on securing and handling webhook requests.
 
 ---
@@ -95,11 +103,11 @@ Notes don't affect workflow execution—they're purely for documentation. Use th
 
 ### Extract
 
-<Card title="Raw Extract" icon="layers" color="#8b5cf6">
+<Card title="Extract" icon="layers" color="#8b5cf6">
 Extract structured data from documents using a JSON schema.
 </Card>
 
-**Inputs:** File  
+**Inputs:** File, plus optional additional inputs (Text, JSON, File)
 **Outputs:** JSON (data), JSON (likelihoods when using consensus)
 
 **Configuration:**
@@ -112,6 +120,7 @@ Extract structured data from documents using a JSON schema.
 | **Image Resolution** | DPI for document rendering | `150` |
 | **Consensus** | Number of parallel extractions (1-10) | `1` |
 | **Reasoning Effort** | How much the model "thinks" | `minimal` |
+| **Additional Inputs** | Named inputs for context (text, JSON, or files) | `[]` |
 
 **Schema Example:**
 ```json
@@ -134,7 +143,14 @@ Extract structured data from documents using a JSON schema.
 **Consensus Mode:**  
 When `n_consensus > 1`, the node runs multiple extractions in parallel and returns:
 - **data**: The consensus result
-- **likelihoods**: Confidence scores for each field
+- **likelihoods**: Confidence scores for each field (0-1)
+
+**Additional Inputs:**
+
+You can add named input handles to provide extra context during extraction:
+- **Text inputs**: Instructions or context as plain text
+- **JSON inputs**: Structured data from other nodes
+- **File inputs**: Additional reference documents
 
 ---
 
@@ -167,7 +183,7 @@ Convert documents to structured text/markdown using AI vision.
 </Card>
 
 **Inputs:** File  
-**Outputs:** File (parsed document)
+**Outputs:** File (parsed document), Text (extracted content)
 
 **Configuration:**
 
@@ -227,13 +243,61 @@ Non-PDF documents are automatically converted to PDF before splitting.
 
 ---
 
+### Classifier
+
+<Card title="Classifier" icon="tags" color="#14b8a6">
+Classify documents into one of the predefined categories.
+</Card>
+
+**Inputs:** File  
+**Outputs:** Multiple File outputs (one per category, only the matched category receives the document)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Categories** | List of document categories with names and descriptions |
+| **Model** | AI model for classification |
+
+**Difference from Split:**
+
+| Feature | Split | Classifier |
+|---------|-------|------------|
+| **Input** | Multi-page document | Single document |
+| **Output** | Multiple PDFs (pages grouped by category) | Same document routed to one category |
+| **Use Case** | Separating bundled documents | Routing different document types |
+
+**Example:**
+```json
+{
+  "categories": [
+    {
+      "name": "Invoice",
+      "description": "Documents containing billing information and payment requests"
+    },
+    {
+      "name": "Receipt",
+      "description": "Proof of payment or purchase confirmation"
+    },
+    {
+      "name": "Contract",
+      "description": "Legal agreements and binding documents"
+    }
+  ]
+}
+```
+
+The AI analyzes the document and routes it to exactly one category. Downstream nodes connected to other categories are skipped.
+
+---
+
 ### Agent Edit
 
 <Card title="Agent Edit" icon="pen-square" color="#10b981">
 Fill PDF forms using AI with natural language instructions.
 </Card>
 
-**Inputs:** File, JSON  
+**Inputs:** File, Text (instructions)  
 **Outputs:** File (filled document)
 
 **Configuration:**
@@ -249,7 +313,7 @@ Use the vendor_name for "Name" and vendor_address for the address fields.
 Leave signature fields blank.
 ```
 
-The JSON input provides the data to use for filling. Connect this to an Extract node's output.
+The Text input provides instructions or data to use for filling. Connect this to an Extract node's JSON output (which converts to text instructions).
 
 ---
 
@@ -298,7 +362,51 @@ Combine multiple PDF documents into a single file.
 }
 ```
 
-PDFs are merged in the order defined by the inputs list.
+PDFs are merged in the order defined by the inputs list. Non-PDF documents are automatically converted before merging.
+
+---
+
+### Merge JSON
+
+<Card title="Merge JSON" icon="combine" color="#8b5cf6">
+Combine multiple JSON objects into a single structured object.
+</Card>
+
+**Inputs:** Multiple JSON inputs (configurable)  
+**Outputs:** JSON (merged object)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Inputs** | Named input slots for JSON objects to merge |
+
+**Example Configuration:**
+```json
+{
+  "inputs": [
+    { "name": "invoice_data" },
+    { "name": "vendor_data" },
+    { "name": "line_items" }
+  ]
+}
+```
+
+**Output Structure:**
+
+The merged output wraps each input under its named key:
+```json
+{
+  "invoice_data": { ... extracted invoice fields ... },
+  "vendor_data": { ... extracted vendor fields ... },
+  "line_items": { ... extracted line items ... }
+}
+```
+
+This is useful for:
+- Combining extractions from multiple documents
+- Aggregating data from parallel processing branches
+- Creating comprehensive outputs from Split or Classifier workflows
 
 ---
 
@@ -307,29 +415,28 @@ PDFs are merged in the order defined by the inputs list.
 ### Human in the Loop (HIL)
 
 <Card title="Human in the Loop" icon="user-check" color="#ec4899">
-Route data for human review based on confidence conditions.
+Pause workflow execution for human review and approval.
 </Card>
 
 **Inputs:** JSON  
 **Outputs:** JSON (verified data)
 
-**Configuration:**
-
-| Setting | Description |
-|---------|-------------|
-| **Review Conditions** | Boolean fields that trigger review when `false` |
+**Configuration:** None (inherits schema from connected source)
 
 **How It Works:**
-1. Connect to an Extract node (schema is automatically inherited)
-2. Add boolean fields from your schema as conditions
-3. If any condition is `false`, the extraction is flagged for human review
-4. After review, the verified data continues through the workflow
+1. Connect to an Extract or Functions node (schema is automatically inherited)
+2. When the workflow runs, it pauses at the HIL node
+3. A reviewer sees the extracted data alongside the source document
+4. The reviewer can approve, modify, or reject the data
+5. After approval, the verified data continues through the workflow
 
-**Example:**  
-If your schema includes `is_signature_present: boolean`, you can add it as a condition. When the AI detects no signature, a human reviewer verifies the document.
+**Use Cases:**
+- Validate critical extractions before sending to downstream systems
+- Quality control for high-value documents
+- Compliance requirements that mandate human oversight
 
 <Note>
-The HIL node must be connected to an Extract or Project Extract node to access the schema's boolean fields.
+The HIL node automatically inherits the JSON schema from the connected upstream node. It also preserves any computed fields from Functions nodes.
 </Note>
 
 ---
@@ -381,6 +488,67 @@ See [Functions Documentation](/projects/Functions) for the complete formula refe
 
 ---
 
+### If / Else (Conditional)
+
+<Card title="If / Else" icon="network" color="#f97316">
+Route data to different branches based on conditions.
+</Card>
+
+**Inputs:** JSON  
+**Outputs:** Multiple JSON outputs (one per branch: If, Else If, Else)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Conditions** | List of conditions to evaluate in order |
+| **Has Else** | Whether to include a default else branch (default: true) |
+
+**Condition Structure:**
+
+Each condition can have multiple sub-conditions combined with AND/OR:
+
+```json
+{
+  "conditions": [
+    {
+      "branch_name": "if",
+      "sub_conditions": [
+        { "path": "data.total_amount", "operator": "is_greater_than", "value": 1000 },
+        { "path": "data.vendor.country", "operator": "is_equal_to", "value": "US" }
+      ],
+      "logical_operator": "and"
+    }
+  ]
+}
+```
+
+**Available Operators:**
+
+| Type | Operators |
+|------|-----------|
+| **Existence** | `exists`, `does_not_exist`, `is_empty`, `is_not_empty` |
+| **Comparison** | `is_equal_to`, `is_not_equal_to` |
+| **String** | `contains`, `starts_with`, `ends_with`, `matches_regex` |
+| **Number** | `is_greater_than`, `is_less_than`, `is_greater_than_or_equal_to`, `is_less_than_or_equal_to` |
+| **Boolean** | `is_true`, `is_false` |
+| **Array** | `length_equal_to`, `length_greater_than`, `length_less_than` |
+| **Date** | `is_after`, `is_before`, `is_after_or_equal_to`, `is_before_or_equal_to` |
+
+**How It Works:**
+1. Conditions are evaluated in order (If, Else If 1, Else If 2, ...)
+2. The first matching condition determines the output branch
+3. Data is routed to exactly one branch
+4. If no conditions match and `has_else` is true, data goes to the Else branch
+5. Downstream nodes on non-matched branches are skipped
+
+**Example Use Cases:**
+- Route high-value invoices for additional approval
+- Process documents differently based on vendor country
+- Flag incomplete extractions for review
+
+---
+
 ## Node I/O Types
 
 Understanding input/output types helps you connect nodes correctly:
@@ -416,12 +584,23 @@ Understanding input/output types helps you connect nodes correctly:
     Instead of computing values after receiving webhook data, use Functions nodes to add totals, percentages, and derived fields directly in the workflow.
   </Accordion>
   
+  <Accordion title="Use Classifier for routing">
+    When handling different document types, use Classifier to route each document to the appropriate extraction schema before processing.
+  </Accordion>
+  
   <Accordion title="Split before specialized processing">
-    When handling mixed document bundles (e.g., invoice + contract), use Split first, then apply specific Extract schemas to each category.
+    When handling mixed document bundles (e.g., invoice + contract in one PDF), use Split first, then apply specific Extract schemas to each category.
+  </Accordion>
+  
+  <Accordion title="Combine results with Merge JSON">
+    When processing multiple documents or branches, use Merge JSON to combine all extracted data into a single structured output.
+  </Accordion>
+  
+  <Accordion title="Use If/Else for conditional logic">
+    Route data based on extracted values—for example, send high-value invoices to a different webhook or flag certain conditions for review.
   </Accordion>
   
   <Accordion title="Test edge cases">
     Run your workflow with documents that have missing fields, poor scan quality, or unusual formats to ensure robust handling.
   </Accordion>
 </AccordionGroup>
-
