@@ -1,0 +1,116 @@
+---
+title: 'Classify'
+openapi: 'POST /v1/documents/classify'
+---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Classify a document into one of the provided categories
+result = client.documents.classify(
+    document="invoice.pdf",
+    model="retab-small",
+    categories=[
+        {"name": "invoice", "description": "Invoice documents with billing information"},
+        {"name": "receipt", "description": "Receipt documents for payments"},
+        {"name": "contract", "description": "Legal contract documents"},
+    ]
+)
+
+# Access classification result
+print(f"Classification: {result.result.classification}")
+print(f"Reasoning: {result.result.reasoning}")
+
+# Example output:
+# Classification: invoice
+# Reasoning: The document contains billing details including line items, 
+# unit prices, quantities, and a total amount due. It has a header with 
+# "INVOICE" and includes payment terms and a due date.
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+import { config } from 'dotenv';
+
+config();
+
+const client = new Retab();
+
+const result = await client.documents.classify({
+    document: "invoice.pdf",
+    model: "retab-small",
+    categories: [
+        { name: "invoice", description: "Invoice documents with billing information" },
+        { name: "receipt", description: "Receipt documents for payments" },
+        { name: "contract", description: "Legal contract documents" },
+    ]
+});
+
+// Access classification result
+console.log(`Classification: ${result.result.classification}`);
+console.log(`Reasoning: ${result.result.reasoning}`);
+```
+
+```typescript typescript
+import { Retab, type ClassifyRequest, type ClassifyResponse } from '@retab/node';
+import { config } from 'dotenv';
+
+config();
+
+const client = new Retab();
+
+const classifyRequest: ClassifyRequest = {
+    document: "invoice.pdf",
+    model: "retab-small",
+    categories: [
+        { name: "invoice", description: "Invoice documents with billing information" },
+        { name: "receipt", description: "Receipt documents for payments" },
+        { name: "contract", description: "Legal contract documents" },
+    ]
+};
+
+const result: ClassifyResponse = await client.documents.classify(classifyRequest);
+
+// Access classification result
+console.log(`Classification: ${result.result.classification}`);
+console.log(`Reasoning: ${result.result.reasoning}`);
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/documents/classify' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "invoice.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsO..."
+  },
+  "model": "retab-small",
+  "categories": [
+    {"name": "invoice", "description": "Invoice documents with billing information"},
+    {"name": "receipt", "description": "Receipt documents for payments"},
+    {"name": "contract", "description": "Legal contract documents"}
+  ]
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "result": {
+    "reasoning": "The document contains billing details including line items, unit prices, quantities, and a total amount due. It has a header with 'INVOICE' prominently displayed and includes standard invoice elements such as invoice number, date, payment terms, and a due date. The format and content are consistent with typical invoice documents.",
+    "classification": "invoice"
+  }
+}
+```
+
+</ResponseExample>
+
