@@ -53,9 +53,13 @@ Unlike manual form filling or template-based approaches, `edit` provides:
 
 ## Edit API
 
-### Fill Document
+The Edit API provides two main approaches:
+- **Agent Fill** (`edit.agent.fill`): AI-powered document filling that automatically detects and fills form fields
+- **Template Fill** (`edit.templates.fill`): Optimized filling using pre-defined templates (PDF only)
 
-The main endpoint for filling documents with form data.
+### Agent Fill
+
+The main endpoint for filling documents with AI. Supports all document formats.
 
 <ParamField body="EditRequest" type="EditRequest">
   <Expandable title="properties">
@@ -64,20 +68,14 @@ The main endpoint for filling documents with form data.
   Natural language or JSON instructions describing how to fill the document. Include the field values you want to populate, e.g., "Name: John Doe, Date: 2025-01-15" or `{"name": "John Doe", "date": "2025-01-15"}`.
 </ParamField>
 
-<ParamField body="document" type="MIMEData">
+<ParamField body="document" type="MIMEData" required>
   The document to edit. Supports PDF, DOCX, XLSX, and PPTX files. Can be a file path, URL, or MIMEData object containing:
   - `filename`: Name of the file (e.g., "form.pdf", "template.docx", "data.xlsx")
   - `url`: Data URI with base64 content (e.g., "data:application/pdf;base64,...")
-  
-  **Note**: Either `document` OR `template_id` must be provided, but not both.
 </ParamField>
 
 <ParamField body="model" type="LLMModel" default="retab-small">
   The AI model to use for element detection and filling. Recommended: `retab-small` for accuracy.
-</ParamField>
-
-<ParamField body="template_id" type="string">
-  Template ID to use for filling. When provided, uses the template's pre-defined form fields and empty PDF instead of detecting fields dynamically. Only works for PDF documents. Mutually exclusive with `document`.
 </ParamField>
 
 </Expandable>
@@ -145,7 +143,7 @@ client = Retab()
 
 # Fill the form with natural language instructions
 # The SDK accepts file paths directly
-result = client.edit.fill_document(
+result = client.edit.agent.fill(
     document="application-form.pdf",
     instructions="""
     Full Name: Jane Smith
@@ -188,7 +186,7 @@ const pdfBuffer = readFileSync("application-form.pdf");
 const pdfBase64 = pdfBuffer.toString('base64');
 
 // Fill the form with natural language instructions
-const result = await client.edit.fill_document({
+const result = await client.edit.agent.fill({
     document: {
         filename: "application-form.pdf",
         url: `data:application/pdf;base64,${pdfBase64}`
@@ -253,7 +251,7 @@ const editRequest: EditRequest = {
     model: "retab-small",
 };
 
-const result: EditResponse = await client.edit.fill_document(editRequest);
+const result: EditResponse = await client.edit.agent.fill(editRequest);
 
 // Save the filled PDF
 if (result.filled_document) {
@@ -336,11 +334,7 @@ console.log("Annotated PDF saved for review!");
 
 ## Use Case: Template-Based Form Filling
 
-Use pre-defined templates for consistent form filling without re-detecting fields each time. There are two ways to fill templates:
-
-### Option 1: Using `templates.fill()` (Recommended for batch processing)
-
-The dedicated template fill endpoint - optimized for filling templates only.
+Use pre-defined templates for consistent form filling without re-detecting fields each time. This is optimized for batch processing scenarios.
 
 <CodeGroup>
 ```python Python
@@ -349,7 +343,7 @@ import base64
 
 client = Retab()
 
-# Use the dedicated template fill endpoint
+# Use the template fill endpoint for fast, consistent filling
 result = client.edit.templates.fill(
     template_id="edittplt_abc123",
     instructions="""
@@ -374,7 +368,7 @@ import { writeFileSync } from 'fs';
 
 const client = new Retab();
 
-// Use the dedicated template fill endpoint
+// Use the template fill endpoint for fast, consistent filling
 const result = await client.edit.templates.fill({
     template_id: "edittplt_abc123",
     instructions: `
@@ -394,72 +388,12 @@ if (result.filled_document) {
 ```
 </CodeGroup>
 
-### Option 2: Using `fill_document()` with `template_id`
-
-You can also use the main fill_document endpoint with a template_id parameter.
-
-<CodeGroup>
-```python Python
-from retab import Retab
-import base64
-
-client = Retab()
-
-# Use fill_document with template_id
-result = client.edit.fill_document(
-    template_id="edittplt_abc123",
-    instructions="""
-    Full Name: Jane Smith
-    Date of Birth: March 15, 1985
-    Email: jane.smith@example.com
-    """,
-    model="retab-small",
-)
-
-# Save the filled PDF
-if result.filled_document:
-    base64_content = result.filled_document.url.split(",")[1]
-    with open("filled-from-template.pdf", "wb") as f:
-        f.write(base64.b64decode(base64_content))
-    print("Template-based form filled and saved!")
-```
-
-```javascript Javascript
-import { Retab } from '@retab/node';
-import { writeFileSync } from 'fs';
-
-const client = new Retab();
-
-// Use fill_document with template_id
-const result = await client.edit.fill_document({
-    template_id: "edittplt_abc123",
-    instructions: `
-        Full Name: Jane Smith
-        Date of Birth: March 15, 1985
-        Email: jane.smith@example.com
-    `,
-    model: "retab-small",
-});
-
-// Save the filled PDF
-if (result.filled_document) {
-    const base64Content = result.filled_document.url.split(",")[1];
-    writeFileSync("filled-from-template.pdf", Buffer.from(base64Content, 'base64'));
-    console.log("Template-based form filled and saved!");
-}
-```
-</CodeGroup>
-
 <Note>
-Templates are useful when you need to:
-- Fill the same form multiple times with different data
-- Avoid re-running field detection for each request
-- Ensure consistent field detection across multiple fills
-- Reduce processing time and costs for batch operations
+**When to use templates vs agent fill:**
+- Use `edit.templates.fill()` for batch processing the same PDF form with different data
+- Use `edit.agent.fill()` for one-off document filling or when you don't have a pre-defined template
 
-**Which method to use?**
-- Use `templates.fill()` for dedicated template workflows and batch processing
-- Use `fill_document(template_id=...)` when you want a unified API that can handle both documents and templates
+Templates skip the field detection step, making them faster and more consistent for repeated use.
 </Note>
 
 ## Use Case: Managing Templates
@@ -567,7 +501,7 @@ await client.edit.templates.delete("tmpl_abc123");
 
 ## Use Case: Batch Form Processing
 
-Process multiple forms with different data programmatically.
+Process multiple forms with different data programmatically. For best performance with repeated forms, use templates.
 
 <CodeGroup>
 ```python Python
@@ -598,7 +532,8 @@ applicants = [
     }
 ]
 
-# Process each applicant using file path directly
+# For batch processing, use templates.fill() with a pre-created template
+# This skips field detection for each document, making it much faster
 for i, applicant in enumerate(applicants):
     instructions = f"""
     Full Name: {applicant['name']}
@@ -607,8 +542,8 @@ for i, applicant in enumerate(applicants):
     Phone Number: {applicant['phone']}
     """
     
-    result = client.edit.fill_document(
-        document="template-form.pdf",
+    result = client.edit.templates.fill(
+        template_id="edittplt_your_template_id",
         instructions=instructions,
         model="retab-small"
     )
@@ -625,7 +560,7 @@ print(f"Processed {len(applicants)} forms successfully!")
 
 ```javascript Javascript
 import { Retab } from '@retab/node';
-import { readFileSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 
 const client = new Retab();
 
@@ -651,11 +586,8 @@ const applicants = [
     }
 ];
 
-// Read the template form once
-const templateBuffer = readFileSync("template-form.pdf");
-const templateBase64 = templateBuffer.toString('base64');
-
-// Process each applicant
+// For batch processing, use templates.fill() with a pre-created template
+// This skips field detection for each document, making it much faster
 for (let i = 0; i < applicants.length; i++) {
     const applicant = applicants[i];
     const instructions = `
@@ -665,11 +597,8 @@ for (let i = 0; i < applicants.length; i++) {
         Phone Number: ${applicant.phone}
     `;
     
-    const result = await client.edit.fill_document({
-        document: {
-            filename: "template-form.pdf",
-            url: `data:application/pdf;base64,${templateBase64}`
-        },
+    const result = await client.edit.templates.fill({
+        template_id: "edittplt_your_template_id",
         instructions: instructions,
         model: "retab-small"
     });
@@ -698,7 +627,7 @@ import base64
 client = Retab()
 
 # Fill a Word document with JSON data
-result = client.edit.fill_document(
+result = client.edit.agent.fill(
     document="contract-template.docx",
     instructions="""
     {
@@ -730,7 +659,7 @@ const client = new Retab();
 const docxBuffer = readFileSync("contract-template.docx");
 const docxBase64 = docxBuffer.toString('base64');
 
-const result = await client.edit.fill_document({
+const result = await client.edit.agent.fill({
     document: {
         filename: "contract-template.docx",
         url: `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${docxBase64}`
@@ -765,7 +694,7 @@ import base64
 client = Retab()
 
 # Fill an Excel spreadsheet
-result = client.edit.fill_document(
+result = client.edit.agent.fill(
     document="invoice-template.xlsx",
     instructions="""
     {
@@ -798,7 +727,7 @@ const client = new Retab();
 const xlsxBuffer = readFileSync("invoice-template.xlsx");
 const xlsxBase64 = xlsxBuffer.toString('base64');
 
-const result = await client.edit.fill_document({
+const result = await client.edit.agent.fill({
     document: {
         filename: "invoice-template.xlsx",
         url: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${xlsxBase64}`
@@ -836,7 +765,7 @@ import base64
 client = Retab()
 
 # Fill a PowerPoint presentation
-result = client.edit.fill_document(
+result = client.edit.agent.fill(
     document="sales-deck-template.pptx",
     instructions="""
     {
@@ -867,7 +796,7 @@ const client = new Retab();
 const pptxBuffer = readFileSync("sales-deck-template.pptx");
 const pptxBase64 = pptxBuffer.toString('base64');
 
-const result = await client.edit.fill_document({
+const result = await client.edit.agent.fill({
     document: {
         filename: "sales-deck-template.pptx",
         url: `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,${pptxBase64}`
@@ -937,4 +866,4 @@ if (result.filled_document) {
 1. **Generate**: Use `edit.templates.generate()` to detect form fields in a blank PDF
 2. **Review**: Check the annotated PDF to verify detected fields
 3. **Create**: Save the form schema as a template with `edit.templates.create()`
-4. **Fill**: Use `edit.templates.fill()` or `edit.fill_document(template_id=...)` for batch processing
+4. **Fill**: Use `edit.templates.fill()` for fast batch processing with pre-defined templates
