@@ -1,0 +1,127 @@
+---
+title: 'Fill Document'
+openapi: 'POST /v1/edit/fill-document'
+---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Option 1: Fill a document directly
+response = client.edit.fill_document(
+    document="form.pdf",
+    filling_instructions="Fill this form with: Name: John Doe, Date: 2025-01-02, Email: john@example.com",
+    model="retab-small"
+)
+
+# Option 2: Fill using a pre-defined template
+response = client.edit.fill_document(
+    template_id="tmpl_abc123",
+    filling_instructions="Fill with company details: Acme Corp, 123 Main St, contact@acme.com"
+)
+
+# Save the filled document
+with open("filled_form.pdf", "wb") as f:
+    import base64
+    pdf_bytes = base64.b64decode(response.filled_document.url.split(",")[1])
+    f.write(pdf_bytes)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+import fs from 'fs';
+
+const client = new Retab();
+
+// Option 1: Fill a document directly
+const response = await client.edit.fill_document({
+    document: "form.pdf",
+    filling_instructions: "Fill this form with: Name: John Doe, Date: 2025-01-02",
+    model: "retab-small"
+});
+
+// Option 2: Fill using a pre-defined template
+const response = await client.edit.fill_document({
+    template_id: "tmpl_abc123",
+    filling_instructions: "Fill with company details: Acme Corp, 123 Main St"
+});
+
+// Save the filled document
+const base64Content = response.filled_document.url.split(",")[1];
+fs.writeFileSync("filled_form.pdf", Buffer.from(base64Content, "base64"));
+```
+
+```bash curl
+curl -X POST 'https://api.retab.com/v1/edit/fill-document' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "document": {
+      "filename": "form.pdf",
+      "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    },
+    "filling_instructions": "Fill this form with: Name: John Doe, Date: 2025-01-02, Email: john@example.com",
+    "model": "retab-small"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "form_data": [
+    {
+      "key": "full_name",
+      "description": "Full name of the applicant",
+      "type": "text",
+      "value": "John Doe",
+      "bbox": {
+        "page": 0,
+        "x": 100,
+        "y": 200,
+        "width": 200,
+        "height": 20
+      }
+    },
+    {
+      "key": "date",
+      "description": "Date of submission",
+      "type": "date",
+      "value": "2025-01-02",
+      "bbox": {
+        "page": 0,
+        "x": 100,
+        "y": 250,
+        "width": 100,
+        "height": 20
+      }
+    },
+    {
+      "key": "email",
+      "description": "Email address",
+      "type": "text",
+      "value": "john@example.com",
+      "bbox": {
+        "page": 0,
+        "x": 100,
+        "y": 300,
+        "width": 200,
+        "height": 20
+      }
+    }
+  ],
+  "filled_document": {
+    "filename": "form_filled.pdf",
+    "mime_type": "application/pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  }
+}
+```
+
+</ResponseExample>
+

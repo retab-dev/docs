@@ -6,13 +6,13 @@
 
 ### Introduction
 
-The `edit` method in Retab's document processing pipeline enables intelligent document form filling. It supports **PDF, Word (DOCX), Excel (XLSX), and PowerPoint (PPTX)** files, automatically detecting fillable elements and populating them based on natural language instructions. This is ideal for automating form completion workflows, document generation, and batch processing of standardized forms.
+The `edit` API in Retab's document processing pipeline enables intelligent document form filling. It supports **PDF, Word (DOCX), Excel (XLSX), and PowerPoint (PPTX)** files, automatically detecting fillable elements and populating them based on natural language instructions. This is ideal for automating form completion workflows, document generation, and batch processing of standardized forms.
 
 ### Supported Formats
 
 | Format | Extension | Processing Method |
 |--------|-----------|------------------|
-| **PDF** | `.pdf` | OCR + LLM form field detection |
+| **PDF** | `.pdf` | Computer vision + LLM form field detection |
 | **Word** | `.docx`, `.doc`, `.odt` | Native XML editing (preserves formatting) |
 | **Excel** | `.xlsx`, `.xls`, `.ods` | Native cell editing |
 | **PowerPoint** | `.pptx`, `.ppt`, `.odp` | Native shape/text editing |
@@ -20,8 +20,8 @@ The `edit` method in Retab's document processing pipeline enables intelligent do
 ### How It Works
 
 **For PDF files:**
-1. **OCR Processing**: Extract text elements with precise bounding box coordinates
-2. **Form Field Detection**: Use LLM to identify fillable fields (text inputs, checkboxes)
+1. **Computer Vision**: Detect form field bounding boxes with precise coordinates
+2. **LLM Inference**: Name and classify detected fields semantically
 3. **Intelligent Filling**: Match your instructions to the appropriate form fields
 4. **PDF Generation**: Create a new PDF with the filled values
 
@@ -53,6 +53,10 @@ Unlike manual form filling or template-based approaches, `edit` provides:
 
 ## Edit API
 
+### Fill Document
+
+The main endpoint for filling documents with form data.
+
 <ParamField body="EditRequest" type="EditRequest">
   <Expandable title="properties">
 
@@ -83,12 +87,51 @@ Unlike manual form filling or template-based approaches, `edit` provides:
 An EditResponse object containing the filled document and form data.
   <Expandable title="properties">
 
-    <ResponseField name="form_data" type="list[FilledFormField]">
+    <ResponseField name="form_data" type="list[FormField]">
       List of form fields with filled values (primarily for PDF). Each field includes bbox, description, type, key, and value.
     </ResponseField>
 
     <ResponseField name="filled_document" type="MIMEData">
       The filled document as MIMEData containing filename and url (data URI with base64 content). Returns the same format as the input (PDF → PDF, DOCX → DOCX, etc.).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Generate Template (Infer Form Schema)
+
+Automatically detect form fields in a PDF document using computer vision and LLM. This is useful for creating templates that can be reused for batch form filling.
+
+<ParamField body="InferFormSchemaRequest" type="InferFormSchemaRequest">
+  <Expandable title="properties">
+
+<ParamField body="document" type="MIMEData" required>
+  The PDF document to analyze. Only PDF format is supported for form schema inference.
+</ParamField>
+
+<ParamField body="model" type="LLMModel" default="retab-small">
+  The AI model to use for field naming and classification.
+</ParamField>
+
+<ParamField body="instructions" type="string">
+  Optional instructions to guide form field detection (e.g., which fields to focus on, specific areas to look for).
+</ParamField>
+
+</Expandable>
+</ParamField>
+
+<ResponseField name="Returns" type="InferFormSchemaResponse Object">
+  <Expandable title="properties">
+
+    <ResponseField name="form_schema" type="FormSchema">
+      The detected form schema containing a list of form fields with keys, descriptions, types, and bounding boxes.
+    </ResponseField>
+
+    <ResponseField name="annotated_pdf" type="MIMEData">
+      PDF with bounding boxes drawn around detected fields for visual verification.
+    </ResponseField>
+
+    <ResponseField name="field_count" type="int">
+      Number of fields detected in the document.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -106,7 +149,7 @@ client = Retab()
 
 # Fill the form with natural language instructions
 # The SDK accepts file paths directly
-result = client.documents.edit(
+result = client.edit.fill_document(
     document="application-form.pdf",
     filling_instructions="""
     Full Name: Jane Smith
@@ -149,7 +192,7 @@ const pdfBuffer = readFileSync("application-form.pdf");
 const pdfBase64 = pdfBuffer.toString('base64');
 
 // Fill the form with natural language instructions
-const result = await client.documents.edit({
+const result = await client.edit.fill_document({
     document: {
         filename: "application-form.pdf",
         url: `data:application/pdf;base64,${pdfBase64}`
@@ -214,7 +257,7 @@ const editRequest: EditRequest = {
     model: "retab-small",
 };
 
-const result: EditResponse = await client.documents.edit(editRequest);
+const result: EditResponse = await client.edit.fill_document(editRequest);
 
 // Save the filled PDF
 if (result.filled_document) {
@@ -234,9 +277,9 @@ result.form_data.forEach(field => {
 ```
 </CodeGroup>
 
-## Use Case: Template-Based Form Filling
+## Use Case: Generate Form Schema
 
-Use pre-defined templates for consistent form filling without re-detecting fields each time.
+Automatically detect and classify form fields in a PDF document. This creates a form schema that can be used to create templates for batch processing.
 
 <CodeGroup>
 ```python Python
@@ -245,10 +288,76 @@ import base64
 
 client = Retab()
 
-# Use a pre-defined template instead of providing a document
-# The template contains the empty PDF and pre-defined form fields
-result = client.documents.edit(
-    template_id="tmpl_abc123",  # Your template ID
+# Generate form schema from a PDF
+response = client.edit.templates.generate(
+    document="blank-form.pdf",
+    model="retab-small",
+    instructions="Focus on the main application fields, ignore headers and footers"
+)
+
+print(f"Detected {response.field_count} form fields:")
+for field in response.form_schema.form_fields:
+    print(f"  - {field.key}: {field.description} ({field.type})")
+    print(f"    Position: page {field.bbox.page}, ({field.bbox.x}, {field.bbox.y})")
+
+# Save the annotated PDF for visual verification
+if response.annotated_pdf:
+    base64_content = response.annotated_pdf.url.split(",")[1]
+    with open("annotated-form.pdf", "wb") as f:
+        f.write(base64.b64decode(base64_content))
+    print("Annotated PDF saved for review!")
+```
+
+```javascript Javascript
+import { Retab } from '@retab/node';
+import { readFileSync, writeFileSync } from 'fs';
+
+const client = new Retab();
+
+// Read the PDF
+const pdfBuffer = readFileSync("blank-form.pdf");
+const pdfBase64 = pdfBuffer.toString('base64');
+
+// Generate form schema
+const response = await client.edit.templates.generate({
+    document: {
+        filename: "blank-form.pdf",
+        url: `data:application/pdf;base64,${pdfBase64}`
+    },
+    model: "retab-small",
+    instructions: "Focus on the main application fields"
+});
+
+console.log(`Detected ${response.field_count} form fields:`);
+response.form_schema.form_fields.forEach(field => {
+    console.log(`  - ${field.key}: ${field.description} (${field.type})`);
+});
+
+// Save the annotated PDF
+const base64Content = response.annotated_pdf.url.split(",")[1];
+writeFileSync("annotated-form.pdf", Buffer.from(base64Content, 'base64'));
+console.log("Annotated PDF saved for review!");
+```
+</CodeGroup>
+
+## Use Case: Template-Based Form Filling
+
+Use pre-defined templates for consistent form filling without re-detecting fields each time. There are two ways to fill templates:
+
+### Option 1: Using `templates.fill()` (Recommended for batch processing)
+
+The dedicated template fill endpoint - optimized for filling templates only.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+import base64
+
+client = Retab()
+
+# Use the dedicated template fill endpoint
+result = client.edit.templates.fill(
+    template_id="edittplt_abc123",
     filling_instructions="""
     Full Name: Jane Smith
     Date of Birth: March 15, 1985
@@ -271,9 +380,65 @@ import { writeFileSync } from 'fs';
 
 const client = new Retab();
 
-// Use a pre-defined template instead of providing a document
-const result = await client.documents.edit({
-    template_id: "tmpl_abc123",  // Your template ID
+// Use the dedicated template fill endpoint
+const result = await client.edit.templates.fill({
+    template_id: "edittplt_abc123",
+    filling_instructions: `
+        Full Name: Jane Smith
+        Date of Birth: March 15, 1985
+        Email: jane.smith@example.com
+    `,
+    model: "retab-small",
+});
+
+// Save the filled PDF
+if (result.filled_document) {
+    const base64Content = result.filled_document.url.split(",")[1];
+    writeFileSync("filled-from-template.pdf", Buffer.from(base64Content, 'base64'));
+    console.log("Template-based form filled and saved!");
+}
+```
+</CodeGroup>
+
+### Option 2: Using `fill_document()` with `template_id`
+
+You can also use the main fill_document endpoint with a template_id parameter.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+import base64
+
+client = Retab()
+
+# Use fill_document with template_id
+result = client.edit.fill_document(
+    template_id="edittplt_abc123",
+    filling_instructions="""
+    Full Name: Jane Smith
+    Date of Birth: March 15, 1985
+    Email: jane.smith@example.com
+    """,
+    model="retab-small",
+)
+
+# Save the filled PDF
+if result.filled_document:
+    base64_content = result.filled_document.url.split(",")[1]
+    with open("filled-from-template.pdf", "wb") as f:
+        f.write(base64.b64decode(base64_content))
+    print("Template-based form filled and saved!")
+```
+
+```javascript Javascript
+import { Retab } from '@retab/node';
+import { writeFileSync } from 'fs';
+
+const client = new Retab();
+
+// Use fill_document with template_id
+const result = await client.edit.fill_document({
+    template_id: "edittplt_abc123",
     filling_instructions: `
         Full Name: Jane Smith
         Date of Birth: March 15, 1985
@@ -294,10 +459,117 @@ if (result.filled_document) {
 <Note>
 Templates are useful when you need to:
 - Fill the same form multiple times with different data
-- Avoid re-running OCR and field detection for each request
+- Avoid re-running field detection for each request
 - Ensure consistent field detection across multiple fills
 - Reduce processing time and costs for batch operations
+
+**Which method to use?**
+- Use `templates.fill()` for dedicated template workflows and batch processing
+- Use `fill_document(template_id=...)` when you want a unified API that can handle both documents and templates
 </Note>
+
+## Use Case: Managing Templates
+
+Create, list, and manage your edit templates programmatically.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+import base64
+
+client = Retab()
+
+# First, generate the form schema
+schema_response = client.edit.templates.generate(
+    document="blank-form.pdf",
+    model="retab-small"
+)
+
+# Create a template from the detected schema
+template = client.edit.templates.create(
+    name="Employee Onboarding Form",
+    document="blank-form.pdf",
+    form_fields=schema_response.form_schema.form_fields
+)
+print(f"Created template: {template.id}")
+
+# List all templates
+templates = client.edit.templates.list(limit=10)
+for t in templates.data:
+    print(f"  - {t.name} ({t.id})")
+
+# Get a specific template
+template = client.edit.templates.get(template_id="tmpl_abc123")
+
+# Update a template
+updated = client.edit.templates.update(
+    template_id="tmpl_abc123",
+    name="Updated Form Name"
+)
+
+# Duplicate a template
+duplicate = client.edit.templates.duplicate(
+    template_id="tmpl_abc123",
+    name="Employee Form - Copy"
+)
+
+# Delete a template
+client.edit.templates.delete(template_id="tmpl_abc123")
+```
+
+```javascript Javascript
+import { Retab } from '@retab/node';
+import { readFileSync } from 'fs';
+
+const client = new Retab();
+
+// Read the PDF
+const pdfBuffer = readFileSync("blank-form.pdf");
+const pdfBase64 = pdfBuffer.toString('base64');
+
+// First, generate the form schema
+const schemaResponse = await client.edit.templates.generate({
+    document: {
+        filename: "blank-form.pdf",
+        url: `data:application/pdf;base64,${pdfBase64}`
+    },
+    model: "retab-small"
+});
+
+// Create a template from the detected schema
+const template = await client.edit.templates.create({
+    name: "Employee Onboarding Form",
+    document: {
+        filename: "blank-form.pdf",
+        url: `data:application/pdf;base64,${pdfBase64}`
+    },
+    form_fields: schemaResponse.form_schema.form_fields
+});
+console.log(`Created template: ${template.id}`);
+
+// List all templates
+const templates = await client.edit.templates.list({ limit: 10 });
+templates.data.forEach(t => {
+    console.log(`  - ${t.name} (${t.id})`);
+});
+
+// Get a specific template
+const fetchedTemplate = await client.edit.templates.get("tmpl_abc123");
+
+// Update a template
+const updated = await client.edit.templates.update("tmpl_abc123", {
+    name: "Updated Form Name"
+});
+
+// Duplicate a template
+const duplicate = await client.edit.templates.duplicate("tmpl_abc123", {
+    name: "Employee Form - Copy"
+});
+
+// Delete a template
+await client.edit.templates.delete("tmpl_abc123");
+```
+</CodeGroup>
 
 ## Use Case: Batch Form Processing
 
@@ -341,7 +613,7 @@ for i, applicant in enumerate(applicants):
     Phone Number: {applicant['phone']}
     """
     
-    result = client.documents.edit(
+    result = client.edit.fill_document(
         document="template-form.pdf",
         filling_instructions=instructions,
         model="retab-small"
@@ -399,7 +671,7 @@ for (let i = 0; i < applicants.length; i++) {
         Phone Number: ${applicant.phone}
     `;
     
-    const result = await client.documents.edit({
+    const result = await client.edit.fill_document({
         document: {
             filename: "template-form.pdf",
             url: `data:application/pdf;base64,${templateBase64}`
@@ -432,7 +704,7 @@ import base64
 client = Retab()
 
 # Fill a Word document with JSON data
-result = client.documents.edit(
+result = client.edit.fill_document(
     document="contract-template.docx",
     filling_instructions="""
     {
@@ -464,7 +736,7 @@ const client = new Retab();
 const docxBuffer = readFileSync("contract-template.docx");
 const docxBase64 = docxBuffer.toString('base64');
 
-const result = await client.documents.edit({
+const result = await client.edit.fill_document({
     document: {
         filename: "contract-template.docx",
         url: `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${docxBase64}`
@@ -499,7 +771,7 @@ import base64
 client = Retab()
 
 # Fill an Excel spreadsheet
-result = client.documents.edit(
+result = client.edit.fill_document(
     document="invoice-template.xlsx",
     filling_instructions="""
     {
@@ -532,7 +804,7 @@ const client = new Retab();
 const xlsxBuffer = readFileSync("invoice-template.xlsx");
 const xlsxBase64 = xlsxBuffer.toString('base64');
 
-const result = await client.documents.edit({
+const result = await client.edit.fill_document({
     document: {
         filename: "invoice-template.xlsx",
         url: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${xlsxBase64}`
@@ -570,7 +842,7 @@ import base64
 client = Retab()
 
 # Fill a PowerPoint presentation
-result = client.documents.edit(
+result = client.edit.fill_document(
     document="sales-deck-template.pptx",
     filling_instructions="""
     {
@@ -601,7 +873,7 @@ const client = new Retab();
 const pptxBuffer = readFileSync("sales-deck-template.pptx");
 const pptxBase64 = pptxBuffer.toString('base64');
 
-const result = await client.documents.edit({
+const result = await client.edit.fill_document({
     document: {
         filename: "sales-deck-template.pptx",
         url: `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,${pptxBase64}`
@@ -637,6 +909,7 @@ if (result.filled_document) {
 - Works best with forms that have clear field labels
 - Supports both text fields and checkboxes
 - For checkboxes, use "checked" or "unchecked" as the value
+- Use `edit.templates.generate()` to preview detected fields before filling
 
 **Word Documents (DOCX):**
 - Best for documents with placeholders like `[Enter name]` or blank spaces after labels
@@ -665,3 +938,9 @@ if (result.filled_document) {
 - Extract base64 content by splitting on comma: `url.split(",")[1]`
 - Python SDK accepts file paths directly and handles MIMEData conversion automatically
 - Output format matches input format (DOCX in → DOCX out, XLSX in → XLSX out)
+
+### Template Workflow
+1. **Generate**: Use `edit.templates.generate()` to detect form fields in a blank PDF
+2. **Review**: Check the annotated PDF to verify detected fields
+3. **Create**: Save the form schema as a template with `edit.templates.create()`
+4. **Fill**: Use `edit.templates.fill()` or `edit.fill_document(template_id=...)` for batch processing

@@ -1,0 +1,153 @@
+---
+title: 'Generate Template'
+openapi: 'POST /v1/edit/templates/generate'
+---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+import base64
+
+client = Retab()
+
+# Generate form schema from a PDF document
+response = client.edit.templates.generate(
+    document="blank_form.pdf",
+    model="retab-small",
+    instructions="Focus on the main application fields, ignore header and footer"
+)
+
+print(f"Detected {response.field_count} fields")
+
+# Access the form schema
+for field in response.form_schema.form_fields:
+    print(f"Field: {field.key} - {field.description} ({field.type})")
+
+# Save the annotated PDF (with bounding boxes drawn)
+if response.annotated_pdf:
+    pdf_bytes = base64.b64decode(response.annotated_pdf.url.split(",")[1])
+    with open("annotated_form.pdf", "wb") as f:
+        f.write(pdf_bytes)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+import fs from 'fs';
+
+const client = new Retab();
+
+// Generate form schema from a PDF document
+const response = await client.edit.templates.generate({
+    document: "blank_form.pdf",
+    model: "retab-small",
+    instructions: "Focus on the main application fields"
+});
+
+console.log(`Detected ${response.field_count} fields`);
+
+// Access the form schema
+for (const field of response.form_schema.form_fields) {
+    console.log(`Field: ${field.key} - ${field.description} (${field.type})`);
+}
+
+// Save the annotated PDF
+const base64Content = response.annotated_pdf.url.split(",")[1];
+fs.writeFileSync("annotated_form.pdf", Buffer.from(base64Content, "base64"));
+```
+
+```bash curl
+curl -X POST 'https://api.retab.com/v1/edit/templates/generate' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "document": {
+      "filename": "blank_form.pdf",
+      "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    },
+    "model": "retab-small",
+    "instructions": "Focus on the main application fields"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "form_schema": {
+    "form_fields": [
+      {
+        "key": "full_name",
+        "description": "Full legal name of the applicant",
+        "type": "text",
+        "bbox": {
+          "page": 0,
+          "x": 120,
+          "y": 185,
+          "width": 250,
+          "height": 22
+        }
+      },
+      {
+        "key": "date_of_birth",
+        "description": "Applicant's date of birth",
+        "type": "date",
+        "bbox": {
+          "page": 0,
+          "x": 120,
+          "y": 220,
+          "width": 120,
+          "height": 22
+        }
+      },
+      {
+        "key": "email_address",
+        "description": "Contact email address",
+        "type": "text",
+        "bbox": {
+          "page": 0,
+          "x": 120,
+          "y": 255,
+          "width": 200,
+          "height": 22
+        }
+      },
+      {
+        "key": "signature",
+        "description": "Applicant signature",
+        "type": "signature",
+        "bbox": {
+          "page": 0,
+          "x": 100,
+          "y": 650,
+          "width": 200,
+          "height": 50
+        }
+      },
+      {
+        "key": "agree_to_terms",
+        "description": "Checkbox to agree to terms and conditions",
+        "type": "checkbox",
+        "bbox": {
+          "page": 0,
+          "x": 50,
+          "y": 600,
+          "width": 15,
+          "height": 15
+        }
+      }
+    ]
+  },
+  "annotated_pdf": {
+    "filename": "blank_form_annotated.pdf",
+    "mime_type": "application/pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  },
+  "field_count": 5
+}
+```
+
+</ResponseExample>
+
