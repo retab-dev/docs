@@ -1,0 +1,142 @@
+---
+title: 'Fill Template'
+openapi: 'POST /v1/edit/templates/fill'
+---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+import base64
+
+client = Retab()
+
+# Fill a form using a pre-defined template
+response = client.edit.templates.fill(
+    template_id="edittplt_abc123",
+    filling_instructions="""
+    Full Name: Jane Smith
+    Date of Birth: March 15, 1985
+    Email: jane.smith@example.com
+    Phone: (555) 123-4567
+    """,
+    model="retab-small"
+)
+
+print(f"Filled {len(response.form_data)} fields")
+
+# Save the filled PDF
+if response.filled_document:
+    pdf_bytes = base64.b64decode(response.filled_document.url.split(",")[1])
+    with open("filled_form.pdf", "wb") as f:
+        f.write(pdf_bytes)
+    print("Filled form saved!")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+import fs from 'fs';
+
+const client = new Retab();
+
+// Fill a form using a pre-defined template
+const response = await client.edit.templates.fill({
+    template_id: "edittplt_abc123",
+    filling_instructions: `
+        Full Name: Jane Smith
+        Date of Birth: March 15, 1985
+        Email: jane.smith@example.com
+        Phone: (555) 123-4567
+    `,
+    model: "retab-small"
+});
+
+console.log(`Filled ${response.form_data.length} fields`);
+
+// Save the filled PDF
+const base64Content = response.filled_document.url.split(",")[1];
+fs.writeFileSync("filled_form.pdf", Buffer.from(base64Content, "base64"));
+console.log("Filled form saved!");
+```
+
+```bash curl
+curl -X POST 'https://api.retab.com/v1/edit/templates/fill' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "template_id": "edittplt_abc123",
+    "filling_instructions": "Full Name: Jane Smith\nDate of Birth: March 15, 1985\nEmail: jane.smith@example.com",
+    "model": "retab-small"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "form_data": [
+    {
+      "key": "full_name",
+      "description": "Full name of the applicant",
+      "type": "text",
+      "value": "Jane Smith",
+      "bbox": {
+        "page": 1,
+        "left": 0.15,
+        "top": 0.25,
+        "width": 0.35,
+        "height": 0.025
+      }
+    },
+    {
+      "key": "date_of_birth",
+      "description": "Date of birth",
+      "type": "date",
+      "value": "March 15, 1985",
+      "bbox": {
+        "page": 1,
+        "left": 0.15,
+        "top": 0.30,
+        "width": 0.20,
+        "height": 0.025
+      }
+    },
+    {
+      "key": "email",
+      "description": "Email address",
+      "type": "text",
+      "value": "jane.smith@example.com",
+      "bbox": {
+        "page": 1,
+        "left": 0.15,
+        "top": 0.35,
+        "width": 0.35,
+        "height": 0.025
+      }
+    },
+    {
+      "key": "phone",
+      "description": "Phone number",
+      "type": "text",
+      "value": "(555) 123-4567",
+      "bbox": {
+        "page": 1,
+        "left": 0.15,
+        "top": 0.40,
+        "width": 0.25,
+        "height": 0.025
+      }
+    }
+  ],
+  "filled_document": {
+    "filename": "filled_form.pdf",
+    "mime_type": "application/pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  }
+}
+```
+
+</ResponseExample>
+
