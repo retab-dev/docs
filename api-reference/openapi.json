@@ -11084,7 +11084,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/main_server__services__v1__projects__routes__ApplyComputationsRequest"
+                "$ref": "#/components/schemas/ApplyComputationsRequest"
               }
             }
           }
@@ -12449,7 +12449,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExportToCsvResponse"
+                  "$ref": "#/components/schemas/main_server__services__v1__integrations__google_sheets__routes__ExportToCsvResponse"
                 }
               }
             }
@@ -13609,7 +13609,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__v1__extractions__models__ExportToCsvResponse"
+                  "$ref": "#/components/schemas/ExportToCsvResponse"
                 }
               }
             }
@@ -24691,7 +24691,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ApplyComputationsRequest"
+                "$ref": "#/components/schemas/main_server__services__v1__workflows__routes__ApplyComputationsRequest"
               }
             }
           }
@@ -26159,14 +26159,15 @@
         }
       }
     },
-    "/v1/edit/fill-document": {
+    "/v1/edit/agent/fill": {
       "post": {
         "tags": [
-          "Edit"
+          "Edit",
+          "Agent Edit"
         ],
-        "summary": "Edit",
-        "description": "Edit a document by inferring form fields and filling them with provided instructions.\n\nEither `document` OR `template_id` must be provided, but not both:\n\n**With `document` (standard flow):**\n1. Detection to identify form field bounding boxes\n2. LLM inference to name and describe detected fields\n3. LLM-based form filling using the provided instructions\n4. Returns the filled document with form field values populated\n\n**With `template_id` (template-based flow, PDF only):**\n- Fetches the empty PDF template from storage\n- Uses the template's pre-defined form fields (skips detection and schema inference)\n- Fills the form fields directly using LLM\n- Returns the filled PDF\n\n**Supported document formats:**\n- PDF: Native form field detection and filling\n- DOCX/DOC: Native editing to preserve styles and formatting\n- PPTX/PPT: Native editing for presentations\n- XLSX/XLS: Native editing for spreadsheets",
-        "operationId": "edit_v1_edit_fill_document_post",
+        "summary": "Agent Edit",
+        "description": "Edit a document by inferring form fields and filling them with provided instructions.\n\n**Processing steps (standard flow):**\n1. Detection to identify form field bounding boxes\n2. LLM inference to name and describe detected fields\n3. LLM-based form filling using the provided instructions\n4. Returns the filled document with form field values populated\n\n**With `form_fields` (PDF only):**\n- Skips field detection and inference steps\n- Uses the provided form fields directly for filling\n- Useful when you already know the form structure\n\n**Supported document formats:**\n- PDF: Native form field detection and filling (supports `form_fields` parameter)\n- DOCX/DOC: Native editing to preserve styles and formatting\n- PPTX/PPT: Native editing for presentations\n- XLSX/XLS: Native editing for spreadsheets",
+        "operationId": "agent_edit_v1_edit_agent_fill_post",
         "security": [
           {
             "HTTPBearer": []
@@ -28366,7 +28367,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__internal__blog__models__User"
+                  "$ref": "#/components/schemas/User"
                 }
               }
             }
@@ -29543,7 +29544,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/retab__types__mime__MIMEData"
+                  "$ref": "#/components/schemas/MIMEData"
                 }
               }
             }
@@ -31813,7 +31814,7 @@
           "Edit"
         ],
         "summary": "Infer And Fill Schema Route",
-        "description": "Full pipeline: OCR a document (PDF or DOCX), infer its form schema, adjust bounding boxes, and fill it using LLM.\n\nFor DOCX files: Uses native DOCX editing to preserve styles and formatting.\nFor PDF files: Uses OCR + LLM pipeline to detect and fill form fields.\n\nIf template_id is provided (PDF only):\n- Fetches the empty PDF template from storage\n- Uses the template's pre-defined form fields\n- Skips OCR and schema inference steps\n- Fills the form fields directly\n\nEach page is processed independently in parallel with a semaphore controlling concurrency.\n\nThis combines multiple steps per page:\n1. OCR the page to extract text elements with bounding boxes\n2. Send OCR results + annotated PDF to LLM to infer the FormSchema (find bounding boxes)\n3. Show the model the annotated PDF and let it adjust bounding boxes if needed\n4. Fill the form based on provided instructions\n\nResults from all pages are merged into a consolidated response.\n\nReturns the filled form data and the filled document.",
+        "description": "Full pipeline: OCR a document (PDF or DOCX), infer its form schema, adjust bounding boxes, and fill it using LLM.\n\nFor DOCX files: Uses native DOCX editing to preserve styles and formatting.\nFor PDF files: Uses OCR + LLM pipeline to detect and fill form fields.\n\nEach page is processed independently in parallel with a semaphore controlling concurrency.\n\nThis combines multiple steps per page:\n1. OCR the page to extract text elements with bounding boxes\n2. Send OCR results + annotated PDF to LLM to infer the FormSchema (find bounding boxes)\n3. Show the model the annotated PDF and let it adjust bounding boxes if needed\n4. Fill the form based on provided instructions\n\nResults from all pages are merged into a consolidated response.\n\nReturns the filled form data and the filled document.",
         "operationId": "infer_and_fill_schema_route_internal_edit_infer_and_fill_schema_post",
         "security": [
           {
@@ -33821,18 +33822,12 @@
           "data": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Data",
-            "description": "The data to apply computations to"
-          },
-          "computation_spec": {
-            "$ref": "#/components/schemas/ComputationSpecInput",
-            "description": "The computation specification"
+            "title": "Data"
           }
         },
         "type": "object",
         "required": [
-          "data",
-          "computation_spec"
+          "data"
         ],
         "title": "ApplyComputationsRequest",
         "description": "Request to apply computations to data."
@@ -39258,7 +39253,7 @@
       "DocumentTransformResponse": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/retab__types__mime__MIMEData"
+            "$ref": "#/components/schemas/MIMEData"
           }
         },
         "type": "object",
@@ -39485,15 +39480,8 @@
       "EditRequest": {
         "properties": {
           "document": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/MIMEData-Input"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Input document (PDF, DOCX, XLSX or PPTX). Mutually exclusive with template_id."
+            "$ref": "#/components/schemas/MIMEData-Input",
+            "description": "Input document (PDF, DOCX, XLSX or PPTX)."
           },
           "model": {
             "type": "string",
@@ -39506,25 +39494,29 @@
             "title": "Instructions",
             "description": "Instructions to fill the form"
           },
-          "template_id": {
+          "form_fields": {
             "anyOf": [
               {
-                "type": "string"
+                "items": {
+                  "$ref": "#/components/schemas/FormField"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Template Id",
-            "description": "Template ID to use for filling. When provided, uses the template's pre-defined form fields and empty PDF. Only works for PDF documents. Mutually exclusive with document."
+            "title": "Form Fields",
+            "description": "Optional pre-defined form fields (PDF only). When provided, skips field inference and uses these fields directly."
           }
         },
         "type": "object",
         "required": [
+          "document",
           "instructions"
         ],
         "title": "EditRequest",
-        "description": "Request for the infer_and_fill_schema endpoint.\n\nEither `document` OR `template_id` must be provided, but not both.\n- When `document` is provided: OCR + LLM inference to detect and fill form fields\n- When `template_id` is provided: Uses pre-defined form fields from the template (PDF only)"
+        "description": "Request for the infer_and_fill_schema endpoint.\n\nPerforms OCR + LLM inference to detect and fill form fields in the provided document.\n\nIf `form_fields` is provided (PDF only), the inference step is skipped and the\nprovided fields are used directly for filling."
       },
       "EditResponse": {
         "properties": {
@@ -39537,7 +39529,7 @@
             "description": "List of form fields (with positions, descriptions, and metadata) that define the structure of the form."
           },
           "filled_document": {
-            "$ref": "#/components/schemas/retab__types__mime__MIMEData",
+            "$ref": "#/components/schemas/MIMEData",
             "description": "PDF with filled form values"
           }
         },
@@ -40407,8 +40399,7 @@
           "rows",
           "columns"
         ],
-        "title": "ExportToCsvResponse",
-        "description": "Response from the export-to-csv endpoint"
+        "title": "ExportToCsvResponse"
       },
       "ExpressionResponse": {
         "properties": {
@@ -41550,7 +41541,7 @@
           "user": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/User"
+                "$ref": "#/components/schemas/main_server__services__custom__bertfake__routes__User"
               },
               {
                 "type": "null"
@@ -41616,7 +41607,7 @@
                   "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__BaseMIMEData"
                 },
                 {
-                  "$ref": "#/components/schemas/MIMEData"
+                  "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__MIMEData"
                 }
               ]
             },
@@ -42213,7 +42204,7 @@
             "description": "Form schema with FFDNet bboxes and placeholder names"
           },
           "annotated_pdf": {
-            "$ref": "#/components/schemas/retab__types__mime__MIMEData",
+            "$ref": "#/components/schemas/MIMEData",
             "description": "PDF with form field bounding boxes"
           },
           "field_count": {
@@ -42244,7 +42235,7 @@
             "description": "Form schema with FFDNet bboxes and LLM-assigned names"
           },
           "annotated_pdf": {
-            "$ref": "#/components/schemas/retab__types__mime__MIMEData",
+            "$ref": "#/components/schemas/MIMEData",
             "description": "PDF with form field bounding boxes"
           },
           "field_count": {
@@ -42425,7 +42416,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-01-02T16:03:27.572871Z",
+              "updated_at": "2026-01-02T16:43:04.237979Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "gpt-5-mini",
@@ -42893,44 +42884,29 @@
       },
       "MIMEData": {
         "properties": {
-          "id": {
+          "filename": {
             "type": "string",
-            "title": "Id",
-            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
+            "title": "Filename",
+            "description": "The filename of the file",
+            "examples": [
+              "file.pdf",
+              "image.png",
+              "data.txt"
+            ]
           },
-          "name": {
+          "url": {
             "type": "string",
-            "title": "Name",
-            "description": "Original filename of the attachment."
-          },
-          "size": {
-            "type": "integer",
-            "title": "Size",
-            "description": "Size of the base64-encoded content in bytes."
-          },
-          "mime_type": {
-            "type": "string",
-            "title": "Mime Type",
-            "description": "MIME type of the attachment, determining how it should be handled."
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/AttachmentMetadata",
-            "description": "Additional metadata about the attachment."
-          },
-          "content": {
-            "type": "string",
-            "title": "Content",
-            "description": "Base64-encoded content of the attachment."
+            "title": "Url",
+            "description": "The URL of the file in base64 format",
+            "examples": [
+              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
+            ]
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "name",
-          "size",
-          "mime_type",
-          "metadata",
-          "content"
+          "filename",
+          "url"
         ],
         "title": "MIMEData"
       },
@@ -50334,20 +50310,20 @@
       },
       "User": {
         "properties": {
-          "object": {
-            "type": "string",
-            "const": "user",
-            "title": "Object"
-          },
           "id": {
             "type": "string",
+            "enum": [
+              "louis-de-benoist",
+              "sacha-ichbiah",
+              "victor-plaisance"
+            ],
             "title": "Id"
           },
-          "email": {
+          "name": {
             "type": "string",
-            "title": "Email"
+            "title": "Name"
           },
-          "first_name": {
+          "avatarUrl": {
             "anyOf": [
               {
                 "type": "string"
@@ -50356,9 +50332,9 @@
                 "type": "null"
               }
             ],
-            "title": "First Name"
+            "title": "Avatarurl"
           },
-          "last_name": {
+          "bio": {
             "anyOf": [
               {
                 "type": "string"
@@ -50367,13 +50343,9 @@
                 "type": "null"
               }
             ],
-            "title": "Last Name"
+            "title": "Bio"
           },
-          "email_verified": {
-            "type": "boolean",
-            "title": "Email Verified"
-          },
-          "profile_picture_url": {
+          "organization_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -50382,69 +50354,13 @@
                 "type": "null"
               }
             ],
-            "title": "Profile Picture Url"
-          },
-          "last_sign_in_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Sign In At"
-          },
-          "locale": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Locale"
-          },
-          "created_at": {
-            "type": "string",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "title": "Updated At"
-          },
-          "external_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "External Id"
-          },
-          "metadata": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Metadata"
-          },
-          "parameters": {
-            "$ref": "#/components/schemas/UserParameters"
+            "title": "Organization Id"
           }
         },
         "type": "object",
         "required": [
-          "object",
           "id",
-          "email",
-          "email_verified",
-          "created_at",
-          "updated_at",
-          "parameters"
+          "name"
         ],
         "title": "User"
       },
@@ -51273,63 +51189,166 @@
         ],
         "title": "BaseMIMEData"
       },
-      "main_server__services__internal__blog__models__User": {
+      "main_server__services__custom__bert__cubemimedata__MIMEData": {
         "properties": {
           "id": {
             "type": "string",
-            "enum": [
-              "louis-de-benoist",
-              "sacha-ichbiah",
-              "victor-plaisance"
-            ],
-            "title": "Id"
+            "title": "Id",
+            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
           },
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "Original filename of the attachment."
           },
-          "avatarUrl": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avatarurl"
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "Size of the base64-encoded content in bytes."
           },
-          "bio": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bio"
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the attachment, determining how it should be handled."
           },
-          "organization_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Organization Id"
+          "metadata": {
+            "$ref": "#/components/schemas/AttachmentMetadata",
+            "description": "Additional metadata about the attachment."
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Base64-encoded content of the attachment."
           }
         },
         "type": "object",
         "required": [
           "id",
-          "name"
+          "name",
+          "size",
+          "mime_type",
+          "metadata",
+          "content"
+        ],
+        "title": "MIMEData"
+      },
+      "main_server__services__custom__bertfake__routes__User": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "user",
+            "title": "Object"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified"
+          },
+          "profile_picture_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Picture Url"
+          },
+          "last_sign_in_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sign In At"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "external_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Id"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metadata"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/UserParameters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "email",
+          "email_verified",
+          "created_at",
+          "updated_at",
+          "parameters"
         ],
         "title": "User"
       },
-      "main_server__services__v1__extractions__models__ExportToCsvResponse": {
+      "main_server__services__v1__integrations__google_sheets__routes__ExportToCsvResponse": {
         "properties": {
           "csv_data": {
             "type": "string",
@@ -51350,22 +51369,8 @@
           "rows",
           "columns"
         ],
-        "title": "ExportToCsvResponse"
-      },
-      "main_server__services__v1__projects__routes__ApplyComputationsRequest": {
-        "properties": {
-          "data": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Data"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "title": "ApplyComputationsRequest",
-        "description": "Request to apply computations to data."
+        "title": "ExportToCsvResponse",
+        "description": "Response from the export-to-csv endpoint"
       },
       "main_server__services__v1__projects__routes__ApplyComputationsResponse": {
         "properties": {
@@ -51423,6 +51428,27 @@
         "title": "CreateTemplateRequest",
         "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
       },
+      "main_server__services__v1__workflows__routes__ApplyComputationsRequest": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "The data to apply computations to"
+          },
+          "computation_spec": {
+            "$ref": "#/components/schemas/ComputationSpecInput",
+            "description": "The computation specification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "computation_spec"
+        ],
+        "title": "ApplyComputationsRequest",
+        "description": "Request to apply computations to data."
+      },
       "openai__types__chat__chat_completion_message_function_tool_call_param__Function": {
         "properties": {
           "arguments": {
@@ -51477,34 +51503,6 @@
         },
         "type": "object",
         "title": "AttachmentMetadata"
-      },
-      "retab__types__mime__MIMEData": {
-        "properties": {
-          "filename": {
-            "type": "string",
-            "title": "Filename",
-            "description": "The filename of the file",
-            "examples": [
-              "file.pdf",
-              "image.png",
-              "data.txt"
-            ]
-          },
-          "url": {
-            "type": "string",
-            "title": "Url",
-            "description": "The URL of the file in base64 format",
-            "examples": [
-              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "filename",
-          "url"
-        ],
-        "title": "MIMEData"
       },
       "retab__types__mime__OCR": {
         "properties": {
