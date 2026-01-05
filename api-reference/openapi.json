@@ -1822,7 +1822,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/main_server__services__v1__schemas__templates__routes__CreateTemplateRequest"
+                "$ref": "#/components/schemas/CreateTemplateRequest"
               }
             }
           }
@@ -2364,7 +2364,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateTemplateRequest"
+                "$ref": "#/components/schemas/main_server__services__v1__schemas__default_templates__routes__CreateTemplateRequest"
               }
             }
           }
@@ -11095,7 +11095,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__v1__projects__routes__ApplyComputationsResponse"
+                  "$ref": "#/components/schemas/ApplyComputationsResponse"
                 }
               }
             }
@@ -23930,7 +23930,8 @@
                     "running",
                     "completed",
                     "error",
-                    "waiting_for_human"
+                    "waiting_for_human",
+                    "cancelled"
                   ],
                   "type": "string"
                 },
@@ -23955,7 +23956,8 @@
                     "running",
                     "completed",
                     "error",
-                    "waiting_for_human"
+                    "waiting_for_human",
+                    "cancelled"
                   ],
                   "type": "string"
                 },
@@ -24393,6 +24395,77 @@
         }
       }
     },
+    "/v1/workflows/runs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Cancel Workflow Run",
+        "description": "Cancel a running or pending workflow run.\n\nThis endpoint marks the run as cancelled and stops further processing.\nOnly runs with status 'pending', 'running', or 'waiting_for_human' can be cancelled.\n\nArgs:\n    run_id: The ID of the workflow run to cancel\n    \nReturns:\n    WorkflowRun with status set to 'cancelled'",
+        "operationId": "cancel_workflow_run_v1_workflows_runs__run_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workflows/runs/{run_id}/documents/{node_id}": {
       "get": {
         "tags": [
@@ -24702,7 +24775,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApplyComputationsResponse"
+                  "$ref": "#/components/schemas/main_server__services__v1__workflows__routes__ApplyComputationsResponse"
                 }
               }
             }
@@ -26215,6 +26288,591 @@
                 "schema": {
                   "$ref": "#/components/schemas/EditResponse"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflow-chat": {
+      "get": {
+        "tags": [
+          "Workflow Chat"
+        ],
+        "summary": "List Workflow Chats",
+        "description": "List workflow chat sessions, optionally filtered by workflow_id.",
+        "operationId": "list_workflow_chats_v1_workflow_chat_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "desc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Workflow Chat"
+        ],
+        "summary": "Create Workflow Chat",
+        "description": "Create a new workflow chat session.",
+        "operationId": "create_workflow_chat_v1_workflow_chat_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkflowChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowChatSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflow-chat/{chat_id}": {
+      "get": {
+        "tags": [
+          "Workflow Chat"
+        ],
+        "summary": "Get Workflow Chat",
+        "description": "Get a workflow chat session by ID.",
+        "operationId": "get_workflow_chat_v1_workflow_chat__chat_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Chat Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowChatSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Workflow Chat"
+        ],
+        "summary": "Update Workflow Chat",
+        "description": "Update a workflow chat session (e.g., title).",
+        "operationId": "update_workflow_chat_v1_workflow_chat__chat_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Chat Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkflowChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowChatSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Workflow Chat"
+        ],
+        "summary": "Delete Workflow Chat",
+        "description": "Delete a workflow chat session.",
+        "operationId": "delete_workflow_chat_v1_workflow_chat__chat_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Chat Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Delete Workflow Chat V1 Workflow Chat  Chat Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflow-chat/{chat_id}/messages": {
+      "post": {
+        "tags": [
+          "Workflow Chat"
+        ],
+        "summary": "Add Message To Workflow Chat",
+        "description": "Add a message to a workflow chat session.",
+        "operationId": "add_message_to_workflow_chat_v1_workflow_chat__chat_id__messages_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Chat Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkflowChatMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowChatMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflow-chat/completions": {
+      "post": {
+        "tags": [
+          "Workflow Chat"
+        ],
+        "summary": "Workflow Chat Completions",
+        "description": "Chat completions endpoint for workflow editing.\n\nThis endpoint allows users to interact with an AI assistant that can\nmodify the workflow using tools like addNode, removeNode, addEdge, etc.",
+        "operationId": "workflow_chat_completions_v1_workflow_chat_completions_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowChatCompletionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -28367,7 +29025,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/main_server__services__internal__blog__models__User"
                 }
               }
             }
@@ -31879,6 +32537,138 @@
         }
       }
     },
+    "/internal/workflow-runs/{run_id}/nodes/{node_id}/execute": {
+      "post": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Execute Llm Node Internal",
+        "description": "Internal endpoint to execute a single LLM workflow node.\nThis endpoint is called by Cloud Tasks and has no authentication.\nSecurity is provided by network-level restrictions.\n\nFeatures:\n- Idempotency protection (prevents duplicate processing)\n- Timeout handling for LLM operations\n- Retry tracking\n- Spawns Cloud Tasks for downstream ready LLM nodes",
+        "operationId": "execute_llm_node_internal_internal_workflow_runs__run_id__nodes__node_id__execute_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Node Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteNodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteNodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workflow-runs/recover-stuck": {
+      "post": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Recover Stuck Llm Nodes",
+        "description": "Recover workflow nodes that are stuck in 'queued' or 'running' state for too long.\n\nA node is considered stuck if:\n- step.status is 'queued' or 'running'\n- step.started_at is older than STUCK_NODE_THRESHOLD_MINUTES (35 minutes)\n\nStuck nodes are reset to 'pending' status with an error message,\nallowing them to be retried.",
+        "operationId": "recover_stuck_llm_nodes_internal_workflow_runs_recover_stuck_post",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional workflow ID to filter",
+              "title": "Workflow Id"
+            },
+            "description": "Optional workflow ID to filter"
+          },
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Organization ID (required)",
+              "title": "Organization Id"
+            },
+            "description": "Organization ID (required)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoverStuckNodesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/custom/groussard/match": {
       "post": {
         "summary": "Find Matches",
@@ -33837,8 +34627,7 @@
           "data": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Data",
-            "description": "The data with computations applied"
+            "title": "Data"
           }
         },
         "type": "object",
@@ -34054,7 +34843,7 @@
             ]
           },
           "metadata": {
-            "$ref": "#/components/schemas/retab__types__mime__AttachmentMetadata",
+            "$ref": "#/components/schemas/AttachmentMetadata",
             "description": "Additional metadata about the attachment.",
             "default": {
               "is_inline": false
@@ -34087,40 +34876,6 @@
             ],
             "title": "Inline Cid",
             "description": "CID reference for inline attachments."
-          },
-          "url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Url",
-            "description": "URL of the attachment."
-          },
-          "display_metadata": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DisplayMetadata"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Display Metadata"
-          },
-          "ocr": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/OCR"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "OCR data for the attachment."
           },
           "source": {
             "anyOf": [
@@ -34362,7 +35117,7 @@
           "file_metadata": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/BaseMIMEData"
+                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
               },
               {
                 "type": "null"
@@ -34607,7 +35362,7 @@
           },
           "attachments": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__BaseMIMEData"
+              "$ref": "#/components/schemas/BaseMIMEData"
             },
             "type": "array",
             "title": "Attachments",
@@ -34630,24 +35385,35 @@
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "ID of the file"
+            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
           },
-          "filename": {
+          "name": {
             "type": "string",
-            "title": "Filename",
-            "description": "Filename of the file"
+            "title": "Name",
+            "description": "Original filename of the attachment."
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "Size of the base64-encoded content in bytes."
           },
           "mime_type": {
             "type": "string",
             "title": "Mime Type",
-            "description": "MIME type of the file"
+            "description": "MIME type of the attachment, determining how it should be handled."
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__AttachmentMetadata",
+            "description": "Additional metadata about the attachment."
           }
         },
         "type": "object",
         "required": [
           "id",
-          "filename",
-          "mime_type"
+          "name",
+          "size",
+          "mime_type",
+          "metadata"
         ],
         "title": "BaseMIMEData"
       },
@@ -35666,7 +36432,7 @@
             "title": "Project Id"
           },
           "mime_data": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "The mime data of the document"
           },
           "prediction_data": {
@@ -36807,7 +37573,7 @@
             "description": "Unique identifier of the classification"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the classified file"
           },
           "result": {
@@ -38058,10 +38824,6 @@
       },
       "CreateTemplateRequest": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -38098,7 +38860,81 @@
           "name",
           "json_schema"
         ],
-        "title": "CreateTemplateRequest"
+        "title": "CreateTemplateRequest",
+        "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
+      },
+      "CreateWorkflowChatMessageRequest": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ],
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "toolInvocations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ToolInvocation-Input"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toolinvocations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "CreateWorkflowChatMessageRequest"
+      },
+      "CreateWorkflowChatRequest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "default": "New Workflow Chat"
+          },
+          "workflowId": {
+            "type": "string",
+            "title": "Workflowid"
+          },
+          "initialMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initialmessage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflowId"
+        ],
+        "title": "CreateWorkflowChatRequest"
       },
       "CreateWorkflowRequest": {
         "properties": {
@@ -38472,7 +39308,7 @@
             "title": "Project Id"
           },
           "mime_data": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "The mime data of the document"
           },
           "prediction_data": {
@@ -39423,8 +40259,19 @@
             "description": "Unique identifier of the editing"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the original file"
+          },
+          "filled_document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Information about the filled document"
           },
           "filled_fields": {
             "items": {
@@ -39477,6 +40324,18 @@
         "title": "Edit",
         "description": "Stored editing result."
       },
+      "EditConfig": {
+        "properties": {
+          "color": {
+            "type": "string",
+            "title": "Color",
+            "description": "Hex code of the color to use for the filled text",
+            "default": "#00007A"
+          }
+        },
+        "type": "object",
+        "title": "EditConfig"
+      },
       "EditRequest": {
         "properties": {
           "document": {
@@ -39508,6 +40367,13 @@
             ],
             "title": "Form Fields",
             "description": "Optional pre-defined form fields (PDF only). When provided, skips field inference and uses these fields directly."
+          },
+          "config": {
+            "$ref": "#/components/schemas/EditConfig",
+            "description": "Configuration for the edit request",
+            "default": {
+              "color": "#00007A"
+            }
           }
         },
         "type": "object",
@@ -39575,7 +40441,7 @@
             "description": "Name of the template"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "File information for the empty PDF template this schema applies to"
           },
           "form_fields": {
@@ -40302,6 +41168,75 @@
         ],
         "title": "Event"
       },
+      "ExecuteNodeRequest": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "node_id",
+          "organization_id",
+          "workflow_id"
+        ],
+        "title": "ExecuteNodeRequest",
+        "description": "Request body for node execution from Cloud Tasks."
+      },
+      "ExecuteNodeResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "extraction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Id"
+          },
+          "downstream_tasks_spawned": {
+            "type": "integer",
+            "title": "Downstream Tasks Spawned",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "run_id",
+          "node_id"
+        ],
+        "title": "ExecuteNodeResponse",
+        "description": "Response from node execution."
+      },
       "ExecuteUploadJobRequest": {
         "properties": {
           "job_id": {
@@ -40713,7 +41648,7 @@
             "description": "Unique identifier of the analysis"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the file"
           },
           "predictions": {
@@ -41326,6 +42261,10 @@
             "type": "string",
             "title": "Template Id",
             "description": "Template ID to use for filling. When provided, uses the template's pre-defined form fields and empty PDF. Only works for PDF documents. Mutually exclusive with document."
+          },
+          "config": {
+            "$ref": "#/components/schemas/EditConfig",
+            "description": "Configuration for the fill request"
           }
         },
         "type": "object",
@@ -41541,7 +42480,7 @@
           "user": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/main_server__services__custom__bertfake__routes__User"
+                "$ref": "#/components/schemas/User"
               },
               {
                 "type": "null"
@@ -41604,7 +42543,7 @@
             "items": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__BaseMIMEData"
+                  "$ref": "#/components/schemas/BaseMIMEData"
                 },
                 {
                   "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__MIMEData"
@@ -42416,7 +43355,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-01-02T16:43:04.237979Z",
+              "updated_at": "2026-01-05T17:02:15.076209Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "gpt-5-mini",
@@ -42451,7 +43390,7 @@
             "title": "Project Id"
           },
           "mime_data": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "The mime data of the document"
           },
           "prediction_data": {
@@ -44268,7 +45207,7 @@
             "description": "Unique identifier of the parse"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the parsed file"
           },
           "pages": {
@@ -44365,7 +45304,7 @@
       "ParseResult": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Processed document metadata"
           },
           "usage": {
@@ -46876,7 +47815,7 @@
           "file": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/BaseMIMEData"
+                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
               },
               {
                 "type": "null"
@@ -46986,6 +47925,36 @@
         ],
         "title": "RecoverStuckJobsResponse",
         "description": "Response for stuck job recovery"
+      },
+      "RecoverStuckNodesResponse": {
+        "properties": {
+          "recovered_count": {
+            "type": "integer",
+            "title": "Recovered Count"
+          },
+          "node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Node Ids"
+          },
+          "run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Run Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recovered_count",
+          "node_ids",
+          "run_ids"
+        ],
+        "title": "RecoverStuckNodesResponse",
+        "description": "Response for stuck node recovery."
       },
       "RenameProjectRequest": {
         "properties": {
@@ -48134,7 +49103,7 @@
             "description": "Unique identifier of the schema generation"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the source file"
           },
           "json_schema": {
@@ -48387,7 +49356,7 @@
             "description": "Unique identifier of the split"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the split file"
           },
           "splits": {
@@ -48681,11 +49650,13 @@
             "type": "string",
             "enum": [
               "pending",
+              "queued",
               "running",
               "completed",
               "skipped",
               "error",
-              "waiting_for_human"
+              "waiting_for_human",
+              "cancelled"
             ],
             "title": "Status",
             "description": "Current status"
@@ -48841,6 +49812,18 @@
             ],
             "title": "Human Review Approved",
             "description": "Whether human approved or rejected"
+          },
+          "retry_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Count",
+            "description": "Number of retry attempts for Cloud Tasks execution"
           }
         },
         "type": "object",
@@ -49393,6 +50376,74 @@
         ],
         "title": "TokenPrice",
         "description": "Holds pricing information (price per 1M tokens) for one token category.\n(For example, for text tokens used in the prompt.)"
+      },
+      "ToolCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "function"
+          },
+          "function": {
+            "$ref": "#/components/schemas/ToolCallFunction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "function"
+        ],
+        "title": "ToolCall",
+        "description": "A tool call made by the assistant."
+      },
+      "ToolCallFunction": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "arguments": {
+            "type": "string",
+            "title": "Arguments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "arguments"
+        ],
+        "title": "ToolCallFunction",
+        "description": "Function details within a tool call."
+      },
+      "ToolInvocation-Input": {
+        "properties": {
+          "call": {
+            "$ref": "#/components/schemas/ToolCall"
+          }
+        },
+        "type": "object",
+        "required": [
+          "call"
+        ],
+        "title": "ToolInvocation",
+        "description": "Wrapper for tool call in DB format."
+      },
+      "ToolInvocation-Output": {
+        "properties": {
+          "call": {
+            "$ref": "#/components/schemas/ToolCall"
+          }
+        },
+        "type": "object",
+        "required": [
+          "call"
+        ],
+        "title": "ToolInvocation",
+        "description": "Wrapper for tool call in DB format."
       },
       "TopLogprob": {
         "properties": {
@@ -50152,6 +51203,23 @@
         "title": "UpdateTemplateRequest",
         "description": "Request model for updating a template."
       },
+      "UpdateWorkflowChatRequest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "title": "UpdateWorkflowChatRequest"
+      },
       "UploadFileForChatRequest": {
         "properties": {
           "mimeData": {
@@ -50310,20 +51378,20 @@
       },
       "User": {
         "properties": {
+          "object": {
+            "type": "string",
+            "const": "user",
+            "title": "Object"
+          },
           "id": {
             "type": "string",
-            "enum": [
-              "louis-de-benoist",
-              "sacha-ichbiah",
-              "victor-plaisance"
-            ],
             "title": "Id"
           },
-          "name": {
+          "email": {
             "type": "string",
-            "title": "Name"
+            "title": "Email"
           },
-          "avatarUrl": {
+          "first_name": {
             "anyOf": [
               {
                 "type": "string"
@@ -50332,9 +51400,9 @@
                 "type": "null"
               }
             ],
-            "title": "Avatarurl"
+            "title": "First Name"
           },
-          "bio": {
+          "last_name": {
             "anyOf": [
               {
                 "type": "string"
@@ -50343,9 +51411,13 @@
                 "type": "null"
               }
             ],
-            "title": "Bio"
+            "title": "Last Name"
           },
-          "organization_id": {
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified"
+          },
+          "profile_picture_url": {
             "anyOf": [
               {
                 "type": "string"
@@ -50354,13 +51426,69 @@
                 "type": "null"
               }
             ],
-            "title": "Organization Id"
+            "title": "Profile Picture Url"
+          },
+          "last_sign_in_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sign In At"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "external_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Id"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metadata"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/UserParameters"
           }
         },
         "type": "object",
         "required": [
+          "object",
           "id",
-          "name"
+          "email",
+          "email_verified",
+          "created_at",
+          "updated_at",
+          "parameters"
         ],
         "title": "User"
       },
@@ -50719,6 +51847,207 @@
         ],
         "title": "Workflow"
       },
+      "WorkflowChatCompletionRequest": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatCompletionRetabMessage-Input"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "Chat messages"
+          },
+          "workflowId": {
+            "type": "string",
+            "title": "Workflowid",
+            "description": "ID of the workflow being edited"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model to use",
+            "default": "gpt-4.1"
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperature",
+            "description": "Temperature for sampling",
+            "default": 0.7
+          },
+          "max_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tokens",
+            "description": "Maximum tokens to generate"
+          },
+          "reasoning_effort": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "minimal",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Effort",
+            "description": "Reasoning effort",
+            "default": "low"
+          },
+          "chatId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chatid",
+            "description": "Chat session ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages",
+          "workflowId"
+        ],
+        "title": "WorkflowChatCompletionRequest"
+      },
+      "WorkflowChatMessage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system",
+              "tool"
+            ],
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "default": ""
+          },
+          "toolInvocations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ToolInvocation-Output"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toolinvocations"
+          },
+          "tool_call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Call Id",
+            "description": "For tool role messages, the ID of the tool call this responds to"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "WorkflowChatMessage",
+        "description": "A message in a workflow chat session."
+      },
+      "WorkflowChatSession": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": "New Workflow Chat"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowChatMessage"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "organization_id",
+          "workflow_id"
+        ],
+        "title": "WorkflowChatSession"
+      },
       "WorkflowConfig-Input": {
         "properties": {
           "nodes": {
@@ -51020,14 +52349,27 @@
             "title": "Organization Id",
             "description": "Organization that owns this run"
           },
+          "workflow_config_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublishedWorkflowConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Snapshot of the published config at time of execution"
+          },
           "status": {
             "type": "string",
             "enum": [
               "pending",
+              "queued",
               "running",
               "completed",
               "error",
-              "waiting_for_human"
+              "waiting_for_human",
+              "cancelled"
             ],
             "title": "Status",
             "description": "Overall status",
@@ -51152,42 +52494,75 @@
         "title": "WorkflowRun",
         "description": "A stored workflow run record"
       },
-      "main_server__services__custom__bert__cubemimedata__BaseMIMEData": {
+      "main_server__services__custom__bert__cubemimedata__AttachmentMetadata": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
+          "is_inline": {
+            "type": "boolean",
+            "title": "Is Inline",
+            "description": "Whether the attachment is inline or not.",
+            "default": false
           },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Original filename of the attachment."
+          "inline_cid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inline Cid",
+            "description": "CID reference for inline attachments."
           },
-          "size": {
-            "type": "integer",
-            "title": "Size",
-            "description": "Size of the base64-encoded content in bytes."
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "URL of the attachment."
           },
-          "mime_type": {
-            "type": "string",
-            "title": "Mime Type",
-            "description": "MIME type of the attachment, determining how it should be handled."
+          "display_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DisplayMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Display Metadata"
           },
-          "metadata": {
-            "$ref": "#/components/schemas/AttachmentMetadata",
-            "description": "Additional metadata about the attachment."
+          "ocr": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OCR"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "OCR data for the attachment."
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Source of the attachment in dot notation attachment_id, or email_id.attachment_id, allow us to keep track of the origin of the attachment, for search purposes. "
           }
         },
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "size",
-          "mime_type",
-          "metadata"
-        ],
-        "title": "BaseMIMEData"
+        "title": "AttachmentMetadata"
       },
       "main_server__services__custom__bert__cubemimedata__MIMEData": {
         "properties": {
@@ -51212,7 +52587,7 @@
             "description": "MIME type of the attachment, determining how it should be handled."
           },
           "metadata": {
-            "$ref": "#/components/schemas/AttachmentMetadata",
+            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__AttachmentMetadata",
             "description": "Additional metadata about the attachment."
           },
           "content": {
@@ -51232,22 +52607,22 @@
         ],
         "title": "MIMEData"
       },
-      "main_server__services__custom__bertfake__routes__User": {
+      "main_server__services__internal__blog__models__User": {
         "properties": {
-          "object": {
-            "type": "string",
-            "const": "user",
-            "title": "Object"
-          },
           "id": {
             "type": "string",
+            "enum": [
+              "louis-de-benoist",
+              "sacha-ichbiah",
+              "victor-plaisance"
+            ],
             "title": "Id"
           },
-          "email": {
+          "name": {
             "type": "string",
-            "title": "Email"
+            "title": "Name"
           },
-          "first_name": {
+          "avatarUrl": {
             "anyOf": [
               {
                 "type": "string"
@@ -51256,9 +52631,9 @@
                 "type": "null"
               }
             ],
-            "title": "First Name"
+            "title": "Avatarurl"
           },
-          "last_name": {
+          "bio": {
             "anyOf": [
               {
                 "type": "string"
@@ -51267,13 +52642,9 @@
                 "type": "null"
               }
             ],
-            "title": "Last Name"
+            "title": "Bio"
           },
-          "email_verified": {
-            "type": "boolean",
-            "title": "Email Verified"
-          },
-          "profile_picture_url": {
+          "organization_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -51282,69 +52653,13 @@
                 "type": "null"
               }
             ],
-            "title": "Profile Picture Url"
-          },
-          "last_sign_in_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Sign In At"
-          },
-          "locale": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Locale"
-          },
-          "created_at": {
-            "type": "string",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "title": "Updated At"
-          },
-          "external_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "External Id"
-          },
-          "metadata": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Metadata"
-          },
-          "parameters": {
-            "$ref": "#/components/schemas/UserParameters"
+            "title": "Organization Id"
           }
         },
         "type": "object",
         "required": [
-          "object",
           "id",
-          "email",
-          "email_verified",
-          "created_at",
-          "updated_at",
-          "parameters"
+          "name"
         ],
         "title": "User"
       },
@@ -51372,23 +52687,12 @@
         "title": "ExportToCsvResponse",
         "description": "Response from the export-to-csv endpoint"
       },
-      "main_server__services__v1__projects__routes__ApplyComputationsResponse": {
+      "main_server__services__v1__schemas__default_templates__routes__CreateTemplateRequest": {
         "properties": {
-          "data": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Data"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "title": "ApplyComputationsResponse",
-        "description": "Response containing computed data."
-      },
-      "main_server__services__v1__schemas__templates__routes__CreateTemplateRequest": {
-        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -51425,8 +52729,7 @@
           "name",
           "json_schema"
         ],
-        "title": "CreateTemplateRequest",
-        "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
+        "title": "CreateTemplateRequest"
       },
       "main_server__services__v1__workflows__routes__ApplyComputationsRequest": {
         "properties": {
@@ -51449,6 +52752,22 @@
         "title": "ApplyComputationsRequest",
         "description": "Request to apply computations to data."
       },
+      "main_server__services__v1__workflows__routes__ApplyComputationsResponse": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "The data with computations applied"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ApplyComputationsResponse",
+        "description": "Response containing computed data."
+      },
       "openai__types__chat__chat_completion_message_function_tool_call_param__Function": {
         "properties": {
           "arguments": {
@@ -51468,41 +52787,31 @@
         "title": "Function",
         "description": "The function that the model called."
       },
-      "retab__types__mime__AttachmentMetadata": {
+      "retab__types__mime__BaseMIMEData": {
         "properties": {
-          "is_inline": {
-            "type": "boolean",
-            "title": "Is Inline",
-            "description": "Whether the attachment is inline or not.",
-            "default": false
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "ID of the file"
           },
-          "inline_cid": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Inline Cid",
-            "description": "CID reference for inline attachments."
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename of the file"
           },
-          "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source",
-            "description": "Source of the attachment in dot notation attachment_id, or email_id.attachment_id, allow us to keep track of the origin of the attachment, for search purposes. "
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the file"
           }
         },
         "type": "object",
-        "title": "AttachmentMetadata"
+        "required": [
+          "id",
+          "filename",
+          "mime_type"
+        ],
+        "title": "BaseMIMEData"
       },
       "retab__types__mime__OCR": {
         "properties": {
