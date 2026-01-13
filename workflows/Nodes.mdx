@@ -154,28 +154,6 @@ You can add named input handles to provide extra context during extraction:
 
 ---
 
-### Project Extract
-
-<Card title="Project Extract" icon="layers" color="#8b5cf6">
-Extract data using a pre-configured project's settings.
-</Card>
-
-**Inputs:** File  
-**Outputs:** JSON
-
-**Configuration:**
-
-| Setting | Description |
-|---------|-------------|
-| **Project ID** | The published project to use for extraction |
-
-This node uses all the schema, model, and settings from an existing project. Perfect for:
-- Reusing validated extraction configurations
-- Ensuring consistency across workflows
-- Leveraging project-specific fine-tuning
-
----
-
 ### Parse
 
 <Card title="Parse" icon="scan-text" color="#06b6d4">
@@ -323,7 +301,7 @@ The Text input provides instructions or data to use for filling. Connect this to
 Fill documents using a pre-defined template.
 </Card>
 
-**Inputs:** Text (instructions/data)  
+**Inputs:** Text (instructions/data)
 **Outputs:** File (filled document)
 
 **Configuration:**
@@ -333,80 +311,6 @@ Fill documents using a pre-defined template.
 | **Template ID** | The template to use for filling |
 
 Templates define a mapping between data fields and form fields. Create templates in the Templates section of your dashboard.
-
----
-
-### Merge PDF
-
-<Card title="Merge PDF" icon="file-stack" color="#6366f1">
-Combine multiple PDF documents into a single file.
-</Card>
-
-**Inputs:** Multiple File inputs (configurable)  
-**Outputs:** File (merged PDF)
-
-**Configuration:**
-
-| Setting | Description |
-|---------|-------------|
-| **Inputs** | Named input slots for PDFs to merge |
-
-**Example Configuration:**
-```json
-{
-  "inputs": [
-    { "name": "Cover Page" },
-    { "name": "Invoice" },
-    { "name": "Terms and Conditions" }
-  ]
-}
-```
-
-PDFs are merged in the order defined by the inputs list. Non-PDF documents are automatically converted before merging.
-
----
-
-### Merge JSON
-
-<Card title="Merge JSON" icon="combine" color="#8b5cf6">
-Combine multiple JSON objects into a single structured object.
-</Card>
-
-**Inputs:** Multiple JSON inputs (configurable)  
-**Outputs:** JSON (merged object)
-
-**Configuration:**
-
-| Setting | Description |
-|---------|-------------|
-| **Inputs** | Named input slots for JSON objects to merge |
-
-**Example Configuration:**
-```json
-{
-  "inputs": [
-    { "name": "invoice_data" },
-    { "name": "vendor_data" },
-    { "name": "line_items" }
-  ]
-}
-```
-
-**Output Structure:**
-
-The merged output wraps each input under its named key:
-```json
-{
-  "invoice_data": { ... extracted invoice fields ... },
-  "vendor_data": { ... extracted vendor fields ... },
-  "line_items": { ... extracted line items ... }
-}
-```
-
-This is useful for:
-- Combining extractions from multiple documents
-- Aggregating data from parallel processing branches
-- Creating comprehensive outputs from Split or Classifier workflows
 
 ---
 
@@ -488,7 +392,7 @@ See [Functions Documentation](/projects/Functions) for the complete formula refe
 
 ---
 
-### If / Else (Conditional)
+### If / Else
 
 <Card title="If / Else" icon="network" color="#f97316">
 Route data to different branches based on conditions.
@@ -549,6 +453,133 @@ Each condition can have multiple sub-conditions combined with AND/OR:
 
 ---
 
+### Merge PDF
+
+<Card title="Merge PDF" icon="file-stack" color="#6366f1">
+Combine multiple PDF documents into a single file.
+</Card>
+
+**Inputs:** Multiple File inputs (configurable)  
+**Outputs:** File (merged PDF)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Inputs** | Named input slots for PDFs to merge |
+
+**Example Configuration:**
+```json
+{
+  "inputs": [
+    { "name": "Cover Page" },
+    { "name": "Invoice" },
+    { "name": "Terms and Conditions" }
+  ]
+}
+```
+
+PDFs are merged in the order defined by the inputs list. Non-PDF documents are automatically converted before merging.
+
+---
+
+### API Call
+
+<Card title="API Call" icon="globe" color="#3b82f6">
+Make HTTP requests to external APIs and use the response in your workflow.
+</Card>
+
+**Inputs:** JSON (optional request body or parameters)
+**Outputs:** JSON (API response)
+
+**Configuration:**
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| **URL** | The API endpoint URL | Required |
+| **Method** | HTTP method (GET, POST, PUT, PATCH, DELETE) | `POST` |
+| **Headers** | Custom HTTP headers (e.g., authentication) | `{}` |
+| **Body Template** | JSON template with placeholders for input data | `{}` |
+
+**Example Configuration:**
+```json
+{
+  "url": "https://api.example.com/validate",
+  "method": "POST",
+  "headers": {
+    "Authorization": "Bearer ${API_KEY}",
+    "Content-Type": "application/json"
+  },
+  "body_template": {
+    "invoice_number": "{{data.invoice_number}}",
+    "amount": "{{data.total_amount}}"
+  }
+}
+```
+
+**Use Cases:**
+- Validate extracted data against external systems
+- Enrich documents with data from your CRM or ERP
+- Trigger actions in third-party services based on extraction results
+- Look up additional information using extracted identifiers
+
+**Placeholders:**
+
+Use `{{path.to.field}}` syntax to reference values from the input JSON:
+- `{{data.invoice_number}}` → Inserts the invoice_number field
+- `{{data.vendor.name}}` → Inserts nested fields
+- `{{data.line_items[0].amount}}` → Inserts array elements
+
+<Note>
+API Call nodes execute synchronously. For long-running operations, consider using webhooks to trigger external workflows asynchronously.
+</Note>
+
+---
+
+### Merge JSON
+
+<Card title="Merge JSON" icon="combine" color="#8b5cf6">
+Combine multiple JSON objects into a single structured object.
+</Card>
+
+**Inputs:** Multiple JSON inputs (configurable)  
+**Outputs:** JSON (merged object)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Inputs** | Named input slots for JSON objects to merge |
+
+**Example Configuration:**
+```json
+{
+  "inputs": [
+    { "name": "invoice_data" },
+    { "name": "vendor_data" },
+    { "name": "line_items" }
+  ]
+}
+```
+
+**Output Structure:**
+
+The merged output wraps each input under its named key:
+```json
+{
+  "invoice_data": { ... extracted invoice fields ... },
+  "vendor_data": { ... extracted vendor fields ... },
+  "line_items": { ... extracted line items ... }
+}
+```
+
+This is useful for:
+- Combining extractions from multiple documents
+- Aggregating data from parallel processing branches
+- Creating comprehensive outputs from Split or Classifier workflows
+
+---
+
 ## Node I/O Types
 
 Understanding input/output types helps you connect nodes correctly:
@@ -574,10 +605,6 @@ Understanding input/output types helps you connect nodes correctly:
 <AccordionGroup>
   <Accordion title="Start with the output in mind">
     Identify what data you need at the end, then work backwards to determine which nodes you need.
-  </Accordion>
-  
-  <Accordion title="Use Project Extract for consistency">
-    If you have a validated project with good extraction accuracy, use Project Extract instead of Raw Extract to ensure consistent results.
   </Accordion>
   
   <Accordion title="Add Functions for calculations">
