@@ -59,6 +59,7 @@ Key features of the Split API:
   List of categories to classify document sections into. Each category has:
   - `name`: Unique identifier for the category
   - `description`: Detailed description to help the model identify this category
+  - `partition_key` (optional): A key to further partition this category. When specified, the API will identify individual items within pages belonging to this category (e.g., "property ID" to find individual properties within a real estate document, or "invoice number" to separate multiple invoices)
 </ParamField>
 
 </Expandable>
@@ -71,7 +72,8 @@ A SplitResponse object containing the classified sections with their page ranges
       List of document sections, each containing:
       - `name`: The category name this section belongs to
       - `pages`: List of 1-indexed page numbers belonging to this section
-      - `partitions`: List of sub-page partitions for precise content boundaries
+      - `partitions`: List of sub-page partitions (populated when `partition_key` is specified on the category)
+        - `key`: The partition key value (e.g., property ID, invoice number)
         - `pages`: List of page numbers in this partition
         - `first_page_y_start`: Y-coordinate (0-1) where content starts on the first page
         - `last_page_y_end`: Y-coordinate (0-1) where content ends on the last page
@@ -279,6 +281,83 @@ for split in result.splits:
     print(f"{split.name}: pages {split.pages}")
 ```
 
+## Use Case: Partitioning by Key
+
+When processing documents that contain multiple items of the same type (e.g., multiple invoices, multiple property listings), use the `partition_key` parameter to identify and separate individual items within a category.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# Define categories with partition_key for sub-document splitting
+categories = [
+    {
+        "name": "property_listing",
+        "description": "Real estate property listings with details and photos",
+        "partition_key": "property ID"  # Will identify individual properties
+    },
+    {
+        "name": "legal_notices",
+        "description": "Legal disclaimers and general information"
+    },
+]
+
+result = client.documents.split(
+    document="property_portfolio.pdf",
+    model="retab-small",
+    categories=categories
+)
+
+# Access partitions for each category
+for split in result.splits:
+    print(f"{split.name}: pages {split.pages}")
+    for partition in split.partitions:
+        print(f"  Property {partition.key}: pages {partition.pages}")
+
+# Example output:
+# property_listing: pages [1, 2, 3, 4, 5, 6]
+#   Property PROP-001: pages [1, 2]
+#   Property PROP-002: pages [3, 4]
+#   Property PROP-003: pages [5, 6]
+# legal_notices: pages [7]
+```
+
+```javascript Javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// Define categories with partition_key for sub-document splitting
+const categories = [
+    {
+        name: "property_listing",
+        description: "Real estate property listings with details and photos",
+        partition_key: "property ID"  // Will identify individual properties
+    },
+    {
+        name: "legal_notices",
+        description: "Legal disclaimers and general information"
+    },
+];
+
+const result = await client.documents.split({
+    document: "property_portfolio.pdf",
+    model: "retab-small",
+    categories: categories
+});
+
+// Access partitions for each category
+result.splits.forEach(split => {
+    console.log(`${split.name}: pages ${split.pages}`);
+    split.partitions.forEach(partition => {
+        console.log(`  Property ${partition.key}: pages ${partition.pages}`);
+    });
+});
+```
+</CodeGroup>
+
 ## Sub-Page Precision with Partitions
 
 The Split API provides sub-page level precision through the `partitions` field. Each partition includes Y-coordinates that specify exactly where content starts and ends within pages, enabling precise extraction even when document sections don't align with page boundaries.
@@ -289,12 +368,14 @@ from retab import Retab
 client = Retab()
 
 result = client.documents.split(
-    document="multi_section_page.pdf",
+    document="multi_invoice_page.pdf",
     model="retab-small",
     categories=[
-        {"name": "header", "description": "Document header and title section"},
-        {"name": "body", "description": "Main content body"},
-        {"name": "footer", "description": "Footer with page numbers and legal text"},
+        {
+            "name": "invoice",
+            "description": "Invoice documents with billing details",
+            "partition_key": "invoice number"
+        },
     ]
 )
 
@@ -302,23 +383,25 @@ result = client.documents.split(
 for split in result.splits:
     print(f"{split.name}: pages {split.pages}")
     for partition in split.partitions:
-        print(f"  Partition pages: {partition.pages}")
-        print(f"  Y-start: {partition.first_page_y_start:.2f}")
-        print(f"  Y-end: {partition.last_page_y_end:.2f}")
+        print(f"  Invoice {partition.key}:")
+        print(f"    Pages: {partition.pages}")
+        print(f"    Y-start: {partition.first_page_y_start:.2f}")
+        print(f"    Y-end: {partition.last_page_y_end:.2f}")
 
 # Example output:
-# header: pages [1]
-#   Partition pages: [1]
-#   Y-start: 0.00
-#   Y-end: 0.15
-# body: pages [1, 2]
-#   Partition pages: [1, 2]
-#   Y-start: 0.15
-#   Y-end: 0.90
-# footer: pages [2]
-#   Partition pages: [2]
-#   Y-start: 0.90
-#   Y-end: 1.00
+# invoice: pages [1, 2]
+#   Invoice INV-001:
+#     Pages: [1]
+#     Y-start: 0.00
+#     Y-end: 0.45
+#   Invoice INV-002:
+#     Pages: [1, 2]
+#     Y-start: 0.45
+#     Y-end: 0.60
+#   Invoice INV-003:
+#     Pages: [2]
+#     Y-start: 0.60
+#     Y-end: 1.00
 ```
 
 The Y-coordinates are normalized values between 0 and 1, where:

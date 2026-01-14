@@ -11,11 +11,12 @@ from retab import Retab
 client = Retab()
 
 # Split a multi-page document into sections based on categories
+# Use partition_key to identify individual items within a category
 result = client.documents.split(
     document="invoice_batch.pdf",
     model="retab-small",
     categories=[
-        {"name": "invoice", "description": "Invoice documents with billing information"},
+        {"name": "invoice", "description": "Invoice documents with billing information", "partition_key": "invoice number"},
         {"name": "receipt", "description": "Receipt documents for payments"},
         {"name": "contract", "description": "Legal contract documents"},
     ]
@@ -24,11 +25,17 @@ result = client.documents.split(
 # Access split results
 for split in result.splits:
     print(f"{split.name}: pages {split.pages}")
+    # Access partitions when partition_key is specified
+    for partition in split.partitions:
+        print(f"  {partition.key}: pages {partition.pages}")
 
 # Example output:
 # invoice: pages [1, 2, 3]
+#   INV-001: pages [1, 2]
+#   INV-002: pages [3]
 # receipt: pages [4, 5]
 # invoice: pages [6, 7, 8]
+#   INV-003: pages [6, 7, 8]
 ```
 
 ```javascript javascript
@@ -43,7 +50,7 @@ const result = await client.documents.split({
     document: "invoice_batch.pdf",
     model: "retab-small",
     categories: [
-        { name: "invoice", description: "Invoice documents with billing information" },
+        { name: "invoice", description: "Invoice documents with billing information", partition_key: "invoice number" },
         { name: "receipt", description: "Receipt documents for payments" },
         { name: "contract", description: "Legal contract documents" },
     ]
@@ -52,6 +59,10 @@ const result = await client.documents.split({
 // Access split results
 result.splits.forEach(split => {
     console.log(`${split.name}: pages ${split.pages}`);
+    // Access partitions when partition_key is specified
+    split.partitions.forEach(partition => {
+        console.log(`  ${partition.key}: pages ${partition.pages}`);
+    });
 });
 ```
 
@@ -67,7 +78,7 @@ const splitRequest: SplitRequest = {
     document: "invoice_batch.pdf",
     model: "retab-small",
     categories: [
-        { name: "invoice", description: "Invoice documents with billing information" },
+        { name: "invoice", description: "Invoice documents with billing information", partition_key: "invoice number" },
         { name: "receipt", description: "Receipt documents for payments" },
         { name: "contract", description: "Legal contract documents" },
     ]
@@ -78,6 +89,10 @@ const result: SplitResponse = await client.documents.split(splitRequest);
 // Access split results
 result.splits.forEach(split => {
     console.log(`${split.name}: pages ${split.pages}`);
+    // Access partitions when partition_key is specified
+    split.partitions.forEach(partition => {
+        console.log(`  ${partition.key}: pages ${partition.pages}`);
+    });
 });
 ```
 
@@ -93,7 +108,7 @@ curl -X 'POST' \
   },
   "model": "retab-small",
   "categories": [
-    {"name": "invoice", "description": "Invoice documents with billing information"},
+    {"name": "invoice", "description": "Invoice documents with billing information", "partition_key": "invoice number"},
     {"name": "receipt", "description": "Receipt documents for payments"},
     {"name": "contract", "description": "Legal contract documents"}
   ]
@@ -112,7 +127,14 @@ curl -X 'POST' \
       "pages": [1, 2, 3],
       "partitions": [
         {
-          "pages": [1, 2, 3],
+          "key": "INV-001",
+          "pages": [1, 2],
+          "first_page_y_start": 0.0,
+          "last_page_y_end": 1.0
+        },
+        {
+          "key": "INV-002",
+          "pages": [3],
           "first_page_y_start": 0.0,
           "last_page_y_end": 1.0
         }
@@ -121,19 +143,14 @@ curl -X 'POST' \
     {
       "name": "receipt",
       "pages": [4, 5],
-      "partitions": [
-        {
-          "pages": [4, 5],
-          "first_page_y_start": 0.0,
-          "last_page_y_end": 1.0
-        }
-      ]
+      "partitions": []
     },
     {
       "name": "invoice",
       "pages": [6, 7, 8],
       "partitions": [
         {
+          "key": "INV-003",
           "pages": [6, 7, 8],
           "first_page_y_start": 0.0,
           "last_page_y_end": 1.0
