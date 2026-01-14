@@ -5674,7 +5674,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dataset"
+                  "$ref": "#/components/schemas/main_server__services__v1__projects__datasets__models__Dataset"
                 }
               }
             }
@@ -5895,7 +5895,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dataset"
+                  "$ref": "#/components/schemas/main_server__services__v1__projects__datasets__models__Dataset"
                 }
               }
             }
@@ -5983,7 +5983,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dataset"
+                  "$ref": "#/components/schemas/main_server__services__v1__projects__datasets__models__Dataset"
                 }
               }
             }
@@ -6315,7 +6315,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dataset"
+                  "$ref": "#/components/schemas/main_server__services__v1__projects__datasets__models__Dataset"
                 }
               }
             }
@@ -27867,7 +27867,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__v1__workflows__datasets__models__Dataset"
+                  "$ref": "#/components/schemas/Dataset"
                 }
               }
             }
@@ -27938,7 +27938,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__v1__workflows__datasets__models__Dataset"
+                  "$ref": "#/components/schemas/Dataset"
                 }
               }
             }
@@ -28017,7 +28017,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__v1__workflows__datasets__models__Dataset"
+                  "$ref": "#/components/schemas/Dataset"
                 }
               }
             }
@@ -35875,7 +35875,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__internal__blog__models__User"
+                  "$ref": "#/components/schemas/User"
                 }
               }
             }
@@ -41366,13 +41366,13 @@
             "description": "Unique identifier of the agent edit"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the original file"
           },
           "filled_document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/BaseMIMEData"
+                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
               },
               {
                 "type": "null"
@@ -41902,20 +41902,14 @@
             "enum": [
               "pending",
               "ready",
+              "running",
+              "waiting_for_annotation",
               "annotated",
-              "skipped"
+              "skipped",
+              "error"
             ],
             "title": "State",
-            "description": "Current annotation state: pending (waiting for deps), ready (can annotate), annotated (done), skipped",
             "default": "pending"
-          },
-          "upstream_annotatable_node_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Upstream Annotatable Node Ids",
-            "description": "IDs of upstream annotatable nodes that must be annotated first"
           },
           "categories": {
             "anyOf": [
@@ -41929,7 +41923,8 @@
                 "type": "null"
               }
             ],
-            "title": "Categories"
+            "title": "Categories",
+            "description": "For classifier: available categories"
           },
           "json_schema": {
             "anyOf": [
@@ -41941,7 +41936,8 @@
                 "type": "null"
               }
             ],
-            "title": "Json Schema"
+            "title": "Json Schema",
+            "description": "For extract: the schema to fill"
           },
           "split_categories": {
             "anyOf": [
@@ -41955,18 +41951,20 @@
                 "type": "null"
               }
             ],
-            "title": "Split Categories"
+            "title": "Split Categories",
+            "description": "For split: categories for page assignment"
           },
-          "current_output": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Current Output"
-          },
-          "was_skipped_in_execution": {
-            "type": "boolean",
-            "title": "Was Skipped In Execution",
-            "description": "Whether this node was skipped during workflow execution",
-            "default": false
+          "current_annotation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Annotation"
           }
         },
         "type": "object",
@@ -42312,7 +42310,7 @@
             ]
           },
           "metadata": {
-            "$ref": "#/components/schemas/retab__types__mime__AttachmentMetadata",
+            "$ref": "#/components/schemas/AttachmentMetadata",
             "description": "Additional metadata about the attachment.",
             "default": {
               "is_inline": false
@@ -42345,40 +42343,6 @@
             ],
             "title": "Inline Cid",
             "description": "CID reference for inline attachments."
-          },
-          "url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Url",
-            "description": "URL of the attachment."
-          },
-          "display_metadata": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DisplayMetadata"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Display Metadata"
-          },
-          "ocr": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__OCR"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "OCR data for the attachment."
           },
           "source": {
             "anyOf": [
@@ -42620,7 +42584,7 @@
           "file_metadata": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/BaseMIMEData"
+                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
               },
               {
                 "type": "null"
@@ -42865,7 +42829,7 @@
           },
           "attachments": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__BaseMIMEData"
+              "$ref": "#/components/schemas/BaseMIMEData"
             },
             "type": "array",
             "title": "Attachments",
@@ -42888,24 +42852,35 @@
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "ID of the file"
+            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
           },
-          "filename": {
+          "name": {
             "type": "string",
-            "title": "Filename",
-            "description": "Filename of the file"
+            "title": "Name",
+            "description": "Original filename of the attachment."
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "Size of the base64-encoded content in bytes."
           },
           "mime_type": {
             "type": "string",
             "title": "Mime Type",
-            "description": "MIME type of the file"
+            "description": "MIME type of the attachment, determining how it should be handled."
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__AttachmentMetadata",
+            "description": "Additional metadata about the attachment."
           }
         },
         "type": "object",
         "required": [
           "id",
-          "filename",
-          "mime_type"
+          "name",
+          "size",
+          "mime_type",
+          "metadata"
         ],
         "title": "BaseMIMEData"
       },
@@ -43949,7 +43924,7 @@
             "title": "Project Id"
           },
           "mime_data": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "The mime data of the document"
           },
           "prediction_data": {
@@ -44011,6 +43986,18 @@
             "type": "string",
             "title": "Description",
             "description": "The description of the category"
+          },
+          "partition_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partition Key",
+            "description": "The key to partition the category"
           }
         },
         "type": "object",
@@ -45090,7 +45077,7 @@
             "description": "Unique identifier of the classification"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the classified file"
           },
           "result": {
@@ -47294,31 +47281,55 @@
           "name": {
             "type": "string",
             "title": "Name",
-            "description": "The name of the dataset",
+            "description": "Name of the dataset",
+            "default": "Untitled Dataset"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the dataset",
             "default": ""
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "ID of the workflow this dataset belongs to"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organization that owns this dataset"
+          },
+          "runs_count": {
+            "type": "integer",
+            "title": "Runs Count",
+            "description": "Number of manual runs in this dataset",
+            "default": 0
+          },
+          "annotated_runs_count": {
+            "type": "integer",
+            "title": "Annotated Runs Count",
+            "description": "Number of fully annotated runs",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           },
           "updated_at": {
             "type": "string",
             "format": "date-time",
             "title": "Updated At"
-          },
-          "base_json_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Base Json Schema",
-            "description": "The base json schema of the dataset",
-            "default": {}
-          },
-          "project_id": {
-            "type": "string",
-            "title": "Project Id"
           }
         },
         "type": "object",
         "required": [
-          "project_id"
+          "workflow_id",
+          "organization_id"
         ],
-        "title": "Dataset"
+        "title": "Dataset",
+        "description": "A dataset is a collection of annotated manual runs for a workflow."
       },
       "DatasetDocument": {
         "properties": {
@@ -47336,7 +47347,7 @@
             "title": "Project Id"
           },
           "mime_data": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "The mime data of the document"
           },
           "prediction_data": {
@@ -48434,7 +48445,7 @@
             "description": "Name of the template"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "File information for the empty PDF template this schema applies to"
           },
           "form_fields": {
@@ -49675,7 +49686,7 @@
             "description": "Unique identifier of the analysis"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the file"
           },
           "predictions": {
@@ -50509,7 +50520,7 @@
           "user": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/User"
+                "$ref": "#/components/schemas/main_server__services__custom__bertfake__routes__User"
               },
               {
                 "type": "null"
@@ -50572,7 +50583,7 @@
             "items": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__BaseMIMEData"
+                  "$ref": "#/components/schemas/BaseMIMEData"
                 },
                 {
                   "$ref": "#/components/schemas/MIMEData"
@@ -51467,7 +51478,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-01-14T18:05:07.302888Z",
+              "updated_at": "2026-01-14T19:16:59.747462Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "gpt-5-mini",
@@ -51524,7 +51535,7 @@
             "title": "Project Id"
           },
           "mime_data": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "The mime data of the document"
           },
           "prediction_data": {
@@ -51896,7 +51907,7 @@
         "properties": {
           "data": {
             "items": {
-              "$ref": "#/components/schemas/Dataset"
+              "$ref": "#/components/schemas/main_server__services__v1__projects__datasets__models__Dataset"
             },
             "type": "array",
             "title": "Data"
@@ -52185,7 +52196,7 @@
             "description": "MIME type of the attachment, determining how it should be handled."
           },
           "metadata": {
-            "$ref": "#/components/schemas/AttachmentMetadata",
+            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__AttachmentMetadata",
             "description": "Additional metadata about the attachment."
           },
           "content": {
@@ -52377,7 +52388,7 @@
           },
           "annotatable_nodes": {
             "items": {
-              "$ref": "#/components/schemas/main_server__services__v1__workflows__datasets__manual_runs__models__AnnotatableNodeInfo"
+              "$ref": "#/components/schemas/AnnotatableNodeInfo"
             },
             "type": "array",
             "title": "Annotatable Nodes"
@@ -53393,7 +53404,7 @@
         "properties": {
           "pages": {
             "items": {
-              "$ref": "#/components/schemas/retab__types__mime__Page"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__Page"
             },
             "type": "array",
             "title": "Pages"
@@ -54015,6 +54026,12 @@
             "type": "integer",
             "title": "Height"
           },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "The unit of the page dimensions",
+            "default": "pixels"
+          },
           "blocks": {
             "items": {
               "$ref": "#/components/schemas/TextBox"
@@ -54028,6 +54045,22 @@
             },
             "type": "array",
             "title": "Lines"
+          },
+          "tokens": {
+            "items": {
+              "$ref": "#/components/schemas/TextBox"
+            },
+            "type": "array",
+            "title": "Tokens"
+          },
+          "transforms": {
+            "items": {
+              "$ref": "#/components/schemas/Matrix"
+            },
+            "type": "array",
+            "title": "Transforms",
+            "description": "Transformation matrices applied to the original document image",
+            "default": []
           }
         },
         "type": "object",
@@ -54036,7 +54069,8 @@
           "width",
           "height",
           "blocks",
-          "lines"
+          "lines",
+          "tokens"
         ],
         "title": "Page"
       },
@@ -54086,7 +54120,7 @@
             "description": "Unique identifier of the parse"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the parsed file"
           },
           "pages": {
@@ -54189,7 +54223,7 @@
       "ParseResult": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Processed document metadata"
           },
           "usage": {
@@ -54518,30 +54552,36 @@
       },
       "Partition": {
         "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "The partition key value (e.g., property ID, invoice number)"
+          },
           "pages": {
             "items": {
               "type": "integer"
             },
             "type": "array",
             "title": "Pages",
-            "description": "The pages of the partition"
+            "description": "The pages of the partition (1-indexed)"
           },
           "first_page_y_start": {
             "type": "number",
             "title": "First Page Y Start",
-            "description": "The y coordinate of the first page of the partition"
+            "description": "The y coordinate of the first page of the partition",
+            "default": 0.0
           },
           "last_page_y_end": {
             "type": "number",
             "title": "Last Page Y End",
-            "description": "The y coordinate of the last page of the partition"
+            "description": "The y coordinate of the last page of the partition",
+            "default": 1.0
           }
         },
         "type": "object",
         "required": [
-          "pages",
-          "first_page_y_start",
-          "last_page_y_end"
+          "key",
+          "pages"
         ],
         "title": "Partition"
       },
@@ -55374,7 +55414,7 @@
           "ocr_result": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/OCR"
+                "$ref": "#/components/schemas/retab__types__mime__OCR"
               },
               {
                 "type": "null"
@@ -57148,7 +57188,7 @@
           "file": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/BaseMIMEData"
+                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
               },
               {
                 "type": "null"
@@ -58490,7 +58530,7 @@
           },
           "annotatable_nodes": {
             "items": {
-              "$ref": "#/components/schemas/AnnotatableNodeInfo"
+              "$ref": "#/components/schemas/main_server__services__v1__workflows__runs__annotations__models__AnnotatableNodeInfo"
             },
             "type": "array",
             "title": "Annotatable Nodes"
@@ -58868,7 +58908,7 @@
             "description": "Unique identifier of the schema generation"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the source file"
           },
           "json_schema": {
@@ -59121,7 +59161,7 @@
             "description": "Unique identifier of the split"
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the split file"
           },
           "splits": {
@@ -59222,23 +59262,13 @@
             "title": "Name",
             "description": "The name of the category"
           },
-          "start_page": {
-            "type": "integer",
-            "title": "Start Page",
-            "description": "The start page of the category (1-indexed)"
-          },
-          "end_page": {
-            "type": "integer",
-            "title": "End Page",
-            "description": "The end page of the category (1-indexed, inclusive)"
-          },
           "pages": {
             "items": {
               "type": "integer"
             },
             "type": "array",
             "title": "Pages",
-            "description": "The pages of the category"
+            "description": "The pages of the category (1-indexed)"
           },
           "partitions": {
             "items": {
@@ -59252,8 +59282,6 @@
         "type": "object",
         "required": [
           "name",
-          "start_page",
-          "end_page",
           "pages"
         ],
         "title": "SplitResult"
@@ -59432,6 +59460,19 @@
             ],
             "title": "Handle Outputs",
             "description": "Handle outputs keyed by handle ID"
+          },
+          "handle_inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Inputs",
+            "description": "Handle inputs keyed by handle ID (what this node received)"
           }
         },
         "type": "object",
@@ -59626,7 +59667,7 @@
           "ocr_result": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/OCR"
+                "$ref": "#/components/schemas/retab__types__mime__OCR"
               },
               {
                 "type": "null"
@@ -60159,13 +60200,13 @@
             "default": ""
           },
           "file": {
-            "$ref": "#/components/schemas/BaseMIMEData",
+            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
             "description": "Information about the template file used"
           },
           "filled_document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/BaseMIMEData"
+                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
               },
               {
                 "type": "null"
@@ -61692,20 +61733,20 @@
       },
       "User": {
         "properties": {
-          "object": {
-            "type": "string",
-            "const": "user",
-            "title": "Object"
-          },
           "id": {
             "type": "string",
+            "enum": [
+              "louis-de-benoist",
+              "sacha-ichbiah",
+              "victor-plaisance"
+            ],
             "title": "Id"
           },
-          "email": {
+          "name": {
             "type": "string",
-            "title": "Email"
+            "title": "Name"
           },
-          "first_name": {
+          "avatarUrl": {
             "anyOf": [
               {
                 "type": "string"
@@ -61714,9 +61755,9 @@
                 "type": "null"
               }
             ],
-            "title": "First Name"
+            "title": "Avatarurl"
           },
-          "last_name": {
+          "bio": {
             "anyOf": [
               {
                 "type": "string"
@@ -61725,13 +61766,9 @@
                 "type": "null"
               }
             ],
-            "title": "Last Name"
+            "title": "Bio"
           },
-          "email_verified": {
-            "type": "boolean",
-            "title": "Email Verified"
-          },
-          "profile_picture_url": {
+          "organization_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -61740,69 +61777,13 @@
                 "type": "null"
               }
             ],
-            "title": "Profile Picture Url"
-          },
-          "last_sign_in_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Sign In At"
-          },
-          "locale": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Locale"
-          },
-          "created_at": {
-            "type": "string",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "title": "Updated At"
-          },
-          "external_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "External Id"
-          },
-          "metadata": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Metadata"
-          },
-          "parameters": {
-            "$ref": "#/components/schemas/UserParameters"
+            "title": "Organization Id"
           }
         },
         "type": "object",
         "required": [
-          "object",
           "id",
-          "email",
-          "email_verified",
-          "created_at",
-          "updated_at",
-          "parameters"
+          "name"
         ],
         "title": "User"
       },
@@ -63298,75 +63279,131 @@
         "title": "WorkflowWithEntities",
         "description": "Complete workflow data assembled from separate collections.\n\nUsed when returning a full workflow view to the client."
       },
-      "main_server__services__custom__bert__cubemimedata__BaseMIMEData": {
+      "main_server__services__custom__bert__cubemimedata__AttachmentMetadata": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
+          "is_inline": {
+            "type": "boolean",
+            "title": "Is Inline",
+            "description": "Whether the attachment is inline or not.",
+            "default": false
           },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Original filename of the attachment."
+          "inline_cid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inline Cid",
+            "description": "CID reference for inline attachments."
           },
-          "size": {
-            "type": "integer",
-            "title": "Size",
-            "description": "Size of the base64-encoded content in bytes."
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "URL of the attachment."
           },
-          "mime_type": {
-            "type": "string",
-            "title": "Mime Type",
-            "description": "MIME type of the attachment, determining how it should be handled."
+          "display_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DisplayMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Display Metadata"
           },
-          "metadata": {
-            "$ref": "#/components/schemas/AttachmentMetadata",
-            "description": "Additional metadata about the attachment."
+          "ocr": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OCR"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "OCR data for the attachment."
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Source of the attachment in dot notation attachment_id, or email_id.attachment_id, allow us to keep track of the origin of the attachment, for search purposes. "
           }
         },
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "size",
-          "mime_type",
-          "metadata"
-        ],
-        "title": "BaseMIMEData"
+        "title": "AttachmentMetadata"
       },
-      "main_server__services__custom__bert__cubemimedata__OCR": {
+      "main_server__services__custom__bert__cubemimedata__Page": {
         "properties": {
-          "pages": {
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "blocks": {
             "items": {
-              "$ref": "#/components/schemas/Page"
+              "$ref": "#/components/schemas/TextBox"
             },
             "type": "array",
-            "title": "Pages"
+            "title": "Blocks"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/TextBox"
+            },
+            "type": "array",
+            "title": "Lines"
           }
         },
         "type": "object",
         "required": [
-          "pages"
+          "page_number",
+          "width",
+          "height",
+          "blocks",
+          "lines"
         ],
-        "title": "OCR"
+        "title": "Page"
       },
-      "main_server__services__internal__blog__models__User": {
+      "main_server__services__custom__bertfake__routes__User": {
         "properties": {
+          "object": {
+            "type": "string",
+            "const": "user",
+            "title": "Object"
+          },
           "id": {
             "type": "string",
-            "enum": [
-              "louis-de-benoist",
-              "sacha-ichbiah",
-              "victor-plaisance"
-            ],
             "title": "Id"
           },
-          "name": {
+          "email": {
             "type": "string",
-            "title": "Name"
+            "title": "Email"
           },
-          "avatarUrl": {
+          "first_name": {
             "anyOf": [
               {
                 "type": "string"
@@ -63375,9 +63412,9 @@
                 "type": "null"
               }
             ],
-            "title": "Avatarurl"
+            "title": "First Name"
           },
-          "bio": {
+          "last_name": {
             "anyOf": [
               {
                 "type": "string"
@@ -63386,9 +63423,13 @@
                 "type": "null"
               }
             ],
-            "title": "Bio"
+            "title": "Last Name"
           },
-          "organization_id": {
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified"
+          },
+          "profile_picture_url": {
             "anyOf": [
               {
                 "type": "string"
@@ -63397,13 +63438,69 @@
                 "type": "null"
               }
             ],
-            "title": "Organization Id"
+            "title": "Profile Picture Url"
+          },
+          "last_sign_in_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sign In At"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "external_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Id"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metadata"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/UserParameters"
           }
         },
         "type": "object",
         "required": [
+          "object",
           "id",
-          "name"
+          "email",
+          "email_verified",
+          "created_at",
+          "updated_at",
+          "parameters"
         ],
         "title": "User"
       },
@@ -63430,6 +63527,41 @@
         ],
         "title": "ExportToCsvResponse",
         "description": "Response from the export-to-csv endpoint"
+      },
+      "main_server__services__v1__projects__datasets__models__Dataset": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "The name of the dataset",
+            "default": ""
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "base_json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Base Json Schema",
+            "description": "The base json schema of the dataset",
+            "default": {}
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id"
+        ],
+        "title": "Dataset"
       },
       "main_server__services__v1__projects__routes__ApplyComputationsRequest": {
         "properties": {
@@ -63487,7 +63619,50 @@
         "title": "CreateTemplateRequest",
         "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
       },
-      "main_server__services__v1__workflows__datasets__manual_runs__models__AnnotatableNodeInfo": {
+      "main_server__services__v1__workflows__datasets__models__CreateDatasetRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the dataset",
+            "default": "Untitled Dataset"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the dataset",
+            "default": ""
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "ID of the workflow this dataset belongs to"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "title": "CreateDatasetRequest",
+        "description": "Request to create a new dataset"
+      },
+      "main_server__services__v1__workflows__routes__ApplyComputationsResponse": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "The data with computations applied"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ApplyComputationsResponse",
+        "description": "Response containing computed data."
+      },
+      "main_server__services__v1__workflows__runs__annotations__models__AnnotatableNodeInfo": {
         "properties": {
           "node_id": {
             "type": "string",
@@ -63516,14 +63691,20 @@
             "enum": [
               "pending",
               "ready",
-              "running",
-              "waiting_for_annotation",
               "annotated",
-              "skipped",
-              "error"
+              "skipped"
             ],
             "title": "State",
+            "description": "Current annotation state: pending (waiting for deps), ready (can annotate), annotated (done), skipped",
             "default": "pending"
+          },
+          "upstream_annotatable_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Upstream Annotatable Node Ids",
+            "description": "IDs of upstream annotatable nodes that must be annotated first"
           },
           "categories": {
             "anyOf": [
@@ -63537,8 +63718,7 @@
                 "type": "null"
               }
             ],
-            "title": "Categories",
-            "description": "For classifier: available categories"
+            "title": "Categories"
           },
           "json_schema": {
             "anyOf": [
@@ -63550,8 +63730,7 @@
                 "type": "null"
               }
             ],
-            "title": "Json Schema",
-            "description": "For extract: the schema to fill"
+            "title": "Json Schema"
           },
           "split_categories": {
             "anyOf": [
@@ -63565,20 +63744,18 @@
                 "type": "null"
               }
             ],
-            "title": "Split Categories",
-            "description": "For split: categories for page assignment"
+            "title": "Split Categories"
           },
-          "current_annotation": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Current Annotation"
+          "current_output": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Current Output"
+          },
+          "was_skipped_in_execution": {
+            "type": "boolean",
+            "title": "Was Skipped In Execution",
+            "description": "Whether this node was skipped during workflow execution",
+            "default": false
           }
         },
         "type": "object",
@@ -63588,108 +63765,6 @@
         ],
         "title": "AnnotatableNodeInfo",
         "description": "Information about a node that can be annotated"
-      },
-      "main_server__services__v1__workflows__datasets__models__CreateDatasetRequest": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Name of the dataset",
-            "default": "Untitled Dataset"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "description": "Description of the dataset",
-            "default": ""
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id",
-            "description": "ID of the workflow this dataset belongs to"
-          }
-        },
-        "type": "object",
-        "required": [
-          "workflow_id"
-        ],
-        "title": "CreateDatasetRequest",
-        "description": "Request to create a new dataset"
-      },
-      "main_server__services__v1__workflows__datasets__models__Dataset": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Name of the dataset",
-            "default": "Untitled Dataset"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "description": "Description of the dataset",
-            "default": ""
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id",
-            "description": "ID of the workflow this dataset belongs to"
-          },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id",
-            "description": "Organization that owns this dataset"
-          },
-          "runs_count": {
-            "type": "integer",
-            "title": "Runs Count",
-            "description": "Number of manual runs in this dataset",
-            "default": 0
-          },
-          "annotated_runs_count": {
-            "type": "integer",
-            "title": "Annotated Runs Count",
-            "description": "Number of fully annotated runs",
-            "default": 0
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "workflow_id",
-          "organization_id"
-        ],
-        "title": "Dataset",
-        "description": "A dataset is a collection of annotated manual runs for a workflow."
-      },
-      "main_server__services__v1__workflows__routes__ApplyComputationsResponse": {
-        "properties": {
-          "data": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Data",
-            "description": "The data with computations applied"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "title": "ApplyComputationsResponse",
-        "description": "Response containing computed data."
       },
       "openai__types__chat__chat_completion_message_function_tool_call_param__Function": {
         "properties": {
@@ -63710,41 +63785,31 @@
         "title": "Function",
         "description": "The function that the model called."
       },
-      "retab__types__mime__AttachmentMetadata": {
+      "retab__types__mime__BaseMIMEData": {
         "properties": {
-          "is_inline": {
-            "type": "boolean",
-            "title": "Is Inline",
-            "description": "Whether the attachment is inline or not.",
-            "default": false
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "ID of the file"
           },
-          "inline_cid": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Inline Cid",
-            "description": "CID reference for inline attachments."
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename of the file"
           },
-          "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source",
-            "description": "Source of the attachment in dot notation attachment_id, or email_id.attachment_id, allow us to keep track of the origin of the attachment, for search purposes. "
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the file"
           }
         },
         "type": "object",
-        "title": "AttachmentMetadata"
+        "required": [
+          "id",
+          "filename",
+          "mime_type"
+        ],
+        "title": "BaseMIMEData"
       },
       "retab__types__mime__MIMEData": {
         "properties": {
@@ -63774,67 +63839,21 @@
         ],
         "title": "MIMEData"
       },
-      "retab__types__mime__Page": {
+      "retab__types__mime__OCR": {
         "properties": {
-          "page_number": {
-            "type": "integer",
-            "title": "Page Number"
-          },
-          "width": {
-            "type": "integer",
-            "title": "Width"
-          },
-          "height": {
-            "type": "integer",
-            "title": "Height"
-          },
-          "unit": {
-            "type": "string",
-            "title": "Unit",
-            "description": "The unit of the page dimensions",
-            "default": "pixels"
-          },
-          "blocks": {
+          "pages": {
             "items": {
-              "$ref": "#/components/schemas/TextBox"
+              "$ref": "#/components/schemas/Page"
             },
             "type": "array",
-            "title": "Blocks"
-          },
-          "lines": {
-            "items": {
-              "$ref": "#/components/schemas/TextBox"
-            },
-            "type": "array",
-            "title": "Lines"
-          },
-          "tokens": {
-            "items": {
-              "$ref": "#/components/schemas/TextBox"
-            },
-            "type": "array",
-            "title": "Tokens"
-          },
-          "transforms": {
-            "items": {
-              "$ref": "#/components/schemas/Matrix"
-            },
-            "type": "array",
-            "title": "Transforms",
-            "description": "Transformation matrices applied to the original document image",
-            "default": []
+            "title": "Pages"
           }
         },
         "type": "object",
         "required": [
-          "page_number",
-          "width",
-          "height",
-          "blocks",
-          "lines",
-          "tokens"
+          "pages"
         ],
-        "title": "Page"
+        "title": "OCR"
       }
     },
     "securitySchemes": {
