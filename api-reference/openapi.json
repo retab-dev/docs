@@ -1822,7 +1822,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateTemplateRequest"
+                "$ref": "#/components/schemas/main_server__services__v1__schemas__templates__routes__CreateTemplateRequest"
               }
             }
           }
@@ -2364,7 +2364,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/main_server__services__v1__schemas__default_templates__routes__CreateTemplateRequest"
+                "$ref": "#/components/schemas/CreateTemplateRequest"
               }
             }
           }
@@ -32021,6 +32021,77 @@
         }
       }
     },
+    "/v1/edit/templates/{template_id}/empty-form": {
+      "get": {
+        "tags": [
+          "Edit",
+          "Edit Templates"
+        ],
+        "summary": "Get Template Empty Form",
+        "description": "Get an editable PDF form with empty widgets from a template.\n\nReturns the template's PDF with interactive form widgets (text fields, checkboxes)\npre-positioned but with no values filled in. This is useful for downloading\nan editable template that can be filled manually in a PDF viewer.",
+        "operationId": "get_template_empty_form_v1_edit_templates__template_id__empty_form_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/retab__types__mime__MIMEData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/edit/templates/{template_id}/duplicate": {
       "post": {
         "tags": [
@@ -45200,6 +45271,18 @@
             "title": "Model",
             "description": "The model to use for classification",
             "default": "retab-small"
+          },
+          "first_n_pages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First N Pages",
+            "description": "Only use the first N pages of the document for classification. Useful for large documents where classification can be determined from early pages."
           }
         },
         "type": "object",
@@ -46693,6 +46776,10 @@
       },
       "CreateTemplateRequest": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -46729,8 +46816,7 @@
           "name",
           "json_schema"
         ],
-        "title": "CreateTemplateRequest",
-        "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
+        "title": "CreateTemplateRequest"
       },
       "CreateWorkflowChatMessageRequest": {
         "properties": {
@@ -51381,7 +51467,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-01-13T09:46:16.135390Z",
+              "updated_at": "2026-01-14T18:05:07.302888Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "gpt-5-mini",
@@ -54429,6 +54515,35 @@
         "type": "object",
         "title": "PartialSchema",
         "description": "Response from the Generate Schema API -- A partial Schema object with no validation"
+      },
+      "Partition": {
+        "properties": {
+          "pages": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Pages",
+            "description": "The pages of the partition"
+          },
+          "first_page_y_start": {
+            "type": "number",
+            "title": "First Page Y Start",
+            "description": "The y coordinate of the first page of the partition"
+          },
+          "last_page_y_end": {
+            "type": "number",
+            "title": "Last Page Y End",
+            "description": "The y coordinate of the last page of the partition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pages",
+          "first_page_y_start",
+          "last_page_y_end"
+        ],
+        "title": "Partition"
       },
       "PatchBlockRequest": {
         "properties": {
@@ -59116,13 +59231,30 @@
             "type": "integer",
             "title": "End Page",
             "description": "The end page of the category (1-indexed, inclusive)"
+          },
+          "pages": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Pages",
+            "description": "The pages of the category"
+          },
+          "partitions": {
+            "items": {
+              "$ref": "#/components/schemas/Partition"
+            },
+            "type": "array",
+            "title": "Partitions",
+            "description": "The partitions of the category"
           }
         },
         "type": "object",
         "required": [
           "name",
           "start_page",
-          "end_page"
+          "end_page",
+          "pages"
         ],
         "title": "SplitResult"
       },
@@ -63314,12 +63446,8 @@
         "title": "ApplyComputationsRequest",
         "description": "Request to apply computations to data."
       },
-      "main_server__services__v1__schemas__default_templates__routes__CreateTemplateRequest": {
+      "main_server__services__v1__schemas__templates__routes__CreateTemplateRequest": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -63356,7 +63484,8 @@
           "name",
           "json_schema"
         ],
-        "title": "CreateTemplateRequest"
+        "title": "CreateTemplateRequest",
+        "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
       },
       "main_server__services__v1__workflows__datasets__manual_runs__models__AnnotatableNodeInfo": {
         "properties": {
