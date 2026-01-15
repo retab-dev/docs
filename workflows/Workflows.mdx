@@ -8,7 +8,10 @@ description: Build visual document processing pipelines with drag-and-drop nodes
 Workflows are visual, node-based pipelines that let you chain together multiple document processing operations. Instead of writing code for each step, you can drag and drop nodes onto a canvas, connect them, and create powerful document automation flows.
 
 A workflow typically consists of:
-- **Input nodes** (Document) - Entry points where documents are uploaded
+- **Input nodes** - Entry points for data:
+  - **Document** - Upload files (PDF, images, Word, Excel)
+  - **JSON Input** - Pass structured JSON data
+  - **Text Input** - Pass plain text strings
 - **Processing nodes** - Operations like Extract, Parse, Split, Classifier
 - **Logic nodes** - Conditional flows like Human-in-the-Loop, Functions, If/Else routing, and API Call
 - **Output nodes** (Webhook) - Destinations for your processed data
@@ -71,6 +74,11 @@ Toggle between modes using the switch at the top of the canvas.
 
 ### Using the SDK
 
+Workflows support three types of inputs:
+- **documents**: For Document (start) nodes - file inputs
+- **json_inputs**: For JSON Input (start_json) nodes - structured data
+- **text_inputs**: For Text Input (start_text) nodes - plain text
+
 <CodeGroup>
 ```python Python
 from retab import Retab
@@ -78,11 +86,36 @@ from pathlib import Path
 
 client = Retab()
 
-# Run a workflow with a document
+# Run a workflow with documents only
 run = client.workflows.runs.create(
     workflow_id="wf_abc123",
     documents={
         "document-node-id": Path("path/to/invoice.pdf")
+    }
+)
+
+# Run a workflow with documents and JSON data
+run = client.workflows.runs.create(
+    workflow_id="wf_abc123",
+    documents={
+        "document-node-id": Path("path/to/invoice.pdf")
+    },
+    json_inputs={
+        "json-node-id": {"customer_id": "cust_123", "priority": "high"}
+    }
+)
+
+# Run a workflow with all input types
+run = client.workflows.runs.create(
+    workflow_id="wf_abc123",
+    documents={
+        "document-node-id": Path("path/to/invoice.pdf")
+    },
+    json_inputs={
+        "json-node-id": {"customer_id": "cust_123"}
+    },
+    text_inputs={
+        "text-node-id": "Process with high priority"
     }
 )
 
@@ -104,11 +137,36 @@ import Retab from 'retab';
 
 const client = new Retab();
 
-// Run a workflow with a document
+// Run a workflow with documents only
 const run = await client.workflows.runs.create({
     workflowId: 'wf_abc123',
     documents: {
         'document-node-id': 'path/to/invoice.pdf'
+    }
+});
+
+// Run a workflow with documents and JSON data
+const run2 = await client.workflows.runs.create({
+    workflowId: 'wf_abc123',
+    documents: {
+        'document-node-id': 'path/to/invoice.pdf'
+    },
+    jsonInputs: {
+        'json-node-id': { customerId: 'cust_123', priority: 'high' }
+    }
+});
+
+// Run a workflow with all input types
+const run3 = await client.workflows.runs.create({
+    workflowId: 'wf_abc123',
+    documents: {
+        'document-node-id': 'path/to/invoice.pdf'
+    },
+    jsonInputs: {
+        'json-node-id': { customerId: 'cust_123' }
+    },
+    textInputs: {
+        'text-node-id': 'Process with high priority'
     }
 });
 
