@@ -3,7 +3,12 @@ title: 'Run Workflow'
 openapi: 'POST /v1/workflows/{workflow_id}/run'
 ---
 
-Run a workflow with the provided input documents. This endpoint creates a workflow run and starts execution in the background. The response returns immediately with status "running" - use the Get Run endpoint to check for updates.
+Run a workflow with the provided inputs. This endpoint creates a workflow run and starts execution in the background. The response returns immediately with status "running" - use the Get Run endpoint to check for updates.
+
+Workflows can accept three types of inputs:
+- **documents**: File inputs for Document (start) nodes
+- **json_inputs**: JSON data for JSON Input (start_json) nodes
+- **text_inputs**: Text strings for Text Input (start_text) nodes
 
 <RequestExample>
 
@@ -13,11 +18,36 @@ from pathlib import Path
 
 client = Retab()
 
+# Run with documents only
 run = client.workflows.runs.create(
     workflow_id="wf_abc123xyz",
     documents={
         "start-node-1": Path("invoice.pdf"),
-        "start-node-2": Path("receipt.pdf"),
+    }
+)
+
+# Run with documents and JSON inputs
+run = client.workflows.runs.create(
+    workflow_id="wf_abc123xyz",
+    documents={
+        "start-node-1": Path("invoice.pdf"),
+    },
+    json_inputs={
+        "json-node-1": {"customer_id": "cust_123", "priority": "high"},
+    }
+)
+
+# Run with all input types
+run = client.workflows.runs.create(
+    workflow_id="wf_abc123xyz",
+    documents={
+        "start-node-1": Path("invoice.pdf"),
+    },
+    json_inputs={
+        "json-node-1": {"customer_id": "cust_123"},
+    },
+    text_inputs={
+        "text-node-1": "Process this invoice urgently",
     }
 )
 
@@ -30,11 +60,36 @@ import Retab from 'retab';
 
 const client = new Retab();
 
+// Run with documents only
 const run = await client.workflows.runs.create({
     workflowId: "wf_abc123xyz",
     documents: {
         "start-node-1": "./invoice.pdf",
-        "start-node-2": "./receipt.pdf",
+    }
+});
+
+// Run with documents and JSON inputs
+const run2 = await client.workflows.runs.create({
+    workflowId: "wf_abc123xyz",
+    documents: {
+        "start-node-1": "./invoice.pdf",
+    },
+    jsonInputs: {
+        "json-node-1": { customerId: "cust_123", priority: "high" },
+    }
+});
+
+// Run with all input types
+const run3 = await client.workflows.runs.create({
+    workflowId: "wf_abc123xyz",
+    documents: {
+        "start-node-1": "./invoice.pdf",
+    },
+    jsonInputs: {
+        "json-node-1": { customerId: "cust_123" },
+    },
+    textInputs: {
+        "text-node-1": "Process this invoice urgently",
     }
 });
 
@@ -43,6 +98,7 @@ console.log(`Status: ${run.status}`);
 ```
 
 ```bash curl
+# Run with documents only
 curl -X 'POST' \
   'https://api.retab.com/v1/workflows/wf_abc123xyz/run' \
   -H 'Content-Type: application/json' \
@@ -53,12 +109,31 @@ curl -X 'POST' \
         "filename": "invoice.pdf",
         "content": "<BASE64_ENCODED_FILE_CONTENT>",
         "mime_type": "application/pdf"
-      },
-      "start-node-2": {
-        "filename": "receipt.pdf",
+      }
+    }
+  }'
+
+# Run with all input types
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/run' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "documents": {
+      "start-node-1": {
+        "filename": "invoice.pdf",
         "content": "<BASE64_ENCODED_FILE_CONTENT>",
         "mime_type": "application/pdf"
       }
+    },
+    "json_inputs": {
+      "json-node-1": {
+        "customer_id": "cust_123",
+        "priority": "high"
+      }
+    },
+    "text_inputs": {
+      "text-node-1": "Process this invoice urgently"
     }
   }'
 ```
