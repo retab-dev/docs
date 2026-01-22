@@ -1,0 +1,334 @@
+---
+title: 'List Jobs'
+openapi: 'GET /v1/jobs'
+---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# List all jobs
+jobs_response = client.jobs.list()
+for job in jobs_response.data:
+    print(f"{job.id}: {job.status} - {job.endpoint}")
+
+# List with filters and pagination
+jobs_response = client.jobs.list(
+    status="completed",
+    limit=10
+)
+
+# Paginate through results
+if jobs_response.has_more:
+    next_page = client.jobs.list(
+        after=jobs_response.last_id,
+        limit=10
+    )
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// List all jobs
+const jobsResponse = await client.jobs.list();
+for (const job of jobsResponse.data) {
+    console.log(`${job.id}: ${job.status} - ${job.endpoint}`);
+}
+
+// List with filters and pagination
+const filteredJobs = await client.jobs.list({
+    status: "completed",
+    limit: 10
+});
+
+// Paginate through results
+if (filteredJobs.has_more) {
+    const nextPage = await client.jobs.list({
+        after: filteredJobs.last_id,
+        limit: 10
+    });
+}
+```
+
+```bash curl
+# List all jobs
+curl -X GET \
+  'https://api.retab.com/v1/jobs' \
+  -H "Api-Key: $RETAB_API_KEY"
+
+# List with filters
+curl -X GET \
+  'https://api.retab.com/v1/jobs?status=completed&limit=10' \
+  -H "Api-Key: $RETAB_API_KEY"
+
+# Paginate
+curl -X GET \
+  'https://api.retab.com/v1/jobs?after=job_abc123&limit=10' \
+  -H "Api-Key: $RETAB_API_KEY"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "job_V1StGXR8_Z5jdHi6B-myT",
+      "object": "job",
+      "status": "completed",
+      "endpoint": "/v1/documents/extract",
+      "request": { ... },
+      "response": {
+        "status_code": 200,
+        "body": { ... }
+      },
+      "error": null,
+      "created_at": 1705420810,
+      "started_at": 1705420812,
+      "completed_at": 1705420820,
+      "expires_at": 1706025610,
+      "organization_id": "org_abc123",
+      "metadata": {"batch_id": "batch_001"}
+    },
+    {
+      "id": "job_X2TuHYS9_A6keIj7C-nzU",
+      "object": "job",
+      "status": "queued",
+      "endpoint": "/v1/documents/parse",
+      "request": { ... },
+      "response": null,
+      "error": null,
+      "created_at": 1705420800,
+      "started_at": null,
+      "completed_at": null,
+      "expires_at": 1706025600,
+      "organization_id": "org_abc123",
+      "metadata": null
+    }
+  ],
+  "first_id": "job_V1StGXR8_Z5jdHi6B-myT",
+  "last_id": "job_X2TuHYS9_A6keIj7C-nzU",
+  "has_more": true
+}
+```
+
+```json 200 (empty)
+{
+  "object": "list",
+  "data": [],
+  "first_id": null,
+  "last_id": null,
+  "has_more": false
+}
+```
+
+</ResponseExample>
+
+## Query Parameters
+
+<ParamField query="after" type="string">
+  Pagination cursor. Use the `last_id` from the previous response to get the next page.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="20">
+  Maximum number of jobs to return. Range: 1-100.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by job status. Valid values:
+  - `validating`
+  - `queued`
+  - `in_progress`
+  - `completed`
+  - `failed`
+  - `cancelled`
+  - `expired`
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="object" type="string">
+  Always `"list"`.
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of Job objects, sorted by `created_at` descending (newest first).
+  <Expandable title="Job object properties">
+    <ResponseField name="id" type="string">
+      Unique identifier for the job.
+    </ResponseField>
+    <ResponseField name="object" type="string">
+      Always `"job"`.
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Current status of the job.
+    </ResponseField>
+    <ResponseField name="endpoint" type="string">
+      The target endpoint for this job.
+    </ResponseField>
+    <ResponseField name="request" type="object">
+      The original request body.
+    </ResponseField>
+    <ResponseField name="response" type="object | null">
+      The response when completed.
+    </ResponseField>
+    <ResponseField name="error" type="object | null">
+      Error details when failed.
+    </ResponseField>
+    <ResponseField name="created_at" type="integer">
+      Unix timestamp of creation.
+    </ResponseField>
+    <ResponseField name="started_at" type="integer | null">
+      Unix timestamp when processing started.
+    </ResponseField>
+    <ResponseField name="completed_at" type="integer | null">
+      Unix timestamp of completion.
+    </ResponseField>
+    <ResponseField name="expires_at" type="integer">
+      Unix timestamp of expiration.
+    </ResponseField>
+    <ResponseField name="organization_id" type="string">
+      The owning organization.
+    </ResponseField>
+    <ResponseField name="metadata" type="object | null">
+      User-provided metadata.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="first_id" type="string | null">
+  ID of the first job in this page (null if empty).
+</ResponseField>
+
+<ResponseField name="last_id" type="string | null">
+  ID of the last job in this page. Use as the `after` parameter for pagination.
+</ResponseField>
+
+<ResponseField name="has_more" type="boolean">
+  Whether there are more results available.
+</ResponseField>
+
+## Pagination
+
+Jobs are returned in descending order by creation time (newest first). Use cursor-based pagination to iterate through all results:
+
+<CodeGroup>
+```python Python
+all_jobs = []
+after = None
+
+while True:
+    response = client.jobs.list(after=after, limit=100)
+    all_jobs.extend(response.data)
+
+    if not response.has_more:
+        break
+    after = response.last_id
+
+print(f"Total jobs: {len(all_jobs)}")
+```
+
+```javascript JavaScript
+const allJobs = [];
+let after = undefined;
+
+while (true) {
+    const response = await client.jobs.list({ after, limit: 100 });
+    allJobs.push(...response.data);
+
+    if (!response.has_more) {
+        break;
+    }
+    after = response.last_id;
+}
+
+console.log(`Total jobs: ${allJobs.length}`);
+```
+</CodeGroup>
+
+## Filtering Examples
+
+### Monitor Active Jobs
+
+<CodeGroup>
+```python Python
+# Get all jobs currently processing
+in_progress = client.jobs.list(status="in_progress")
+queued = client.jobs.list(status="queued")
+
+print(f"In progress: {len(in_progress.data)}")
+print(f"Queued: {len(queued.data)}")
+```
+
+```javascript JavaScript
+// Get all jobs currently processing
+const inProgress = await client.jobs.list({ status: "in_progress" });
+const queued = await client.jobs.list({ status: "queued" });
+
+console.log(`In progress: ${inProgress.data.length}`);
+console.log(`Queued: ${queued.data.length}`);
+```
+</CodeGroup>
+
+### Find Failed Jobs
+
+<CodeGroup>
+```python Python
+# List failed jobs to investigate errors
+failed_jobs = client.jobs.list(status="failed", limit=50)
+
+for job in failed_jobs.data:
+    print(f"{job.id}: {job.error.code} - {job.error.message}")
+```
+
+```javascript JavaScript
+// List failed jobs to investigate errors
+const failedJobs = await client.jobs.list({ status: "failed", limit: 50 });
+
+for (const job of failedJobs.data) {
+    console.log(`${job.id}: ${job.error.code} - ${job.error.message}`);
+}
+```
+</CodeGroup>
+
+### Filter by Metadata
+
+While the API doesn't support direct metadata filtering, you can filter client-side:
+
+<CodeGroup>
+```python Python
+# Find jobs from a specific batch
+batch_id = "batch_001"
+batch_jobs = []
+
+response = client.jobs.list(limit=100)
+for job in response.data:
+    if job.metadata and job.metadata.get("batch_id") == batch_id:
+        batch_jobs.append(job)
+
+print(f"Jobs in {batch_id}: {len(batch_jobs)}")
+```
+
+```javascript JavaScript
+// Find jobs from a specific batch
+const batchId = "batch_001";
+const batchJobs = [];
+
+const response = await client.jobs.list({ limit: 100 });
+for (const job of response.data) {
+    if (job.metadata?.batch_id === batchId) {
+        batchJobs.push(job);
+    }
+}
+
+console.log(`Jobs in ${batchId}: ${batchJobs.length}`);
+```
+</CodeGroup>

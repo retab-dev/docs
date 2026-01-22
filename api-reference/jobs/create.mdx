@@ -1,0 +1,231 @@
+---
+title: 'Create Job'
+openapi: 'POST /v1/jobs'
+---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Create an async extraction job
+job = client.jobs.create(
+    endpoint="/v1/documents/extract",
+    request={
+        "document": {
+            "filename": "invoice.pdf",
+            "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+        },
+        "json_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_number": {"type": "string"},
+                "total": {"type": "number"}
+            },
+            "required": ["invoice_number", "total"]
+        },
+        "model": "retab-small"
+    },
+    metadata={"batch_id": "batch_001", "source": "api"}
+)
+
+print(f"Job ID: {job.id}")
+print(f"Status: {job.status}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// Create an async extraction job
+const job = await client.jobs.create({
+    endpoint: "/v1/documents/extract",
+    request: {
+        document: {
+            filename: "invoice.pdf",
+            url: "data:application/pdf;base64,JVBERi0xLjQK..."
+        },
+        json_schema: {
+            type: "object",
+            properties: {
+                invoice_number: { type: "string" },
+                total: { type: "number" }
+            },
+            required: ["invoice_number", "total"]
+        },
+        model: "retab-small"
+    },
+    metadata: { batch_id: "batch_001", source: "api" }
+});
+
+console.log(`Job ID: ${job.id}`);
+console.log(`Status: ${job.status}`);
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/jobs' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "endpoint": "/v1/documents/extract",
+    "request": {
+      "document": {
+        "filename": "invoice.pdf",
+        "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+      },
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "invoice_number": {"type": "string"},
+          "total": {"type": "number"}
+        },
+        "required": ["invoice_number", "total"]
+      },
+      "model": "retab-small"
+    },
+    "metadata": {
+      "batch_id": "batch_001",
+      "source": "api"
+    }
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "job_V1StGXR8_Z5jdHi6B-myT",
+  "object": "job",
+  "status": "queued",
+  "endpoint": "/v1/documents/extract",
+  "request": {
+    "document": {
+      "filename": "invoice.pdf",
+      "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    },
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "total": {"type": "number"}
+      },
+      "required": ["invoice_number", "total"]
+    },
+    "model": "retab-small"
+  },
+  "response": null,
+  "error": null,
+  "created_at": 1705420800,
+  "started_at": null,
+  "completed_at": null,
+  "expires_at": 1706025600,
+  "organization_id": "org_abc123",
+  "metadata": {
+    "batch_id": "batch_001",
+    "source": "api"
+  }
+}
+```
+
+```json 400
+{
+  "detail": "Invalid request body for /v1/documents/extract: validation error..."
+}
+```
+
+```json 422
+{
+  "detail": [
+    {
+      "loc": ["body", "endpoint"],
+      "msg": "Input should be '/v1/documents/extract', '/v1/documents/parse', ...",
+      "type": "literal_error"
+    }
+  ]
+}
+```
+
+</ResponseExample>
+
+## Request Parameters
+
+<ParamField body="endpoint" type="string" required>
+  The API endpoint to call asynchronously. Supported values:
+  - `/v1/documents/extract` - Extract structured data
+  - `/v1/documents/parse` - Parse to text/markdown
+  - `/v1/documents/split` - Split documents
+  - `/v1/documents/classify` - Classify documents
+  - `/v1/schemas/generate` - Generate schemas
+  - `/v1/edit/agent/fill` - AI agent form filling
+  - `/v1/edit/templates/fill` - Template filling
+  - `/v1/edit/templates/generate` - Generate form schema
+  - `/v1/projects/extract` - Project extraction (requires `project_id` in request)
+</ParamField>
+
+<ParamField body="request" type="object" required>
+  The full request body for the target endpoint. Must match the schema expected by the specified endpoint.
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Optional key-value pairs for tracking. Maximum 16 pairs; keys up to 64 characters, values up to 512 characters.
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="id" type="string">
+  Unique identifier for the job, prefixed with `job_`.
+</ResponseField>
+
+<ResponseField name="object" type="string">
+  Always `"job"`.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current status: `validating`, `queued`, `in_progress`, `completed`, `failed`, `cancelled`, or `expired`.
+</ResponseField>
+
+<ResponseField name="endpoint" type="string">
+  The target endpoint for this job.
+</ResponseField>
+
+<ResponseField name="request" type="object">
+  The original request body submitted.
+</ResponseField>
+
+<ResponseField name="response" type="object | null">
+  The response from the target endpoint when `status` is `completed`. Contains `status_code` and `body`.
+</ResponseField>
+
+<ResponseField name="error" type="object | null">
+  Error details when `status` is `failed`. Contains `code`, `message`, and optional `details`.
+</ResponseField>
+
+<ResponseField name="created_at" type="integer">
+  Unix timestamp when the job was created.
+</ResponseField>
+
+<ResponseField name="started_at" type="integer | null">
+  Unix timestamp when processing started.
+</ResponseField>
+
+<ResponseField name="completed_at" type="integer | null">
+  Unix timestamp when the job reached a terminal status.
+</ResponseField>
+
+<ResponseField name="expires_at" type="integer">
+  Unix timestamp when the job data will expire (7 days after creation).
+</ResponseField>
+
+<ResponseField name="organization_id" type="string">
+  The organization that owns this job.
+</ResponseField>
+
+<ResponseField name="metadata" type="object | null">
+  User-provided metadata.
+</ResponseField>

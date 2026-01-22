@@ -1,0 +1,273 @@
+---
+title: 'Retrieve Job'
+openapi: 'GET /v1/jobs/{job_id}'
+---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Retrieve a job by ID
+job = client.jobs.retrieve("job_V1StGXR8_Z5jdHi6B-myT")
+
+print(f"Status: {job.status}")
+
+if job.status == "completed":
+    print(f"Result: {job.response.body}")
+elif job.status == "failed":
+    print(f"Error: {job.error.message}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// Retrieve a job by ID
+const job = await client.jobs.retrieve("job_V1StGXR8_Z5jdHi6B-myT");
+
+console.log(`Status: ${job.status}`);
+
+if (job.status === "completed") {
+    console.log("Result:", job.response.body);
+} else if (job.status === "failed") {
+    console.log("Error:", job.error.message);
+}
+```
+
+```bash curl
+curl -X GET \
+  'https://api.retab.com/v1/jobs/job_V1StGXR8_Z5jdHi6B-myT' \
+  -H "Api-Key: $RETAB_API_KEY"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 (queued)
+{
+  "id": "job_V1StGXR8_Z5jdHi6B-myT",
+  "object": "job",
+  "status": "queued",
+  "endpoint": "/v1/documents/extract",
+  "request": {
+    "document": {
+      "filename": "invoice.pdf",
+      "url": "data:application/pdf;base64,..."
+    },
+    "json_schema": { ... },
+    "model": "retab-small"
+  },
+  "response": null,
+  "error": null,
+  "created_at": 1705420800,
+  "started_at": null,
+  "completed_at": null,
+  "expires_at": 1706025600,
+  "organization_id": "org_abc123",
+  "metadata": {"batch_id": "batch_001"}
+}
+```
+
+```json 200 (completed)
+{
+  "id": "job_V1StGXR8_Z5jdHi6B-myT",
+  "object": "job",
+  "status": "completed",
+  "endpoint": "/v1/documents/extract",
+  "request": { ... },
+  "response": {
+    "status_code": 200,
+    "body": {
+      "content": {
+        "id": "chatcmpl-abc123",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "{\"invoice_number\": \"INV-2024-001\", \"total\": 1250.00}",
+              "role": "assistant",
+              "parsed": {
+                "invoice_number": "INV-2024-001",
+                "total": 1250.00
+              }
+            }
+          }
+        ],
+        "model": "retab-small",
+        "usage": {
+          "prompt_tokens": 1500,
+          "completion_tokens": 25,
+          "total_tokens": 1525
+        },
+        "likelihoods": {
+          "invoice_number": 0.95,
+          "total": 0.92
+        }
+      }
+    }
+  },
+  "error": null,
+  "created_at": 1705420800,
+  "started_at": 1705420802,
+  "completed_at": 1705420810,
+  "expires_at": 1706025600,
+  "organization_id": "org_abc123",
+  "metadata": {"batch_id": "batch_001"}
+}
+```
+
+```json 200 (failed)
+{
+  "id": "job_V1StGXR8_Z5jdHi6B-myT",
+  "object": "job",
+  "status": "failed",
+  "endpoint": "/v1/documents/extract",
+  "request": { ... },
+  "response": null,
+  "error": {
+    "code": "extraction_error",
+    "message": "Failed to extract data from document: unsupported format",
+    "details": {
+      "document_type": "unknown"
+    }
+  },
+  "created_at": 1705420800,
+  "started_at": 1705420802,
+  "completed_at": 1705420805,
+  "expires_at": 1706025600,
+  "organization_id": "org_abc123",
+  "metadata": null
+}
+```
+
+```json 404
+{
+  "detail": "Job not found"
+}
+```
+
+</ResponseExample>
+
+## Path Parameters
+
+<ParamField path="job_id" type="string" required>
+  The unique identifier of the job to retrieve.
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="id" type="string">
+  Unique identifier for the job.
+</ResponseField>
+
+<ResponseField name="object" type="string">
+  Always `"job"`.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current status of the job:
+  - `validating` - Request is being validated
+  - `queued` - Waiting in the processing queue
+  - `in_progress` - Currently being processed
+  - `completed` - Successfully finished
+  - `failed` - Execution failed
+  - `cancelled` - Cancelled by user
+  - `expired` - Job data has expired
+</ResponseField>
+
+<ResponseField name="endpoint" type="string">
+  The target endpoint for this job.
+</ResponseField>
+
+<ResponseField name="request" type="object">
+  The original request body submitted.
+</ResponseField>
+
+<ResponseField name="response" type="object | null">
+  Present when `status` is `completed`. Contains:
+  <Expandable title="properties">
+    <ResponseField name="status_code" type="integer">
+      HTTP status code from the target endpoint.
+    </ResponseField>
+    <ResponseField name="body" type="object">
+      The response body from the target endpoint.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object | null">
+  Present when `status` is `failed`. Contains:
+  <Expandable title="properties">
+    <ResponseField name="code" type="string">
+      Error code identifying the type of failure.
+    </ResponseField>
+    <ResponseField name="message" type="string">
+      Human-readable error message.
+    </ResponseField>
+    <ResponseField name="details" type="object | null">
+      Additional error details when available.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="created_at" type="integer">
+  Unix timestamp when the job was created.
+</ResponseField>
+
+<ResponseField name="started_at" type="integer | null">
+  Unix timestamp when processing started (null if not yet started).
+</ResponseField>
+
+<ResponseField name="completed_at" type="integer | null">
+  Unix timestamp when the job reached a terminal status.
+</ResponseField>
+
+<ResponseField name="expires_at" type="integer">
+  Unix timestamp when the job data will expire.
+</ResponseField>
+
+<ResponseField name="organization_id" type="string">
+  The organization that owns this job.
+</ResponseField>
+
+<ResponseField name="metadata" type="object | null">
+  User-provided metadata from job creation.
+</ResponseField>
+
+## Polling for Completion
+
+Use polling to wait for a job to complete:
+
+<CodeGroup>
+```python Python
+import time
+
+job = client.jobs.retrieve(job_id)
+terminal_statuses = ("completed", "failed", "cancelled", "expired")
+
+while job.status not in terminal_statuses:
+    time.sleep(2)  # Wait 2 seconds between polls
+    job = client.jobs.retrieve(job_id)
+
+# Or use the helper method
+job = client.jobs.wait_for_completion(job_id, poll_interval=2.0, timeout=300)
+```
+
+```javascript JavaScript
+const terminalStatuses = ["completed", "failed", "cancelled", "expired"];
+
+while (!terminalStatuses.includes(job.status)) {
+    await new Promise(r => setTimeout(r, 2000));  // Wait 2 seconds
+    job = await client.jobs.retrieve(jobId);
+}
+
+// Or use the helper method
+const job = await client.jobs.waitForCompletion(jobId, 2.0, 300);
+```
+</CodeGroup>
