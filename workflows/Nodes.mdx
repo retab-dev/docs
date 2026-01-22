@@ -470,6 +470,67 @@ See [Functions Documentation](/projects/Functions) for the complete formula refe
 
 ---
 
+### Reshape
+
+<Card title="Reshape" icon="arrow-right-arrow-left" color="#8b5cf6">
+Transform JSON by selecting and renaming fields into a new structure.
+</Card>
+
+**Inputs:** JSON
+**Outputs:** JSON (reshaped data)
+
+**Configuration:**
+
+| Setting | Description |
+|---------|-------------|
+| **Mappings** | List of field mappings from input to output paths |
+
+**How It Works:**
+
+Reshape lets you transform JSON data by mapping fields from an input structure to a new output structure. Use dot notation for both input and output paths to access or create nested fields.
+
+**Mapping Example:**
+
+| Input Path | Output Path |
+|------------|-------------|
+| `client_name` | `client.name` |
+| `client_address` | `client.address` |
+| `bank_name` | `bank.name` |
+
+**Input:**
+```json
+{
+  "client_name": "Jane Doe",
+  "client_address": "123 Main St",
+  "bank_name": "Commerce Bank"
+}
+```
+
+**Output:**
+```json
+{
+  "client": {
+    "name": "Jane Doe",
+    "address": "123 Main St"
+  },
+  "bank": {
+    "name": "Commerce Bank"
+  }
+}
+```
+
+**Use Cases:**
+- Restructure flat data into nested objects for downstream systems
+- Select only the fields you need from a large extraction
+- Rename fields to match your API or database schema
+- Prepare data for webhooks that expect a specific format
+
+<Note>
+Unmapped fields are excluded from the output. If an input path doesn't exist, the mapping is skipped without error.
+</Note>
+
+---
+
 ### If / Else
 
 <Card title="If / Else" icon="network" color="#f97316">
@@ -658,6 +719,168 @@ This is useful for:
 
 ---
 
+### While Loop
+
+<Card title="While Loop" icon="refresh-cw" color="#64748b">
+Repeat contained nodes until a termination condition is met.
+</Card>
+
+**Inputs:** JSON, File, or Text
+**Outputs:** JSON, File, or Text (final iteration result)
+
+**Configuration:**
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| **Max Iterations** | Maximum number of loop iterations | `10` |
+| **Termination Conditions** | Conditions that stop the loop when matched | `[]` |
+| **Loop Context Template** | Text template with loop variables for contained nodes | `""` |
+
+**How It Works:**
+
+1. Data enters the loop through the left input handle
+2. Contained nodes inside the loop process the data
+3. After each iteration, termination conditions are evaluated
+4. If a condition matches (or max iterations reached), the loop exits
+5. Final output is passed through the right output handle
+
+**Termination Conditions:**
+
+Configure conditions using the same operators as If/Else:
+
+| Type | Operators |
+|------|-----------|
+| **Comparison** | `is_equal_to`, `is_not_equal_to`, `is_greater_than`, `is_less_than` |
+| **Existence** | `exists`, `does_not_exist`, `is_empty`, `is_not_empty` |
+| **Boolean** | `is_true`, `is_false` |
+| **Array** | `length_equal_to`, `length_greater_than`, `length_less_than` |
+
+**Example Configuration:**
+```json
+{
+  "max_iterations": 5,
+  "termination_conditions": [
+    {
+      "path": "data.status",
+      "operator": "is_equal_to",
+      "value": "complete"
+    }
+  ]
+}
+```
+
+**Loop Context Variables:**
+
+The loop context template can include these variables:
+- `{{iteration_number}}` - Current iteration (e.g., "1 of 10")
+- `{{termination_condition_breakdown}}` - Detailed evaluation of why the loop continued
+- `{{data}}` - JSON data from the previous iteration
+
+**Use Cases:**
+- Iteratively refine extractions until quality thresholds are met
+- Process documents until a specific field value is detected
+- Implement retry logic with conditional exit
+
+<Note>
+The loop always runs at least once. Termination conditions are evaluated after each iteration completes.
+</Note>
+
+---
+
+### For Each
+
+<Card title="For Each" icon="layers" color="#f97316">
+Process items in parallel and combine results.
+</Card>
+
+**Inputs:** JSON (array) or File (PDF)
+**Outputs:** JSON (combined results) or File (merged PDF)
+
+**Configuration:**
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| **Map Method** | How to split input into items | `split_by_page` |
+| **Max Iterations** | Maximum items to process | `100` |
+| **Reduce Strategy** | How to combine iteration outputs | `concat_array` |
+
+**Map Methods:**
+
+| Method | Description | Input Type |
+|--------|-------------|------------|
+| `iterate_array` | Process each item in a JSON array | JSON |
+| `split_by_page` | Split PDF into N-page chunks | File |
+| `split_by_key` | Split PDF by semantic boundaries (AI-detected) | File |
+
+**Reduce Strategies:**
+
+| Strategy | Description | Output Type |
+|----------|-------------|-------------|
+| `concat_array` | Combine all outputs into an array | JSON |
+| `first` | Return only the first iteration's output | JSON |
+| `last` | Return only the last iteration's output | JSON |
+| `merge_pdf` | Merge all output PDFs into one | File |
+| `concat_text` | Combine all text outputs into an array | JSON |
+| `none` | No output (side effects only) | None |
+
+**Example: Iterate Array**
+
+Process each line item in an invoice separately:
+
+```json
+{
+  "map_method": "iterate_array",
+  "map_source_path": "data.line_items",
+  "reduce_strategy": "concat_array",
+  "reduce_concat_data_key": "processed_items"
+}
+```
+
+**Example: Split by Page**
+
+Process a multi-page document one page at a time:
+
+```json
+{
+  "map_method": "split_by_page",
+  "split_page_range": 1,
+  "reduce_strategy": "concat_array"
+}
+```
+
+**Example: Split by Key**
+
+Split a document containing multiple invoices by invoice number:
+
+```json
+{
+  "map_method": "split_by_key",
+  "partition_key_name": "invoice_number",
+  "partition_key_description": "The invoice number found at the top of each invoice",
+  "reduce_strategy": "concat_array",
+  "reduce_concat_item_key": "invoice_id"
+}
+```
+
+**Iteration Context:**
+
+Inside the loop, contained nodes can access:
+- `{{key}}` - The partition key for the current item (page range or semantic key)
+- `{{input_json}}` - The full input JSON (for `iterate_array` method)
+- `{{key_description}}` - The partition key description (for `split_by_key`)
+
+**Use Cases:**
+- Extract data from each page of a multi-page document independently
+- Process bundled documents that contain multiple invoices/receipts
+- Apply different logic to each item in an array
+- Batch process documents with parallel execution
+
+<Note>
+For Each processes items sequentially. The reduce phase runs after all iterations complete. Use `split_by_key` when documents have multiple logical sections that need AI to identify boundaries.
+</Note>
+
+---
+
 ## Node I/O Types
 
 Understanding input/output types helps you connect nodes correctly:
@@ -704,7 +927,19 @@ Understanding input/output types helps you connect nodes correctly:
   <Accordion title="Use If/Else for conditional logic">
     Route data based on extracted values—for example, send high-value invoices to a different webhook or flag certain conditions for review.
   </Accordion>
-  
+
+  <Accordion title="Use Reshape to prepare data for external systems">
+    When your extraction schema doesn't match your downstream API or database structure, use Reshape to transform fields without modifying your extraction schema.
+  </Accordion>
+
+  <Accordion title="Use For Each for multi-document PDFs">
+    When a single PDF contains multiple logical documents (like several invoices), use For Each with `split_by_key` to process each one independently with its own extraction.
+  </Accordion>
+
+  <Accordion title="Use While Loop for iterative refinement">
+    When you need to retry or refine processing until a quality threshold is met, use While Loop with termination conditions that check for the desired outcome.
+  </Accordion>
+
   <Accordion title="Test edge cases">
     Run your workflow with documents that have missing fields, poor scan quality, or unusual formats to ensure robust handling.
   </Accordion>
