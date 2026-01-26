@@ -1822,7 +1822,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/main_server__services__v1__schemas__templates__routes__CreateTemplateRequest"
+                "$ref": "#/components/schemas/CreateTemplateRequest"
               }
             }
           }
@@ -2364,7 +2364,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateTemplateRequest"
+                "$ref": "#/components/schemas/main_server__services__v1__schemas__default_templates__routes__CreateTemplateRequest"
               }
             }
           }
@@ -11084,7 +11084,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/main_server__services__v1__projects__routes__ApplyComputationsRequest"
+                "$ref": "#/components/schemas/ApplyComputationsRequest"
               }
             }
           }
@@ -11095,7 +11095,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApplyComputationsResponse"
+                  "$ref": "#/components/schemas/main_server__services__v1__projects__routes__ApplyComputationsResponse"
                 }
               }
             }
@@ -21135,7 +21135,7 @@
           "Documents"
         ],
         "summary": "Split Document",
-        "description": "Split a document into sections based on provided categories.\n\nThis endpoint analyzes a multi-page document and classifies pages into \nuser-defined categories, returning the page ranges for each section.\n\nExample use cases:\n- Splitting a combined PDF into individual invoices, contracts, or reports\n- Identifying different sections in a legal document\n- Separating a scanned batch of mixed documents",
+        "description": "Split a document into sections based on provided categories.\n\nThis endpoint analyzes a multi-page document and classifies pages into\nuser-defined categories, returning the page ranges for each section.\n\nExample use cases:\n- Splitting a combined PDF into individual invoices, contracts, or reports\n- Identifying different sections in a legal document\n- Separating a scanned batch of mixed documents",
         "operationId": "split_document_v1_documents_split_post",
         "security": [
           {
@@ -21172,6 +21172,77 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SplitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SplitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/documents/split_test": {
+      "post": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Split Document Test",
+        "description": "Test endpoint for split with tunable partition_method.\n\nSame as /split but allows specifying the partition_method:\n- \"llm\": Use LLM to find page locations (default)\n- \"pdf_page_selection\": Use PDF structure analysis\n- \"pdf_cropping\": Use visual/spatial PDF analysis with y-coordinates\n\nAdditional test options:\n- apply_energylink_params: Use energy-link specific cropping parameters",
+        "operationId": "split_document_test_v1_documents_split_test_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SplitTestRequest"
               }
             }
           }
@@ -24401,7 +24472,7 @@
           "Workflow Runs"
         ],
         "summary": "List Workflow Runs",
-        "description": "List workflow runs with pagination and optional filtering.\n\nFilters:\n- workflow_id: Filter runs for a specific workflow\n- status: Filter by run status (pending, running, completed, error, waiting_for_human)\n- exclude_status: Exclude runs with this status\n- from_date: Filter runs created on or after this date (YYYY-MM-DD)\n- to_date: Filter runs created on or before this date (YYYY-MM-DD)",
+        "description": "List workflow runs with pagination and optional filtering.\n\nFilters:\n- workflow_id: Filter runs for a specific workflow\n- status: Filter by run status (pending, running, completed, error, waiting_for_human)\n- exclude_status: Exclude runs with this status\n- trigger_type: Filter by how the run was triggered (manual, api, schedule, webhook)\n- from_date: Filter runs created on or after this date (YYYY-MM-DD)\n- to_date: Filter runs created on or before this date (YYYY-MM-DD)\n- min_cost: Filter runs with cost >= this value\n- max_cost: Filter runs with cost <= this value\n- min_duration: Filter runs with duration >= this value (milliseconds)\n- max_duration: Filter runs with duration <= this value (milliseconds)\n- search: Search by run ID (partial match)",
         "operationId": "list_workflow_runs_v1_workflows_runs_get",
         "security": [
           {
@@ -24454,10 +24525,28 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by run status",
+              "description": "Filter by single run status (deprecated, use 'statuses')",
               "title": "Status"
             },
-            "description": "Filter by run status"
+            "description": "Filter by single run status (deprecated, use 'statuses')"
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by multiple statuses (comma-separated: pending,running,completed,error,waiting_for_human,cancelled)",
+              "title": "Statuses"
+            },
+            "description": "Filter by multiple statuses (comma-separated: pending,running,completed,error,waiting_for_human,cancelled)"
           },
           {
             "name": "exclude_status",
@@ -24484,6 +24573,48 @@
               "title": "Exclude Status"
             },
             "description": "Exclude runs with this status"
+          },
+          {
+            "name": "trigger_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "manual",
+                    "api",
+                    "schedule",
+                    "webhook"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by single trigger type (deprecated, use 'trigger_types')",
+              "title": "Trigger Type"
+            },
+            "description": "Filter by single trigger type (deprecated, use 'trigger_types')"
+          },
+          {
+            "name": "trigger_types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by multiple trigger types (comma-separated: manual,api,schedule,webhook)",
+              "title": "Trigger Types"
+            },
+            "description": "Filter by multiple trigger types (comma-separated: manual,api,schedule,webhook)"
           },
           {
             "name": "from_date",
@@ -24520,6 +24651,96 @@
               "title": "To Date"
             },
             "description": "Filter runs created on or before this date (YYYY-MM-DD)"
+          },
+          {
+            "name": "min_cost",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs with cost >= this value",
+              "title": "Min Cost"
+            },
+            "description": "Filter runs with cost >= this value"
+          },
+          {
+            "name": "max_cost",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs with cost <= this value",
+              "title": "Max Cost"
+            },
+            "description": "Filter runs with cost <= this value"
+          },
+          {
+            "name": "min_duration",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs with duration >= this value (milliseconds)",
+              "title": "Min Duration"
+            },
+            "description": "Filter runs with duration >= this value (milliseconds)"
+          },
+          {
+            "name": "max_duration",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs with duration <= this value (milliseconds)",
+              "title": "Max Duration"
+            },
+            "description": "Filter runs with duration <= this value (milliseconds)"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by run ID (partial match)",
+              "title": "Search"
+            },
+            "description": "Search by run ID (partial match)"
           },
           {
             "name": "before",
@@ -24682,6 +24903,246 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/export": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Export Workflow Runs",
+        "description": "Export workflow runs as CSV with optional filtering.\n\nReturns a CSV file with all runs matching the filter criteria.",
+        "operationId": "export_workflow_runs_v1_workflows_runs_export_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by workflow ID",
+              "title": "Workflow Id"
+            },
+            "description": "Filter by workflow ID"
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by multiple statuses (comma-separated: pending,running,completed,error,waiting_for_human,cancelled)",
+              "title": "Statuses"
+            },
+            "description": "Filter by multiple statuses (comma-separated: pending,running,completed,error,waiting_for_human,cancelled)"
+          },
+          {
+            "name": "trigger_types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by multiple trigger types (comma-separated: manual,api,schedule,webhook)",
+              "title": "Trigger Types"
+            },
+            "description": "Filter by multiple trigger types (comma-separated: manual,api,schedule,webhook)"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs created on or after this date (YYYY-MM-DD)",
+              "title": "From Date"
+            },
+            "description": "Filter runs created on or after this date (YYYY-MM-DD)"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs created on or before this date (YYYY-MM-DD)",
+              "title": "To Date"
+            },
+            "description": "Filter runs created on or before this date (YYYY-MM-DD)"
+          },
+          {
+            "name": "min_cost",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs with cost >= this value",
+              "title": "Min Cost"
+            },
+            "description": "Filter runs with cost >= this value"
+          },
+          {
+            "name": "max_cost",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs with cost <= this value",
+              "title": "Max Cost"
+            },
+            "description": "Filter runs with cost <= this value"
+          },
+          {
+            "name": "min_duration",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs with duration >= this value (milliseconds)",
+              "title": "Min Duration"
+            },
+            "description": "Filter runs with duration >= this value (milliseconds)"
+          },
+          {
+            "name": "max_duration",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs with duration <= this value (milliseconds)",
+              "title": "Max Duration"
+            },
+            "description": "Filter runs with duration <= this value (milliseconds)"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by run ID (partial match)",
+              "title": "Search"
+            },
+            "description": "Search by run ID (partial match)"
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -24907,7 +25368,7 @@
           "Workflow Runs"
         ],
         "summary": "Resume Workflow Run",
-        "description": "Resume a workflow run by approving or rejecting a specific HIL node.\n\nThis endpoint is called after a human has reviewed the data at a HIL node.\nThe workflow will continue executing nodes that depend on the approved node,\nor mark the node as rejected if not approved.\n\nArgs:\n    run_id: The ID of the run to resume\n    request: The resume request containing node_id, approval status, and optional modified data\n    \nReturns:\n    WorkflowRun with updated execution status (immediately returns after applying review)",
+        "description": "Resume a workflow run by approving or rejecting a specific HIL node.\n\nThis endpoint is called after a human has reviewed the data at a HIL node.\nUses a queue-based approach to handle multiple simultaneous approvals safely.\n\nWhen multiple HIL nodes are approved at the same time, only one resume\nprocesses at a time. Other resumes are queued and processed sequentially\nto prevent race conditions.\n\nArgs:\n    run_id: The ID of the run to resume\n    request: The resume request containing node_id, approval status, and optional modified data\n\nReturns:\n    ResumeWorkflowResponse with run status and queue information:\n    - resume_status: \"processing\" if resume started immediately, \"queued\" if waiting\n    - queue_position: Position in queue (None if processing)\n    - queue_item_id: ID for tracking this resume request",
         "operationId": "resume_workflow_run_v1_workflows_runs__run_id__resume_post",
         "security": [
           {
@@ -24963,7 +25424,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowRun"
+                  "$ref": "#/components/schemas/ResumeWorkflowResponse"
                 }
               }
             }
@@ -24988,7 +25449,7 @@
           "Workflow Runs"
         ],
         "summary": "Cancel Workflow Run",
-        "description": "Cancel a running or pending workflow run.\n\nThis endpoint marks the run as cancelled and stops further processing.\nOnly runs with status 'pending', 'running', or 'waiting_for_human' can be cancelled.\n\nArgs:\n    run_id: The ID of the workflow run to cancel\n    \nReturns:\n    WorkflowRun with status set to 'cancelled'",
+        "description": "Cancel a running or pending workflow run.\n\nThis endpoint:\n1. Sets a Redis cancellation flag (checked by executor every 500ms)\n2. Updates the run status to 'cancelled' in MongoDB\n\nThe Redis flag ensures in-flight executions are stopped quickly,\neven if they're running on Cloud Tasks.\n\nArgs:\n    run_id: The ID of the workflow run to cancel\n\nReturns:\n    CancelWorkflowResponse with run status and redis availability",
         "operationId": "cancel_workflow_run_v1_workflows_runs__run_id__cancel_post",
         "security": [
           {
@@ -25034,7 +25495,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowRun"
+                  "$ref": "#/components/schemas/CancelWorkflowResponse"
                 }
               }
             }
@@ -25139,7 +25600,7 @@
           "Workflow Runs"
         ],
         "summary": "Get Run Document",
-        "description": "Get a signed URL for downloading a document from a workflow run step.\n\nUse doc_type to specify whether to get the input or output document.\nFor split nodes, use the category parameter to get a specific split document.",
+        "description": "Get a signed URL for downloading a document from a workflow run step.\n\nUse doc_type to specify whether to get the input or output document.\nFor split nodes, use the category parameter to get a specific split document.\nUse handle_id to get a document from a specific handle (handle_inputs for input, handle_outputs for output).",
         "operationId": "get_run_document_v1_workflows_runs__run_id__documents__node_id__get",
         "security": [
           {
@@ -25204,6 +25665,24 @@
               "title": "Category"
             },
             "description": "For split nodes: the category name"
+          },
+          {
+            "name": "handle_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Handle ID to get document from handle_inputs or handle_outputs",
+              "title": "Handle Id"
+            },
+            "description": "Handle ID to get document from handle_inputs or handle_outputs"
           },
           {
             "name": "access_token",
@@ -25632,7 +26111,7 @@
           "Dataset Manual Runs"
         ],
         "summary": "Create Manual Run",
-        "description": "Create a new manual workflow run in a dataset.\n\nManual runs execute using the manual_executor which pauses at annotatable nodes\n(extract, classifier, split, project_extract) for human annotation.",
+        "description": "Create a new manual workflow run in a dataset.\n\nManual runs execute using the manual_executor which pauses at annotatable nodes\n(extract, classifier, split) for human annotation.",
         "operationId": "create_manual_run_v1_workflows_datasets__dataset_id__manual_runs_post",
         "security": [
           {
@@ -28191,6 +28670,66 @@
         }
       }
     },
+    "/v1/workflows/test_webhooks/{test_id}": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow Test Webhooks"
+        ],
+        "summary": "Receive Webhook",
+        "description": "Receive a webhook callback from a workflow end node.\n\nThis endpoint stores the received payload so it can be retrieved\nby the integration test for verification.\n\nArgs:\n    test_id: Unique identifier for the test (e.g., \"agent_edit_test\", \"multiple_inputs_test\")\n    payload: The webhook payload from the workflow end node",
+        "operationId": "receive_webhook_v1_workflows_test_webhooks__test_id__post",
+        "parameters": [
+          {
+            "name": "test_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Test Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Receive Webhook V1 Workflows Test Webhooks  Test Id  Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workflows/{workflow_id}/blocks": {
       "get": {
         "tags": [
@@ -28807,7 +29346,7 @@
           "Workflow Edges"
         ],
         "summary": "Create Edge",
-        "description": "Create a new edge connecting two blocks.\n\nValidates that both source and target blocks exist in the workflow.",
+        "description": "Create a new edge connecting two blocks.\n\nValidates that:\n- Both source and target blocks exist in the workflow\n- The connection is semantically valid (type compatibility, container rules, etc.)",
         "operationId": "create_edge_v1_workflows__workflow_id__edges_post",
         "security": [
           {
@@ -29101,7 +29640,7 @@
           "Workflow Edges"
         ],
         "summary": "Create Edges Batch",
-        "description": "Create multiple edges in a single request.\n\nUseful for importing workflows or creating complex structures.\nValidates that all referenced blocks exist.",
+        "description": "Create multiple edges in a single request.\n\nUseful for importing workflows or creating complex structures.\nValidates that all referenced blocks exist and all connections are valid.",
         "operationId": "create_edges_batch_v1_workflows__workflow_id__edges_batch_post",
         "security": [
           {
@@ -29804,7 +30343,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ApplyComputationsRequest"
+                "$ref": "#/components/schemas/main_server__services__v1__workflows__routes__ApplyComputationsRequest"
               }
             }
           }
@@ -29815,7 +30354,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/main_server__services__v1__workflows__routes__ApplyComputationsResponse"
+                  "$ref": "#/components/schemas/ApplyComputationsResponse"
                 }
               }
             }
@@ -31885,7 +32424,7 @@
           "Edit Templates"
         ],
         "summary": "Update Template",
-        "description": "Update an existing Edit Template.",
+        "description": "Update an existing Edit Template.\n\nForm fields are automatically sorted by document reading order\n(page, then top-to-bottom, then left-to-right).",
         "operationId": "update_template_v1_edit_templates__template_id__patch",
         "security": [
           {
@@ -33373,6 +33912,413 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/internal/{job_id}/execute": {
+      "post": {
+        "tags": [
+          "Jobs",
+          "Jobs Internal"
+        ],
+        "summary": "Execute Job Callback",
+        "description": "Internal endpoint called by Cloud Tasks to execute a job.\n\nThis endpoint is protected by OIDC token verification in production.\nFor local development, the X-Simulated-Cloud-Task header bypasses verification.",
+        "operationId": "execute_job_callback_v1_jobs_internal__job_id__execute_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "X-Simulated-Cloud-Task",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Simulated-Cloud-Task"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Execute Job Callback V1 Jobs Internal  Job Id  Execute Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs": {
+      "post": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Create Job",
+        "description": "Create a new asynchronous job.\n\nThe job will be queued for processing and can be polled for status\nusing the retrieve endpoint.",
+        "operationId": "create_job_v1_jobs_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "List Jobs",
+        "description": "List jobs with pagination and optional status filtering.",
+        "operationId": "list_jobs_v1_jobs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Pagination cursor (last ID from previous page)",
+              "title": "After"
+            },
+            "description": "Pagination cursor (last ID from previous page)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Number of jobs to return",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Number of jobs to return"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "validating",
+                    "queued",
+                    "in_progress",
+                    "completed",
+                    "failed",
+                    "cancelled",
+                    "expired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status"
+            },
+            "description": "Filter by status"
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Retrieve Job",
+        "description": "Retrieve a job by ID.\n\nReturns the current status, timestamps, and result (if completed) or error (if failed).",
+        "operationId": "retrieve_job_v1_jobs__job_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Cancel Job",
+        "description": "Cancel an in-progress or queued job.\n\nReturns the updated job with status 'cancelled'.",
+        "operationId": "cancel_job_v1_jobs__job_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
               }
             }
           },
@@ -35875,7 +36821,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/main_server__services__internal__blog__models__User"
                 }
               }
             }
@@ -39464,7 +40410,7 @@
           "Workflow Runs"
         ],
         "summary": "Execute Llm Node Internal",
-        "description": "Internal endpoint to execute a single LLM workflow node.\nThis endpoint is called by Cloud Tasks and has no authentication.\nSecurity is provided by network-level restrictions.\n\nFeatures:\n- Idempotency protection (prevents duplicate processing)\n- Timeout handling for LLM operations\n- Retry tracking\n- Spawns Cloud Tasks for downstream ready LLM nodes",
+        "description": "Internal endpoint to execute a single LLM workflow node.\nThis endpoint is called by Cloud Tasks with OIDC authentication.\nIf OIDC is configured, the token is verified; otherwise relies on network restrictions.\n\nFeatures:\n- Idempotency protection (prevents duplicate processing)\n- Timeout handling for LLM operations\n- Retry tracking\n- Spawns Cloud Tasks for downstream ready LLM nodes\n- Trace ID propagation for cross-service correlation",
         "operationId": "execute_llm_node_internal_internal_workflow_runs__run_id__nodes__node_id__execute_post",
         "parameters": [
           {
@@ -39483,6 +40429,38 @@
             "schema": {
               "type": "string",
               "title": "Node Id"
+            }
+          },
+          {
+            "name": "X-Trace-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Trace-Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -39520,13 +40498,295 @@
         }
       }
     },
+    "/internal/workflow-runs/{run_id}/map-reduce/{mr_id}/items/{item_index}/execute": {
+      "post": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Execute Parallel Mr Item Internal",
+        "description": "Internal endpoint to execute a single item in a parallel map-reduce.\nThis endpoint is called by Cloud Tasks with OIDC authentication.\nIf OIDC is configured, the token is verified; otherwise relies on network restrictions.\n\nFeatures:\n- Executes contained nodes for a specific item\n- Stores results atomically using item index as key\n- Triggers reduce phase when all items complete\n- Trace ID propagation for cross-service correlation",
+        "operationId": "execute_parallel_mr_item_internal_internal_workflow_runs__run_id__map_reduce__mr_id__items__item_index__execute_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "mr_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mr Id"
+            }
+          },
+          {
+            "name": "item_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Item Index"
+            }
+          },
+          {
+            "name": "X-Trace-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Trace-Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteParallelItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteParallelItemResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workflow-runs/{run_id}/loops/{loop_id}/execute-iteration": {
+      "post": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Execute Loop Iteration Internal",
+        "description": "Internal endpoint to execute an entire loop iteration as an atomic subworkflow.\n\nThis is the new subworkflow-based approach where entire loop iterations\nare executed as atomic units, eliminating race conditions from stale\ncloud tasks completing after the loop has advanced.\n\nFeatures:\n- Executes all body nodes for one iteration atomically\n- Evaluates termination condition after execution\n- Dispatches next iteration or completes loop\n- Trace ID propagation for cross-service correlation",
+        "operationId": "execute_loop_iteration_internal_internal_workflow_runs__run_id__loops__loop_id__execute_iteration_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "loop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Loop Id"
+            }
+          },
+          {
+            "name": "X-Trace-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Trace-Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteLoopIterationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteLoopIterationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workflow-runs/{run_id}/continue": {
+      "post": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Continue Workflow Internal",
+        "description": "Internal endpoint to continue workflow execution after a loop terminates.\n\nThis is called by Cloud Tasks when a while_loop or map_reduce loop completes.\nIt resumes the main workflow execution to process downstream nodes.\n\nFeatures:\n- Reloads workflow state from database\n- Marks the loop container as completed\n- Continues execution of downstream nodes\n- Trace ID propagation for cross-service correlation",
+        "operationId": "continue_workflow_internal_internal_workflow_runs__run_id__continue_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-Trace-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Trace-Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContinueWorkflowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContinueWorkflowResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/internal/workflow-runs/recover-stuck": {
       "post": {
         "tags": [
           "Workflow Runs"
         ],
         "summary": "Recover Stuck Llm Nodes",
-        "description": "Recover workflow nodes that are stuck in 'queued' or 'running' state for too long.\n\nA node is considered stuck if:\n- step.status is 'queued' or 'running'\n- step.started_at is older than STUCK_NODE_THRESHOLD_MINUTES (35 minutes)\n\nStuck nodes are reset to 'pending' status with an error message,\nallowing them to be retried.",
+        "description": "Recover workflow nodes that are stuck in 'queued' or 'running' state for too long.\n\nA node is considered stuck if:\n- step.status is 'queued' or 'running'\n- step.started_at is older than STUCK_NODE_THRESHOLD_MINUTES (32 minutes)\n\nStuck nodes are reset to 'pending' status with an error message,\nallowing them to be retried.",
         "operationId": "recover_stuck_llm_nodes_internal_workflow_runs_recover_stuck_post",
         "parameters": [
           {
@@ -39564,6 +40824,22 @@
               "title": "Organization Id"
             },
             "description": "Organization ID (required)"
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -39583,6 +40859,106 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workflow-runs/health/cloud-tasks": {
+      "get": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Health Cloud Tasks",
+        "description": "Check Cloud Tasks subsystem health.\n\nReturns:\n    - status: healthy/unhealthy\n    - queue_name: The Cloud Tasks queue name\n    - region: The queue region\n    - shutdown_requested: Whether shutdown has been requested",
+        "operationId": "health_cloud_tasks_internal_workflow_runs_health_cloud_tasks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudTasksHealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workflow-runs/health/workflows": {
+      "get": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Health Workflows",
+        "description": "Check workflow execution health.\n\nReturns:\n    - status: healthy/degraded/unhealthy\n    - stuck_runs: Number of runs stuck for longer than threshold\n    - running_runs: Number of currently running runs\n    - queued_runs: Number of queued runs",
+        "operationId": "health_workflows_internal_workflow_runs_health_workflows_get",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional organization ID to filter",
+              "title": "Organization Id"
+            },
+            "description": "Optional organization ID to filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowHealthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/workflow-runs/shutdown": {
+      "post": {
+        "tags": [
+          "Workflow Runs"
+        ],
+        "summary": "Request Shutdown",
+        "description": "Request graceful shutdown of Cloud Tasks creation.\n\nThis prevents new Cloud Tasks from being created and waits for\nin-flight task creations to complete.",
+        "operationId": "request_shutdown_internal_workflow_runs_shutdown_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Request Shutdown Internal Workflow Runs Shutdown Post"
                 }
               }
             }
@@ -41292,6 +42668,39 @@
         ],
         "title": "AccuracyMetric"
       },
+      "ActiveResume": {
+        "properties": {
+          "queue_item_id": {
+            "type": "string",
+            "title": "Queue Item Id",
+            "description": "ID of the ResumeQueueItem being processed"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id",
+            "description": "ID of the HIL node being resumed"
+          },
+          "claimed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Claimed At",
+            "description": "When this resume was claimed"
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "title": "Timeout Seconds",
+            "description": "Seconds before a claimed resume times out (default 5 min)",
+            "default": 300
+          }
+        },
+        "type": "object",
+        "required": [
+          "queue_item_id",
+          "node_id"
+        ],
+        "title": "ActiveResume",
+        "description": "Tracks the currently active resume being processed.\n\nOnly one resume can be active at a time per workflow run to prevent race conditions.\nIncludes timeout mechanism to handle stale claims."
+      },
       "AddBuilderDocumentRequest": {
         "properties": {
           "mime_data": {
@@ -41366,13 +42775,13 @@
             "description": "Unique identifier of the agent edit"
           },
           "file": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "Information about the original file"
           },
           "filled_document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
+                "$ref": "#/components/schemas/BaseMIMEData"
               },
               {
                 "type": "null"
@@ -41885,7 +43294,6 @@
             "enum": [
               "classifier",
               "extract",
-              "project_extract",
               "split"
             ],
             "title": "Node Type",
@@ -42073,18 +43481,12 @@
           "data": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Data",
-            "description": "The data to apply computations to"
-          },
-          "computation_spec": {
-            "$ref": "#/components/schemas/ComputationSpecInput",
-            "description": "The computation specification"
+            "title": "Data"
           }
         },
         "type": "object",
         "required": [
-          "data",
-          "computation_spec"
+          "data"
         ],
         "title": "ApplyComputationsRequest",
         "description": "Request to apply computations to data."
@@ -42094,7 +43496,8 @@
           "data": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Data"
+            "title": "Data",
+            "description": "The data with computations applied"
           }
         },
         "type": "object",
@@ -42584,7 +43987,7 @@
           "file_metadata": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
+                "$ref": "#/components/schemas/BaseMIMEData"
               },
               {
                 "type": "null"
@@ -42627,7 +44030,7 @@
           "cost_breakdown": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/CostBreakdown"
+                "$ref": "#/components/schemas/main_server__globals__sdk__usage__usage__CostBreakdown"
               },
               {
                 "type": "null"
@@ -42829,7 +44232,7 @@
           },
           "attachments": {
             "items": {
-              "$ref": "#/components/schemas/BaseMIMEData"
+              "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__BaseMIMEData"
             },
             "type": "array",
             "title": "Attachments",
@@ -42852,35 +44255,24 @@
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
+            "description": "ID of the file"
           },
-          "name": {
+          "filename": {
             "type": "string",
-            "title": "Name",
-            "description": "Original filename of the attachment."
-          },
-          "size": {
-            "type": "integer",
-            "title": "Size",
-            "description": "Size of the base64-encoded content in bytes."
+            "title": "Filename",
+            "description": "Filename of the file"
           },
           "mime_type": {
             "type": "string",
             "title": "Mime Type",
-            "description": "MIME type of the attachment, determining how it should be handled."
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__AttachmentMetadata",
-            "description": "Additional metadata about the attachment."
+            "description": "MIME type of the file"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "name",
-          "size",
-          "mime_type",
-          "metadata"
+          "filename",
+          "mime_type"
         ],
         "title": "BaseMIMEData"
       },
@@ -43924,7 +45316,7 @@
             "title": "Project Id"
           },
           "mime_data": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "The mime data of the document"
           },
           "prediction_data": {
@@ -43974,6 +45366,25 @@
         },
         "type": "object",
         "title": "CachePreloadRequest"
+      },
+      "CancelWorkflowResponse": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/WorkflowRun"
+          },
+          "redis_available": {
+            "type": "boolean",
+            "title": "Redis Available",
+            "description": "Whether Redis was available to set the cancellation flag for immediate effect",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "run"
+        ],
+        "title": "CancelWorkflowResponse",
+        "description": "Response for cancel workflow endpoint."
       },
       "Category": {
         "properties": {
@@ -45077,7 +46488,7 @@
             "description": "Unique identifier of the classification"
           },
           "file": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "Information about the classified file"
           },
           "result": {
@@ -45270,6 +46681,18 @@
             ],
             "title": "First N Pages",
             "description": "Only use the first N pages of the document for classification. Useful for large documents where classification can be determined from early pages."
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context",
+            "description": "Additional context for classification (e.g., iteration context from a loop)"
           }
         },
         "type": "object",
@@ -45367,6 +46790,46 @@
         ],
         "title": "CloneProjectTemplateResponse",
         "description": "Response model for cloning a project template."
+      },
+      "CloudTasksHealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "queue_name": {
+            "type": "string",
+            "title": "Queue Name"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "shutdown_requested": {
+            "type": "boolean",
+            "title": "Shutdown Requested"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "queue_name",
+          "region",
+          "shutdown_requested"
+        ],
+        "title": "CloudTasksHealthResponse",
+        "description": "Response for Cloud Tasks health check."
       },
       "CompletionTokensDetails": {
         "properties": {
@@ -45899,6 +47362,70 @@
         ],
         "title": "ConsensusDictRequest"
       },
+      "ContinueWorkflowRequest": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "loop_id": {
+            "type": "string",
+            "title": "Loop Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "loop_id",
+          "organization_id",
+          "workflow_id"
+        ],
+        "title": "ContinueWorkflowRequest",
+        "description": "Request body for workflow continuation after loop termination."
+      },
+      "ContinueWorkflowResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "loop_id": {
+            "type": "string",
+            "title": "Loop Id"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "run_id",
+          "loop_id"
+        ],
+        "title": "ContinueWorkflowResponse",
+        "description": "Response from workflow continuation."
+      },
       "ConversionConfig": {
         "properties": {
           "browser_canvas": {
@@ -45970,76 +47497,51 @@
       },
       "CostBreakdown": {
         "properties": {
+          "input": {
+            "type": "number",
+            "title": "Input",
+            "description": "Cost for input tokens in USD",
+            "default": 0.0
+          },
+          "output": {
+            "type": "number",
+            "title": "Output",
+            "description": "Cost for output tokens in USD",
+            "default": 0.0
+          },
           "total": {
-            "$ref": "#/components/schemas/Amount"
+            "type": "number",
+            "title": "Total",
+            "description": "Total cost in USD",
+            "default": 0.0
           },
-          "text_prompt_cost": {
-            "$ref": "#/components/schemas/Amount"
-          },
-          "text_cached_cost": {
-            "$ref": "#/components/schemas/Amount"
-          },
-          "text_completion_cost": {
-            "$ref": "#/components/schemas/Amount"
-          },
-          "text_total_cost": {
-            "$ref": "#/components/schemas/Amount"
-          },
-          "audio_prompt_cost": {
+          "tokens": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Amount"
+                "$ref": "#/components/schemas/TokenUsage"
               },
               {
                 "type": "null"
               }
-            ]
-          },
-          "audio_completion_cost": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Amount"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "audio_total_cost": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Amount"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "token_counts": {
-            "$ref": "#/components/schemas/TokenCounts"
+            ],
+            "description": "Token usage breakdown"
           },
           "model": {
-            "type": "string",
-            "title": "Model"
-          },
-          "is_fine_tuned": {
-            "type": "boolean",
-            "title": "Is Fine Tuned",
-            "default": false
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "Model used (e.g., 'gpt-4o', 'claude-3-opus')"
           }
         },
         "type": "object",
-        "required": [
-          "total",
-          "text_prompt_cost",
-          "text_cached_cost",
-          "text_completion_cost",
-          "text_total_cost",
-          "token_counts",
-          "model"
-        ],
         "title": "CostBreakdown",
-        "description": "Detailed breakdown of API call costs by token type and usage category."
+        "description": "Cost breakdown for a single operation or model call."
       },
       "CreateAndLinkOrganizationRequest": {
         "properties": {
@@ -46065,6 +47567,8 @@
             "type": "string",
             "enum": [
               "start",
+              "start_json",
+              "start_text",
               "end",
               "note",
               "parse",
@@ -46083,14 +47587,19 @@
               "transform",
               "set_state",
               "hil",
-              "project_extract",
               "merge_pdf",
               "merge_dicts",
               "functions",
               "conditional",
-              "conditional_check",
               "api_call",
-              "loop"
+              "loop",
+              "while_loop",
+              "map_reduce",
+              "reshape",
+              "while_loop_sentinel_start",
+              "while_loop_sentinel_end",
+              "map_reduce_sentinel_start",
+              "map_reduce_sentinel_end"
             ],
             "title": "Type",
             "description": "Block type"
@@ -46167,6 +47676,18 @@
             ],
             "title": "Subflow Id",
             "description": "Parent subflow ID if inside a subflow"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id",
+            "description": "ID of parent container block (while_loop, map_reduce)"
           }
         },
         "type": "object",
@@ -46460,6 +47981,52 @@
           "dataset_id"
         ],
         "title": "CreateIterationRequest"
+      },
+      "CreateJobRequest": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "enum": [
+              "/v1/documents/extract",
+              "/v1/documents/parse",
+              "/v1/documents/split",
+              "/v1/documents/classify",
+              "/v1/schemas/generate",
+              "/v1/edit/agent/fill",
+              "/v1/edit/templates/fill",
+              "/v1/edit/templates/generate",
+              "/v1/projects/extract"
+            ],
+            "title": "Endpoint"
+          },
+          "request": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Request"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata",
+            "description": "Max 16 pairs; keys \u226464 chars, values \u2264512 chars"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoint",
+          "request"
+        ],
+        "title": "CreateJobRequest",
+        "description": "Request body for POST /v1/jobs."
       },
       "CreateOrganizationResponse": {
         "properties": {
@@ -46763,10 +48330,6 @@
       },
       "CreateTemplateRequest": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -46803,7 +48366,8 @@
           "name",
           "json_schema"
         ],
-        "title": "CreateTemplateRequest"
+        "title": "CreateTemplateRequest",
+        "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
       },
       "CreateWorkflowChatMessageRequest": {
         "properties": {
@@ -47347,7 +48911,7 @@
             "title": "Project Id"
           },
           "mime_data": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "The mime data of the document"
           },
           "prediction_data": {
@@ -48445,7 +50009,7 @@
             "description": "Name of the template"
           },
           "file": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "File information for the empty PDF template this schema applies to"
           },
           "form_fields": {
@@ -49086,6 +50650,74 @@
         ],
         "title": "ErrorDetail"
       },
+      "ErrorDetails": {
+        "properties": {
+          "stack_trace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stack Trace",
+            "description": "Full Python stack trace"
+          },
+          "block_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Id",
+            "description": "ID of the block that failed"
+          },
+          "block_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Name",
+            "description": "Name/label of the block that failed"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code",
+            "description": "Error code if available"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context",
+            "description": "Additional context about the error"
+          }
+        },
+        "type": "object",
+        "title": "ErrorDetails",
+        "description": "Detailed error information for debugging.\n\nCaptures stack traces and context about where and why an error occurred."
+      },
       "Event": {
         "properties": {
           "object": {
@@ -49173,6 +50805,112 @@
         ],
         "title": "Event"
       },
+      "ExecuteLoopIterationRequest": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "loop_id": {
+            "type": "string",
+            "title": "Loop Id"
+          },
+          "iteration": {
+            "type": "integer",
+            "title": "Iteration"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "input_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input Data"
+          },
+          "body_config_json": {
+            "type": "string",
+            "title": "Body Config Json"
+          },
+          "parent_iteration_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Iteration Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "loop_id",
+          "iteration",
+          "organization_id",
+          "workflow_id",
+          "input_data",
+          "body_config_json"
+        ],
+        "title": "ExecuteLoopIterationRequest",
+        "description": "Request body for loop iteration execution from Cloud Tasks (subworkflow mode)."
+      },
+      "ExecuteLoopIterationResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "loop_id": {
+            "type": "string",
+            "title": "Loop Id"
+          },
+          "iteration": {
+            "type": "integer",
+            "title": "Iteration"
+          },
+          "continued": {
+            "type": "boolean",
+            "title": "Continued",
+            "default": false
+          },
+          "terminated": {
+            "type": "boolean",
+            "title": "Terminated",
+            "default": false
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "run_id",
+          "loop_id",
+          "iteration"
+        ],
+        "title": "ExecuteLoopIterationResponse",
+        "description": "Response from loop iteration execution."
+      },
       "ExecuteNodeRequest": {
         "properties": {
           "run_id": {
@@ -49241,6 +50979,79 @@
         ],
         "title": "ExecuteNodeResponse",
         "description": "Response from node execution."
+      },
+      "ExecuteParallelItemRequest": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "mr_id": {
+            "type": "string",
+            "title": "Mr Id"
+          },
+          "item_index": {
+            "type": "integer",
+            "title": "Item Index"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "mr_id",
+          "item_index",
+          "organization_id",
+          "workflow_id"
+        ],
+        "title": "ExecuteParallelItemRequest",
+        "description": "Request body for parallel map-reduce item execution from Cloud Tasks."
+      },
+      "ExecuteParallelItemResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "mr_id": {
+            "type": "string",
+            "title": "Mr Id"
+          },
+          "item_index": {
+            "type": "integer",
+            "title": "Item Index"
+          },
+          "is_last_item": {
+            "type": "boolean",
+            "title": "Is Last Item",
+            "default": false
+          },
+          "reduce_triggered": {
+            "type": "boolean",
+            "title": "Reduce Triggered",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "run_id",
+          "mr_id",
+          "item_index"
+        ],
+        "title": "ExecuteParallelItemResponse",
+        "description": "Response from parallel item execution."
       },
       "ExecuteUploadJobRequest": {
         "properties": {
@@ -49686,7 +51497,7 @@
             "description": "Unique identifier of the analysis"
           },
           "file": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "Information about the file"
           },
           "predictions": {
@@ -50021,7 +51832,11 @@
                   "token",
                   "line",
                   "block",
-                  "token-windows"
+                  "token-windows",
+                  "word",
+                  "sentence",
+                  "paragraph",
+                  "key-value"
                 ]
               },
               {
@@ -50029,7 +51844,114 @@
               }
             ],
             "title": "Match Level",
-            "description": "The level of the match (token, line, block, token-windows)"
+            "description": "The level of the match (token, line, block, token-windows for OCR; word, line, sentence, paragraph, key-value for text)"
+          },
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "bbox",
+              "text",
+              "excel"
+            ],
+            "title": "Source Type",
+            "description": "The type of source: 'bbox' for OCR-based, 'text' for text-native, 'excel' for Excel-native",
+            "default": "bbox"
+          },
+          "line_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Start",
+            "description": "Starting line number (1-indexed)"
+          },
+          "line_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line End",
+            "description": "Ending line number (1-indexed)"
+          },
+          "char_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Char Start",
+            "description": "Starting character offset in the file (0-indexed)"
+          },
+          "char_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Char End",
+            "description": "Ending character offset in the file (0-indexed)"
+          },
+          "sheet_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheet Name",
+            "description": "Sheet name for Excel files"
+          },
+          "cell_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cell Ref",
+            "description": "Cell reference like 'A1', 'B5'"
+          },
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row",
+            "description": "1-indexed row number"
+          },
+          "col": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Col",
+            "description": "1-indexed column number"
           }
         },
         "type": "object",
@@ -50418,6 +52340,24 @@
             "title": "Key",
             "description": "Key of the field. This is used to identify the field in the form data."
           },
+          "combing": {
+            "type": "boolean",
+            "title": "Combing",
+            "description": "Whether this field is a combing field (one character per cell).",
+            "default": false
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length",
+            "description": "Number of character cells if this is a combing field."
+          },
           "bbox": {
             "$ref": "#/components/schemas/BBox",
             "description": "Bounding box specifying the position and size of this field on the page."
@@ -50520,7 +52460,7 @@
           "user": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/main_server__services__custom__bertfake__routes__User"
+                "$ref": "#/components/schemas/User"
               },
               {
                 "type": "null"
@@ -50583,7 +52523,7 @@
             "items": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/BaseMIMEData"
+                  "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__BaseMIMEData"
                 },
                 {
                   "$ref": "#/components/schemas/MIMEData"
@@ -51478,7 +53418,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-01-14T19:16:59.747462Z",
+              "updated_at": "2026-01-26T14:22:51.549110Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "gpt-5-mini",
@@ -51535,7 +53475,7 @@
             "title": "Project Id"
           },
           "mime_data": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "The mime data of the document"
           },
           "prediction_data": {
@@ -51746,6 +53686,247 @@
         ],
         "title": "IterationRunMetrics",
         "description": "Metrics for an iteration run compared to ground truth"
+      },
+      "Job": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "object": {
+            "type": "string",
+            "const": "job",
+            "title": "Object",
+            "default": "job"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "validating",
+              "queued",
+              "in_progress",
+              "completed",
+              "failed",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Status",
+            "default": "validating"
+          },
+          "endpoint": {
+            "type": "string",
+            "enum": [
+              "/v1/documents/extract",
+              "/v1/documents/parse",
+              "/v1/documents/split",
+              "/v1/documents/classify",
+              "/v1/schemas/generate",
+              "/v1/edit/agent/fill",
+              "/v1/edit/templates/fill",
+              "/v1/edit/templates/generate",
+              "/v1/projects/extract"
+            ],
+            "title": "Endpoint"
+          },
+          "request": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Request"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "integer",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "expires_at": {
+            "type": "integer",
+            "title": "Expires At"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "cloud_task_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cloud Task Name"
+          },
+          "cancelled": {
+            "type": "boolean",
+            "title": "Cancelled",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoint",
+          "request",
+          "organization_id"
+        ],
+        "title": "Job",
+        "description": "Core Job object following OpenAI-style specification.\n\nRepresents a single asynchronous job that can be polled for status\nand result retrieval."
+      },
+      "JobError": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "JobError",
+        "description": "Error details when job fails."
+      },
+      "JobListResponse": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list",
+            "title": "Object",
+            "default": "list"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Job"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "first_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Id"
+          },
+          "last_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Id"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "JobListResponse",
+        "description": "Response for GET /v1/jobs."
+      },
+      "JobResponse": {
+        "properties": {
+          "status_code": {
+            "type": "integer",
+            "title": "Status Code"
+          },
+          "body": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status_code",
+          "body"
+        ],
+        "title": "JobResponse",
+        "description": "Response stored when job completes successfully."
       },
       "KeyValidationResponse": {
         "properties": {
@@ -52738,6 +54919,8 @@
                   "claude-3-haiku-20240307",
                   "claude-opus-4.1",
                   "claude-opus-4",
+                  "claude-opus-4-5",
+                  "claude-opus-4-5-20251101",
                   "claude-sonnet-4",
                   "claude-sonnet-4-20250514",
                   "claude-sonnet-4-5",
@@ -52889,6 +55072,42 @@
         ],
         "title": "ModelCardsResponse"
       },
+      "ModelCostEntry": {
+        "properties": {
+          "input": {
+            "type": "number",
+            "title": "Input",
+            "description": "Input cost in USD",
+            "default": 0.0
+          },
+          "output": {
+            "type": "number",
+            "title": "Output",
+            "description": "Output cost in USD",
+            "default": 0.0
+          },
+          "total": {
+            "type": "number",
+            "title": "Total",
+            "description": "Total cost in USD",
+            "default": 0.0
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokenUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Token usage for this model"
+          }
+        },
+        "type": "object",
+        "title": "ModelCostEntry",
+        "description": "Per-model cost and token tracking."
+      },
       "ModelsResponse": {
         "properties": {
           "data": {
@@ -52993,7 +55212,6 @@
             "enum": [
               "classifier",
               "extract",
-              "project_extract",
               "split"
             ],
             "title": "Node Type",
@@ -54120,7 +56338,7 @@
             "description": "Unique identifier of the parse"
           },
           "file": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "Information about the parsed file"
           },
           "pages": {
@@ -54223,7 +56441,7 @@
       "ParseResult": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "Processed document metadata"
           },
           "usage": {
@@ -56114,6 +58332,17 @@
             ],
             "description": "Project context if extraction triggered from a project endpoint"
           },
+          "workflow_props": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessingLogWorkflowProps"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Workflow context if extraction triggered from a workflow node"
+          },
           "edit_props": {
             "anyOf": [
               {
@@ -56380,6 +58609,29 @@
         ],
         "title": "ProcessingLogSplitProps",
         "description": "Properties for split operations (document splitting)."
+      },
+      "ProcessingLogWorkflowProps": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "run_id",
+          "node_id"
+        ],
+        "title": "ProcessingLogWorkflowProps"
       },
       "ProcessingOperation": {
         "type": "string",
@@ -57188,7 +59440,7 @@
           "file": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
+                "$ref": "#/components/schemas/BaseMIMEData"
               },
               {
                 "type": "null"
@@ -57652,6 +59904,64 @@
         "title": "ResumeManualRequest",
         "description": "Request to resume a manual workflow with annotation data"
       },
+      "ResumeQueueItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique ID for this queue item"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id",
+            "description": "ID of the HIL node being resumed"
+          },
+          "approved": {
+            "type": "boolean",
+            "title": "Approved",
+            "description": "Whether the human approved the data"
+          },
+          "modified_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified Data",
+            "description": "Modified data from human review"
+          },
+          "queued_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Queued At",
+            "description": "When this resume was queued"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "claimed",
+              "processing",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "description": "Status of this queue item",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_id",
+          "approved"
+        ],
+        "title": "ResumeQueueItem",
+        "description": "A queued resume request for sequential processing.\n\nWhen multiple HIL nodes are approved simultaneously, resumes are processed\none at a time to prevent race conditions. This model tracks each queued resume."
+      },
       "ResumeWorkflowRequest": {
         "properties": {
           "node_id": {
@@ -57685,6 +59995,48 @@
         ],
         "title": "ResumeWorkflowRequest",
         "description": "Request to resume a workflow after human review for a specific HIL node"
+      },
+      "ResumeWorkflowResponse": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/WorkflowRun"
+          },
+          "resume_status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "queued",
+              "already_processed"
+            ],
+            "title": "Resume Status",
+            "description": "Status: 'processing' if started, 'queued' if waiting, 'already_processed' if duplicate request"
+          },
+          "queue_position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Position",
+            "description": "Position in queue if queued (None if processing)"
+          },
+          "queue_item_id": {
+            "type": "string",
+            "title": "Queue Item Id",
+            "description": "ID of the queue item for tracking"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run",
+          "resume_status",
+          "queue_item_id"
+        ],
+        "title": "ResumeWorkflowResponse",
+        "description": "Response for resume workflow endpoint with queue information."
       },
       "RetabParsedChatCompletion-Input": {
         "properties": {
@@ -58560,6 +60912,64 @@
         "title": "RunAnnotationMetadata",
         "description": "Metadata about annotatable nodes in a run, with manual executor state"
       },
+      "RunCostSummary": {
+        "properties": {
+          "total": {
+            "type": "number",
+            "title": "Total",
+            "description": "Total cost in USD for the entire run",
+            "default": 0.0
+          },
+          "input_cost": {
+            "type": "number",
+            "title": "Input Cost",
+            "description": "Total input token cost",
+            "default": 0.0
+          },
+          "output_cost": {
+            "type": "number",
+            "title": "Output Cost",
+            "description": "Total output token cost",
+            "default": 0.0
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens",
+            "description": "Total tokens used across all models",
+            "default": 0
+          },
+          "prompt_tokens": {
+            "type": "integer",
+            "title": "Prompt Tokens",
+            "description": "Total prompt/input tokens",
+            "default": 0
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "title": "Completion Tokens",
+            "description": "Total completion/output tokens",
+            "default": 0
+          },
+          "models": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/ModelCostEntry"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Models",
+            "description": "Per-model cost breakdown"
+          }
+        },
+        "type": "object",
+        "title": "RunCostSummary",
+        "description": "Aggregate cost summary for an entire workflow run.\n\nTracks total costs across all steps and provides per-model breakdown."
+      },
       "RunEval": {
         "properties": {
           "id": {
@@ -58800,14 +61210,28 @@
             "type": "object",
             "title": "Documents",
             "description": "Mapping of start node IDs to their input documents"
+          },
+          "json_inputs": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Json Inputs",
+            "description": "Mapping of start_json node IDs to their input JSON data"
+          },
+          "text_inputs": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Text Inputs",
+            "description": "Mapping of start_text node IDs to their input text"
           }
         },
         "type": "object",
-        "required": [
-          "documents"
-        ],
         "title": "RunWorkflowRequest",
-        "description": "Request to run a workflow with input documents.\n\nDocuments are provided as a dict mapping start node IDs to document inputs.\n\nExample:\n    {\n        \"documents\": {\n            \"start-node-1\": {\n                \"filename\": \"invoice.pdf\",\n                \"mime_type\": \"application/pdf\",\n                \"content\": \"base64_encoded_content...\"\n            },\n            \"start-node-2\": {\n                \"filename\": \"receipt.pdf\",\n                \"mime_type\": \"application/pdf\", \n                \"content\": \"base64_encoded_content...\"\n            }\n        }\n    }"
+        "description": "Request to run a workflow with input documents, JSON data, and/or text.\n\nDocuments are provided as a dict mapping start node IDs to document inputs.\nJSON inputs are provided as a dict mapping start_json node IDs to JSON data.\nText inputs are provided as a dict mapping start_text node IDs to text strings.\n\nExample:\n    {\n        \"documents\": {\n            \"start-node-1\": {\n                \"filename\": \"invoice.pdf\",\n                \"mime_type\": \"application/pdf\",\n                \"content\": \"base64_encoded_content...\"\n            }\n        },\n        \"json_inputs\": {\n            \"start-json-node-1\": {\n                \"customer_name\": \"John Doe\",\n                \"invoice_number\": \"INV-001\"\n            }\n        },\n        \"text_inputs\": {\n            \"start-text-node-1\": \"Some plain text input...\"\n        }\n    }"
       },
       "SchemaChange": {
         "properties": {
@@ -58908,7 +61332,7 @@
             "description": "Unique identifier of the schema generation"
           },
           "file": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "Information about the source file"
           },
           "json_schema": {
@@ -59161,7 +61585,7 @@
             "description": "Unique identifier of the split"
           },
           "file": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "Information about the split file"
           },
           "splits": {
@@ -59229,6 +61653,18 @@
             "title": "Model",
             "description": "The model to use to split the document",
             "default": "retab-small"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context",
+            "description": "Additional context for the split operation (e.g., iteration context from a loop)"
           }
         },
         "type": "object",
@@ -59309,6 +61745,62 @@
         ],
         "title": "SplitSettings",
         "description": "Settings used for the split operation."
+      },
+      "SplitTestRequest": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/MIMEData-Input",
+            "description": "The document to split"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/Category"
+            },
+            "type": "array",
+            "title": "Categories",
+            "description": "The categories to split the document into"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "The model to use to split the document",
+            "default": "retab-small"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context",
+            "description": "Additional context for the split operation (e.g., iteration context from a loop)"
+          },
+          "partition_method": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "pdf_page_selection",
+              "pdf_cropping"
+            ],
+            "title": "Partition Method",
+            "default": "llm"
+          },
+          "apply_energylink_params": {
+            "type": "boolean",
+            "title": "Apply Energylink Params",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "document",
+          "categories"
+        ],
+        "title": "SplitTestRequest",
+        "description": "Extended split request with tunable partition_method for testing."
       },
       "SpreadsheetDetails": {
         "properties": {
@@ -59496,6 +61988,8 @@
             "type": "string",
             "enum": [
               "start",
+              "start_json",
+              "start_text",
               "end",
               "note",
               "parse",
@@ -59514,14 +62008,19 @@
               "transform",
               "set_state",
               "hil",
-              "project_extract",
               "merge_pdf",
               "merge_dicts",
               "functions",
               "conditional",
-              "conditional_check",
               "api_call",
-              "loop"
+              "loop",
+              "while_loop",
+              "map_reduce",
+              "reshape",
+              "while_loop_sentinel_start",
+              "while_loop_sentinel_end",
+              "map_reduce_sentinel_start",
+              "map_reduce_sentinel_end"
             ],
             "title": "Node Type",
             "description": "Type of the node"
@@ -59596,6 +62095,41 @@
             "title": "Error",
             "description": "Error message if failed"
           },
+          "error_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "input_collection",
+                  "execution",
+                  "output_storage",
+                  "routing"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Stage",
+            "description": "Which execution stage failed"
+          },
+          "error_category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "transient",
+                  "permanent",
+                  "quota"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Category",
+            "description": "Category of error for retry decisions"
+          },
           "requires_human_review": {
             "anyOf": [
               {
@@ -59607,6 +62141,64 @@
             ],
             "title": "Requires Human Review",
             "description": "Whether this step requires human review"
+          },
+          "loop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loop Id",
+            "description": "ID of the containing while_loop (if inside a loop)"
+          },
+          "iteration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iteration",
+            "description": "Iteration number (0-based) if inside a loop"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "LLM model used (e.g., 'gpt-4o')"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cost breakdown for this step"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokenUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Token usage for this step"
           }
         },
         "type": "object",
@@ -60200,13 +62792,13 @@
             "default": ""
           },
           "file": {
-            "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData",
+            "$ref": "#/components/schemas/BaseMIMEData",
             "description": "Information about the template file used"
           },
           "filled_document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/retab__types__mime__BaseMIMEData"
+                "$ref": "#/components/schemas/BaseMIMEData"
               },
               {
                 "type": "null"
@@ -60526,7 +63118,55 @@
         "title": "TokenPrice",
         "description": "Holds pricing information (price per 1M tokens) for one token category.\n(For example, for text tokens used in the prompt.)"
       },
+      "TokenUsage": {
+        "properties": {
+          "input": {
+            "type": "integer",
+            "title": "Input",
+            "description": "Number of input/prompt tokens",
+            "default": 0
+          },
+          "output": {
+            "type": "integer",
+            "title": "Output",
+            "description": "Number of output/completion tokens",
+            "default": 0
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total tokens (input + output)",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "TokenUsage",
+        "description": "Token usage for LLM calls."
+      },
       "ToolCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "function"
+          },
+          "function": {
+            "$ref": "#/components/schemas/ToolCallFunction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "function"
+        ],
+        "title": "ToolCall",
+        "description": "A tool call made by the assistant."
+      },
+      "ToolCall-Input": {
         "properties": {
           "id": {
             "type": "string",
@@ -60571,7 +63211,7 @@
       "ToolInvocation-Input": {
         "properties": {
           "call": {
-            "$ref": "#/components/schemas/ToolCall"
+            "$ref": "#/components/schemas/ToolCall-Input"
           },
           "result": {
             "anyOf": [
@@ -60693,6 +63333,217 @@
           "logprob"
         ],
         "title": "TopLogprob"
+      },
+      "TraceSpan": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique span identifier"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Display name for the span"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Type of span (workflow, model, tool, agent, parallel, loop, block)",
+            "default": "block"
+          },
+          "duration": {
+            "type": "integer",
+            "title": "Duration",
+            "description": "Duration in milliseconds",
+            "default": 0
+          },
+          "start_time": {
+            "type": "string",
+            "title": "Start Time",
+            "description": "ISO timestamp when span started"
+          },
+          "end_time": {
+            "type": "string",
+            "title": "End Time",
+            "description": "ISO timestamp when span ended"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "success",
+                  "error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "Execution status"
+          },
+          "children": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TraceSpan"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Children",
+            "description": "Nested child spans"
+          },
+          "block_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Id",
+            "description": "ID of the associated block"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "Model used (for model spans)"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokenUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Token usage (for model spans)"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cost breakdown (for model spans)"
+          },
+          "tool_calls": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/main_server__services__v1__workflows__models__ToolCall"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Calls",
+            "description": "Tool calls made during this span"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input",
+            "description": "Input data for this span"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output",
+            "description": "Output data from this span"
+          },
+          "loop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loop Id",
+            "description": "ID of containing loop (for loop-iteration spans)"
+          },
+          "parallel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parallel Id",
+            "description": "ID of containing parallel (for parallel-iteration spans)"
+          },
+          "iteration_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iteration Index",
+            "description": "Iteration number (0-based) for iteration spans"
+          },
+          "relative_start_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Start Ms",
+            "description": "Start time relative to workflow start in ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "start_time",
+          "end_time"
+        ],
+        "title": "TraceSpan",
+        "description": "A span in the execution trace hierarchy.\n\nRepresents a unit of work during workflow execution, such as:\n- workflow: Top-level workflow execution\n- model: LLM API call\n- tool: Tool/function call\n- agent: Agent block execution\n- parallel/loop: Container execution with iterations\n- block: Generic block execution\n\nSpans can be nested via the children field to show execution hierarchy."
       },
       "UpdateChatRequest": {
         "properties": {
@@ -61733,20 +64584,20 @@
       },
       "User": {
         "properties": {
+          "object": {
+            "type": "string",
+            "const": "user",
+            "title": "Object"
+          },
           "id": {
             "type": "string",
-            "enum": [
-              "louis-de-benoist",
-              "sacha-ichbiah",
-              "victor-plaisance"
-            ],
             "title": "Id"
           },
-          "name": {
+          "email": {
             "type": "string",
-            "title": "Name"
+            "title": "Email"
           },
-          "avatarUrl": {
+          "first_name": {
             "anyOf": [
               {
                 "type": "string"
@@ -61755,9 +64606,9 @@
                 "type": "null"
               }
             ],
-            "title": "Avatarurl"
+            "title": "First Name"
           },
-          "bio": {
+          "last_name": {
             "anyOf": [
               {
                 "type": "string"
@@ -61766,9 +64617,13 @@
                 "type": "null"
               }
             ],
-            "title": "Bio"
+            "title": "Last Name"
           },
-          "organization_id": {
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified"
+          },
+          "profile_picture_url": {
             "anyOf": [
               {
                 "type": "string"
@@ -61777,13 +64632,69 @@
                 "type": "null"
               }
             ],
-            "title": "Organization Id"
+            "title": "Profile Picture Url"
+          },
+          "last_sign_in_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sign In At"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "external_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Id"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metadata"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/UserParameters"
           }
         },
         "type": "object",
         "required": [
+          "object",
           "id",
-          "name"
+          "email",
+          "email_verified",
+          "created_at",
+          "updated_at",
+          "parameters"
         ],
         "title": "User"
       },
@@ -62150,6 +65061,8 @@
             "type": "string",
             "enum": [
               "start",
+              "start_json",
+              "start_text",
               "end",
               "note",
               "parse",
@@ -62168,14 +65081,19 @@
               "transform",
               "set_state",
               "hil",
-              "project_extract",
               "merge_pdf",
               "merge_dicts",
               "functions",
               "conditional",
-              "conditional_check",
               "api_call",
-              "loop"
+              "loop",
+              "while_loop",
+              "map_reduce",
+              "reshape",
+              "while_loop_sentinel_start",
+              "while_loop_sentinel_end",
+              "map_reduce_sentinel_start",
+              "map_reduce_sentinel_end"
             ],
             "title": "Type",
             "description": "Block type (extract, parse, classifier, etc.)"
@@ -62252,6 +65170,18 @@
             ],
             "title": "Subflow Id",
             "description": "If inside a subflow container, the subflow ID"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id",
+            "description": "ID of parent container (while_loop, map_reduce)"
           },
           "updated_at": {
             "type": "string",
@@ -62632,6 +65562,46 @@
         "title": "WorkflowEdgeDoc",
         "description": "Edge document connecting two blocks.\n\nStored in workflow_edges collection. Edges are independently\ncreatable and deletable without affecting block documents."
       },
+      "WorkflowHealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "stuck_runs": {
+            "type": "integer",
+            "title": "Stuck Runs"
+          },
+          "running_runs": {
+            "type": "integer",
+            "title": "Running Runs"
+          },
+          "queued_runs": {
+            "type": "integer",
+            "title": "Queued Runs"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "stuck_runs",
+          "running_runs",
+          "queued_runs"
+        ],
+        "title": "WorkflowHealthResponse",
+        "description": "Response for workflow health check."
+      },
       "WorkflowIteration": {
         "properties": {
           "id": {
@@ -62739,6 +65709,8 @@
             "type": "string",
             "enum": [
               "start",
+              "start_json",
+              "start_text",
               "end",
               "note",
               "parse",
@@ -62757,14 +65729,19 @@
               "transform",
               "set_state",
               "hil",
-              "project_extract",
               "merge_pdf",
               "merge_dicts",
               "functions",
               "conditional",
-              "conditional_check",
               "api_call",
-              "loop"
+              "loop",
+              "while_loop",
+              "map_reduce",
+              "reshape",
+              "while_loop_sentinel_start",
+              "while_loop_sentinel_end",
+              "map_reduce_sentinel_start",
+              "map_reduce_sentinel_end"
             ],
             "title": "Type"
           },
@@ -62816,6 +65793,18 @@
             ],
             "title": "Height",
             "description": "Node height for resizable nodes"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id",
+            "description": "ID of parent container node (while_loop, map_reduce)"
           }
         },
         "type": "object",
@@ -62968,6 +65957,18 @@
             "description": "Overall status",
             "default": "pending"
           },
+          "trigger_type": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "api",
+              "schedule",
+              "webhook"
+            ],
+            "title": "Trigger Type",
+            "description": "How this run was triggered",
+            "default": "manual"
+          },
           "started_at": {
             "type": "string",
             "format": "date-time",
@@ -63021,6 +66022,37 @@
             "title": "Input Documents",
             "description": "Start node ID -> input document reference"
           },
+          "input_json_data": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Json Data",
+            "description": "Start_json node ID -> input JSON data"
+          },
+          "input_text_data": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Text Data",
+            "description": "Start_text node ID -> input text"
+          },
           "final_outputs": {
             "anyOf": [
               {
@@ -63045,6 +66077,66 @@
             ],
             "title": "Error",
             "description": "Error message if workflow failed"
+          },
+          "error_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "input_collection",
+                  "execution",
+                  "output_storage",
+                  "routing"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Stage",
+            "description": "Which execution stage failed at workflow level"
+          },
+          "error_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Details",
+            "description": "Detailed error context including stack trace"
+          },
+          "cost_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunCostSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Aggregate cost summary for the entire run"
+          },
+          "trace_spans": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TraceSpan"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Spans",
+            "description": "Hierarchical execution trace spans"
           },
           "created_at": {
             "type": "string",
@@ -63076,6 +66168,59 @@
             ],
             "title": "Pending Node Outputs",
             "description": "Serialized node outputs to resume from"
+          },
+          "dag_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dag Snapshot",
+            "description": "Serialized DAGSnapshot for Cloud Task state restoration"
+          },
+          "executed_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Executed Node Ids",
+            "description": "Node IDs that have completed execution (uses $addToSet for atomic deduplication)"
+          },
+          "resume_queue": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeQueueItem"
+            },
+            "type": "array",
+            "title": "Resume Queue",
+            "description": "Queue of pending resume requests (processed sequentially to prevent race conditions)"
+          },
+          "active_resume": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActiveResume"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Currently processing resume (only one at a time per workflow run)"
+          },
+          "run_resume_status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "waiting_for_human",
+              "partially_resumed",
+              "resuming",
+              "fully_resumed"
+            ],
+            "title": "Run Resume Status",
+            "description": "High-level status of HIL resume processing",
+            "default": "idle"
           }
         },
         "type": "object",
@@ -63279,6 +66424,79 @@
         "title": "WorkflowWithEntities",
         "description": "Complete workflow data assembled from separate collections.\n\nUsed when returning a full workflow view to the client."
       },
+      "main_server__globals__sdk__usage__usage__CostBreakdown": {
+        "properties": {
+          "total": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "text_prompt_cost": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "text_cached_cost": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "text_completion_cost": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "text_total_cost": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "audio_prompt_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Amount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "audio_completion_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Amount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "audio_total_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Amount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "token_counts": {
+            "$ref": "#/components/schemas/TokenCounts"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "is_fine_tuned": {
+            "type": "boolean",
+            "title": "Is Fine Tuned",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "text_prompt_cost",
+          "text_cached_cost",
+          "text_completion_cost",
+          "text_total_cost",
+          "token_counts",
+          "model"
+        ],
+        "title": "CostBreakdown",
+        "description": "Detailed breakdown of API call costs by token type and usage category."
+      },
       "main_server__services__custom__bert__cubemimedata__AttachmentMetadata": {
         "properties": {
           "is_inline": {
@@ -63349,6 +66567,43 @@
         "type": "object",
         "title": "AttachmentMetadata"
       },
+      "main_server__services__custom__bert__cubemimedata__BaseMIMEData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "SHA-256 hash of the base64-encoded content, serving as a unique identifier."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Original filename of the attachment."
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "Size of the base64-encoded content in bytes."
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the attachment, determining how it should be handled."
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/main_server__services__custom__bert__cubemimedata__AttachmentMetadata",
+            "description": "Additional metadata about the attachment."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "size",
+          "mime_type",
+          "metadata"
+        ],
+        "title": "BaseMIMEData"
+      },
       "main_server__services__custom__bert__cubemimedata__Page": {
         "properties": {
           "page_number": {
@@ -63388,22 +66643,22 @@
         ],
         "title": "Page"
       },
-      "main_server__services__custom__bertfake__routes__User": {
+      "main_server__services__internal__blog__models__User": {
         "properties": {
-          "object": {
-            "type": "string",
-            "const": "user",
-            "title": "Object"
-          },
           "id": {
             "type": "string",
+            "enum": [
+              "louis-de-benoist",
+              "sacha-ichbiah",
+              "victor-plaisance"
+            ],
             "title": "Id"
           },
-          "email": {
+          "name": {
             "type": "string",
-            "title": "Email"
+            "title": "Name"
           },
-          "first_name": {
+          "avatarUrl": {
             "anyOf": [
               {
                 "type": "string"
@@ -63412,9 +66667,9 @@
                 "type": "null"
               }
             ],
-            "title": "First Name"
+            "title": "Avatarurl"
           },
-          "last_name": {
+          "bio": {
             "anyOf": [
               {
                 "type": "string"
@@ -63423,13 +66678,9 @@
                 "type": "null"
               }
             ],
-            "title": "Last Name"
+            "title": "Bio"
           },
-          "email_verified": {
-            "type": "boolean",
-            "title": "Email Verified"
-          },
-          "profile_picture_url": {
+          "organization_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -63438,69 +66689,13 @@
                 "type": "null"
               }
             ],
-            "title": "Profile Picture Url"
-          },
-          "last_sign_in_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Sign In At"
-          },
-          "locale": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Locale"
-          },
-          "created_at": {
-            "type": "string",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "title": "Updated At"
-          },
-          "external_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "External Id"
-          },
-          "metadata": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Metadata"
-          },
-          "parameters": {
-            "$ref": "#/components/schemas/UserParameters"
+            "title": "Organization Id"
           }
         },
         "type": "object",
         "required": [
-          "object",
           "id",
-          "email",
-          "email_verified",
-          "created_at",
-          "updated_at",
-          "parameters"
+          "name"
         ],
         "title": "User"
       },
@@ -63563,7 +66758,7 @@
         ],
         "title": "Dataset"
       },
-      "main_server__services__v1__projects__routes__ApplyComputationsRequest": {
+      "main_server__services__v1__projects__routes__ApplyComputationsResponse": {
         "properties": {
           "data": {
             "additionalProperties": true,
@@ -63575,11 +66770,15 @@
         "required": [
           "data"
         ],
-        "title": "ApplyComputationsRequest",
-        "description": "Request to apply computations to data."
+        "title": "ApplyComputationsResponse",
+        "description": "Response containing computed data."
       },
-      "main_server__services__v1__schemas__templates__routes__CreateTemplateRequest": {
+      "main_server__services__v1__schemas__default_templates__routes__CreateTemplateRequest": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -63616,8 +66815,7 @@
           "name",
           "json_schema"
         ],
-        "title": "CreateTemplateRequest",
-        "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
+        "title": "CreateTemplateRequest"
       },
       "main_server__services__v1__workflows__datasets__models__CreateDatasetRequest": {
         "properties": {
@@ -63646,21 +66844,119 @@
         "title": "CreateDatasetRequest",
         "description": "Request to create a new dataset"
       },
-      "main_server__services__v1__workflows__routes__ApplyComputationsResponse": {
+      "main_server__services__v1__workflows__models__ToolCall": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the tool called"
+          },
+          "duration": {
+            "type": "integer",
+            "title": "Duration",
+            "description": "Duration in milliseconds",
+            "default": 0
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time",
+            "description": "ISO timestamp when call started"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time",
+            "description": "ISO timestamp when call ended"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "error"
+            ],
+            "title": "Status",
+            "description": "Whether the tool call succeeded",
+            "default": "success"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input",
+            "description": "Input parameters to the tool"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output",
+            "description": "Output from the tool"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Error message if tool call failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ToolCall",
+        "description": "A tool/function call made during execution.\n\nTracks tool invocations within agent or model spans for debugging."
+      },
+      "main_server__services__v1__workflows__routes__ApplyComputationsRequest": {
         "properties": {
           "data": {
             "additionalProperties": true,
             "type": "object",
             "title": "Data",
-            "description": "The data with computations applied"
+            "description": "The data to apply computations to"
+          },
+          "computation_spec": {
+            "$ref": "#/components/schemas/ComputationSpecInput",
+            "description": "The computation specification"
           }
         },
         "type": "object",
         "required": [
-          "data"
+          "data",
+          "computation_spec"
         ],
-        "title": "ApplyComputationsResponse",
-        "description": "Response containing computed data."
+        "title": "ApplyComputationsRequest",
+        "description": "Request to apply computations to data."
       },
       "main_server__services__v1__workflows__runs__annotations__models__AnnotatableNodeInfo": {
         "properties": {
@@ -63674,7 +66970,6 @@
             "enum": [
               "classifier",
               "extract",
-              "project_extract",
               "split"
             ],
             "title": "Node Type",
@@ -63784,32 +67079,6 @@
         ],
         "title": "Function",
         "description": "The function that the model called."
-      },
-      "retab__types__mime__BaseMIMEData": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "ID of the file"
-          },
-          "filename": {
-            "type": "string",
-            "title": "Filename",
-            "description": "Filename of the file"
-          },
-          "mime_type": {
-            "type": "string",
-            "title": "Mime Type",
-            "description": "MIME type of the file"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "filename",
-          "mime_type"
-        ],
-        "title": "BaseMIMEData"
       },
       "retab__types__mime__MIMEData": {
         "properties": {
