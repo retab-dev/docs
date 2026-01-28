@@ -11,7 +11,6 @@ The Jobs API provides several advantages over synchronous requests:
 - **Avoid request timeouts**: Process large documents that would exceed HTTP timeout limits
 - **Resilient to disconnections**: Jobs continue processing even if your client disconnects
 - **Higher throughput**: Queue multiple jobs without waiting for each to complete
-- **7-day result retention**: Retrieve results anytime within the retention window
 - **Progress tracking**: Monitor job status and get detailed error information
 
 Use the Jobs API when processing documents that may take more than a few seconds, when you need to process multiple documents in parallel, or when you want guaranteed delivery of results.
@@ -612,26 +611,8 @@ The Jobs API has the following limits:
 | Metadata key length | 64 characters |
 | Metadata value length | 512 characters |
 | Concurrent jobs | Unlimited |
-| Result retention | 7 days |
 
 Jobs are processed in the order they are created. There is no limit on the number of concurrent jobs, but processing throughput depends on system capacity.
-
-## Job Expiration
-
-Jobs and their associated data expire **7 days** after creation:
-
-- Both the `request` and `response` data are deleted at expiration
-- The job record remains but with `status: "expired"` and empty request/response
-- Check the `expires_at` timestamp on the job object to know when data will be deleted
-- Retrieve and store results before expiration if you need long-term retention
-
-```python
-# Check expiration timestamp
-from datetime import datetime
-
-expires_at = datetime.fromtimestamp(job.expires_at)
-print(f"Results available until: {expires_at}")
-```
 
 ## Job Response Structure
 
@@ -662,7 +643,6 @@ When a job completes successfully, the result is available in the `response` fie
   "created_at": 1705420800,
   "started_at": 1705420802,
   "completed_at": 1705420810,
-  "expires_at": 1706025600,
   "organization_id": "org_xxx"
 }
 ```
