@@ -6,7 +6,7 @@
 
 ### Introduction
 
-The `split` method in Retab's document processing pipeline analyzes multi-page documents and classifies pages into user-defined categories, returning the page ranges for each section. This endpoint is ideal for processing batches of mixed documents, separating combined PDFs, and organizing document collections by content type.
+The `split` method in Retab's document processing pipeline analyzes multi-page documents and classifies pages into user-defined subdocuments, returning the page ranges for each section. This endpoint is ideal for processing batches of mixed documents, separating combined PDFs, and organizing document collections by content type.
 
 Common use cases include:
 
@@ -21,7 +21,7 @@ flowchart LR
     
     subgraph Retab["Retab Split API"]
         B[1. Page Analysis]
-        B --> C[2. Category Classification]
+        B --> C[2. Subdocument Classification]
         C --> D[3. Page Range Detection]
     end
     
@@ -36,11 +36,11 @@ flowchart LR
 
 Key features of the Split API:
 
-- **Multi-Category Support**: Define multiple categories with descriptions for accurate classification
-- **Discontinuous Sections**: Same category can appear multiple times for non-contiguous content
+- **Multi-Subdocument Support**: Define multiple subdocuments with descriptions for accurate classification
+- **Discontinuous Sections**: Same subdocument can appear multiple times for non-contiguous content
 - **Page-Level Precision**: Get exact start and end pages for each section
 - **Vision-Based Analysis**: Uses LLM vision capabilities for accurate page classification
-- **Flexible Categories**: Define custom categories tailored to your document types
+- **Flexible Subdocuments**: Define custom subdocuments tailored to your document types
 
 ## Split API
 
@@ -55,11 +55,11 @@ Key features of the Split API:
   The AI model to use for document splitting. Recommended: `retab-small` for best balance of speed and accuracy.
 </ParamField>
 
-<ParamField body="categories" type="array[Category]" required>
-  List of categories to classify document sections into. Each category has:
-  - `name`: Unique identifier for the category
-  - `description`: Detailed description to help the model identify this category
-  - `partition_key` (optional): A key to further partition this category. When specified, the API will identify individual items within pages belonging to this category (e.g., "property ID" to find individual properties within a real estate document, or "invoice number" to separate multiple invoices)
+<ParamField body="subdocuments" type="array[Subdocument]" required>
+  List of subdocuments to classify document sections into. Each subdocument has:
+  - `name`: Unique identifier for the subdocument
+  - `description`: Detailed description to help the model identify this subdocument
+  - `partition_key` (optional): A key to further partition this subdocument. When specified, the API will identify individual items within pages belonging to this subdocument (e.g., "property ID" to find individual properties within a real estate document, or "invoice number" to separate multiple invoices)
 </ParamField>
 
 <ParamField body="context" type="string">
@@ -74,9 +74,9 @@ A SplitResponse object containing the classified sections with their page ranges
   <Expandable title="properties">
     <ResponseField name="splits" type="array[SplitResult]">
       List of document sections, each containing:
-      - `name`: The category name this section belongs to
+      - `name`: The subdocument name this section belongs to
       - `pages`: List of 1-indexed page numbers belonging to this section
-      - `partitions`: List of sub-page partitions (populated when `partition_key` is specified on the category)
+      - `partitions`: List of sub-page partitions (populated when `partition_key` is specified on the subdocument)
         - `key`: The partition key value (e.g., property ID, invoice number)
         - `pages`: List of page numbers in this partition
         - `first_page_y_start`: Y-coordinate (0-1) where content starts on the first page
@@ -95,8 +95,8 @@ from retab import Retab
 
 client = Retab()
 
-# Define categories for classification
-categories = [
+# Define subdocuments for classification
+subdocuments = [
     {"name": "invoice", "description": "Invoice documents with billing details, line items, totals, and payment terms"},
     {"name": "receipt", "description": "Payment receipts showing transaction confirmation and amounts paid"},
     {"name": "contract", "description": "Legal contracts with terms, conditions, and signature blocks"},
@@ -107,7 +107,7 @@ categories = [
 result = client.documents.split(
     document="scanned_batch.pdf",
     model="retab-small",
-    categories=categories
+    subdocuments=subdocuments
 )
 
 # Process each section
@@ -134,8 +134,8 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-// Define categories for classification
-const categories = [
+// Define subdocuments for classification
+const subdocuments = [
     { name: "invoice", description: "Invoice documents with billing details, line items, totals, and payment terms" },
     { name: "receipt", description: "Payment receipts showing transaction confirmation and amounts paid" },
     { name: "contract", description: "Legal contracts with terms, conditions, and signature blocks" },
@@ -146,7 +146,7 @@ const categories = [
 const result = await client.documents.split({
     document: "scanned_batch.pdf",
     model: "retab-small",
-    categories: categories
+    subdocuments: subdocuments
 });
 
 // Process each section
@@ -163,17 +163,12 @@ result.splits.forEach(split => {
 ```
 
 ```typescript TypeScript
-import { Retab, type SplitRequest, type SplitResponse } from '@retab/node';
-
-interface Category {
-    name: string;
-    description: string;
-}
+import { Retab, type SplitRequest, type SplitResponse, type Subdocument } from '@retab/node';
 
 const client = new Retab();
 
-// Define categories for classification
-const categories: Category[] = [
+// Define subdocuments for classification
+const subdocuments: Subdocument[] = [
     { name: "invoice", description: "Invoice documents with billing details, line items, totals, and payment terms" },
     { name: "receipt", description: "Payment receipts showing transaction confirmation and amounts paid" },
     { name: "contract", description: "Legal contracts with terms, conditions, and signature blocks" },
@@ -184,7 +179,7 @@ const categories: Category[] = [
 const splitRequest: SplitRequest = {
     document: "scanned_batch.pdf",
     model: "retab-small",
-    categories: categories
+    subdocuments: subdocuments
 };
 
 const result: SplitResponse = await client.documents.split(splitRequest);
@@ -214,7 +209,7 @@ from retab import Retab
 client = Retab()
 
 # Define report sections
-categories = [
+subdocuments = [
     {"name": "executive_summary", "description": "Executive summary with key findings and recommendations"},
     {"name": "financial_data", "description": "Financial statements, tables, charts, and numerical analysis"},
     {"name": "appendix", "description": "Appendices with supporting documents, references, and supplementary materials"},
@@ -224,7 +219,7 @@ categories = [
 result = client.documents.split(
     document="annual_report.pdf",
     model="retab-small",
-    categories=categories
+    subdocuments=subdocuments
 )
 
 # Find specific sections
@@ -239,7 +234,7 @@ import { Retab } from '@retab/node';
 const client = new Retab();
 
 // Define report sections
-const categories = [
+const subdocuments = [
     { name: "executive_summary", description: "Executive summary with key findings and recommendations" },
     { name: "financial_data", description: "Financial statements, tables, charts, and numerical analysis" },
     { name: "appendix", description: "Appendices with supporting documents, references, and supplementary materials" },
@@ -249,7 +244,7 @@ const categories = [
 const result = await client.documents.split({
     document: "annual_report.pdf",
     model: "retab-small",
-    categories: categories
+    subdocuments: subdocuments
 });
 
 // Find specific sections
@@ -262,14 +257,14 @@ financialSections.forEach(section => {
 
 ## Understanding Discontinuous Sections
 
-The Split API correctly handles cases where the same category appears multiple times in a document. This is common when documents are interleaved or when similar content appears in different parts of a document.
+The Split API correctly handles cases where the same subdocument appears multiple times in a document. This is common when documents are interleaved or when similar content appears in different parts of a document.
 
 ```python
 # Example: A batch with interleaved invoices and receipts
 result = client.documents.split(
     document="mixed_batch.pdf",
     model="retab-small",
-    categories=[
+    subdocuments=[
         {"name": "invoice", "description": "Invoice documents"},
         {"name": "receipt", "description": "Receipt documents"},
     ]
@@ -278,7 +273,7 @@ result = client.documents.split(
 # The result correctly identifies non-contiguous sections:
 # invoice: pages [1, 2, 3]
 # receipt: pages [4, 5]
-# invoice: pages [6, 7, 8]  <- Same category, different location
+# invoice: pages [6, 7, 8]  <- Same subdocument, different location
 # receipt: pages [9, 10]
 
 for split in result.splits:
@@ -287,7 +282,7 @@ for split in result.splits:
 
 ## Use Case: Partitioning by Key
 
-When processing documents that contain multiple items of the same type (e.g., multiple invoices, multiple property listings), use the `partition_key` parameter to identify and separate individual items within a category.
+When processing documents that contain multiple items of the same type (e.g., multiple invoices, multiple property listings), use the `partition_key` parameter to identify and separate individual items within a subdocument.
 
 <CodeGroup>
 ```python Python
@@ -295,8 +290,8 @@ from retab import Retab
 
 client = Retab()
 
-# Define categories with partition_key for sub-document splitting
-categories = [
+# Define subdocuments with partition_key for sub-document splitting
+subdocuments = [
     {
         "name": "property_listing",
         "description": "Real estate property listings with details and photos",
@@ -311,10 +306,10 @@ categories = [
 result = client.documents.split(
     document="property_portfolio.pdf",
     model="retab-small",
-    categories=categories
+    subdocuments=subdocuments
 )
 
-# Access partitions for each category
+# Access partitions for each subdocument
 for split in result.splits:
     print(f"{split.name}: pages {split.pages}")
     for partition in split.partitions:
@@ -333,8 +328,8 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-// Define categories with partition_key for sub-document splitting
-const categories = [
+// Define subdocuments with partition_key for sub-document splitting
+const subdocuments = [
     {
         name: "property_listing",
         description: "Real estate property listings with details and photos",
@@ -349,10 +344,10 @@ const categories = [
 const result = await client.documents.split({
     document: "property_portfolio.pdf",
     model: "retab-small",
-    categories: categories
+    subdocuments: subdocuments
 });
 
-// Access partitions for each category
+// Access partitions for each subdocument
 result.splits.forEach(split => {
     console.log(`${split.name}: pages ${split.pages}`);
     split.partitions.forEach(partition => {
@@ -374,7 +369,7 @@ client = Retab()
 result = client.documents.split(
     document="multi_invoice_page.pdf",
     model="retab-small",
-    categories=[
+    subdocuments=[
         {
             "name": "invoice",
             "description": "Invoice documents with billing details",
@@ -416,11 +411,11 @@ The Y-coordinates are normalized values between 0 and 1, where:
 
 ## Best Practices
 
-### Category Definition
-- **Be Specific**: Provide detailed descriptions that distinguish categories clearly
+### Subdocument Definition
+- **Be Specific**: Provide detailed descriptions that distinguish subdocuments clearly
 - **Use Visual Cues**: Mention distinctive visual elements (logos, headers, layouts)
-- **Include Examples**: Reference typical content found in each category
-- **Avoid Overlap**: Ensure categories are mutually exclusive when possible
+- **Include Examples**: Reference typical content found in each subdocument
+- **Avoid Overlap**: Ensure subdocuments are mutually exclusive when possible
 
 ### Model Selection
 - **`retab-large`**: Best balance of speed and accuracy for most use cases
@@ -429,6 +424,6 @@ The Y-coordinates are normalized values between 0 and 1, where:
 
 ### Performance Tips
 - **Batch Similar Documents**: Group similar document types for consistent results
-- **Limit Categories**: Use 3-7 well-defined categories for best accuracy
-- **Test Descriptions**: Iterate on category descriptions to improve classification
+- **Limit Subdocuments**: Use 3-7 well-defined subdocuments for best accuracy
+- **Test Descriptions**: Iterate on subdocument descriptions to improve classification
 
