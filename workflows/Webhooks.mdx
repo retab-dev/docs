@@ -14,7 +14,7 @@ The webhook sends a standardized JSON payload with the following structure:
 | Field | Type | Description |
 |-------|------|-------------|
 | `document` | `MIMEData \| null` | Document data (if a file was passed to the End node) |
-| `json` | `object \| null` | Extracted JSON data (if JSON was passed to the End node) |
+| `data` | `object \| null` | Extracted structured data (if JSON was passed to the End node) |
 
 ### MIMEData Structure
 
@@ -38,7 +38,7 @@ data:<mime_type>;base64,<base64_encoded_content>
     "filename": "invoice.pdf",
     "url": "data:application/pdf;base64,JVBERi0xLjQKJeLjz9..."
   },
-  "json": {
+  "data": {
     "invoice_number": "INV-2024-001",
     "vendor_name": "Acme Corp",
     "total_amount": 1250.00,
@@ -51,7 +51,7 @@ data:<mime_type>;base64,<base64_encoded_content>
 ```
 
 <Note>
-Either `document` or `json` (or both) will be present depending on what's connected to the End node. If only an Extract node is connected, you'll receive `json` with the extracted data. If a document is also passed through, you'll receive both.
+Either `document` or `data` (or both) will be present depending on what's connected to the End node. If only an Extract node is connected, you'll receive `data` with the extracted data. If a document is also passed through, you'll receive both.
 </Note>
 
 ### Parsing the Payload
@@ -84,7 +84,7 @@ class MIMEData(BaseModel):
 
 class WebhookPayload(BaseModel):
     document: MIMEData | None = None
-    json: dict[str, Any] | None = Field(default=None)
+    data: dict[str, Any] | None = Field(default=None)
 ```
 
 ```typescript Node.js
@@ -95,7 +95,7 @@ interface MIMEData {
 
 interface WebhookPayload {
     document: MIMEData | null;
-    json: Record<string, any> | null;
+    data: Record<string, any> | null;
 }
 
 // Helper to extract MIME type from data URL
@@ -151,12 +151,12 @@ class Invoice(BaseModel):
 async def webhook_handler(request: Request):
     payload = await request.json()
     
-    # Extract the JSON data
-    json_data = payload.get("json")
+    # Extract the structured data
+    data = payload.get("data")
     document = payload.get("document")
     
-    if json_data:
-        invoice = Invoice.model_validate(json_data)
+    if data:
+        invoice = Invoice.model_validate(data)
         print(f"📬 Received invoice: {invoice.invoice_number} - ${invoice.total_amount}")
     
     if document:
@@ -187,10 +187,10 @@ const app = express();
 app.use(express.json({ limit: '50mb' })); // Increase limit for base64 files
 
 app.post('/webhook', async (req, res) => {
-    const { document, json } = req.body;
+    const { document, data } = req.body;
     
-    if (json) {
-        console.log(`📬 Received invoice: ${json.invoice_number} - $${json.total_amount}`);
+    if (data) {
+        console.log(`📬 Received invoice: ${data.invoice_number} - $${data.total_amount}`);
     }
     
     if (document) {
@@ -355,7 +355,7 @@ async def webhook_handler(request: Request):
     # Signature verified - process the webhook
     import json
     data = json.loads(payload.decode('utf-8'))
-    json_data = data.get("json")
+    extracted_data = data.get("data")
     document = data.get("document")
     
     # Process your data...
@@ -461,9 +461,9 @@ app.post('/webhook', async (req, res) => {
 
     // Process the webhook...
     const data = JSON.parse(payload.toString('utf-8'));
-    const { document, json } = data;
+    const { document, data: extractedData } = data;
     
-    console.log('Verified webhook:', { document, json });
+    console.log('Verified webhook:', { document, data: extractedData });
     
     return res.status(200).send();
 });
@@ -542,9 +542,9 @@ export async function POST(request) {
 
     // Process the webhook...
     const data = JSON.parse(Buffer.from(payload).toString('utf-8'));
-    const { document, json } = data;
+    const { document, data: extractedData } = data;
     
-    console.log('Verified webhook:', { document, json });
+    console.log('Verified webhook:', { document, data: extractedData });
 
     return new Response(null, { status: 200 });
 }
