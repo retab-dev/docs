@@ -542,17 +542,18 @@ curl -X POST https://api.retab.com/v1/documents/extract \
 - Simulate a conversation: Add a user message with context, then an assistant acknowledgment to prime the model.
 - Ideal for: currency defaults, date format preferences, handling ambiguous abbreviations, or specifying regional conventions.
 - Keep messages concise to avoid diluting the extraction focus.
-- You can also use the `create_messages` API to convert additional documents into chat messages, then pass them as `additional_messages` for multi-document context:
 
 ```python
 # Create messages from a reference document
-ref_messages = client.documents.create_messages(document="reference/template.pdf")
 
 # Use those messages as additional context for extraction
 result = client.documents.extract(
     document="invoices/invoice_001.pdf",
     json_schema=my_schema,
     model="retab-small",
-    additional_messages=ref_messages.messages
+    additional_messages=[{
+        "role": "user",
+        "content": "Note: This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
+    }]
 )
 ```
