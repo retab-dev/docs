@@ -138,31 +138,35 @@ response = client.documents.extract(
 
 ## Pricing
 
-Chunking uses the same credit-based pricing as standard extraction. The cost is calculated per page:
+Chunking now uses a simplified, predictable pricing rule based on document pages (not item count).
 
 ```
-credits/page = n_consensus × model_credits
+total_credits = (2 × document_page_count) × n_consensus × model_credits
 ```
 
-Additionally, Chunking includes a **key discovery pass** that scans the document to identify and locate all items — this adds one extra extraction call at the document level.
+This means:
+- Billing is independent of how many items were found in arrays
+- Billing is the same whether routing is sparse or dense
+- Chunking creates a single consolidated processing log with `source="parallel_pages_x2"`
 
 ### Cost Breakdown
 
 | Component | Cost |
 |-----------|------|
-| Key discovery | 1 × model_credits × page_count |
-| Per-item extraction | n_items × n_consensus × model_credits |
-| Constants extraction | 1 × model_credits × page_count |
+| Billed pages | `2 × document_page_count` |
+| Credits per billed page | `n_consensus × model_credits` |
+| Total | `(2 × document_page_count) × n_consensus × model_credits` |
 
 ### Example
 
-For a 10-page invoice with 25 line items using `retab-small` (1.0 credit) and `n_consensus=1`:
+For a 10-page invoice using `retab-small` (1.0 credit) and `n_consensus=1`:
 
-- Key discovery: 1 × 1.0 × 10 = **10 credits**
-- Item extraction: 25 × 1 × 1.0 = **25 credits**
-- Constants: 1 × 1.0 × 10 = **10 credits**
-- **Total: 45 credits**
+- Billed pages: `2 × 10 = 20`
+- Credits per billed page: `1 × 1.0 = 1.0`
+- **Total: 20 × 1.0 = 20 credits**
 
-While Chunking may cost more than standard extraction for the same document, the improved accuracy and speed often provide better value — especially when re-extractions due to errors are factored in.
+If `n_consensus=3`, the same document costs:
+
+- `20 × (3 × 1.0) = 60 credits`
 
 For detailed pricing information, see the [Pricing documentation](/core-concepts/Pricing).
