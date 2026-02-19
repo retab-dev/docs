@@ -205,6 +205,13 @@ curl -X POST https://api.retab.com/v1/jobs/{job_id}/cancel \
 
 View all your jobs with optional filtering:
 
+By default, `GET /v1/jobs` returns a lightweight list for fast polling:
+
+- `request` is omitted (`null`)
+- `response` is omitted (`null`)
+
+Use `GET /v1/jobs?include_request=true&include_response=true` if you need full payloads in list results. For most workflows, list for discovery and call retrieve on specific job IDs for full details.
+
 <CodeGroup>
 ```python Python
 # List all jobs
@@ -234,6 +241,16 @@ const queuedJobs = await client.jobs.list({ status: "queued" });
 if (jobsResponse.has_more) {
     const nextPage = await client.jobs.list({ after: jobsResponse.last_id });
 }
+```
+
+```bash cURL
+# Lightweight list (default)
+curl https://api.retab.com/v1/jobs?limit=20 \
+  -H "Api-Key: $RETAB_API_KEY"
+
+# Include full request/response payloads
+curl "https://api.retab.com/v1/jobs?limit=20&include_request=true&include_response=true" \
+  -H "Api-Key: $RETAB_API_KEY"
 ```
 </CodeGroup>
 
@@ -647,6 +664,8 @@ When a job completes successfully, the result is available in the `response` fie
 }
 ```
 
+Note: in list responses (`GET /v1/jobs`) the `request` and `response` fields are `null` by default unless `include_request/include_response` query parameters are enabled.
+
 ## Error Handling
 
 When a job fails, the `error` field contains details about what went wrong:
@@ -662,6 +681,8 @@ When a job fails, the `error` field contains details about what went wrong:
   }
 }
 ```
+
+Jobs can also include non-fatal `warnings` (for example, if request/response document restoration from storage fails during retrieve/list). In that case, affected document objects may include `gcs_error` placeholders such as `download_failed` or `reconstruct_failed`.
 
 Handle errors in your code:
 
