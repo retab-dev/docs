@@ -71,10 +71,6 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
   The temperature for sampling. Defaults to 0.0.
 </ParamField>
 
-<ParamField body="reasoning_effort" type="ChatCompletionReasoningEffort" default="minimal">
-  The effort level for the model to reason about the input data. Defaults to "minimal".
-</ParamField>
-
 <ParamField body="chunking_keys" type="dict[str, str] | None" default="None">
   If set, keys to be used for the extraction of long lists of data using Parallel OCR. Defaults to None.
 </ParamField>
@@ -520,6 +516,91 @@ curl -X POST https://api.retab.com/v1/documents/extract \
 }'
 ```
 </CodeGroup>
+
+## Metadata Filters
+
+Use `metadata` at extraction time to tag each document with stable identifiers, then filter those extractions later using the same keys.
+
+This is especially important in multi-tenant systems: always include stable tenant-scoping metadata keys to avoid cross-tenant contamination.
+
+### 1. Tag the extraction request with metadata
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+result = client.documents.extract(
+    document="freight/booking_confirmation.jpg",
+    model="retab-small",
+    json_schema=my_schema,
+    metadata={
+        "organization_id": "org_123",
+        "source": "sinari_jobs",
+        "project_id": "project_abc",
+    },
+)
+```
+
+```javascript JavaScript
+import { Retab } from "@retab/node";
+
+const client = new Retab();
+
+const result = await client.documents.extract({
+  document: "freight/booking_confirmation.jpg",
+  model: "retab-small",
+  json_schema: mySchema,
+  metadata: {
+    organization_id: "org_123",
+    source: "sinari_jobs",
+    project_id: "project_abc",
+  },
+});
+```
+</CodeGroup>
+
+### 2. Filter extractions by metadata
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+tenant_extractions = client.extractions.list(
+    limit=50,
+    metadata={
+        "organization_id": "org_123",
+        "source": "sinari_jobs",
+    },
+)
+```
+
+```javascript JavaScript
+import { Retab } from "@retab/node";
+
+const client = new Retab();
+
+const tenantExtractions = await client.extractions.list({
+  limit: 50,
+  metadata: {
+    organization_id: "org_123",
+    source: "sinari_jobs",
+  },
+});
+```
+
+```curl cURL
+curl -G 'https://api.retab.com/v1/extractions' \
+  -H 'Authorization: Bearer $RETAB_API_KEY' \
+  --data-urlencode 'limit=50' \
+  --data-urlencode 'metadata={"organization_id":"org_123","source":"sinari_jobs"}'
+```
+</CodeGroup>
+
+When multiple metadata keys are provided, all keys are applied together as exact-match filters.
 
 ## Best Practices
 
