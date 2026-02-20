@@ -64,7 +64,7 @@ completion = client.completions.parse(
         {"role": "system", "content": "You are an expert at structured data extraction. You will be given unstructured text from a research paper and should convert it into the given structure."},
         {"role": "user", "content": "..."}
     ],
-    model="gpt-4.1",
+    model="gpt-5",
     temperature=0
 )
 ```
@@ -84,7 +84,7 @@ const ResearchPaperExtraction = z.object({
 });
 
 const completion = await openai.chat.completions.parse({
-  model: "gpt-4o",
+  model: "gpt-5.2",
   messages: [
     { role: "system", content: "You are an expert at structured data extraction. You will be given unstructured text from a research paper and should convert it into the given structure." },
     { role: "user", content: "..." },
