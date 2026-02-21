@@ -11,7 +11,7 @@ from retab import Retab
 client = Retab()
 
 # Retrieve a job by ID
-job = client.jobs.retrieve("job_V1StGXR8_Z5jdHi6B-myT")
+job = client.jobs.retrieve_full("job_V1StGXR8_Z5jdHi6B-myT")
 
 print(f"Status: {job.status}")
 
@@ -27,7 +27,7 @@ import { Retab } from '@retab/node';
 const client = new Retab();
 
 // Retrieve a job by ID
-const job = await client.jobs.retrieve("job_V1StGXR8_Z5jdHi6B-myT");
+const job = await client.jobs.retrieveFull("job_V1StGXR8_Z5jdHi6B-myT");
 
 console.log(`Status: ${job.status}`);
 
@@ -40,7 +40,7 @@ if (job.status === "completed") {
 
 ```bash curl
 curl -X GET \
-  'https://api.retab.com/v1/jobs/job_V1StGXR8_Z5jdHi6B-myT' \
+  'https://api.retab.com/v1/jobs/job_V1StGXR8_Z5jdHi6B-myT?include_request=true&include_response=true' \
   -H "Api-Key: $RETAB_API_KEY"
 ```
 
@@ -162,15 +162,22 @@ curl -X GET \
 
 ## Query Parameters
 
-<ParamField query="include_request" type="boolean" default="true">
+<ParamField query="include_request" type="boolean" default="false">
   Whether to include and restore the original request payload.
 </ParamField>
 
-<ParamField query="include_response" type="boolean" default="true">
+<ParamField query="include_response" type="boolean" default="false">
   Whether to include and restore response payloads/documents.
 </ParamField>
 
-For lightweight polling, use `include_request=false&include_response=false`.
+The default retrieve response is lightweight (`request` and `response` are omitted).
+
+## SDK Convenience Methods
+
+- Python: `client.jobs.retrieve(job_id)` defaults to lightweight polling.
+- Python: `client.jobs.retrieve_full(job_id)` fetches full request/response payloads.
+- JavaScript: `client.jobs.retrieve(jobId)` defaults to lightweight polling.
+- JavaScript: `client.jobs.retrieveFull(jobId)` fetches full request/response payloads.
 
 ## Response Fields
 
@@ -267,8 +274,16 @@ while job.status not in terminal_statuses:
     time.sleep(2)  # Wait 2 seconds between polls
     job = client.jobs.retrieve(job_id)
 
+# Fetch full payload only once the job is terminal
+if job.status == "completed":
+    job = client.jobs.retrieve_full(job_id)
+
 # Or use the helper method
-job = client.jobs.wait_for_completion(job_id, poll_interval=2.0, timeout=300)
+job = client.jobs.wait_for_completion(
+    job_id,
+    poll_interval_seconds=2.0,
+    timeout_seconds=300,
+)
 ```
 
 ```javascript JavaScript
@@ -279,7 +294,17 @@ while (!terminalStatuses.includes(job.status)) {
     job = await client.jobs.retrieve(jobId);
 }
 
+// Fetch full payload only once the job is terminal
+if (job.status === "completed") {
+    job = await client.jobs.retrieveFull(jobId);
+}
+
 // Or use the helper method
-const job = await client.jobs.waitForCompletion(jobId, 2.0, 300);
+job = await client.jobs.waitForCompletion(jobId, {
+    poll_interval_ms: 2000,
+    timeout_ms: 300_000,
+});
 ```
 </CodeGroup>
+
+By default, `wait_for_completion`/`waitForCompletion` polls with lightweight retrieves and returns a final job with `include_response=true` and `include_request=false`. Override these with options when needed.
