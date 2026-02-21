@@ -137,33 +137,35 @@ curl https://api.retab.com/v1/jobs/{job_id} \
 ```
 </CodeGroup>
 
+SDK note: `jobs.retrieve(...)` is lightweight by default in both Python and JavaScript clients. Use `retrieve_full`/`retrieveFull` when you need `request` or `response` payloads.
+
 Or use the SDK helper method:
 
 <CodeGroup>
 ```python Python
 completed_job = client.jobs.wait_for_completion(
     job.id,
-    poll_interval=2.0,  # seconds between polls
-    timeout=300         # max seconds to wait
+    poll_interval_seconds=2.0,  # seconds between polls
+    timeout_seconds=300         # max seconds to wait
 )
 ```
 
 ```javascript JavaScript
-const completedJob = await client.jobs.waitForCompletion(
-    job.id,
-    2.0,   // pollInterval in seconds
-    300    // timeout in seconds
-);
+const completedJob = await client.jobs.waitForCompletion(job.id, {
+    poll_interval_ms: 2000,
+    timeout_ms: 300_000,
+});
 ```
 </CodeGroup>
 
 ### 4. Retrieve Results
 
-Once the job completes, access the results from the `response` field:
+If you used lightweight polling with `jobs.retrieve(...)`, fetch full payloads before reading `response`:
 
 <CodeGroup>
 ```python Python
 if job.status == "completed":
+    job = client.jobs.retrieve_full(job.id)
     result = job.response.body
     print(result)
 elif job.status == "failed":
@@ -172,6 +174,7 @@ elif job.status == "failed":
 
 ```javascript JavaScript
 if (job.status === "completed") {
+    job = await client.jobs.retrieveFull(job.id);
     const result = job.response.body;
     console.log(result);
 } else if (job.status === "failed") {
@@ -210,7 +213,7 @@ By default, `GET /v1/jobs` returns a lightweight list for fast polling:
 - `request` is omitted (`null`)
 - `response` is omitted (`null`)
 
-Use `GET /v1/jobs?include_request=true&include_response=true` if you need full payloads in list results. For most workflows, list for discovery and call retrieve on specific job IDs for full details.
+Use `GET /v1/jobs?include_request=true&include_response=true` if you need full payloads in list results. For most workflows, list for discovery and call `retrieve_full`/`retrieveFull` on specific job IDs for full details.
 
 <CodeGroup>
 ```python Python
@@ -308,6 +311,7 @@ while job.status not in ("completed", "failed", "cancelled", "expired"):
 
 # Get extracted data
 if job.status == "completed":
+    job = client.jobs.retrieve_full(job.id)
     extracted = job.response.body["choices"][0]["message"]["parsed"]
     print(f"Invoice: {extracted['invoice_number']}")
     print(f"Total: ${extracted['total_amount']}")
@@ -361,6 +365,7 @@ while (!terminalStatuses.includes(job.status)) {
 
 // Get extracted data
 if (job.status === "completed") {
+    job = await client.jobs.retrieveFull(job.id);
     const extracted = job.response.body.choices[0].message.parsed;
     console.log(`Invoice: ${extracted.invoice_number}`);
     console.log(`Total: $${extracted.total_amount}`);
@@ -407,6 +412,7 @@ while job.status not in ("completed", "failed", "cancelled", "expired"):
 
 # Get parsed content
 if job.status == "completed":
+    job = client.jobs.retrieve_full(job.id)
     result = job.response.body
     print(f"Parsed text:\n{result['text']}")
     print(f"Total pages: {len(result['pages'])}")
@@ -446,6 +452,7 @@ while (!terminalStatuses.includes(job.status)) {
 
 // Get parsed content
 if (job.status === "completed") {
+    job = await client.jobs.retrieveFull(job.id);
     const result = job.response.body;
     console.log(`Parsed text:\n${result.text}`);
     console.log(`Total pages: ${result.pages.length}`);
@@ -504,6 +511,7 @@ while job.status not in ("completed", "failed", "cancelled", "expired"):
 
 # Get classification result
 if job.status == "completed":
+    job = client.jobs.retrieve_full(job.id)
     result = job.response.body["result"]
     print(f"Classification: {result['classification']}")
     print(f"Reasoning: {result['reasoning']}")
@@ -555,6 +563,7 @@ while (!terminalStatuses.includes(job.status)) {
 
 // Get classification result
 if (job.status === "completed") {
+    job = await client.jobs.retrieveFull(job.id);
     const result = job.response.body.result;
     console.log(`Classification: ${result.classification}`);
     console.log(`Reasoning: ${result.reasoning}`);
@@ -664,7 +673,7 @@ When a job completes successfully, the result is available in the `response` fie
 }
 ```
 
-Note: in list responses (`GET /v1/jobs`) the `request` and `response` fields are `null` by default unless `include_request/include_response` query parameters are enabled.
+Note: in list responses (`GET /v1/jobs`) and retrieve responses (`GET /v1/jobs/{job_id}`), the `request` and `response` fields are `null` by default unless `include_request/include_response` query parameters are enabled.
 
 ## Error Handling
 
@@ -723,8 +732,8 @@ if (job.status === "failed") {
 try:
     job = client.jobs.wait_for_completion(
         job.id,
-        poll_interval=2.0,
-        timeout=300
+        poll_interval_seconds=2.0,
+        timeout_seconds=300
     )
 except TimeoutError:
     print("Job did not complete within timeout")
@@ -762,7 +771,7 @@ MAX_RETRIES = 3
 
 for attempt in range(MAX_RETRIES):
     job = client.jobs.create(endpoint=endpoint, request=request)
-    job = client.jobs.wait_for_completion(job.id, timeout=300)
+    job = client.jobs.wait_for_completion(job.id, timeout_seconds=300)
 
     if job.status == "completed":
         break
