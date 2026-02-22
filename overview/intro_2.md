@@ -65,7 +65,6 @@ completion = client.completions.parse(
         {"role": "user", "content": "..."}
     ],
     model="gpt-5",
-    temperature=0
 )
 ```
 
