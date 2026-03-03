@@ -93,36 +93,6 @@ run = client.workflows.runs.create(
 )
 ```
 
----
-
-### Text Input (Start)
-
-<Card title="Text Input" icon="type" color="#06b6d4">
-Entry point for plain text data. Pass text strings when running the workflow.
-</Card>
-
-**Outputs:** Text
-
-**Configuration:** None
-
-**Usage:**
-- Use Text Input nodes to pass instructions or context into workflows
-- Connect to Agent Edit nodes to provide fill instructions
-- Combine with other nodes that accept text inputs
-- Useful for dynamic prompts or user-provided instructions
-
-**SDK Example:**
-```python
-run = client.workflows.runs.create(
-    workflow_id="wf_abc123",
-    text_inputs={
-        "text-node-id": "Process this document with high priority"
-    }
-)
-```
-
----
-
 ### Webhook (End)
 
 <Card title="Webhook" icon="webhook" color="#ef4444">
@@ -185,7 +155,7 @@ Notes don't affect workflow execution—they're purely for documentation. Use th
 Extract structured data from documents using a JSON schema.
 </Card>
 
-**Inputs:** File, plus optional additional inputs (Text, JSON, File)
+**Inputs:** File, plus optional additional inputs (JSON, File)
 **Outputs:** JSON (data), JSON (likelihoods when using consensus)
 
 **Configuration:**
@@ -196,7 +166,7 @@ Extract structured data from documents using a JSON schema.
 | **Model** | AI model for extraction | `retab-small` |
 | **Image Resolution** | DPI for document rendering | `150` |
 | **Consensus** | Number of parallel extractions (1-10) | `1` |
-| **Additional Inputs** | Named inputs for context (text, JSON, or files) | `[]` |
+| **Additional Inputs** | Named inputs for context (JSON or files) | `[]` |
 
 **Schema Example:**
 ```json
@@ -224,7 +194,6 @@ When `n_consensus > 1`, the node runs multiple extractions in parallel and retur
 **Additional Inputs:**
 
 You can add named input handles to provide extra context during extraction:
-- **Text inputs**: Instructions or context as plain text
 - **JSON inputs**: Structured data from other nodes
 - **File inputs**: Additional reference documents
 
@@ -233,11 +202,11 @@ You can add named input handles to provide extra context during extraction:
 ### Parse
 
 <Card title="Parse" icon="scan-text" color="#06b6d4">
-Convert documents to structured text/markdown using AI vision.
+Parse documents into machine-usable JSON with a `Pages` array.
 </Card>
 
 **Inputs:** File  
-**Outputs:** File (parsed document), Text (extracted content)
+**Outputs:** JSON (`{"Pages":[...]}`)
 
 **Configuration:**
 
@@ -247,9 +216,9 @@ Convert documents to structured text/markdown using AI vision.
 | **Image Resolution** | DPI for document rendering | `150` |
 
 **Use Cases:**
-- Pre-process documents before extraction
-- Convert scanned PDFs to searchable text
-- Extract text from images
+- Generate page-by-page JSON content for indexing/RAG pipelines
+- Add parsed page context to Extract as additional JSON input
+- Convert scanned PDFs to machine-usable page content
 
 ---
 
@@ -348,12 +317,12 @@ The AI analyzes the document and routes it to exactly one category. Downstream n
 ### Edit
 
 <Card title="Edit" icon="pen-square" color="#10b981">
-Fill PDF forms using AI with natural language instructions or pre-defined templates.
+Fill PDF forms using AI with JSON instructions or pre-defined templates.
 </Card>
 
 **Inputs:**
 - File (document to edit) — *only when "Use Template" is off*
-- Text (instructions/data)
+- JSON (instructions/data)
 
 **Outputs:** File (filled document)
 
@@ -368,24 +337,26 @@ Fill PDF forms using AI with natural language instructions or pre-defined templa
 **Two Operating Modes:**
 
 1. **Document Mode** (default): Edit an input document using AI
-   - Connect a document from another node (e.g., Start, Split, Parse)
-   - Provide natural language instructions via the Text input
+   - Connect a document from another node (e.g., Start, Split)
+   - Provide instructions via the JSON input
    - The AI fills the form fields based on your instructions
 
 2. **Template Mode**: Fill a pre-defined template
    - Enable "Use Template" toggle
    - Select a template from your template library
    - No document input required — the template provides the form structure
-   - Provide data/instructions via the Text input
+   - Provide data/instructions via the JSON input
 
-**Example Instructions:**
-```
-Fill this form with the company information from the input data.
-Use the vendor_name for "Name" and vendor_address for the address fields.
-Leave signature fields blank.
+**Example Instructions (JSON):**
+```json
+{
+  "name": "Acme Corp",
+  "address": "12 Main St",
+  "notes": "Leave signature fields blank"
+}
 ```
 
-The Text input provides instructions or data to use for filling. Connect this to an Extract node's JSON output (which converts to text instructions).
+The JSON input provides instructions/data for filling. Connect this to an Extract node's JSON output for end-to-end automation.
 
 ---
 
@@ -722,8 +693,8 @@ This is useful for:
 Repeat contained nodes until a termination condition is met.
 </Card>
 
-**Inputs:** JSON, File, or Text
-**Outputs:** JSON, File, or Text (final iteration result)
+**Inputs:** JSON or File
+**Outputs:** JSON or File (final iteration result)
 
 **Configuration:**
 
@@ -817,7 +788,6 @@ Process items in parallel and combine results.
 | `first` | Return only the first iteration's output | JSON |
 | `last` | Return only the last iteration's output | JSON |
 | `merge_pdf` | Merge all output PDFs into one | File |
-| `concat_text` | Combine all text outputs into an array | JSON |
 | `none` | No output (side effects only) | None |
 
 **Example: Iterate Array**
@@ -886,15 +856,13 @@ Understanding input/output types helps you connect nodes correctly:
 |------|-------|-------------|
 | **File** | Blue (📎) | Documents, PDFs, images |
 | **JSON** | Purple (`{ }`) | Structured data objects |
-| **Text** | Cyan (📄) | Plain text strings |
 
 ### Compatibility Matrix
 
-| Source → Target | File | JSON | Text |
-|-----------------|------|------|------|
-| **File** | ✅ | ❌ | ❌ |
-| **JSON** | ❌ | ✅ | ✅ |
-| **Text** | ❌ | ❌ | ✅ |
+| Source → Target | File | JSON |
+|-----------------|------|------|
+| **File** | ✅ | ❌ |
+| **JSON** | ❌ | ✅ |
 
 ---
 

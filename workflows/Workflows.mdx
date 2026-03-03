@@ -11,7 +11,6 @@ A workflow typically consists of:
 - **Input nodes** - Entry points for data:
   - **Document** - Upload files (PDF, images, Word, Excel)
   - **JSON Input** - Pass structured JSON data
-  - **Text Input** - Pass plain text strings
 - **Processing nodes** - Operations like Extract, Parse, Split, Classifier
 - **Logic nodes** - Conditional flows like Human-in-the-Loop, Functions, If/Else routing, and API Call
 - **Output nodes** (Webhook) - Destinations for your processed data
@@ -34,13 +33,11 @@ Nodes communicate through **handles** that define the type of data they accept o
 |-------------|------|-------------|
 | **File** | 📎 | Document files (PDF, images, Word, Excel) |
 | **JSON** | `{ }` | Structured data extracted from documents |
-| **Text** | 📄 | Plain text or instruction strings |
 
 ### Connection Rules
 
 - **File → File**: Pass documents between processing nodes
 - **JSON → JSON**: Pass extracted data between logic nodes
-- **JSON → Text**: JSON data can connect to text inputs (e.g., for template instructions)
 - Each input handle accepts only **one connection**
 - Connections validate automatically to prevent incompatible links
 
@@ -74,10 +71,9 @@ Toggle between modes using the switch at the top of the canvas.
 
 ### Using the SDK
 
-Workflows support three types of inputs:
+Workflows support two types of inputs:
 - **documents**: For Document (start) nodes - file inputs
 - **json_inputs**: For JSON Input (start_json) nodes - structured data
-- **text_inputs**: For Text Input (start_text) nodes - plain text
 
 <CodeGroup>
 ```python Python
@@ -102,20 +98,6 @@ run = client.workflows.runs.create(
     },
     json_inputs={
         "json-node-id": {"customer_id": "cust_123", "priority": "high"}
-    }
-)
-
-# Run a workflow with all input types
-run = client.workflows.runs.create(
-    workflow_id="wf_abc123",
-    documents={
-        "document-node-id": Path("path/to/invoice.pdf")
-    },
-    json_inputs={
-        "json-node-id": {"customer_id": "cust_123"}
-    },
-    text_inputs={
-        "text-node-id": "Process with high priority"
     }
 )
 
@@ -153,20 +135,6 @@ const run2 = await client.workflows.runs.create({
     },
     jsonInputs: {
         'json-node-id': { customerId: 'cust_123', priority: 'high' }
-    }
-});
-
-// Run a workflow with all input types
-const run3 = await client.workflows.runs.create({
-    workflowId: 'wf_abc123',
-    documents: {
-        'document-node-id': 'path/to/invoice.pdf'
-    },
-    jsonInputs: {
-        'json-node-id': { customerId: 'cust_123' }
-    },
-    textInputs: {
-        'text-node-id': 'Process with high priority'
     }
 });
 
