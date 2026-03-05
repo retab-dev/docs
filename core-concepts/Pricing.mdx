@@ -3,7 +3,7 @@ title: Pricing
 ---
 
 Retab uses a credit-based pricing system. Different models have different credit costs based on their capabilities.
-Split and Classify use a fixed rate of **0.25 credits per page**.
+Split uses the selected model rate (for example, **1 credit per page** on `retab-small`) and scales with `n_consensus`. Classify uses a quarter of the selected model rate.
 
 ## Credit Price
 
@@ -25,10 +25,22 @@ Split and Classify use a fixed rate of **0.25 credits per page**.
 total_credits = model_credits × page_count
 ```
 
-### Split, Classify
+### Split
 
 ```
-total_credits = 0.25 × page_count
+total_credits = model_credits × page_count
+```
+
+For **Split** with consensus:
+
+```
+total_credits = model_credits × page_count × n_consensus
+```
+
+### Classify
+
+```
+total_credits = (model_credits / 4) × page_count
 ```
 
 For **Extract** with consensus:
@@ -57,17 +69,19 @@ total_credits = 3 × model_credits × page_count
 
 ### Split
 
-| Document | Pages | Calculation | Total |
-|----------|-------|-------------|-------|
-| Multi-invoice PDF | 10 | 0.25 × 10 | **2.5 credits** |
-| Document batch | 50 | 0.25 × 50 | **12.5 credits** |
+| Document | Model | Pages | Consensus | Calculation | Total |
+|----------|-------|-------|-----------|-------------|-------|
+| Multi-invoice PDF | retab-small | 10 | 1 | 1.0 × 10 × 1 | **10.0 credits** |
+| Document batch | retab-small | 50 | 1 | 1.0 × 50 × 1 | **50.0 credits** |
+| Contract pack | retab-large | 8 | 2 | 3.0 × 8 × 2 | **48.0 credits** |
 
 ### Classify
 
-| Document | Pages | Calculation | Total |
-|----------|-------|-------------|-------|
-| Incoming invoice | 2 | 0.25 × 2 | **0.5 credits** |
-| Contract packet | 12 | 0.25 × 12 | **3.0 credits** |
+| Document | Model | Pages | Calculation | Total |
+|----------|-------|-------|-------------|-------|
+| Incoming invoice | retab-small | 2 | (1.0 / 4) × 2 | **0.5 credits** |
+| Contract packet | retab-small | 12 | (1.0 / 4) × 12 | **3.0 credits** |
+| Due diligence file | retab-large | 4 | (3.0 / 4) × 4 | **3.0 credits** |
 
 ### Parse
 
@@ -99,4 +113,4 @@ total_credits = 3 × model_credits × page_count
 | **Small** (1.0 credits) | retab-small | Balanced performance and cost |
 | **Large** (3.0 credits) | retab-large | Complex tasks, maximum accuracy |
 
-Model tiers apply to model-based endpoints (Extract, Parse, Schema Generation, Edit).
+Model tiers apply to model-based endpoints (Extract, Parse, Schema Generation, Edit, Split, and Classify).
