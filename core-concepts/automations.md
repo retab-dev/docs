@@ -72,7 +72,7 @@ client = Retab()
 
 processor = client.processors.create(
     name="Invoice Processor",
-    model="gpt-5",
+    model="gpt-5.4",
     json_schema="Invoice_schema.json"
 )
 
