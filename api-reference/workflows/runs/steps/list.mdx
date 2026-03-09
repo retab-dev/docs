@@ -1,0 +1,121 @@
+---
+title: 'Get Steps (Batch)'
+openapi: 'POST /v1/workflows/runs/{run_id}/steps/batch'
+---
+
+Get outputs for multiple steps in a single request. This is useful when you need to retrieve data from several nodes at once without making individual requests for each.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+batch = client.workflows.runs.steps.get_batch(
+    "run_abc123xyz",
+    ["extract-node-1", "extract-node-2", "split-node-1"]
+)
+
+for node_id, step in batch.outputs.items():
+    print(f"{node_id}: {step.status}")
+```
+
+```javascript javascript
+import Retab from 'retab';
+
+const client = new Retab();
+
+const batch = await client.workflows.runs.steps.getBatch(
+    "run_abc123xyz",
+    ["extract-node-1", "extract-node-2", "split-node-1"]
+);
+
+for (const [nodeId, step] of Object.entries(batch.outputs)) {
+    console.log(`${nodeId}: ${step.status}`);
+}
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/runs/run_abc123xyz/steps/batch' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "node_ids": ["extract-node-1", "extract-node-2", "split-node-1"]
+  }'
+```
+
+</RequestExample>
+
+
+<ResponseExample>
+
+```json 200
+{
+  "outputs": {
+    "extract-node-1": {
+      "node_id": "extract-node-1",
+      "node_type": "extract",
+      "node_label": "Extract Invoice",
+      "status": "completed",
+      "handle_outputs": {
+        "output-0": {
+          "invoice_number": "INV-2024-001",
+          "total_amount": 1234.56
+        }
+      },
+      "handle_inputs": {
+        "input-0": {
+          "file_id": "file_123",
+          "filename": "invoice.pdf"
+        }
+      }
+    },
+    "extract-node-2": {
+      "node_id": "extract-node-2",
+      "node_type": "extract",
+      "node_label": "Extract Receipt",
+      "status": "completed",
+      "handle_outputs": {
+        "output-0": {
+          "merchant": "Coffee Shop",
+          "amount": 5.50
+        }
+      },
+      "handle_inputs": {
+        "input-0": {
+          "file_id": "file_456",
+          "filename": "receipt.jpg"
+        }
+      }
+    },
+    "split-node-1": {
+      "node_id": "split-node-1",
+      "node_type": "split",
+      "node_label": "Split Documents",
+      "status": "completed",
+      "handle_outputs": {
+        "output-0": [
+          {"file_id": "file_789", "filename": "page_1.pdf"},
+          {"file_id": "file_790", "filename": "page_2.pdf"}
+        ]
+      },
+      "handle_inputs": {
+        "input-0": {
+          "file_id": "file_123",
+          "filename": "multi_page.pdf"
+        }
+      }
+    }
+  }
+}
+```
+
+```json 404
+{
+  "detail": "Workflow run not found"
+}
+```
+
+</ResponseExample>

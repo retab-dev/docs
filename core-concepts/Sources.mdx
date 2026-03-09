@@ -69,6 +69,10 @@ The response contains both the original extraction and a sourced version with id
 {
   "object": "extraction.sources",
   "extraction_id": "extr_01G34H8J2K",
+  "file": {
+    "filename": "invoice_001.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQg..."
+  },
   "document_type": "pdf",
   "extraction": {
     "invoice_number": "INV-1032",
@@ -88,8 +92,6 @@ The response contains both the original extraction and a sourced version with id
       "value": "INV-1032",
       "source": {
         "content": "INV-1032",
-        "surrounding": "invoice_number: INV-1032",
-        "surrounding_span": { "start": 16, "end": 24 },
         "anchor": {
           "kind": "pdf_bbox",
           "page": 1,
@@ -154,14 +156,6 @@ Every scalar value (string, number, boolean, null) in the extraction becomes:
   The verbatim text found in the document corresponding to this value.
 </ResponseField>
 
-<ResponseField name="surrounding" type="string">
-  A short context snippet containing the cited value with its field label.
-</ResponseField>
-
-<ResponseField name="surrounding_span" type="object">
-  Offsets into `surrounding` that identify the cited substring. `start` is 0-based inclusive, `end` is 0-based exclusive.
-</ResponseField>
-
 <ResponseField name="anchor" type="SourceAnchor">
   Format-specific source locator. The `kind` field determines the anchor type. See [Anchor Types](#anchor-types) below.
 </ResponseField>
@@ -205,7 +199,6 @@ Same as PDF bbox but for image documents.
 }
 ```
 
-<ResponseField name="page" type="int">Optional page for multi-image containers.</ResponseField>
 <ResponseField name="left" type="float">Normalized left coordinate [0, 1].</ResponseField>
 <ResponseField name="top" type="float">Normalized top coordinate [0, 1].</ResponseField>
 <ResponseField name="width" type="float">Normalized width [0, 1].</ResponseField>
@@ -258,13 +251,15 @@ Text span within a DOCX paragraph.
   "kind": "docx_text_span",
   "paragraph": 14,
   "char_start": 15,
-  "char_end": 24
+  "char_end": 24,
+  "xml": "<w:p>...</w:p>"
 }
 ```
 
 <ResponseField name="paragraph" type="int">0-based paragraph index within the document.</ResponseField>
 <ResponseField name="char_start" type="int">Start character offset within the paragraph text.</ResponseField>
 <ResponseField name="char_end" type="int">End character offset within the paragraph text.</ResponseField>
+<ResponseField name="xml" type="string">Raw OOXML of the matched paragraph element. Can be used to locate the exact element in the `.docx` archive.</ResponseField>
 
 ### DOCX Table Cell (`docx_table_cell`)
 
@@ -277,7 +272,8 @@ Cell reference within a DOCX table.
   "row": 4,
   "column": 1,
   "char_start": 0,
-  "char_end": 12
+  "char_end": 12,
+  "xml": "<w:tc>...</w:tc>"
 }
 ```
 
@@ -286,6 +282,7 @@ Cell reference within a DOCX table.
 <ResponseField name="column" type="int">0-based column index.</ResponseField>
 <ResponseField name="char_start" type="int">Start character offset within the cell text.</ResponseField>
 <ResponseField name="char_end" type="int">End character offset within the cell text.</ResponseField>
+<ResponseField name="xml" type="string">Raw OOXML of the matched table cell element. Can be used to locate the exact element in the `.docx` archive.</ResponseField>
 
 ### Plain Text (`text_span`)
 
