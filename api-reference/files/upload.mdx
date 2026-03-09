@@ -1,0 +1,84 @@
+---
+title: 'Upload File'
+openapi: 'POST /v1/files/upload'
+---
+
+Upload a document to Retab. The file is stored persistently and can be referenced by `file_id` in extractions, workflows, and other operations.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+from pathlib import Path
+
+client = Retab()
+
+# Upload from a file path
+response = client.files.upload(Path("invoice.pdf"))
+print(f"File ID: {response.file_id}")
+print(f"Filename: {response.filename}")
+```
+
+```javascript javascript
+import Retab from 'retab';
+
+const client = new Retab();
+
+const response = await client.files.upload({
+    filename: "invoice.pdf",
+    url: "data:application/pdf;base64,JVBERi0xLjQK..."
+});
+
+console.log(`File ID: ${response.fileId}`);
+console.log(`Filename: ${response.filename}`);
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/files/upload' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "mimeData": {
+      "filename": "invoice.pdf",
+      "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    }
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "file_id": "file_a1b2c3d4e5f6",
+  "filename": "invoice.pdf"
+}
+```
+
+</ResponseExample>
+
+## Request Parameters
+
+<ParamField body="mimeData" type="object" required>
+  The document to upload.
+  <Expandable title="properties">
+    <ParamField body="filename" type="string" required>
+      The filename including extension (e.g., `"invoice.pdf"`).
+    </ParamField>
+    <ParamField body="url" type="string" required>
+      A data URL with base64-encoded content (e.g., `"data:application/pdf;base64,..."`) or a public URL pointing to the file.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="file_id" type="string">
+  Unique identifier for the uploaded file, prefixed with `file_`.
+</ResponseField>
+
+<ResponseField name="filename" type="string">
+  The filename of the uploaded document.
+</ResponseField>
