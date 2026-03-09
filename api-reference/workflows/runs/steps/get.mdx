@@ -1,0 +1,73 @@
+---
+title: 'Get Step'
+openapi: 'GET /v1/workflows/runs/{run_id}/steps/{node_id}'
+---
+
+Get the full output data for a specific step in a workflow run. Use this to retrieve detailed inputs and outputs for a particular node after or during execution.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+step = client.workflows.runs.steps.get("run_abc123xyz", "extract-node-1")
+
+if step.handle_outputs:
+    for handle_id, payload in step.handle_outputs.items():
+        print(f"{handle_id}: {payload}")
+```
+
+```javascript javascript
+import Retab from 'retab';
+
+const client = new Retab();
+
+const step = await client.workflows.runs.steps.get("run_abc123xyz", "extract-node-1");
+
+console.log(`Step status: ${step.status}`);
+console.log("Output:", step.output);
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/runs/run_abc123xyz/steps/extract-node-1' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+
+<ResponseExample>
+
+```json 200
+{
+  "node_id": "extract-node-1",
+  "node_type": "extract",
+  "node_label": "Extract Data",
+  "status": "completed",
+  "handle_outputs": {
+    "output-0": {
+      "invoice_number": "INV-2024-001",
+      "total_amount": 1234.56,
+      "vendor_name": "Acme Corp"
+    }
+  },
+  "handle_inputs": {
+    "input-0": {
+      "file_id": "file_123",
+      "filename": "invoice.pdf",
+      "mime_type": "application/pdf"
+    }
+  }
+}
+```
+
+```json 404
+{
+  "detail": "Step not found"
+}
+```
+
+</ResponseExample>
