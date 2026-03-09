@@ -97,8 +97,7 @@ The response contains both the original extraction and a sourced version with id
           "top": 0.12,
           "width": 0.25,
           "height": 0.03
-        },
-        "confidence": 0.95
+        }
       }
     },
     "customer": {
@@ -136,8 +135,7 @@ Every scalar value (string, number, boolean, null) in the extraction becomes:
   "value": "INV-1032",
   "source": {
     "content": "INV-1032",
-    "anchor": { "kind": "pdf_bbox", "..." : "..." },
-    "confidence": 0.95
+    "anchor": { "kind": "pdf_bbox", "..." : "..." }
   }
 }
 ```
@@ -166,10 +164,6 @@ Every scalar value (string, number, boolean, null) in the extraction becomes:
 
 <ResponseField name="anchor" type="SourceAnchor">
   Format-specific source locator. The `kind` field determines the anchor type. See [Anchor Types](#anchor-types) below.
-</ResponseField>
-
-<ResponseField name="confidence" type="float">
-  Confidence score in [0, 1] for the source mapping (not the extraction value itself).
 </ResponseField>
 
 ## Anchor Types
@@ -217,9 +211,26 @@ Same as PDF bbox but for image documents.
 <ResponseField name="width" type="float">Normalized width [0, 1].</ResponseField>
 <ResponseField name="height" type="float">Normalized height [0, 1].</ResponseField>
 
+### CSV (`csv_cell`)
+
+Cell reference for CSV files.
+
+```json
+{
+  "kind": "csv_cell",
+  "row": 12,
+  "column": "A",
+  "coordinate": "A12"
+}
+```
+
+<ResponseField name="row" type="int">1-based row number.</ResponseField>
+<ResponseField name="column" type="string">Column letter (A, B, AA).</ResponseField>
+<ResponseField name="coordinate" type="string">Cell coordinate (e.g. A12, B5).</ResponseField>
+
 ### Spreadsheet (`spreadsheet_cell`)
 
-Cell reference for CSV and XLSX files.
+Cell reference for XLSX files. Extends CSV cell with sheet information.
 
 ```json
 {
@@ -235,7 +246,7 @@ Cell reference for CSV and XLSX files.
 <ResponseField name="sheet_index" type="int">0-based sheet index.</ResponseField>
 <ResponseField name="sheet_name" type="string">Sheet name.</ResponseField>
 <ResponseField name="row" type="int">1-based row number.</ResponseField>
-<ResponseField name="column" type="string">Excel-style column letter (A, B, AA).</ResponseField>
+<ResponseField name="column" type="string">Column letter (A, B, AA).</ResponseField>
 <ResponseField name="coordinate" type="string">Cell coordinate (e.g. A12, B5).</ResponseField>
 
 ### DOCX Paragraph (`docx_text_span`)
@@ -300,7 +311,7 @@ Line and character offsets for plain text files (.txt, .md, .json, etc.).
 | `pdf` | `pdf_bbox` | Bounding box on a PDF page |
 | `image` | `image_bbox` | Bounding box on an image |
 | `xlsx` | `spreadsheet_cell` | Cell reference in a spreadsheet |
-| `csv` | `text_span` | Line/character offsets in the CSV text |
+| `csv` | `csv_cell` | Cell reference in a CSV file |
 | `docx` | `docx_text_span` / `docx_table_cell` | Paragraph or table cell reference |
 | `txt` | `text_span` | Line/character offsets in the text file |
 
