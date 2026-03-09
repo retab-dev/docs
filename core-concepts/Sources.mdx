@@ -1,0 +1,370 @@
+---
+
+## title: Sources
+
+---
+
+Sources provide per-field provenance for extraction results. Given an extraction, `sources` returns the same data structure with every leaf value wrapped as `{value, source}`, where `source` points back to the exact location in the original document where the data was found.
+
+This is useful for:
+- **Citation display** in review UIs
+- **Provenance audit** and debugging
+- **Source highlighting** in document viewers
+- **Downstream review workflows** that need to verify extracted data
+
+## Getting Sources
+
+Retrieve sourced provenance for an extraction by its ID. The response preserves the exact shape of the extraction output, but each leaf value is replaced with a `{value, source}` object.
+
+<CodeGroup>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+result = client.extractions.sources("extr_01G34H8J2K")
+
+# Access the original extraction
+print(result["extraction"])
+
+# Access the sourced version (same shape, leaves wrapped with source info)
+print(result["sources"])
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const result = await client.extractions.sources("extr_01G34H8J2K");
+
+// Access the original extraction
+console.log(result.extraction);
+
+// Access the sourced version (same shape, leaves wrapped with source info)
+console.log(result.sources);
+```
+
+```bash cURL
+curl -X 'GET' \
+  'https://api.retab.com/v1/extractions/extr_01G34H8J2K/sources' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</CodeGroup>
+
+### Parameters
+
+<ResponseField name="extraction_id" type="string" required>
+  The ID of the extraction to source.
+</ResponseField>
+
+## Response Shape
+
+The response contains both the original extraction and a sourced version with identical structure:
+
+```json
+{
+  "object": "extraction.sources",
+  "extraction_id": "extr_01G34H8J2K",
+  "document_type": "pdf",
+  "extraction": {
+    "invoice_number": "INV-1032",
+    "customer": {
+      "name": "Acme Inc.",
+      "email": "billing@acme.com"
+    },
+    "line_items": [
+      {
+        "description": "Widget A",
+        "quantity": 2
+      }
+    ]
+  },
+  "sources": {
+    "invoice_number": {
+      "value": "INV-1032",
+      "source": {
+        "content": "INV-1032",
+        "surrounding": "invoice_number: INV-1032",
+        "surrounding_span": { "start": 16, "end": 24 },
+        "anchor": {
+          "kind": "pdf_bbox",
+          "page": 1,
+          "left": 0.60,
+          "top": 0.12,
+          "width": 0.25,
+          "height": 0.03
+        },
+        "confidence": 0.95
+      }
+    },
+    "customer": {
+      "name": {
+        "value": "Acme Inc.",
+        "source": { "..." : "..." }
+      },
+      "email": {
+        "value": "billing@acme.com",
+        "source": { "..." : "..." }
+      }
+    },
+    "line_items": [
+      {
+        "description": {
+          "value": "Widget A",
+          "source": { "..." : "..." }
+        },
+        "quantity": {
+          "value": 2,
+          "source": { "..." : "..." }
+        }
+      }
+    ]
+  }
+}
+```
+
+### Sourced Leaf
+
+Every scalar value (string, number, boolean, null) in the extraction becomes:
+
+```json
+{
+  "value": "INV-1032",
+  "source": {
+    "content": "INV-1032",
+    "anchor": { "kind": "pdf_bbox", "..." : "..." },
+    "confidence": 0.95
+  }
+}
+```
+
+<ResponseField name="value" type="any">
+  The extracted value (what the model produced). May differ from `content` if the model normalized or reformatted the data.
+</ResponseField>
+
+<ResponseField name="source" type="Source | null">
+  Source citation pointing to the document location. `null` if provenance could not be determined.
+</ResponseField>
+
+### Source Object
+
+<ResponseField name="content" type="string">
+  The verbatim text found in the document corresponding to this value.
+</ResponseField>
+
+<ResponseField name="surrounding" type="string">
+  A short context snippet containing the cited value with its field label.
+</ResponseField>
+
+<ResponseField name="surrounding_span" type="object">
+  Offsets into `surrounding` that identify the cited substring. `start` is 0-based inclusive, `end` is 0-based exclusive.
+</ResponseField>
+
+<ResponseField name="anchor" type="SourceAnchor">
+  Format-specific source locator. The `kind` field determines the anchor type. See [Anchor Types](#anchor-types) below.
+</ResponseField>
+
+<ResponseField name="confidence" type="float">
+  Confidence score in [0, 1] for the source mapping (not the extraction value itself).
+</ResponseField>
+
+## Anchor Types
+
+The `anchor` field uses a discriminated union on `kind`. The anchor type depends on the document format.
+
+### PDF (`pdf_bbox`)
+
+Normalized bounding box on a PDF page. Coordinates are in [0, 1] with origin at top-left.
+
+```json
+{
+  "kind": "pdf_bbox",
+  "page": 1,
+  "left": 0.60,
+  "top": 0.75,
+  "width": 0.35,
+  "height": 0.12
+}
+```
+
+<ResponseField name="page" type="int">1-based page number.</ResponseField>
+<ResponseField name="left" type="float">Normalized left coordinate [0, 1].</ResponseField>
+<ResponseField name="top" type="float">Normalized top coordinate [0, 1].</ResponseField>
+<ResponseField name="width" type="float">Normalized width [0, 1].</ResponseField>
+<ResponseField name="height" type="float">Normalized height [0, 1].</ResponseField>
+
+### Image (`image_bbox`)
+
+Same as PDF bbox but for image documents.
+
+```json
+{
+  "kind": "image_bbox",
+  "left": 0.15,
+  "top": 0.30,
+  "width": 0.40,
+  "height": 0.08
+}
+```
+
+<ResponseField name="page" type="int">Optional page for multi-image containers.</ResponseField>
+<ResponseField name="left" type="float">Normalized left coordinate [0, 1].</ResponseField>
+<ResponseField name="top" type="float">Normalized top coordinate [0, 1].</ResponseField>
+<ResponseField name="width" type="float">Normalized width [0, 1].</ResponseField>
+<ResponseField name="height" type="float">Normalized height [0, 1].</ResponseField>
+
+### Spreadsheet (`spreadsheet_cell`)
+
+Cell reference for CSV and XLSX files.
+
+```json
+{
+  "kind": "spreadsheet_cell",
+  "sheet_index": 0,
+  "sheet_name": "Customers",
+  "row": 12,
+  "column": "A",
+  "coordinate": "A12"
+}
+```
+
+<ResponseField name="sheet_index" type="int">0-based sheet index.</ResponseField>
+<ResponseField name="sheet_name" type="string">Sheet name.</ResponseField>
+<ResponseField name="row" type="int">1-based row number.</ResponseField>
+<ResponseField name="column" type="string">Excel-style column letter (A, B, AA).</ResponseField>
+<ResponseField name="coordinate" type="string">Cell coordinate (e.g. A12, B5).</ResponseField>
+
+### DOCX Paragraph (`docx_text_span`)
+
+Text span within a DOCX paragraph.
+
+```json
+{
+  "kind": "docx_text_span",
+  "paragraph": 14,
+  "char_start": 15,
+  "char_end": 24
+}
+```
+
+<ResponseField name="paragraph" type="int">0-based paragraph index within the document.</ResponseField>
+<ResponseField name="char_start" type="int">Start character offset within the paragraph text.</ResponseField>
+<ResponseField name="char_end" type="int">End character offset within the paragraph text.</ResponseField>
+
+### DOCX Table Cell (`docx_table_cell`)
+
+Cell reference within a DOCX table.
+
+```json
+{
+  "kind": "docx_table_cell",
+  "table": 2,
+  "row": 4,
+  "column": 1
+}
+```
+
+<ResponseField name="table" type="int">0-based table index.</ResponseField>
+<ResponseField name="row" type="int">0-based row index.</ResponseField>
+<ResponseField name="column" type="int">0-based column index.</ResponseField>
+<ResponseField name="char_start" type="int">Start character offset within the cell text.</ResponseField>
+<ResponseField name="char_end" type="int">End character offset within the cell text.</ResponseField>
+
+### Plain Text (`text_span`)
+
+Line and character offsets for plain text files (.txt, .md, .json, etc.).
+
+```json
+{
+  "kind": "text_span",
+  "line_start": 42,
+  "line_end": 42,
+  "char_start": 15,
+  "char_end": 24
+}
+```
+
+<ResponseField name="line_start" type="int">1-based start line number.</ResponseField>
+<ResponseField name="line_end" type="int">1-based end line number.</ResponseField>
+<ResponseField name="char_start" type="int">Start character offset within the line.</ResponseField>
+<ResponseField name="char_end" type="int">End character offset within the line.</ResponseField>
+
+## Supported Document Types
+
+| Document Type | Anchor Kind | Description |
+|---------------|-------------|-------------|
+| `pdf` | `pdf_bbox` | Bounding box on a PDF page |
+| `image` | `image_bbox` | Bounding box on an image |
+| `xlsx` | `spreadsheet_cell` | Cell reference in a spreadsheet |
+| `csv` | `text_span` | Line/character offsets in the CSV text |
+| `docx` | `docx_text_span` / `docx_table_cell` | Paragraph or table cell reference |
+| `txt` | `text_span` | Line/character offsets in the text file |
+
+## Edge Cases
+
+- **Null values**: Wrapped as `{"value": null, "source": null}`.
+- **Empty arrays/objects**: Preserved unchanged (not wrapped).
+- **Unsourced fields**: If a field cannot be located in the document, `source` is `null`. The endpoint still returns 200 with partial results.
+
+## Use Case: Building a Review UI
+
+Use sources to highlight extracted values in the original document for human review.
+
+<CodeGroup>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# 1. Extract data from a document
+result = client.documents.extract(
+    document="invoices/invoice_001.pdf",
+    model="retab-small",
+    json_schema=my_schema,
+)
+
+# 2. Get sources for the extraction
+sources = client.extractions.sources(result.extraction_id)
+
+# 3. Use anchors to highlight values in a PDF viewer
+for field, leaf in sources["sources"].items():
+    if isinstance(leaf, dict) and "source" in leaf and leaf["source"]:
+        anchor = leaf["source"]["anchor"]
+        if anchor["kind"] == "pdf_bbox":
+            print(f"{field}: page {anchor['page']}, "
+                  f"bbox ({anchor['left']:.2f}, {anchor['top']:.2f}, "
+                  f"{anchor['width']:.2f}, {anchor['height']:.2f})")
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// 1. Extract data from a document
+const result = await client.documents.extract({
+    document: "invoices/invoice_001.pdf",
+    model: "retab-small",
+    json_schema: mySchema,
+});
+
+// 2. Get sources for the extraction
+const sources = await client.extractions.sources(result.extraction_id);
+
+// 3. Use anchors to highlight values in a PDF viewer
+for (const [field, leaf] of Object.entries(sources.sources)) {
+    if (leaf?.source?.anchor?.kind === "pdf_bbox") {
+        const { page, left, top, width, height } = leaf.source.anchor;
+        console.log(`${field}: page ${page}, bbox (${left}, ${top}, ${width}, ${height})`);
+    }
+}
+```
+
+</CodeGroup>
+
+Please check the [API Reference](/api-reference/extractions/get-sources) for complete endpoint documentation.
