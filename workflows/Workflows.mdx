@@ -13,7 +13,7 @@ A workflow typically consists of:
   - **JSON Input** - Pass structured JSON data
 - **Processing nodes** - Operations like Extract, Parse, Split, Classifier
 - **Logic nodes** - Conditional flows like Human-in-the-Loop, Functions, If/Else routing, and API Call
-- **Output nodes** (Webhook) - Destinations for your processed data
+- **Output nodes** - Optional destinations such as webhooks for your processed data
 
 
 ## Creating a Workflow
@@ -60,6 +60,8 @@ Workflows have two operational modes:
 Toggle between modes using the switch at the top of the canvas.
 
 ## Running a Workflow
+
+A workflow is fundamentally an asynchronous job. When you start it, Retab creates a workflow run, executes each step on the server, and stores the results on that run. A webhook is optional: you can configure one if you want Retab to notify your system automatically, but you can also simply run the workflow and poll the run until it finishes.
 
 ### From the Dashboard
 
@@ -155,6 +157,32 @@ for (const step of currentRun.steps) {
 ```
 </CodeGroup>
 
+### Polling vs Webhooks
+
+There are two standard ways to use a workflow in production:
+
+#### 1. Run the workflow and poll the run
+
+This is the core workflow model.
+
+1. Start the workflow from the SDK or API
+2. Receive a `run.id` and an initial status immediately
+3. Poll the workflow run until it reaches a terminal status such as `completed` or `error`
+4. Read the step results from the completed run
+
+This is enough for many scripts, internal tools, and synchronous backend flows. You do **not** need a webhook for this pattern. The workflow run remains the source of truth, and the step results stay attached to the run after completion.
+
+#### 2. Add a webhook for automatic notification
+
+If you want Retab to call your backend automatically when a workflow finishes, add a webhook on an **End** node.
+
+This is useful when:
+- your system is event-driven
+- another service should start work automatically after the workflow completes
+- you do not want an active polling loop
+
+The webhook does not replace the workflow run. It complements it. Even when a webhook is configured, the run still has its own id, status, and step results that you can retrieve from the API.
+
 ## Workflow Execution Order
 
 Workflows execute in **topological order** based on the node connections:
@@ -162,7 +190,7 @@ Workflows execute in **topological order** based on the node connections:
 1. Start from Document input nodes
 2. Process each node once all its inputs are ready
 3. Continue until all nodes are processed or an error occurs
-4. Send results to any Webhook output nodes
+4. Optionally send results to any configured Webhook output nodes
 
 If a node fails, execution stops and the error is displayed on that node.
 
