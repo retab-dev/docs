@@ -29067,6 +29067,81 @@
         }
       }
     },
+    "/v1/workflows/runs/{run_id}/steps": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "List Workflow Run Steps",
+        "description": "List all step documents for a workflow run.",
+        "operationId": "list_workflow_run_steps_v1_workflows_runs__run_id__steps_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowRunStepListItem"
+                  },
+                  "title": "Response List Workflow Run Steps V1 Workflows Runs  Run Id  Steps Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workflows/runs/{run_id}/steps/batch": {
       "post": {
         "tags": [
@@ -44340,6 +44415,73 @@
         }
       }
     },
+    "/custom/xpo/send_to_rec": {
+      "post": {
+        "summary": "Send Xpo To Rec",
+        "operationId": "send_xpo_to_rec_custom_xpo_send_to_rec_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XpoSendEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/XpoSendToRecResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/offload/documents/parse": {
       "post": {
         "tags": [
@@ -48681,13 +48823,13 @@
           "description": {
             "type": "string",
             "title": "Description",
-            "description": "The description of the category"
+            "description": "The description of the category",
+            "default": ""
           }
         },
         "type": "object",
         "required": [
-          "name",
-          "description"
+          "name"
         ],
         "title": "Category"
       },
@@ -57754,6 +57896,49 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HandlePayload": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "file",
+              "json"
+            ],
+            "title": "Type",
+            "description": "Type of payload"
+          },
+          "document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BaseMIMEData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For file handles: document reference"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data",
+            "description": "For JSON handles: structured data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "HandlePayload",
+        "description": "Payload for a single output handle.\n\nEach output handle on a node produces a typed payload that can be:\n- file: A document reference (PDF, image, etc.)\n- json: Structured JSON data (extracted data, etc.)\n\nHandle IDs follow the convention: \"output-{type}-{index_or_name}\"\nExamples: \"output-file-0\", \"output-json-0\", \"output-file-SubdocumentName\""
+      },
       "HeaderDetection": {
         "properties": {
           "header_row_start": {
@@ -58229,7 +58414,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-03-09T21:42:25.360167Z",
+              "updated_at": "2026-03-12T10:39:03.961099Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -69616,7 +69801,8 @@
           "description": {
             "type": "string",
             "title": "Description",
-            "description": "The description of the subdocument"
+            "description": "The description of the subdocument",
+            "default": ""
           },
           "partition_key": {
             "anyOf": [
@@ -69633,8 +69819,7 @@
         },
         "type": "object",
         "required": [
-          "name",
-          "description"
+          "name"
         ],
         "title": "Subdocument"
       },
@@ -74285,6 +74470,434 @@
         "title": "WorkflowRunExecutionOrderResponse",
         "description": "Response containing canonical execution ordering for a run's steps."
       },
+      "WorkflowRunStepListItem": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "Parent workflow run ID",
+            "default": ""
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organization that owns this",
+            "default": ""
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id",
+            "description": "Logical ID of the node (e.g., 'extract-123')"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id",
+            "description": "Full step ID with iteration context (e.g., 'mr1_iter_0_extract-123'). Assigned once at creation, never recomputed.",
+            "default": ""
+          },
+          "node_type": {
+            "type": "string",
+            "enum": [
+              "start",
+              "start_json",
+              "end",
+              "note",
+              "parse",
+              "edit",
+              "extract",
+              "split",
+              "classifier",
+              "conditional",
+              "hil",
+              "api_call",
+              "functions",
+              "reshape",
+              "while_loop",
+              "for_each",
+              "merge_pdf",
+              "merge_dicts",
+              "while_loop_sentinel_start",
+              "while_loop_sentinel_end",
+              "for_each_sentinel_start",
+              "for_each_sentinel_end"
+            ],
+            "title": "Node Type",
+            "description": "Type of the node"
+          },
+          "node_label": {
+            "type": "string",
+            "title": "Node Label",
+            "description": "Label of the node"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "queued",
+              "running",
+              "completed",
+              "skipped",
+              "error",
+              "waiting_for_human",
+              "cancelled"
+            ],
+            "title": "Status",
+            "description": "Current status"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At",
+            "description": "When the step started"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At",
+            "description": "When the step completed"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "Duration in milliseconds"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Error message if failed"
+          },
+          "error_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "input_collection",
+                  "registry_lookup",
+                  "document_fetch",
+                  "execution",
+                  "output_storage",
+                  "routing",
+                  "history_payload"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Stage",
+            "description": "Which execution stage failed"
+          },
+          "error_category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "transient",
+                  "permanent",
+                  "quota"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Category",
+            "description": "Category of error for retry decisions"
+          },
+          "error_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Details",
+            "description": "Detailed error context including stack trace"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "LLM model used (e.g., 'gpt-5.4')"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/main_server__services__v1__workflows__models__CostBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cost breakdown for this step"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokenUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Token usage for this step"
+          },
+          "trace_spans": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TraceSpan"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Spans",
+            "description": "Nested execution trace spans"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output",
+            "description": "Output data from the step"
+          },
+          "handle_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/HandlePayload"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Outputs",
+            "description": "Output payloads keyed by handle ID (e.g., 'output-file-0', 'output-json-0', 'output-file-SubdocumentName')"
+          },
+          "handle_inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/HandlePayload"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Inputs",
+            "description": "Input payloads keyed by handle ID (e.g., 'input-file-0', 'input-json-0'). Captures what this node received."
+          },
+          "input_document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BaseMIMEData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Reference to input document"
+          },
+          "output_document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BaseMIMEData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Reference to output document"
+          },
+          "split_documents": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/BaseMIMEData"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split Documents",
+            "description": "For split nodes: subdocument -> document reference"
+          },
+          "requires_human_review": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requires Human Review",
+            "description": "Whether this step requires human review"
+          },
+          "human_reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Reviewed At",
+            "description": "When human review was completed"
+          },
+          "human_review_approved": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Review Approved",
+            "description": "Whether human approved or rejected"
+          },
+          "retry_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Count",
+            "description": "Number of retry attempts for this step execution"
+          },
+          "loop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loop Id",
+            "description": "ID of the containing while_loop (if inside a loop)"
+          },
+          "iteration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iteration",
+            "description": "Iteration number (0-based) if inside a loop"
+          },
+          "iteration_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IterationContextData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured container hierarchy for this step"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "When the step document was created"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "When the step document was last updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_id",
+          "node_type",
+          "node_label",
+          "status"
+        ],
+        "title": "WorkflowRunStepListItem",
+        "description": "Workflow run step document with storage timestamps preserved for listing."
+      },
       "WorkflowSnapshot": {
         "properties": {
           "id": {
@@ -75033,6 +75646,67 @@
         "type": "object",
         "title": "XpoProviderData"
       },
+      "XpoRecOrderResult": {
+        "properties": {
+          "provider_order_id": {
+            "type": "string",
+            "title": "Provider Order Id"
+          },
+          "shipment_reference": {
+            "type": "string",
+            "title": "Shipment Reference"
+          },
+          "status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Code"
+          },
+          "is_success": {
+            "type": "boolean",
+            "title": "Is Success"
+          },
+          "response_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Json"
+          },
+          "response_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider_order_id",
+          "shipment_reference",
+          "is_success"
+        ],
+        "title": "XpoRecOrderResult"
+      },
       "XpoSendEmailRequest": {
         "properties": {
           "document": {
@@ -75087,6 +75761,47 @@
           "attachment_count"
         ],
         "title": "XpoSendEmailResponse"
+      },
+      "XpoSendToRecResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "target_url": {
+            "type": "string",
+            "title": "Target Url"
+          },
+          "sent_count": {
+            "type": "integer",
+            "title": "Sent Count"
+          },
+          "success_count": {
+            "type": "integer",
+            "title": "Success Count"
+          },
+          "failure_count": {
+            "type": "integer",
+            "title": "Failure Count"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/XpoRecOrderResult"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "target_url",
+          "sent_count",
+          "success_count",
+          "failure_count",
+          "results"
+        ],
+        "title": "XpoSendToRecResponse"
       },
       "XpoSharedPickup": {
         "properties": {
