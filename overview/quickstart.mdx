@@ -4,7 +4,7 @@
 
 ---
 
-While Retab is built around evals, the most basic workflow is extracting structured data from a document. The easiest way to access our APIs is through our python SDK.
+While Retab is built around evals, the most basic workflow is extracting structured data from a document. The easiest way to access the API is through the Python or Node SDK.
 
 
 <Tip>
@@ -40,9 +40,9 @@ While Retab is built around evals, the most basic workflow is extracting structu
       ```
 
       ```javascript JavaScript
-      import { Retab } from 'retab';
+      import { Retab } from '@retab/node';
 
-      const client = new Retab();
+      const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
       const schema_response = await client.schemas.generate({
           documents: ["Invoice.pdf"],
@@ -78,24 +78,28 @@ While Retab is built around evals, the most basic workflow is extracting structu
       extraction_response = client.documents.extract(
           json_schema = schema_response.json_schema,
           document = "Invoice.pdf",
-          model="retab-small",
+          model="retab-micro",
       )
 
-      print(extraction_response)
+      print(extraction_response.data)
+      print(extraction_response.likelihoods)
+      print(extraction_response.extraction_id)
       ```
 
       ```javascript JavaScript
-      import { Retab } from 'retab';
+      import { Retab } from '@retab/node';
 
-      const client = new Retab();
+      const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
       const extraction_response = await client.documents.extract({
           json_schema: schema_response.json_schema,
           document: "Invoice.pdf",
-          model: "retab-small",
+          model: "retab-micro",
       });
 
-      console.log(extraction_response);
+      console.log(extraction_response.choices[0].message.parsed);
+      console.log(extraction_response.likelihoods);
+      console.log(extraction_response.extraction_id);
       ```
 
       ```curl cURL
@@ -108,9 +112,8 @@ While Retab is built around evals, the most basic workflow is extracting structu
     "filename": "file.pdf",
     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
   },
-  "image_resolution_dpi": 96,
-  "browser_canvas": "A4",
-  "model": "string",
+  "image_resolution_dpi": 192,
+  "model": "retab-micro",
   "json_schema": {
         "title": "Invoice Document Schema",
         "description": "A schema for storing structured data extracted from invoice documents, including parties, line items, and payment details.",
@@ -243,9 +246,9 @@ While Retab is built around evals, the most basic workflow is extracting structu
         }
     },
     "n_consensus": 1,
-    "stream": false,
-    "need_validation": false,
-    "test_exception": "before_handle_extraction"
+    "metadata": {
+      "source": "quickstart"
+    }
   }
 
       

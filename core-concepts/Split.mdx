@@ -6,7 +6,9 @@
 
 ### Introduction
 
-The `split` method in Retab's document processing pipeline analyzes multi-page documents and classifies pages into user-defined subdocuments, returning the page ranges for each section. This endpoint is ideal for processing batches of mixed documents, separating combined PDFs, and organizing document collections by content type.
+The `split` method in Retab's document processing pipeline analyzes a multi-page document and classifies pages into user-defined subdocuments. Each result returns a `name` and the exact `pages` assigned to that subdocument. The same subdocument can appear multiple times in one response, which makes `split` useful for mixed batches, merged PDFs, and long documents with repeated sections.
+
+The SDK also exposes `documents.generate_split_config(...)`, which can propose the initial subdocument list for you before you run `documents.split(...)`.
 
 Common use cases include:
 
@@ -22,7 +24,7 @@ flowchart LR
     subgraph Retab["Retab Split API"]
         B[1. Page Analysis]
         B --> C[2. Subdocument Classification]
-        C --> D[3. Page Range Detection]
+        C --> D[3. Page Assignment Detection]
     end
     
     D --> E
@@ -38,9 +40,12 @@ Key features of the Split API:
 
 - **Multi-Subdocument Support**: Define multiple subdocuments with descriptions for accurate classification
 - **Discontinuous Sections**: Same subdocument can appear multiple times for non-contiguous content
-- **Page-Level Precision**: Get exact start and end pages for each section
+- **Page-Level Precision**: Get the exact list of 1-indexed pages for each section
 - **Vision-Based Analysis**: Uses LLM vision capabilities for accurate page classification
 - **Flexible Subdocuments**: Define custom subdocuments tailored to your document types
+- **Partition Detection**: Add a `partition_key` to break one subdocument into repeated items
+- **Consensus Scoring**: Increase `n_consensus` to get confidence signals like `likelihood` and `votes`
+- **Config Generation**: Use `generate_split_config` to bootstrap subdocuments from a sample file
 
 ## Split API
 
@@ -66,16 +71,22 @@ Key features of the Split API:
   Additional context to guide the split operation. Useful for providing iteration context from a loop, business rules, or other relevant information that helps the model make more accurate splitting decisions.
 </ParamField>
 
+<ParamField body="n_consensus" type="integer">
+  Number of split passes to run before building the final answer. Leave it at `1` for the fastest deterministic pass, or raise it when boundary quality is business-critical and you want `likelihood` and `votes` in the response.
+</ParamField>
+
 </Expandable>
 </ParamField>
 
 <ResponseField name="Returns" type="SplitResponse Object">
-A SplitResponse object containing the classified sections with their page ranges.
+A SplitResponse object containing the classified sections with their assigned pages.
   <Expandable title="properties">
     <ResponseField name="splits" type="array[SplitResult]">
       List of document sections, each containing:
       - `name`: The subdocument name this section belongs to
       - `pages`: List of 1-indexed page numbers belonging to this section
+      - `likelihood`: Confidence score for this split when `n_consensus > 1`
+      - `votes`: Per-run page assignments used to build the consensus result
       - `partitions`: List of sub-page partitions (populated when `partition_key` is specified on the subdocument)
         - `key`: The partition key value (e.g., property ID, invoice number)
         - `pages`: List of page numbers in this partition
@@ -84,6 +95,55 @@ A SplitResponse object containing the classified sections with their page ranges
     </ResponseField>
   </Expandable>
 </ResponseField>
+
+## Recommended Workflow
+
+If you do not already know the right subdocument list, start with `generate_split_config` and then pass the generated `subdocuments` into `split`.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+config = client.documents.generate_split_config(
+    document="property_portfolio.pdf",
+    model="retab-small",
+)
+
+result = client.documents.split(
+    document="property_portfolio.pdf",
+    model="retab-small",
+    subdocuments=[subdoc.model_dump() for subdoc in config.subdocuments],
+    n_consensus=3,
+)
+
+for split in result.splits:
+    print(split.name, split.pages, split.likelihood)
+```
+
+```typescript TypeScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const config = await client.documents.generate_split_config({
+  document: "property_portfolio.pdf",
+  model: "retab-small",
+});
+
+const result = await client.documents.split({
+  document: "property_portfolio.pdf",
+  model: "retab-small",
+  subdocuments: config.subdocuments,
+  n_consensus: 3,
+});
+
+for (const split of result.splits) {
+  console.log(split.name, split.pages, split.likelihood);
+}
+```
+</CodeGroup>
 
 ## Use Case: Processing Mixed Document Batches
 
@@ -426,4 +486,3 @@ The Y-coordinates are normalized values between 0 and 1, where:
 - **Batch Similar Documents**: Group similar document types for consistent results
 - **Limit Subdocuments**: Use 3-7 well-defined subdocuments for best accuracy
 - **Test Descriptions**: Iterate on subdocument descriptions to improve classification
-

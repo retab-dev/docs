@@ -1,7 +1,5 @@
 ---
-
-## title: Editing
-
+title: Editing
 ---
 
 ### Introduction
@@ -51,11 +49,28 @@ Unlike manual form filling or template-based approaches, `edit` provides:
 - **Automatic Field Matching**: LLM intelligently maps your data to form fields
 - **MIMEData Output**: Get the filled document as MIMEData with filename and base64 content
 
+## SDK Surface
+
+The edit SDK exposes the same workflow in both clients:
+
+- `client.edit.agent.fill(...)` for agent-based filling with automatic field detection
+- `client.edit.templates.generate(...)` to infer a reusable PDF form schema
+- `client.edit.templates.fill(...)` to fill a saved template
+- `client.edit.templates.list(...)`, `get(...)`, `create(...)`, `update(...)`, `duplicate(...)`, and `delete(...)` to manage templates
+- `client.documents.edit(...)` if you prefer a single request shape that supports either `document` or `template_id`
+
+<Note>
+Python exposes `color` as a top-level argument on `edit.agent.fill(...)` and `edit.templates.fill(...)`.
+
+In the Node SDK, `edit.agent.fill(...)` uses `config: { color: "#000080" }`, while `edit.templates.fill(...)` accepts `color` directly.
+</Note>
+
 ## Edit API
 
 The Edit API provides two main approaches:
 - **Agent Fill** (`edit.agent.fill`): AI-powered document filling that automatically detects and fills form fields
 - **Template Fill** (`edit.templates.fill`): Optimized filling using pre-defined templates (PDF only)
+- **Template Management** (`edit.templates.*`): Create and reuse saved PDF templates for batch processing
 
 ### Agent Fill
 
@@ -208,7 +223,9 @@ const result = await client.edit.agent.fill({
         I agree to the terms and conditions: checked
     `,
     model: "retab-small",
-    color: "#000080",  // Dark blue text (default)
+    config: {
+        color: "#000080",  // Dark blue text (default)
+    },
 });
 
 // Save the filled PDF
@@ -255,7 +272,9 @@ const editRequest: EditRequest = {
         I agree to the terms and conditions: checked
     `,
     model: "retab-small",
-    color: "#000080",  // Dark blue text (default)
+    config: {
+        color: "#000080",  // Dark blue text (default)
+    },
 };
 
 const result: EditResponse = await client.edit.agent.fill(editRequest);
@@ -298,7 +317,10 @@ response = client.edit.templates.generate(
 print(f"Detected {response.field_count} form fields:")
 for field in response.form_schema.form_fields:
     print(f"  - {field.key}: {field.description} ({field.type})")
-    print(f"    Position: page {field.bbox.page}, ({field.bbox.x}, {field.bbox.y})")
+    print(
+        f"    Position: page {field.bbox.page}, "
+        f"left={field.bbox.left:.3f}, top={field.bbox.top:.3f}"
+    )
 
 # Save the annotated PDF for visual verification
 if response.annotated_pdf:
@@ -436,22 +458,22 @@ for t in templates.data:
     print(f"  - {t.name} ({t.id})")
 
 # Get a specific template
-template = client.edit.templates.get(template_id="tmpl_abc123")
+template = client.edit.templates.get(template_id="edittplt_abc123")
 
 # Update a template
 updated = client.edit.templates.update(
-    template_id="tmpl_abc123",
+    template_id="edittplt_abc123",
     name="Updated Form Name"
 )
 
 # Duplicate a template
 duplicate = client.edit.templates.duplicate(
-    template_id="tmpl_abc123",
+    template_id="edittplt_abc123",
     name="Employee Form - Copy"
 )
 
 # Delete a template
-client.edit.templates.delete(template_id="tmpl_abc123")
+client.edit.templates.delete(template_id="edittplt_abc123")
 ```
 
 ```javascript Javascript
@@ -491,20 +513,20 @@ templates.data.forEach(t => {
 });
 
 // Get a specific template
-const fetchedTemplate = await client.edit.templates.get("tmpl_abc123");
+const fetchedTemplate = await client.edit.templates.get("edittplt_abc123");
 
 // Update a template
-const updated = await client.edit.templates.update("tmpl_abc123", {
+const updated = await client.edit.templates.update("edittplt_abc123", {
     name: "Updated Form Name"
 });
 
 // Duplicate a template
-const duplicate = await client.edit.templates.duplicate("tmpl_abc123", {
+const duplicate = await client.edit.templates.duplicate("edittplt_abc123", {
     name: "Employee Form - Copy"
 });
 
 // Delete a template
-await client.edit.templates.delete("tmpl_abc123");
+await client.edit.templates.delete("edittplt_abc123");
 ```
 </CodeGroup>
 

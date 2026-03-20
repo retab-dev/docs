@@ -12,6 +12,7 @@ client = Retab()
 
 # Split a multi-page document into sections based on subdocuments
 # Use partition_key to identify individual items within a subdocument
+# Use n_consensus when you want consensus-based confidence signals
 result = client.documents.split(
     document="invoice_batch.pdf",
     model="retab-small",
@@ -20,12 +21,15 @@ result = client.documents.split(
         {"name": "receipt", "description": "Receipt documents for payments"},
         {"name": "contract", "description": "Legal contract documents"},
     ],
-    context="Processing Q4 2024 vendor document batch"  # Optional: additional context
+    context="Processing Q4 2024 vendor document batch",  # Optional: additional context
+    n_consensus=3
 )
 
 # Access split results
 for split in result.splits:
     print(f"{split.name}: pages {split.pages}")
+    print(f"likelihood={split.likelihood}")
+    print(f"votes={len(split.votes)}")
     # Access partitions when partition_key is specified
     for partition in split.partitions:
         print(f"  {partition.key}: pages {partition.pages}")
@@ -54,12 +58,15 @@ const result = await client.documents.split({
         { name: "receipt", description: "Receipt documents for payments" },
         { name: "contract", description: "Legal contract documents" },
     ],
-    context: "Processing Q4 2024 vendor document batch"  // Optional: additional context
+    context: "Processing Q4 2024 vendor document batch",  // Optional: additional context
+    n_consensus: 3
 });
 
 // Access split results
 result.splits.forEach(split => {
     console.log(`${split.name}: pages ${split.pages}`);
+    console.log(`likelihood=${split.likelihood}`);
+    console.log(`votes=${split.votes.length}`);
     // Access partitions when partition_key is specified
     split.partitions.forEach(partition => {
         console.log(`  ${partition.key}: pages ${partition.pages}`);
@@ -83,7 +90,8 @@ const splitRequest: SplitRequest = {
         { name: "receipt", description: "Receipt documents for payments" },
         { name: "contract", description: "Legal contract documents" },
     ],
-    context: "Processing Q4 2024 vendor document batch"  // Optional: additional context
+    context: "Processing Q4 2024 vendor document batch",  // Optional: additional context
+    n_consensus: 3
 };
 
 const result: SplitResponse = await client.documents.split(splitRequest);
@@ -91,6 +99,8 @@ const result: SplitResponse = await client.documents.split(splitRequest);
 // Access split results
 result.splits.forEach(split => {
     console.log(`${split.name}: pages ${split.pages}`);
+    console.log(`likelihood=${split.likelihood}`);
+    console.log(`votes=${split.votes.length}`);
     // Access partitions when partition_key is specified
     split.partitions.forEach(partition => {
         console.log(`  ${partition.key}: pages ${partition.pages}`);
@@ -114,7 +124,8 @@ curl -X 'POST' \
     {"name": "receipt", "description": "Receipt documents for payments"},
     {"name": "contract", "description": "Legal contract documents"}
   ],
-  "context": "Processing Q4 2024 vendor document batch"
+  "context": "Processing Q4 2024 vendor document batch",
+  "n_consensus": 3
 }'
 ```
 
@@ -128,6 +139,12 @@ curl -X 'POST' \
     {
       "name": "invoice",
       "pages": [1, 2, 3],
+      "likelihood": 0.98,
+      "votes": [
+        {"pages": [1, 2, 3]},
+        {"pages": [1, 2, 3]},
+        {"pages": [1, 2, 3]}
+      ],
       "partitions": [
         {
           "key": "INV-001",
@@ -146,11 +163,23 @@ curl -X 'POST' \
     {
       "name": "receipt",
       "pages": [4, 5],
+      "likelihood": 0.93,
+      "votes": [
+        {"pages": [4, 5]},
+        {"pages": [4, 5]},
+        {"pages": [4, 5]}
+      ],
       "partitions": []
     },
     {
       "name": "contract",
       "pages": [6, 7, 8],
+      "likelihood": 0.89,
+      "votes": [
+        {"pages": [6, 7, 8]},
+        {"pages": [6, 7, 8]},
+        {"pages": [6, 7, 8]}
+      ],
       "partitions": []
     }
   ]

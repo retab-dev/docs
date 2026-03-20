@@ -5,6 +5,8 @@ openapi: 'GET /v1/workflows/runs/{run_id}'
 
 Get a single workflow run by ID. Use this endpoint to check the status of a running workflow or retrieve the results of a completed workflow.
 
+`run.steps` contains execution status for each node. For typed handle inputs and outputs, use [Get Step](/api-reference/workflows/runs/steps/get).
+
 <RequestExample>
 
 ```python python
@@ -17,7 +19,7 @@ run = client.workflows.runs.get("run_abc123xyz")
 print(f"Status: {run.status}")
 if run.status == "completed":
     print(f"Duration: {run.duration_ms}ms")
-    print(f"Outputs: {run.final_outputs}")
+    print(f"Outputs: {run.output}")
 ```
 
 ```javascript javascript
@@ -72,12 +74,7 @@ curl -X 'GET' \
       "status": "completed",
       "started_at": "2024-01-15T10:30:01Z",
       "completed_at": "2024-01-15T10:30:10Z",
-      "duration_ms": 9000,
-      "output": {
-        "invoice_number": "INV-2024-001",
-        "total_amount": 1234.56,
-        "vendor_name": "Acme Corp"
-      }
+      "duration_ms": 9000
     },
     {
       "node_id": "end-node-1",
@@ -91,15 +88,15 @@ curl -X 'GET' \
   ],
   "input_documents": {
     "start-node-1": {
-      "file_id": "file_123",
+      "id": "file_123",
       "filename": "invoice.pdf",
       "mime_type": "application/pdf"
     }
   },
   "final_outputs": {
     "end-node-1": {
-      "label": "Output",
-      "json_data": {
+      "document": null,
+      "data": {
         "invoice_number": "INV-2024-001",
         "total_amount": 1234.56,
         "vendor_name": "Acme Corp"
@@ -120,4 +117,3 @@ curl -X 'GET' \
 ```
 
 </ResponseExample>
-

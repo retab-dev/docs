@@ -1,49 +1,42 @@
 ---
-
-## title: Parsing
-
+title: Parsing
 ---
 
 ### Introduction
 
-The `parse` method in Retab's document processing pipeline converts any document into cleaned, raw markdown text with page-by-page extraction. This endpoint is ideal for extracting cleaned document content to be used as context for downstream processing, such as RAG pipelines, custom ingestion pipelines, embeddings classification, and content indexing workflows.
+The `parse` method turns a document into normalized text content, returned both page-by-page and as one combined string. It is the right tool when you need readable document text for RAG pipelines, search indexing, prompting, debugging, or any workflow that works on free text rather than schema-constrained extraction.
 
-The typical RAG workflow follows these steps:
+Unlike `extract`, `parse` does not try to fit the document into a JSON schema. Instead, it returns:
 
-1. **Parsing**: Extract clean text from documents using Retab's `parse` method
-2. **Chunking**: Split the text into manageable blocks (sentences, paragraphs, etc..) called "chunks" for embedding
-3. **Indexing**: Store chunks in a vector database or any other search index for retrieval
+- `pages`: one parsed string per page
+- `text`: the full document content as a single string
+- `document`: basic file metadata
+- `usage`: page count and credits consumed
 
-For chunking, **we recommend** [chonkie](https://chonkie.ai/) - a powerful and flexible text chunking library designed specifically for RAG pipelines.
+Table content can be rendered as `html`, `markdown`, `yaml`, or `json`, depending on what your downstream system expects.
 
 ```mermaid
 flowchart LR
     A[Documents] --> B
-    
+
     subgraph Retab["Retab Parse API"]
-    B[1. Parsing into raw text]
-        
+        B[1. Parse into normalized text]
     end
-    
+
     B --> C
-    
-    subgraph Chonker["Chunker (eg. chonkie)"]
-        C[2. Dividing text into chunks]
+
+    subgraph Chunker["Chunking / segmentation"]
+        C[2. Split into chunks]
     end
-    
+
     C --> D
 
-    subgraph Vector Database["Search Index"]
-        D[3. Indexing ]
+    subgraph Index["Vector DB / search index"]
+        D[3. Store and retrieve]
     end
 ```
 
-Unlike other methods that focus on chat formatting or structured extraction, `parse` provides:
-- **Clean Text Output**: Removes formatting artifacts and provides readable text
-- **Page-by-Page Processing**: Access content from individual pages
-- **Flexible Table Formats**: Choose how tables are represented (HTML, Markdown, JSON, YAML)
-- **OCR Integration**: Handles both text-based and image-based documents
-- **Batch Processing Ready**: Efficient for processing multiple documents
+For chunking, [chonkie](https://chonkie.ai/) is a good fit for RAG-style pipelines.
 
 ## Parse API
 
@@ -51,56 +44,48 @@ Unlike other methods that focus on chat formatting or structured extraction, `pa
   <Expandable title="properties">
 
 <ParamField body="document" type="MIMEData" required>
-  The document to parse. Can be a file path, bytes, or PIL.Image.Image object.
+  The document to parse. The HTTP API accepts `MIMEData`. The SDK also accepts convenient local inputs such as file paths, file-like objects, images, buffers, and URLs, then converts them for you.
 </ParamField>
 
-<ParamField body="model" type="LLMModel">
-  The AI model to use for document parsing.
+<ParamField body="model" type="string" default="retab-small">
+  The model used for parsing.
 </ParamField>
 
-<ParamField body="table_parsing_format" type="TableParsingFormat" default="html">
-  Format for parsing tables within the document:
-  - `"html"` (default): Tables converted to HTML format
-  - `"markdown"`: Tables converted to Markdown format
-  - `"yaml"`: Tables converted to YAML format
-  - `"json"`: Tables converted to JSON format
+<ParamField body="table_parsing_format" type='"markdown" | "yaml" | "html" | "json"' default="html">
+  Controls how tables are represented in the parsed text.
 </ParamField>
 
-<ParamField body="image_resolution_dpi" type="integer" default="96">
-  DPI (dots per inch) for image processing. Higher values (150-300) for better OCR quality.
+<ParamField body="image_resolution_dpi" type="integer" default="192">
+  DPI used when rasterizing pages for OCR-backed parsing. Accepted values are `96` to `300`.
 </ParamField>
 
-
-<ParamField body="idempotency_key" type="string">
-  Optional idempotency key for the request to ensure the same operation is not performed multiple times.
-</ParamField>
-</Expandable>
+  </Expandable>
 </ParamField>
 
-<ResponseField name="Returns" type="ParseResult Object">
-A ParseResult object containing the extracted text content and processing information.
+<ResponseField name="Returns" type="ParseResponse">
+  A parsed document payload with text content and usage metadata.
   <Expandable title="properties">
-    <ResponseField name="document" type="BaseMIMEData Object">
-      Processed document metadata containing file information.
+    <ResponseField name="document" type="BaseMIMEData">
+      Processed document metadata with `id`, `filename`, and `mime_type`.
     </ResponseField>
 
-    <ResponseField name="usage" type="RetabUsage Object">
-      Processing usage information including page count and credits consumed.
+    <ResponseField name="usage" type="RetabUsage">
+      Processing usage information including `page_count` and `credits`.
     </ResponseField>
 
     <ResponseField name="pages" type="array[string]">
-      Text content of each page as separate strings in the array.
+      Parsed content for each page.
     </ResponseField>
 
     <ResponseField name="text" type="string">
-      Complete text content of the document as a single concatenated string.
+      Full document content as a single string.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
-## Use Case: RAG (Retrieval-Augmented Generation) Pipeline Preparation
+## Use Case: Preparing Documents For RAG
 
-Prepare documents for RAG applications by extracting and chunking text content.
+This pattern is useful when you want Retab to handle document parsing and your application to handle chunking and indexing.
 
 <CodeGroup>
 ```python Python
@@ -109,166 +94,128 @@ from chonkie import SentenceChunker
 
 client = Retab()
 
-# Parse the document
 result = client.documents.parse(
     document="technical-manual.pdf",
     model="retab-small",
-    table_parsing_format="markdown",  # Better for RAG
-    image_resolution_dpi=150  # Higher quality for technical docs
+    table_parsing_format="markdown",
+    image_resolution_dpi=192,
 )
 
-# Initialize chunker for RAG
 chunker = SentenceChunker(
     tokenizer_or_token_counter="gpt2",
     chunk_size=512,
     chunk_overlap=128,
-    min_sentences_per_chunk=1
+    min_sentences_per_chunk=1,
 )
 
-# Process each page and create chunks
 all_chunks = []
-for page_num, page_text in enumerate(result.pages, 1):
+for page_num, page_text in enumerate(result.pages, start=1):
     chunks = list(chunker(page_text))
-    
     for chunk_idx, chunk in enumerate(chunks):
-        chunk_data = {
-            "page": page_num,
-            "chunk_id": f"page_{page_num}_chunk_{chunk_idx}",
-            "text": str(chunk),
-            "document": result.document.name
-        }
-        all_chunks.append(chunk_data)
+        all_chunks.append(
+            {
+                "page": page_num,
+                "chunk_id": f"page_{page_num}_chunk_{chunk_idx}",
+                "text": str(chunk),
+                "document": result.document.filename,
+            }
+        )
 
 print(f"Created {len(all_chunks)} chunks from {result.usage.page_count} pages")
 ```
 
-```javascript Javascript
+```javascript JavaScript
 import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-// Parse the document
 const result = await client.documents.parse({
-    document: "technical-manual.pdf",
-    model: "retab-small",
-    table_parsing_format: "markdown",  // Better for RAG
-    image_resolution_dpi: 150  // Higher quality for technical docs
+  document: 'technical-manual.pdf',
+  model: 'retab-small',
+  table_parsing_format: 'markdown',
+  image_resolution_dpi: 192,
 });
 
-// Process each page
 const allChunks = [];
 result.pages.forEach((pageText, index) => {
-    const pageNum = index + 1;
-    
-    // Simple sentence-based chunking
-    const sentences = pageText.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    const chunks = [];
-    
-    for (let i = 0; i < sentences.length; i += 3) {
-        const chunk = sentences.slice(i, i + 3).join('. ');
-        chunks.push(chunk);
-    }
-    
-    chunks.forEach((chunk, chunkIdx) => {
-        const chunkData = {
-            page: pageNum,
-            chunk_id: `page_${pageNum}_chunk_${chunkIdx}`,
-            text: chunk,
-            document: result.document.name
-        };
-        allChunks.push(chunkData);
+  const pageNum = index + 1;
+  const sentences = pageText.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+
+  for (let i = 0; i < sentences.length; i += 3) {
+    allChunks.push({
+      page: pageNum,
+      chunk_id: `page_${pageNum}_chunk_${Math.floor(i / 3)}`,
+      text: sentences.slice(i, i + 3).join('. '),
+      document: result.document.filename,
     });
+  }
 });
 
 console.log(`Created ${allChunks.length} chunks from ${result.usage.page_count} pages`);
-
-// Access all text content
-console.log("Full document text:", result.text);
-
-// Access page-by-page content
-result.pages.forEach((pageText, index) => {
-    console.log(`Page ${index + 1}:`, pageText);
-});
-
-// Check usage information
-console.log(`Processed ${result.usage.page_count} pages`);
+console.log(result.text);
 ```
 
 ```typescript TypeScript
-import { Retab, type ParseRequest, type ParseResult } from '@retab/node';
+import { Retab, type ParseRequest, type ParseResponse } from '@retab/node';
 
 interface ChunkData {
-    page: number;
-    chunk_id: string;
-    text: string;
-    document: string;
+  page: number;
+  chunk_id: string;
+  text: string;
+  document: string;
 }
 
 const client = new Retab();
 
-// Parse the document
 const parseRequest: ParseRequest = {
-    document: "technical-manual.pdf",
-    model: "retab-small",
-    table_parsing_format: "markdown",  // Better for RAG
-    image_resolution_dpi: 150  // Higher quality for technical docs
+  document: 'technical-manual.pdf',
+  model: 'retab-small',
+  table_parsing_format: 'markdown',
+  image_resolution_dpi: 192,
 };
 
-const result: ParseResult = await client.documents.parse(parseRequest);
+const result: ParseResponse = await client.documents.parse(parseRequest);
 
-// Process each page
 const allChunks: ChunkData[] = [];
-result.pages.forEach((pageText: string, index: number) => {
-    const pageNum = index + 1;
-    
-    // Simple sentence-based chunking
-    const sentences: string[] = pageText.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    const chunks: string[] = [];
-    
-    for (let i = 0; i < sentences.length; i += 3) {
-        const chunk = sentences.slice(i, i + 3).join('. ');
-        chunks.push(chunk);
-    }
-    
-    chunks.forEach((chunk: string, chunkIdx: number) => {
-        const chunkData: ChunkData = {
-            page: pageNum,
-            chunk_id: `page_${pageNum}_chunk_${chunkIdx}`,
-            text: chunk,
-            document: result.document.name
-        };
-        allChunks.push(chunkData);
+result.pages.forEach((pageText, index) => {
+  const pageNum = index + 1;
+  const sentences = pageText.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+
+  for (let i = 0; i < sentences.length; i += 3) {
+    allChunks.push({
+      page: pageNum,
+      chunk_id: `page_${pageNum}_chunk_${Math.floor(i / 3)}`,
+      text: sentences.slice(i, i + 3).join('. '),
+      document: result.document.filename,
     });
+  }
 });
 
 console.log(`Created ${allChunks.length} chunks from ${result.usage.page_count} pages`);
-
-// Access all text content
-console.log("Full document text:", result.text);
-
-// Access page-by-page content
-result.pages.forEach((pageText: string, index: number) => {
-    console.log(`Page ${index + 1}:`, pageText);
-});
-
-// Check usage information
-console.log(`Processed ${result.usage.page_count} pages`);
+console.log(result.text);
 ```
 </CodeGroup>
 
-
 ## Best Practices
 
-### Model Selection
-- **`retab-large`**: Most accurate and robust model, recommended for complex or high-stakes document parsing tasks.
-- **`retab-small`**: Best for speed and cost-effectiveness, suitable for most general-purpose documents.
-- **`retab-micro`**: Fastest and most cost-efficient, ideal for simple documents or high-volume batch processing where maximum throughput is needed.
+### When To Use Parse
 
-### Image Quality Settings
-- **Standard documents**: 96 DPI
-- **Technical documents**: 150 DPI  
-- **Fine print/small text**: 300+ DPI
+- Use `parse` when your downstream system wants readable text.
+- Use `extract` when you need typed fields that match a schema.
 
+### Picking A Table Format
 
+- Use `markdown` for chunking, prompting, and most RAG pipelines.
+- Use `html` when preserving table structure matters more than readability.
+- Use `json` or `yaml` when another parser will consume the table output directly.
 
+### Choosing DPI
 
+- Start with `192` DPI for general-purpose parsing.
+- Drop to `96` DPI when throughput matters more than OCR quality.
+- Increase toward `300` DPI for scans, fine print, or low-quality images.
+
+### Indexing Advice
+
+- Store the page number with every chunk you create from `result.pages`.
+- Keep the original `document.id` or `document.filename` alongside indexed text so retrieval results remain traceable.

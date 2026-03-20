@@ -1,0 +1,209 @@
+---
+title: "Classify Evals"
+description: "How to use the SDK resources under client.evals.classify."
+---
+
+`client.evals.classify` is the SDK surface for benchmarking single-label document classification. You define the category set once, attach labeled examples to datasets, create iterations with category and model overrides, and measure how well each iteration performs before publishing it.
+
+## Resource Map
+
+```text
+client.evals.classify
+|- create / get / list / update / delete / publish
+|- process
+|- datasets
+|  |- create / get / list / update / delete / duplicate
+|  |- add_document / get_document / list_documents / update_document / delete_document
+|  |- process_document
+|  `- iterations
+|     |- create / get / list / update_draft / delete / finalize
+|     |- get_categories / get_schema / process_documents / get_metrics
+|     `- get_document / list_documents / update_document / delete_document / process_document
+`- templates
+   |- list / get / clone
+   `- list_builder_document_previews / list_builder_documents
+```
+
+## Quick Start
+
+<CodeGroup>
+
+```python Python
+from retab import Retab
+from retab.types.documents.classify import Category
+from retab.types.mime import MIMEData
+from retab.types.projects.predictions import PredictionData
+
+client = Retab()
+
+categories = [
+    Category(name="invoice", description="Invoices with vendor, totals, and line items"),
+    Category(name="receipt", description="Proof of payment or point-of-sale receipt"),
+]
+
+eval_project = client.evals.classify.create(
+    name="AP document classifier",
+    categories=categories,
+)
+
+dataset = client.evals.classify.datasets.create(
+    eval_project.id,
+    name="Labeled AP mail",
+    base_categories=categories,
+)
+
+dataset_document = client.evals.classify.datasets.add_document(
+    eval_project.id,
+    dataset.id,
+    mime_data=MIMEData(
+        filename="receipt.jpg",
+        url="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ...",
+    ),
+    prediction_data=PredictionData(prediction={"classification": "receipt"}),
+)
+
+iteration = client.evals.classify.datasets.iterations.create(
+    eval_project.id,
+    dataset.id,
+)
+
+client.evals.classify.datasets.iterations.process_documents(
+    eval_project.id,
+    dataset.id,
+    iteration.id,
+    dataset_document.id,
+)
+
+categories_for_iteration = client.evals.classify.datasets.iterations.get_categories(
+    eval_project.id,
+    dataset.id,
+    iteration.id,
+)
+
+metrics = client.evals.classify.datasets.iterations.get_metrics(
+    eval_project.id,
+    dataset.id,
+    iteration.id,
+)
+
+print([category.name for category in categories_for_iteration])
+print(metrics.overall_metrics.accuracy)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const categories = [
+  { name: "invoice", description: "Invoices with vendor, totals, and line items" },
+  { name: "receipt", description: "Proof of payment or point-of-sale receipt" },
+];
+
+const evalProject = await client.evals.classify.create({
+  name: "AP document classifier",
+  categories,
+});
+
+const dataset = await client.evals.classify.datasets.create(evalProject.id, {
+  name: "Labeled AP mail",
+  base_categories: categories,
+});
+
+const datasetDocument = await client.evals.classify.datasets.addDocument(
+  evalProject.id,
+  dataset.id,
+  {
+    mime_data: { filename: "receipt.jpg", url: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ..." },
+    prediction_data: {
+      prediction: {
+        classification: "receipt",
+      },
+    },
+  }
+);
+
+const iteration = await client.evals.classify.datasets.iterations.create(
+  evalProject.id,
+  dataset.id
+);
+
+await client.evals.classify.datasets.iterations.processDocuments(
+  evalProject.id,
+  dataset.id,
+  iteration.id,
+  datasetDocument.id
+);
+
+const iterationCategories =
+  await client.evals.classify.datasets.iterations.getCategories(
+    evalProject.id,
+    dataset.id,
+    iteration.id
+  );
+
+const metrics = await client.evals.classify.datasets.iterations.getMetrics(
+  evalProject.id,
+  dataset.id,
+  iteration.id
+);
+
+console.log(iterationCategories.map((category) => category.name));
+console.log(metrics.overall_metrics?.accuracy);
+```
+
+</CodeGroup>
+
+## Core Resources
+
+### Eval
+
+The top-level classify eval resource manages the category set and published configuration.
+
+- `create(name, categories, ...)`: create a new classify eval.
+- `get(eval_id)`, `list(...)`, `update(eval_id, ...)`, `delete(eval_id)`: standard CRUD methods.
+- `publish(eval_id, origin=None)`: publish the current draft config.
+- `process(eval_id, iteration_id=None, document=..., ...)`: classify a document against the base eval or a specific iteration.
+
+`process()` returns `ClassifyResponse`, which contains the winning classification and the model reasoning.
+
+## Datasets
+
+Datasets store documents plus their expected labels.
+
+- `datasets.create(..., base_categories=..., base_inference_settings=...)`: create a labeled classification dataset.
+- `datasets.add_document(...)`: add a document with optional `prediction_data`.
+- `datasets.update_document(...)`: update `validation_flag`, `prediction_data`, `classification_id`, or `extraction_id`.
+- `datasets.process_document(...)`: run a document through the base eval configuration.
+
+For classification evals, the label usually lives in `prediction_data.prediction.classification`.
+
+## Iterations
+
+Iterations let you experiment with model settings and category text.
+
+- `iterations.create(...)`: start a new iteration.
+- `iterations.update_draft(...)`: update draft `inference_settings` or `category_overrides`.
+- `iterations.get_categories(...)`: fetch the effective category list for the iteration.
+- `iterations.get_schema(...)`: fetch the server-side schema view for the iteration.
+- `iterations.finalize(...)`: freeze the draft into a finalized iteration.
+- `iterations.process_documents(...)`: queue one labeled dataset document for iteration scoring.
+- `iterations.get_metrics(...)`: compute quality metrics for the iteration.
+
+`category_overrides` is the key iteration-specific knob for classify evals. It lets you refine category descriptions without rebuilding the whole eval.
+
+## Templates
+
+Templates work the same way as on the other eval resources.
+
+- `templates.list(...)`: browse classify templates.
+- `templates.get(template_id)`: inspect one template.
+- `templates.clone(template_id, name=None)`: create a new classify eval from the template.
+- `templates.list_builder_documents(template_id)`: fetch the template's sample documents.
+- `templates.list_builder_document_previews(template_ids)`: fetch previews for multiple templates.
+
+## SDK Notes
+
+- Python `list()` methods on evals, datasets, and iterations return model lists. Node returns paginated API payloads with `data`.
+- Python and Node both expose `get_categories()` on classify iterations. This method is specific to classification evals.
+- Classification evals do not expose `process_stream()` in the SDK.

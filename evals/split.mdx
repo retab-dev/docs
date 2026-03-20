@@ -1,0 +1,202 @@
+---
+title: "Split Evals"
+description: "How to use the SDK resources under client.evals.split."
+---
+
+`client.evals.split` is the SDK surface for evaluating document splitting. You define the target subdocuments, label datasets with expected split output, create iterations with split-specific overrides, and compare how changes affect split quality before publishing.
+
+## Resource Map
+
+```text
+client.evals.split
+|- create / get / list / update / delete / publish
+|- process
+|- datasets
+|  |- create / get / list / update / delete / duplicate
+|  |- add_document / get_document / list_documents / update_document / delete_document
+|  |- process_document
+|  `- iterations
+|     |- create / get / list / update_draft / delete / finalize
+|     |- get_schema / process_documents / get_metrics
+|     `- get_document / list_documents / update_document / delete_document / process_document
+`- templates
+   |- list / get / clone
+   `- list_builder_document_previews / list_builder_documents
+```
+
+## Quick Start
+
+<CodeGroup>
+
+```python Python
+from retab import Retab
+from retab.types.mime import MIMEData
+from retab.types.projects.predictions import PredictionData
+
+client = Retab()
+
+split_config = [
+    {"name": "invoice", "description": "Invoice pages"},
+    {"name": "receipt", "description": "Receipt pages"},
+]
+
+eval_project = client.evals.split.create(
+    name="Mailroom split eval",
+    split_config=split_config,
+)
+
+dataset = client.evals.split.datasets.create(
+    eval_project.id,
+    name="Mixed PDFs",
+    base_split_config=split_config,
+)
+
+dataset_document = client.evals.split.datasets.add_document(
+    eval_project.id,
+    dataset.id,
+    mime_data=MIMEData(
+        filename="mixed-batch.pdf",
+        url="data:application/pdf;base64,JVBERi0xLjQKJ...",
+    ),
+    prediction_data=PredictionData(
+        prediction={
+            "splits": [
+                {"name": "invoice", "pages": [1, 2]},
+                {"name": "receipt", "pages": [3]},
+            ]
+        }
+    ),
+)
+
+iteration = client.evals.split.datasets.iterations.create(
+    eval_project.id,
+    dataset.id,
+)
+
+client.evals.split.datasets.iterations.process_documents(
+    eval_project.id,
+    dataset.id,
+    iteration.id,
+    dataset_document.id,
+)
+
+metrics = client.evals.split.datasets.iterations.get_metrics(
+    eval_project.id,
+    dataset.id,
+    iteration.id,
+)
+
+print(metrics.overall_metrics.accuracy)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const splitConfig = [
+  { name: "invoice", description: "Invoice pages" },
+  { name: "receipt", description: "Receipt pages" },
+];
+
+const evalProject = await client.evals.split.create({
+  name: "Mailroom split eval",
+  split_config: splitConfig,
+});
+
+const dataset = await client.evals.split.datasets.create(evalProject.id, {
+  name: "Mixed PDFs",
+  base_split_config: splitConfig,
+});
+
+const datasetDocument = await client.evals.split.datasets.addDocument(
+  evalProject.id,
+  dataset.id,
+  {
+    mime_data: { filename: "mixed-batch.pdf", url: "data:application/pdf;base64,JVBERi0xLjQKJ..." },
+    prediction_data: {
+      prediction: {
+        splits: [
+          { name: "invoice", pages: [1, 2] },
+          { name: "receipt", pages: [3] },
+        ],
+      },
+    },
+  }
+);
+
+const iteration = await client.evals.split.datasets.iterations.create(
+  evalProject.id,
+  dataset.id
+);
+
+await client.evals.split.datasets.iterations.processDocuments(
+  evalProject.id,
+  dataset.id,
+  iteration.id,
+  datasetDocument.id
+);
+
+const metrics = await client.evals.split.datasets.iterations.getMetrics(
+  evalProject.id,
+  dataset.id,
+  iteration.id
+);
+
+console.log(metrics.overall_metrics?.accuracy);
+```
+
+</CodeGroup>
+
+## Core Resources
+
+### Eval
+
+The top-level split eval resource manages the base subdocument config.
+
+- `create(name, split_config)`: create a split eval.
+- `get(eval_id)`, `list(...)`, `update(eval_id, ...)`, `delete(eval_id)`: standard CRUD methods.
+- `publish(eval_id, origin=None)`: promote the draft config to the published config.
+- `process(eval_id, iteration_id=None, document=..., ...)`: run a document through the split eval.
+
+The SDK currently validates split eval `process()` responses as `RetabParsedChatCompletion`, so read the structured result from the parsed message content.
+
+## Datasets
+
+Datasets hold expected split outcomes for sample documents.
+
+- `datasets.create(..., base_split_config=..., base_inference_settings=...)`: create a dataset tied to a split config.
+- `datasets.add_document(...)`: add a document and optional expected split output in `prediction_data`.
+- `datasets.update_document(...)`: update `validation_flags`, `prediction_data`, or `extraction_id`.
+- `datasets.process_document(...)`: run one dataset document against the base eval.
+
+Ground truth commonly lives in `prediction_data.prediction.splits`.
+
+## Iterations
+
+Iterations are where you refine descriptions, partition keys, and model settings.
+
+- `iterations.create(...)`: create a new iteration.
+- `iterations.update_draft(...)`: update draft `inference_settings` or `split_config_overrides`.
+- `iterations.get_schema(..., use_draft=True)` / `getSchema(..., { useDraft: true })`: inspect the materialized split schema with pending draft changes.
+- `iterations.finalize(...)`: finalize the draft iteration.
+- `iterations.process_documents(...)`: queue one dataset document for iteration processing.
+- `iterations.get_metrics(...)`: fetch split accuracy metrics for the iteration.
+
+The main split-specific override object is `split_config_overrides`, which includes fields like `descriptions_override` and `partition_keys_override`.
+
+## Templates
+
+Split templates expose the same helper methods as the other eval resources.
+
+- `templates.list(...)`: browse split templates.
+- `templates.get(template_id)`: fetch a split template.
+- `templates.clone(template_id, name=None)`: create a new split eval from that template.
+- `templates.list_builder_documents(template_id)`: fetch the sample builder documents.
+- `templates.list_builder_document_previews(template_ids)`: fetch previews for multiple templates.
+
+## SDK Notes
+
+- Python `list()` methods on evals, datasets, and iterations return model lists. Node returns paginated API payloads with `data`.
+- Split evals do not expose `process_stream()` in the SDK.
+- Split eval datasets and iterations both accept `prediction_data`, which is where expected split output is usually stored for scoring.

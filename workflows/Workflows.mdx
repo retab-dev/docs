@@ -81,91 +81,127 @@ For the SDK and HTTP endpoint details, see the workflow API reference:
 
 ### Using the SDK
 
-Workflows support two types of inputs:
-- **documents**: For Document (start) nodes - file inputs
-- **json_inputs**: For JSON Input (start_json) nodes - structured data
+The Python SDK exposes workflow metadata, graph authoring, run execution, and typed step inspection:
 
-<CodeGroup>
-```python Python
+- `client.workflows.*` for `list()`, `get()`, `create()`, `publish()`, `duplicate()`, and `get_entities()`
+- `client.workflows.blocks.*` and `client.workflows.edges.*` for programmatic graph changes
+- `client.workflows.runs.*` and `client.workflows.runs.steps.*` for running flows and reading results
+
+#### Discover input node IDs
+
+Workflow run inputs are keyed by the IDs of your `start` and `start_json` nodes. `get_entities()` is the easiest way to discover them.
+
+```python
 from retab import Retab
-from pathlib import Path
 
 client = Retab()
 
-# Run a workflow with documents only
-run = client.workflows.runs.create(
-    workflow_id="wf_abc123",
-    documents={
-        "document-node-id": Path("path/to/invoice.pdf")
-    }
-)
+workflow = client.workflows.get_entities("wf_abc123")
 
-# Run a workflow with documents and JSON data
+document_start_id = workflow.start_nodes[0].id
+json_start_id = workflow.start_json_nodes[0].id
+```
+
+#### Run and wait for completion
+
+Workflows support two input maps:
+
+- `documents` for Document (`start`) nodes
+- `json_inputs` for JSON Input (`start_json`) nodes
+
+```python
+from pathlib import Path
+
+from retab import Retab
+
+client = Retab()
+
+workflow = client.workflows.get_entities("wf_abc123")
+document_start_id = workflow.start_nodes[0].id
+json_start_id = workflow.start_json_nodes[0].id
+
 run = client.workflows.runs.create(
-    workflow_id="wf_abc123",
+    workflow_id=workflow.workflow.id,
     documents={
-        "document-node-id": Path("path/to/invoice.pdf")
+        document_start_id: Path("path/to/invoice.pdf"),
     },
     json_inputs={
-        "json-node-id": {"customer_id": "cust_123", "priority": "high"}
-    }
+        json_start_id: {"customer_id": "cust_123", "priority": "high"},
+    },
 )
 
-# Poll for completion
-import time
-while run.status in ["pending", "running"]:
-    time.sleep(1)
-    run = client.workflows.runs.get(run.id)
+run = client.workflows.runs.wait_for_completion(
+    run.id,
+    poll_interval_seconds=1.0,
+)
+run.raise_for_status()
 
-# Access the results
-for step in run.steps:
-    print(f"{step.node_id}: {step.status}")
-    if step.handle_outputs:
-        print(f"  Handles: {step.handle_outputs}")
+print(run.status)
+print(run.waiting_for_node_ids)
+
+for end_node_id, output in (run.output or {}).items():
+    print(end_node_id, output.data, output.document)
 ```
 
-```typescript Node.js
-import Retab from 'retab';
+`run.steps` contains per-node status summaries. For typed inputs and outputs on each node, use the step helpers.
 
-const client = new Retab();
+#### Inspect typed step outputs
 
-// Run a workflow with documents only
-const run = await client.workflows.runs.create({
-    workflowId: 'wf_abc123',
-    documents: {
-        'document-node-id': 'path/to/invoice.pdf'
-    }
-});
+Step payloads are normalized into `HandlePayload` objects. For JSON-producing nodes, `extracted_data` is shorthand for the default `output-json-0` handle.
 
-// Run a workflow with documents and JSON data
-const run2 = await client.workflows.runs.create({
-    workflowId: 'wf_abc123',
-    documents: {
-        'document-node-id': 'path/to/invoice.pdf'
+```python
+step = client.workflows.runs.steps.get(run.id, "extract-node-id")
+
+print(step.status)
+print(step.extracted_data)
+
+all_step_outputs = client.workflows.runs.steps.get_all(run)
+for node_id, output in all_step_outputs.outputs.items():
+    print(node_id, output.status, output.extracted_data)
+```
+
+Use `client.workflows.runs.steps.list(run.id)` when you want the persisted step documents for every node, or `client.workflows.runs.steps.list(run.id, node_ids=[...])` when you only need a subset.
+
+#### Build workflows from code
+
+The same SDK can create and publish workflow graphs:
+
+```python
+workflow = client.workflows.create(name="Invoice Pipeline")
+entities = client.workflows.get_entities(workflow.id)
+start_node = entities.start_nodes[0]
+
+extract_block = client.workflows.blocks.create(
+    workflow.id,
+    id="extract-invoice",
+    type="extract",
+    label="Extract Invoice",
+    position_x=320,
+    position_y=0,
+    config={
+        "json_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_number": {"type": "string"},
+                "total_amount": {"type": "number"},
+            },
+        },
     },
-    jsonInputs: {
-        'json-node-id': { customerId: 'cust_123', priority: 'high' }
-    }
-});
+)
 
-// Poll for completion
-let currentRun = run;
-while (currentRun.status === 'pending' || currentRun.status === 'running') {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    currentRun = await client.workflows.runs.get(currentRun.id);
-}
+client.workflows.edges.create(
+    workflow.id,
+    id="edge-start-to-extract",
+    source_block=start_node.id,
+    target_block=extract_block.id,
+    source_handle="output-file-0",
+    target_handle="input-file-0",
+)
 
-// Access the results
-for (const step of currentRun.steps) {
-    console.log(`${step.node_id}: ${step.status}`);
-    if (step.handle_outputs) {
-        console.log(`  Handles: ${JSON.stringify(step.handle_outputs)}`);
-    }
-}
+client.workflows.publish(workflow.id, description="Initial version")
 ```
-</CodeGroup>
 
-Use `client.workflows.list()` or `client.workflows.get(workflow_id)` when you need to browse existing workflows before launching a run.
+Use `client.workflows.list()` or `client.workflows.get(workflow_id)` when you need to browse existing workflows before launching a run, and `client.workflows.duplicate(workflow_id)` when you want a draft copy of an existing flow.
 
 ### Polling vs Webhooks
 
