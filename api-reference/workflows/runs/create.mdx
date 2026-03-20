@@ -9,6 +9,8 @@ Workflows can accept two types of inputs:
 - **documents**: File inputs for Document (start) nodes
 - **json_inputs**: JSON data for JSON Input (start_json) nodes
 
+If you do not know the input node IDs yet, call `client.workflows.get_entities(workflow_id)` first and read `.start_nodes` / `.start_json_nodes`.
+
 <RequestExample>
 
 ```python python
@@ -17,11 +19,15 @@ from pathlib import Path
 
 client = Retab()
 
+workflow = client.workflows.get_entities("wf_abc123xyz")
+document_start_id = workflow.start_nodes[0].id
+json_start_id = workflow.start_json_nodes[0].id
+
 # Run with documents only
 run = client.workflows.runs.create(
     workflow_id="wf_abc123xyz",
     documents={
-        "start-node-1": Path("invoice.pdf"),
+        document_start_id: Path("invoice.pdf"),
     }
 )
 
@@ -29,10 +35,10 @@ run = client.workflows.runs.create(
 run = client.workflows.runs.create(
     workflow_id="wf_abc123xyz",
     documents={
-        "start-node-1": Path("invoice.pdf"),
+        document_start_id: Path("invoice.pdf"),
     },
     json_inputs={
-        "json-node-1": {"customer_id": "cust_123", "priority": "high"},
+        json_start_id: {"customer_id": "cust_123", "priority": "high"},
     }
 )
 
@@ -141,7 +147,7 @@ curl -X 'POST' \
   ],
   "input_documents": {
     "start-node-1": {
-      "file_id": "file_123",
+      "id": "file_123",
       "filename": "invoice.pdf",
       "mime_type": "application/pdf"
     }

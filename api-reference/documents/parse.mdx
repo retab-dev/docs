@@ -12,15 +12,15 @@ client = Retab()
 result = client.documents.parse(
     document="document.pdf",
     model="retab-small",
-    table_parsing_format="html",
-    image_resolution_dpi=72,
-    browser_canvas="A4"
+    table_parsing_format="markdown",
+    image_resolution_dpi=192,
 )
 
 # Access parsed content
 for i, page_content in enumerate(result.pages):
     print(f"Page {i + 1}: {page_content}")
 
+print(f"Filename: {result.document.filename}")
 print(f"Total pages: {result.usage.page_count}")
 print(f"Credits used: {result.usage.credits}")
 ```
@@ -36,8 +36,8 @@ const client = new Retab();
 const result = await client.documents.parse({
     document: "document.pdf",
     model: "retab-small",
-    table_parsing_format: "html",
-    image_resolution_dpi: 72,
+    table_parsing_format: "markdown",
+    image_resolution_dpi: 192,
 });
 
 // Access parsed content
@@ -45,12 +45,13 @@ result.pages.forEach((pageContent, index) => {
     console.log(`Page ${index + 1}: ${pageContent}`);
 });
 
+console.log(`Filename: ${result.document.filename}`);
 console.log(`Total pages: ${result.usage.page_count}`);
 console.log(`Credits used: ${result.usage.credits}`);
 ```
 
 ```typescript typescript
-import { Retab, type ParseRequest, type ParseResult } from '@retab/node';
+import { Retab, type ParseRequest, type ParseResponse } from '@retab/node';
 import { config } from 'dotenv';
 
 config();
@@ -60,17 +61,18 @@ const client = new Retab();
 const parseRequest: ParseRequest = {
     document: "document.pdf",
     model: "retab-small",
-    table_parsing_format: "html",
-    image_resolution_dpi: 72,
+    table_parsing_format: "markdown",
+    image_resolution_dpi: 192,
 };
 
-const result: ParseResult = await client.documents.parse(parseRequest);
+const result: ParseResponse = await client.documents.parse(parseRequest);
 
 // Access parsed content
 result.pages.forEach((pageContent: string, index: number) => {
     console.log(`Page ${index + 1}: ${pageContent}`);
 });
 
+console.log(`Filename: ${result.document.filename}`);
 console.log(`Total pages: ${result.usage.page_count}`);
 console.log(`Credits used: ${result.usage.credits}`);
 ```
@@ -86,8 +88,8 @@ curl -X 'POST' \
     "url": "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsO..."
   },
   "model": "retab-small",
-  "table_parsing_format": "html",
-  "image_resolution_dpi": 72,
+  "table_parsing_format": "markdown",
+  "image_resolution_dpi": 192
 }'
 ```
 
@@ -98,22 +100,21 @@ curl -X 'POST' \
 ```json 200
 {
   "document": {
+    "id": "file_abc123",
     "filename": "document.pdf",
-    "mime_type": "application/pdf",
-    "size": 15432
+    "mime_type": "application/pdf"
   },
   "usage": {
     "page_count": 3,
     "credits": 1.5
   },
   "pages": [
-    "<h1>Document Title</h1><p>First page content with formatted text and tables...</p>",
-    "<p>Second page content continues here...</p>",
-    "<p>Third and final page content...</p>"
+    "# Document Title\n\nFirst page content with a markdown table...",
+    "Second page content continues here...",
+    "Third and final page content..."
   ],
-  "text": "<h1>Document Title</h1><p>First page content with formatted text and tables...</p><p>Second page content continues here...</p><p>Third and final page content...</p>"
+  "text": "# Document Title\n\nFirst page content with a markdown table...\n\nSecond page content continues here...\n\nThird and final page content..."
 }
 ```
 
 </ResponseExample>
-

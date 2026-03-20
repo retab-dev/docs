@@ -14,7 +14,12 @@ The typical extraction workflow follows these steps:
 2. **Extraction**: Use Retab's `extract` method to process the document and retrieve structured data.
 3. **Validation & Usage**: Validate the extracted data (optionally using likelihood scores) and integrate it into your application.
 
-For advanced validation or post-processing, **we recommend** combining this with schema validation libraries like Pydantic (Python) or Zod (JavaScript) to ensure data integrity.
+The SDKs already help here:
+
+- Python parses `message.parsed` against the JSON schema you pass in
+- Node accepts a JSON schema object, a schema file path, or a `zod` schema directly
+
+You can still add your own application-level validation if you want stricter business rules.
 
 ```mermaid
 flowchart LR
@@ -80,49 +85,29 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
 </ParamField>
 
 <ParamField body="additional_messages" type="list[ChatCompletionRetabMessage]" default="null">
-  Additional chat messages to append after the document content. Useful for providing extra context, clarifications, or specific instructions that guide the extraction. Each message should have a `role` ("user" or "assistant") and `content` (string or array of content parts).
+  Additional chat messages to append after the document content. Useful for extra context, clarifications, or domain-specific instructions. Roles follow the chat message format used by the SDKs, including `system`, `developer`, `user`, and `assistant`.
 </ParamField>
 
   </Expandable>
 </ParamField>
 
-<ResponseField name="Returns" type="ParsedChatCompletion">
-A ParsedChatCompletion object with the extracted data, usage details, and likelihood scores.
+<ResponseField name="Returns" type="RetabParsedChatCompletion">
+A `RetabParsedChatCompletion` with the extracted data, usage details, likelihood scores, and a persisted `extraction_id`.
   <Expandable title="properties">
-    <ResponseField name="content" type="object">
-      The core response content, including the OpenAI-compatible chat completion structure.
-      <Expandable title="properties">
-        <ResponseField name="id" type="string">
-          Unique identifier for the completion.
-        </ResponseField>
-        <ResponseField name="choices" type="array[object]">
-          Array of completion choices, typically containing one object with the extracted message.
-        </ResponseField>
-        <ResponseField name="created" type="integer">
-          Timestamp of creation (Unix epoch).
-        </ResponseField>
-        <ResponseField name="model" type="string">
-          The model used for extraction.
-        </ResponseField>
-        <ResponseField name="object" type="string">
-          Object type, e.g., "chat.completion".
-        </ResponseField>
-        <ResponseField name="service_tier" type="string">
-          Service tier used.
-        </ResponseField>
-        <ResponseField name="system_fingerprint" type="string">
-          System fingerprint for tracking.
-        </ResponseField>
-        <ResponseField name="usage" type="object">
-          Token usage details.
-        </ResponseField>
-        <ResponseField name="likelihoods" type="object">
-          Confidence scores for each extracted field (0-1 scale).
-        </ResponseField>
-      </Expandable>
+    <ResponseField name="id" type="string">
+      Unique identifier for the completion.
     </ResponseField>
-    <ResponseField name="error" type="object | null">
-      Error details if the request failed, otherwise null.
+    <ResponseField name="choices" type="array[object]">
+      Array of completion choices. `choices[0].message.parsed` contains the structured output.
+    </ResponseField>
+    <ResponseField name="usage" type="object">
+      Token usage details.
+    </ResponseField>
+    <ResponseField name="likelihoods" type="object | null">
+      Confidence scores for each extracted field.
+    </ResponseField>
+    <ResponseField name="extraction_id" type="string | null">
+      Identifier for the stored extraction record, usable with `client.extractions.*`.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -133,10 +118,10 @@ from retab import Retab
 
 client = Retab()
 
-# doc_msg = client.documents.extractions.stream(...) for stream mode
+# Use client.documents.extract_stream(...) for stream mode
 doc_msg = client.documents.extract(
     document = "freight/booking_confirmation.jpg", 
-    model="retab-small",
+    model="retab-micro",
     json_schema = {
       'X-SystemPrompt': 'You are a useful assistant.',
       'properties': {
@@ -157,16 +142,20 @@ doc_msg = client.documents.extract(
     },
     n_consensus=1 # 1 means disabled (default), if greater than 1 it will run the extraction with n-consensus mode
 )
+
+print(doc_msg.data)
+print(doc_msg.likelihoods)
+print(doc_msg.extraction_id)
 ```
 ```javascript Javascript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-// const docMsg = await client.documents.extractions.stream(...) for stream mode
+// Use client.documents.extract_stream(...) for stream mode
 const docMsg = await client.documents.extract({
     document: "freight/booking_confirmation.jpg",
-    model: "retab-small",
+    model: "retab-micro",
     json_schema: {
         "X-SystemPrompt": "You are a useful assistant.",
         properties: {
@@ -187,17 +176,21 @@ const docMsg = await client.documents.extract({
     },
     n_consensus: 1 // 1 means disabled (default), if greater than 1 it will run the extraction with n-consensus mode
 });
+
+console.log(docMsg.choices[0].message.parsed);
+console.log(docMsg.likelihoods);
+console.log(docMsg.extraction_id);
 ```
 ```curl cURL
 curl -X POST https://api.retab.com/v1/documents/extract \
--H "Authorization: Bearer $RETAB_API_KEY" \
+-H "Api-Key: $RETAB_API_KEY" \
 -H "Content-Type: application/json" \
 -d '{
     "document": {
       "filename": "Alphabet-10Q-Q1-25.pdf",
       "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMSAwIG9iago8PAovVHlwZS…"
     },
-    "model": "retab-small",
+    "model": "retab-micro",
     "json_schema": {
         "X-SystemPrompt": "You are a useful assistant.",
         "properties": {
@@ -221,53 +214,49 @@ curl -X POST https://api.retab.com/v1/documents/extract \
 ```
 ```json Response
 {
-    "content": {
-        "id": "chatcmpl-AoBs45TNWTB1VKGSXV7NAwCnxMaNN",
-        "choices": [
-            {
-                "finish_reason": "stop",
-                "index": 0,
-                "logprobs": null,
-                "message": {
-                    "content": "{\"name\": \"Confirmation d'affr\\u00e9tement\", \"date\": \"2024-11-08\"}",
-                    "refusal": null,
-                    "role": "assistant",
-                    "audio": null,
-                    "function_call": null,
-                    "tool_calls": [],
-                    "parsed": {
-                        "name": "Confirmation d'affr\u00e9tement",
-                        "date": "2024-11-08"
-                    }
+    "id": "chatcmpl-AoBs45TNWTB1VKGSXV7NAwCnxMaNN",
+    "choices": [
+        {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+                "content": "{\"name\": \"Confirmation d'affr\\u00e9tement\", \"date\": \"2024-11-08\"}",
+                "refusal": null,
+                "role": "assistant",
+                "audio": null,
+                "function_call": null,
+                "tool_calls": [],
+                "parsed": {
+                    "name": "Confirmation d'affr\u00e9tement",
+                    "date": "2024-11-08"
                 }
             }
-        ],
-        "created": 1736525396,
-        "model": "retab-small",
-        "object": "chat.completion",
-        "service_tier": "default",
-        "system_fingerprint": "fp_f2cd28694a",
-        "usage": {
-            "completion_tokens": 20,
-            "prompt_tokens": 2760,
-            "total_tokens": 2780,
-            "completion_tokens_details": {
-                "accepted_prediction_tokens": 0,
-                "audio_tokens": 0,
-                "reasoning_tokens": 0,
-                "rejected_prediction_tokens": 0
-            },
-            "prompt_tokens_details": {
-                "audio_tokens": 0,
-                "cached_tokens": 0
-            }
+        }
+    ],
+    "created": 1736525396,
+    "model": "retab-micro",
+    "object": "chat.completion",
+    "extraction_id": "extr_01HZX0ABCDEF123456",
+    "usage": {
+        "completion_tokens": 20,
+        "prompt_tokens": 2760,
+        "total_tokens": 2780,
+        "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
         },
-        "likelihoods": {
-            "name": 0.7227993785831323,
-            "date": 0.7306298416895017
-        },
+        "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+        }
     },
-    "error": null
+    "likelihoods": {
+        "name": 0.7227993785831323,
+        "date": 0.7306298416895017
+    }
 }
 ```
 </CodeGroup>
@@ -279,19 +268,13 @@ Extract structured calendar event data from a booking confirmation image and val
 <CodeGroup>
 ```python Python
 from retab import Retab
-from pydantic import BaseModel, ValidationError
 
 client = Retab()
-
-# Define Pydantic model matching the schema for validation
-class CalendarEvent(BaseModel):
-    name: str
-    date: str  # ISO 8601
 
 # Extract data
 result = client.documents.extract(
     document="freight/booking_confirmation.jpg",
-    model="retab-small",
+    model="retab-micro",
     json_schema={
         'X-SystemPrompt': 'You are a useful assistant.',
         'properties': {
@@ -313,34 +296,29 @@ result = client.documents.extract(
     n_consensus=1
 )
 
-# Access extracted data
-extracted_data = result.content.choices[0].message.parsed
-likelihoods = result.content.likelihoods
+# Python SDK parses against the schema automatically
+extracted_data = result.data
+likelihoods = result.likelihoods or {}
 
-# Validate with Pydantic
-try:
-    event = CalendarEvent(**extracted_data)
-    print(f"Extracted Event: {event.name} on {event.date}")
-    
-    # Check likelihoods
+if extracted_data is None:
+    print("Schema validation failed")
+else:
+    print(f"Extracted Event: {extracted_data.name} on {extracted_data.date}")
+
     if all(score > 0.7 for score in likelihoods.values()):
         print("High likelihood extraction - Saving to DB...")
-        # db.save(event)  # Pseudo-code for DB integration
     else:
         print("Low likelihood - Review manually")
-except ValidationError as e:
-    print(f"Validation failed: {e}")
 
-print(f"Processed with {result.content.usage.total_tokens} tokens")
+print(f"Processed with {result.usage.total_tokens} tokens")
 ```
 
 ```javascript Javascript
 import { Retab } from '@retab/node';
 import { z } from 'zod';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-// Define Zod schema for validation
 const CalendarEventSchema = z.object({
     name: z.string(),
     date: z.string().refine((val) => {
@@ -351,31 +329,14 @@ const CalendarEventSchema = z.object({
 // Extract data
 const result = await client.documents.extract({
     document: "freight/booking_confirmation.jpg",
-    model: "retab-small",
-    json_schema: {
-        "X-SystemPrompt": "You are a useful assistant.",
-        properties: {
-            name: {
-                description: "The name of the calendar event.",
-                title: "Name",
-                type: "string"
-            },
-            date: {
-                description: "The date of the calendar event in ISO 8601 format.",
-                title: "Date",
-                type: "string"
-            }
-        },
-        required: ["name", "date"],
-        title: "CalendarEvent",
-        type: "object"
-    },
+    model: "retab-micro",
+    json_schema: CalendarEventSchema,
     n_consensus: 1
 });
 
 // Access extracted data
-const extractedData = result.content.choices[0].message.parsed;
-const likelihoods = result.content.likelihoods;
+const extractedData = result.choices[0].message.parsed;
+const likelihoods = result.likelihoods ?? {};
 
 // Validate with Zod
 const validation = CalendarEventSchema.safeParse(extractedData);
@@ -395,7 +356,7 @@ if (validation.success) {
     console.log("Validation failed:", validation.error);
 }
 
-console.log(`Processed with ${result.content.usage.total_tokens} tokens`);
+console.log(`Processed with ${result.usage?.total_tokens} tokens`);
 ```
 </CodeGroup>
 
@@ -412,7 +373,7 @@ client = Retab()
 # Extract invoice data with additional context
 result = client.documents.extract(
     document="invoices/invoice_001.pdf",
-    model="retab-small",
+    model="retab-micro",
     json_schema={
         'properties': {
             'vendor_name': {'type': 'string', 'description': 'Name of the vendor'},
@@ -425,7 +386,11 @@ result = client.documents.extract(
     },
     additional_messages=[
         {
-            "role": "user", 
+            "role": "developer",
+            "content": "Extract values exactly as written. Do not infer missing currency."
+        },
+        {
+            "role": "user",
             "content": "Note: This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
         },
         {
@@ -434,7 +399,8 @@ result = client.documents.extract(
                 {
                     "type": "image_url",
                     "image_url": {
-                        "url": "https://www.example.com/logo.png"
+                        "url": "https://www.example.com/logo.png",
+                        "detail": "auto"
                     }
                 }
             ]
@@ -442,18 +408,18 @@ result = client.documents.extract(
     ]
 )
 
-print(result.choices[0].message.parsed)
+print(result.data)
 ```
 
 ```javascript Javascript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Extract invoice data with additional context
 const result = await client.documents.extract({
     document: "invoices/invoice_001.pdf",
-    model: "retab-small",
+    model: "retab-micro",
     json_schema: {
         properties: {
             vendor_name: { type: "string", description: "Name of the vendor" },
@@ -466,12 +432,12 @@ const result = await client.documents.extract({
     },
     additional_messages: [
         {
-            role: "user",
-            content: "Note: This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
+            role: "developer",
+            content: "Extract values exactly as written. Do not infer missing currency."
         },
         {
-            role: "assistant",
-            content: "Understood. I will default to EUR for currency unless the document specifies a different currency."
+            role: "user",
+            content: "Note: This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
         }
     ]
 });
@@ -481,14 +447,14 @@ console.log(result.choices[0].message.parsed);
 
 ```curl cURL
 curl -X POST https://api.retab.com/v1/documents/extract \
--H "Authorization: Bearer $RETAB_API_KEY" \
+-H "Api-Key: $RETAB_API_KEY" \
 -H "Content-Type: application/json" \
 -d '{
     "document": {
       "filename": "invoice_001.pdf",
       "url": "data:application/pdf;base64,..."
     },
-    "model": "retab-small",
+    "model": "retab-micro",
     "json_schema": {
         "properties": {
             "vendor_name": {"type": "string", "description": "Name of the vendor"},
@@ -501,12 +467,12 @@ curl -X POST https://api.retab.com/v1/documents/extract \
     },
     "additional_messages": [
         {
-            "role": "user",
-            "content": "Note: This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
+            "role": "developer",
+            "content": "Extract values exactly as written. Do not infer missing currency."
         },
         {
-            "role": "assistant", 
-            "content": "Understood. I will default to EUR for currency unless the document specifies a different currency."
+            "role": "user",
+            "content": "Note: This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
         }
     ]
 }'
@@ -590,7 +556,7 @@ const tenantExtractions = await client.extractions.list({
 
 ```curl cURL
 curl -G 'https://api.retab.com/v1/extractions' \
-  -H 'Authorization: Bearer $RETAB_API_KEY' \
+  -H 'Api-Key: $RETAB_API_KEY' \
   --data-urlencode 'limit=50' \
   --data-urlencode 'metadata={"organization_id":"org_123","source":"sinari_jobs"}'
 ```
@@ -616,7 +582,7 @@ When multiple metadata keys are provided, all keys are applied together as exact
 
 ### Using Additional Messages
 - Use `additional_messages` to provide domain-specific context or clarifications.
-- Simulate a conversation: Add a user message with context, then an assistant acknowledgment to prime the model.
+- Prefer `developer` or `system` messages for extraction policy and `user` messages for document-specific context.
 - Ideal for: currency defaults, date format preferences, handling ambiguous abbreviations, or specifying regional conventions.
 - Keep messages concise to avoid diluting the extraction focus.
 

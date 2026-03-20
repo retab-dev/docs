@@ -15,8 +15,12 @@ client = Retab()
 response = client.documents.extract(
     json_schema = "Invoice_schema.json",
     document = "Invoice.pdf",
-    model="retab-small",
+    model="retab-micro",
 )
+
+print(response.data)
+print(response.likelihoods)
+print(response.extraction_id)
 ```
 
 ```javascript javascript
@@ -25,13 +29,17 @@ import { config } from 'dotenv';
 
 config();
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const response = await client.documents.extract({
     document: "Invoice.pdf",
-    model: "retab-small",
+    model: "retab-micro",
     json_schema: "Invoice_schema.json",
 });
+
+console.log(response.choices[0].message.parsed);
+console.log(response.likelihoods);
+console.log(response.extraction_id);
 ```
 
 
@@ -45,8 +53,8 @@ curl -X 'POST' \
     "filename": "file.pdf",
     "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
   },
-  "image_resolution_dpi": 96,
-  "model": "string",
+  "image_resolution_dpi": 192,
+  "model": "retab-micro",
   "json_schema": {
     "title": "Invoice Document Schema",
     "description": "A schema for storing structured data extracted from invoice documents, including parties, line items, and payment details.",
@@ -179,9 +187,9 @@ curl -X 'POST' \
     }
   },
   "n_consensus": 1,
-  "stream": false,
-  "need_validation": false,
-  "test_exception": "before_handle_extraction"
+  "metadata": {
+    "source": "docs"
+  }
 }'
 ```
 
@@ -192,53 +200,49 @@ curl -X 'POST' \
 
 ```json 200
 {
-    "content": {
-        "id": "chatcmpl-AoBs45TNWTB1VKGSXV7NAwCnxMaNN",
-        "choices": [
-            {
-                "finish_reason": "stop",
-                "index": 0,
-                "logprobs": null,
-                "message": {
-                    "content": "{\"name\": \"Confirmation d'affr\\u00e9tement\", \"date\": \"2024-11-08\"}",
-                    "refusal": null,
-                    "role": "assistant",
-                    "audio": null,
-                    "function_call": null,
-                    "tool_calls": [],
-                    "parsed": {
-                        "name": "Confirmation d'affr\u00e9tement",
-                        "date": "2024-11-08"
-                    }
+    "id": "chatcmpl-AoBs45TNWTB1VKGSXV7NAwCnxMaNN",
+    "choices": [
+        {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+                "content": "{\"name\": \"Confirmation d'affr\\u00e9tement\", \"date\": \"2024-11-08\"}",
+                "refusal": null,
+                "role": "assistant",
+                "audio": null,
+                "function_call": null,
+                "tool_calls": [],
+                "parsed": {
+                    "name": "Confirmation d'affr\u00e9tement",
+                    "date": "2024-11-08"
                 }
             }
-        ],
-        "created": 1736525396,
-        "model": "retab-small",
-        "object": "chat.completion",
-        "service_tier": "default",
-        "system_fingerprint": "fp_f2cd28694a",
-        "usage": {
-            "completion_tokens": 20,
-            "prompt_tokens": 2760,
-            "total_tokens": 2780,
-            "completion_tokens_details": {
-                "accepted_prediction_tokens": 0,
-                "audio_tokens": 0,
-                "reasoning_tokens": 0,
-                "rejected_prediction_tokens": 0
-            },
-            "prompt_tokens_details": {
-                "audio_tokens": 0,
-                "cached_tokens": 0
-            }
+        }
+    ],
+    "created": 1736525396,
+    "model": "retab-micro",
+    "object": "chat.completion",
+    "extraction_id": "extr_01HZX0ABCDEF123456",
+    "usage": {
+        "completion_tokens": 20,
+        "prompt_tokens": 2760,
+        "total_tokens": 2780,
+        "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
         },
-        "likelihoods": {
-            "name": 0.7227993785831323,
-            "date": 0.7306298416895017
+        "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
         }
     },
-    "error": null
+    "likelihoods": {
+        "name": 0.7227993785831323,
+        "date": 0.7306298416895017
+    }
 }
 
 ```
