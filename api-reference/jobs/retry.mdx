@@ -1,0 +1,100 @@
+---
+title: 'Retry Job'
+openapi: 'POST /v1/jobs/{job_id}/retry'
+---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+retried_job = client.jobs.retry("job_V1StGXR8_Z5jdHi6B-myT")
+
+print(retried_job.status)  # queued
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const retriedJob = await client.jobs.retry("job_V1StGXR8_Z5jdHi6B-myT");
+
+console.log(retriedJob.status); // queued
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/jobs/job_V1StGXR8_Z5jdHi6B-myT/retry' \
+  -H "Api-Key: $RETAB_API_KEY"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "job_V1StGXR8_Z5jdHi6B-myT",
+  "object": "job",
+  "status": "queued",
+  "endpoint": "/v1/documents/extract",
+  "request": {
+    "document": {
+      "filename": "invoice.pdf",
+      "url": "data:application/pdf;base64,..."
+    },
+    "json_schema": { ... },
+    "model": "retab-small"
+  },
+  "response": null,
+  "error": null,
+  "created_at": 1705420800,
+  "started_at": null,
+  "completed_at": null,
+  "expires_at": 1706025600,
+  "organization_id": "org_abc123",
+  "metadata": {"batch_id": "batch_001"}
+}
+```
+
+```json 400
+{
+  "detail": "Cannot retry job in 'completed' status"
+}
+```
+
+```json 404
+{
+  "detail": "Job not found"
+}
+```
+
+```json 503
+{
+  "detail": "Retry queued; dispatch is delayed"
+}
+```
+
+</ResponseExample>
+
+## Path Parameters
+
+<ParamField path="job_id" type="string" required>
+  The unique identifier of the job to retry.
+</ParamField>
+
+## Retry Behavior
+
+Retry resets the existing job in place and keeps the same `job_id`.
+
+Retry is supported when the current status is:
+- `failed`
+- `cancelled`
+- `expired` if artifact cleanup has not already completed
+
+On success, Retab clears the previous `error`, removes the previous `response`, refreshes `expires_at`, and requeues the job for execution.
+
+If task dispatch is temporarily delayed after the retry is accepted, the API returns `503` with `"Retry queued; dispatch is delayed"`. The retry still succeeded, so poll the same `job_id`.
