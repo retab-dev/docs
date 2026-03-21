@@ -8,8 +8,6 @@
 
 The `split` method in Retab's document processing pipeline analyzes a multi-page document and classifies pages into user-defined subdocuments. Each result returns a `name` and the exact `pages` assigned to that subdocument. The same subdocument can appear multiple times in one response, which makes `split` useful for mixed batches, merged PDFs, and long documents with repeated sections.
 
-The SDK also exposes `documents.generate_split_config(...)`, which can propose the initial subdocument list for you before you run `documents.split(...)`.
-
 Common use cases include:
 
 1. **Document Separation**: Split a combined PDF containing multiple invoices, receipts, or contracts into individual sections
@@ -45,7 +43,6 @@ Key features of the Split API:
 - **Flexible Subdocuments**: Define custom subdocuments tailored to your document types
 - **Partition Detection**: Add a `partition_key` to break one subdocument into repeated items
 - **Consensus Scoring**: Increase `n_consensus` to get confidence signals like `likelihood` and `votes`
-- **Config Generation**: Use `generate_split_config` to bootstrap subdocuments from a sample file
 
 ## Split API
 
@@ -98,7 +95,7 @@ A SplitResponse object containing the classified sections with their assigned pa
 
 ## Recommended Workflow
 
-If you do not already know the right subdocument list, start with `generate_split_config` and then pass the generated `subdocuments` into `split`.
+Define the subdocument list you want to detect, then pass it directly into `split`.
 
 <CodeGroup>
 ```python Python
@@ -106,15 +103,13 @@ from retab import Retab
 
 client = Retab()
 
-config = client.documents.generate_split_config(
-    document="property_portfolio.pdf",
-    model="retab-small",
-)
-
 result = client.documents.split(
     document="property_portfolio.pdf",
     model="retab-small",
-    subdocuments=[subdoc.model_dump() for subdoc in config.subdocuments],
+    subdocuments=[
+        {"name": "property_listing", "description": "Property listing pages with photos, pricing, and listing details"},
+        {"name": "legal_notice", "description": "Legal notices, disclaimers, or policy pages"},
+    ],
     n_consensus=3,
 )
 
@@ -127,15 +122,13 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-const config = await client.documents.generate_split_config({
-  document: "property_portfolio.pdf",
-  model: "retab-small",
-});
-
 const result = await client.documents.split({
   document: "property_portfolio.pdf",
   model: "retab-small",
-  subdocuments: config.subdocuments,
+  subdocuments: [
+    { name: "property_listing", description: "Property listing pages with photos, pricing, and listing details" },
+    { name: "legal_notice", description: "Legal notices, disclaimers, or policy pages" },
+  ],
   n_consensus: 3,
 });
 

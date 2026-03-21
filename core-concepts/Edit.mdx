@@ -56,7 +56,6 @@ The edit SDK exposes the same workflow in both clients:
 - `client.edit.agent.fill(...)` for agent-based filling with automatic field detection
 - `client.edit.templates.generate(...)` to infer a reusable PDF form schema
 - `client.edit.templates.fill(...)` to fill a saved template
-- `client.edit.templates.list(...)`, `get(...)`, `create(...)`, `update(...)`, `duplicate(...)`, and `delete(...)` to manage templates
 - `client.documents.edit(...)` if you prefer a single request shape that supports either `document` or `template_id`
 
 <Note>
@@ -70,7 +69,6 @@ In the Node SDK, `edit.agent.fill(...)` uses `config: { color: "#000080" }`, whi
 The Edit API provides two main approaches:
 - **Agent Fill** (`edit.agent.fill`): AI-powered document filling that automatically detects and fills form fields
 - **Template Fill** (`edit.templates.fill`): Optimized filling using pre-defined templates (PDF only)
-- **Template Management** (`edit.templates.*`): Create and reuse saved PDF templates for batch processing
 
 ### Agent Fill
 
@@ -426,109 +424,6 @@ if (result.filled_document) {
 
 Templates skip the field detection step, making them faster and more consistent for repeated use.
 </Note>
-
-## Use Case: Managing Templates
-
-Create, list, and manage your edit templates programmatically.
-
-<CodeGroup>
-```python Python
-from retab import Retab
-import base64
-
-client = Retab()
-
-# First, generate the form schema
-schema_response = client.edit.templates.generate(
-    document="blank-form.pdf",
-    model="retab-small"
-)
-
-# Create a template from the detected schema
-template = client.edit.templates.create(
-    name="Employee Onboarding Form",
-    document="blank-form.pdf",
-    form_fields=schema_response.form_schema.form_fields
-)
-print(f"Created template: {template.id}")
-
-# List all templates
-templates = client.edit.templates.list(limit=10)
-for t in templates.data:
-    print(f"  - {t.name} ({t.id})")
-
-# Get a specific template
-template = client.edit.templates.get(template_id="edittplt_abc123")
-
-# Update a template
-updated = client.edit.templates.update(
-    template_id="edittplt_abc123",
-    name="Updated Form Name"
-)
-
-# Duplicate a template
-duplicate = client.edit.templates.duplicate(
-    template_id="edittplt_abc123",
-    name="Employee Form - Copy"
-)
-
-# Delete a template
-client.edit.templates.delete(template_id="edittplt_abc123")
-```
-
-```javascript Javascript
-import { Retab } from '@retab/node';
-import { readFileSync } from 'fs';
-
-const client = new Retab();
-
-// Read the PDF
-const pdfBuffer = readFileSync("blank-form.pdf");
-const pdfBase64 = pdfBuffer.toString('base64');
-
-// First, generate the form schema
-const schemaResponse = await client.edit.templates.generate({
-    document: {
-        filename: "blank-form.pdf",
-        url: `data:application/pdf;base64,${pdfBase64}`
-    },
-    model: "retab-small"
-});
-
-// Create a template from the detected schema
-const template = await client.edit.templates.create({
-    name: "Employee Onboarding Form",
-    document: {
-        filename: "blank-form.pdf",
-        url: `data:application/pdf;base64,${pdfBase64}`
-    },
-    form_fields: schemaResponse.form_schema.form_fields
-});
-console.log(`Created template: ${template.id}`);
-
-// List all templates
-const templates = await client.edit.templates.list({ limit: 10 });
-templates.data.forEach(t => {
-    console.log(`  - ${t.name} (${t.id})`);
-});
-
-// Get a specific template
-const fetchedTemplate = await client.edit.templates.get("edittplt_abc123");
-
-// Update a template
-const updated = await client.edit.templates.update("edittplt_abc123", {
-    name: "Updated Form Name"
-});
-
-// Duplicate a template
-const duplicate = await client.edit.templates.duplicate("edittplt_abc123", {
-    name: "Employee Form - Copy"
-});
-
-// Delete a template
-await client.edit.templates.delete("edittplt_abc123");
-```
-</CodeGroup>
 
 ## Use Case: Batch Form Processing
 
@@ -897,5 +792,4 @@ if (result.filled_document) {
 ### Template Workflow
 1. **Generate**: Use `edit.templates.generate()` to detect form fields in a blank PDF
 2. **Review**: Check the annotated PDF to verify detected fields
-3. **Create**: Save the form schema as a template with `edit.templates.create()`
-4. **Fill**: Use `edit.templates.fill()` for fast batch processing with pre-defined templates
+3. **Fill**: Use `edit.templates.fill()` for fast batch processing with a saved template

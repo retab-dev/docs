@@ -1,94 +1,33 @@
 ---
 title: "Extract Evals"
-description: "How to use the SDK resources under client.evals.extract."
+description: "How to use the processing-only SDK surface under client.evals.extract."
 ---
 
-`client.evals.extract` is the SDK surface for running extraction evals against labeled datasets. It gives you the full workflow: create an eval from a schema, attach ground-truth documents, create iterations with draft overrides, run documents through an eval or iteration, and measure quality with iteration metrics.
+`client.evals.extract` now exposes only processing entry points:
 
-## Resource Map
+- `process(...)`
+- `process_stream(...)` in Python / `processStream(...)` in Node
 
-```text
-client.evals.extract
-|- create / get / list / update / delete / publish
-|- process
-|- process_stream (Python only)
-|- datasets
-|  |- create / get / list / update / delete / duplicate
-|  |- add_document / get_document / list_documents / update_document / delete_document
-|  |- process_document
-|  `- iterations
-|     |- create / get / list / update_draft / delete / finalize
-|     |- get_schema / process_documents / get_metrics
-|     `- get_document / list_documents / update_document / delete_document / process_document
-`- templates
-   |- list / get / clone
-   `- list_builder_document_previews / list_builder_documents
-```
-
-## Quick Start
+## Process
 
 <CodeGroup>
 
 ```python Python
 from retab import Retab
 from retab.types.mime import MIMEData
-from retab.types.projects.predictions import PredictionData
 
 client = Retab()
 
-invoice_schema = {
-    "type": "object",
-    "properties": {
-        "invoice_number": {"type": "string"},
-        "total_amount": {"type": "number"},
-    },
-    "required": ["invoice_number", "total_amount"],
-}
-
-eval_project = client.evals.extract.create(
-    name="Invoice extraction eval",
-    json_schema=invoice_schema,
-)
-
-dataset = client.evals.extract.datasets.create(
-    eval_project.id,
-    name="March invoices",
-)
-
-dataset_document = client.evals.extract.datasets.add_document(
-    eval_project.id,
-    dataset.id,
-    mime_data=MIMEData(
+result = client.evals.extract.process(
+    eval_id="eval_123",
+    document=MIMEData(
         filename="invoice.pdf",
         url="data:application/pdf;base64,JVBERi0xLjQKJ...",
     ),
-    prediction_data=PredictionData(
-        prediction={
-            "invoice_number": "INV-1001",
-            "total_amount": 1299.50,
-        }
-    ),
+    metadata={"source": "sdk-docs"},
 )
 
-iteration = client.evals.extract.datasets.iterations.create(
-    eval_project.id,
-    dataset.id,
-)
-
-client.evals.extract.datasets.iterations.process_documents(
-    eval_project.id,
-    dataset.id,
-    iteration.id,
-    dataset_document.id,
-)
-
-metrics = client.evals.extract.datasets.iterations.get_metrics(
-    eval_project.id,
-    dataset.id,
-    iteration.id,
-)
-
-print(metrics.overall_metrics.accuracy)
+print(result.choices[0].message.parsed)
 ```
 
 ```typescript TypeScript
@@ -96,115 +35,57 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const invoiceSchema = {
-  type: "object",
-  properties: {
-    invoice_number: { type: "string" },
-    total_amount: { type: "number" },
+const result = await client.evals.extract.process({
+  eval_id: "eval_123",
+  document: {
+    filename: "invoice.pdf",
+    url: "data:application/pdf;base64,JVBERi0xLjQKJ...",
   },
-  required: ["invoice_number", "total_amount"],
-};
-
-const evalProject = await client.evals.extract.create({
-  name: "Invoice extraction eval",
-  json_schema: invoiceSchema,
+  metadata: { source: "sdk-docs" },
 });
 
-const dataset = await client.evals.extract.datasets.create(evalProject.id, {
-  name: "March invoices",
-});
-
-const datasetDocument = await client.evals.extract.datasets.addDocument(
-  evalProject.id,
-  dataset.id,
-  {
-    mime_data: { filename: "invoice.pdf", url: "data:application/pdf;base64,JVBERi0xLjQKJ..." },
-    prediction_data: {
-      prediction: {
-        invoice_number: "INV-1001",
-        total_amount: 1299.5,
-      },
-    },
-  }
-);
-
-const iteration = await client.evals.extract.datasets.iterations.create(
-  evalProject.id,
-  dataset.id
-);
-
-await client.evals.extract.datasets.iterations.processDocuments(
-  evalProject.id,
-  dataset.id,
-  iteration.id,
-  datasetDocument.id
-);
-
-const metrics = await client.evals.extract.datasets.iterations.getMetrics(
-  evalProject.id,
-  dataset.id,
-  iteration.id
-);
-
-console.log(metrics.overall_metrics?.accuracy);
+console.log(result.choices[0].message.parsed);
 ```
 
 </CodeGroup>
 
-## Core Resources
+## Process Stream
 
-### Eval
+<CodeGroup>
 
-Use the top-level resource to manage the extraction eval itself.
+```python Python
+from retab import Retab
+from retab.types.mime import MIMEData
 
-- `create(name, json_schema, ...)`: create a new extraction eval from a JSON schema.
-- `get(eval_id)`, `list(...)`, `update(eval_id, ...)`, `delete(eval_id)`: standard CRUD methods.
-- `publish(eval_id, origin=None)`: promote the current draft config to the published config.
-- `process(eval_id, iteration_id=None, document=..., ...)`: run a document directly against the eval or a specific iteration.
-- `process_stream(...)` in Python: stream `RetabParsedChatCompletionChunk` values while the structured output fills in.
+client = Retab()
 
-`process()` returns a `RetabParsedChatCompletion`, so the structured result is available on the parsed message content.
+with client.evals.extract.process_stream(
+    eval_id="eval_123",
+    document=MIMEData(
+        filename="invoice.pdf",
+        url="data:application/pdf;base64,JVBERi0xLjQKJ...",
+    ),
+) as stream:
+    for chunk in stream:
+        print(chunk.choices[0].delta.flat_parsed)
+```
 
-Use `process()`. The older Python alias `client.evals.extract.extract(...)` is deprecated in the SDK.
+```typescript TypeScript
+import { Retab } from "@retab/node";
 
-## Datasets
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-Datasets hold labeled examples for an eval.
+const stream = await client.evals.extract.processStream({
+  eval_id: "eval_123",
+  document: {
+    filename: "invoice.pdf",
+    url: "data:application/pdf;base64,JVBERi0xLjQKJ...",
+  },
+});
 
-- `datasets.create(eval_id, name, base_json_schema=None)`: create a dataset for an eval.
-- `datasets.duplicate(...)`: clone an existing dataset.
-- `datasets.add_document(...)`: attach a document and optional `prediction_data` ground truth.
-- `datasets.update_document(...)`: revise labels, validation flags, or attach an `extraction_id`.
-- `datasets.process_document(...)`: run one dataset document through the base eval configuration.
+for await (const chunk of stream) {
+  console.log(chunk.choices[0]?.delta?.flat_parsed);
+}
+```
 
-For extraction evals, ground truth usually lives in `prediction_data.prediction`.
-
-## Iterations
-
-Iterations are where you compare model settings and schema changes.
-
-- `iterations.create(...)`: create a new draft iteration for a dataset.
-- `iterations.update_draft(...)`: stage new `inference_settings` or `schema_overrides`.
-- `iterations.get_schema(..., use_draft=True)` / `getSchema(..., { useDraft: true })`: preview the materialized schema after draft overrides.
-- `iterations.finalize(...)`: promote the draft into the finalized iteration.
-- `iterations.process_documents(...)`: create an iteration document from a dataset document and queue processing.
-- `iterations.get_metrics(...)`: compute accuracy and field-level metrics for the iteration.
-- `iterations.process_document(...)`: rerun a specific iteration document.
-
-The draft/finalize split matters here: you edit the draft first, inspect it, then finalize when you want those changes locked in.
-
-## Templates
-
-Templates let you start from existing eval blueprints.
-
-- `templates.list(...)`: browse extraction eval templates.
-- `templates.get(template_id)`: fetch one template.
-- `templates.clone(template_id, name=None)`: turn a template into a new eval project.
-- `templates.list_builder_documents(template_id)`: fetch the sample documents attached to a template.
-- `templates.list_builder_document_previews(template_ids)`: fetch preview MIME metadata for multiple templates.
-
-## SDK Notes
-
-- Python `list()` methods on evals, datasets, and iterations return model lists. Node returns paginated API payloads with `data`.
-- Python templates `list()` returns a paginated wrapper with `data` and `list_metadata`.
-- Extraction eval processing accepts a single `document`. Passing `documents=` raises an SDK error in Python.
+</CodeGroup>
