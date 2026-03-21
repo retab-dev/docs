@@ -165,7 +165,11 @@ curl -X POST \
   - `/v1/edit/agent/fill` - AI agent form filling
   - `/v1/edit/templates/fill` - Template filling
   - `/v1/edit/templates/generate` - Generate form schema
-  - `/v1/projects/extract` - Project extraction (requires `project_id` in request)
+  - `/v1/evals/extract/process` - Run an extract eval process job. Requires `project_id` in `request`
+  - `/v1/evals/split/process` - Run a split eval process job. Requires `project_id` in `request`
+  - `/v1/evals/classify/process` - Run a classify eval process job. Requires `project_id` in `request`
+  - `/v1/evals/extract/extract` - Run extract evaluation extraction. Requires `project_id` in `request`
+  - `/v1/evals/extract/split` - Run extract evaluation splitting. Requires `project_id` in `request`
 </ParamField>
 
 <ParamField body="request" type="object" required>
@@ -175,6 +179,10 @@ curl -X POST \
 <ParamField body="metadata" type="object">
   Optional key-value pairs for tracking. Maximum 16 pairs; keys up to 64 characters, values up to 512 characters.
 </ParamField>
+
+<Note>
+If `request` contains embedded MIME/data URLs, Retab may offload those artifacts to object storage internally before persisting the job. The API response still returns the original request shape.
+</Note>
 
 ## Response Fields
 
@@ -205,6 +213,10 @@ curl -X POST \
 <ResponseField name="error" type="object | null">
   Error details when `status` is `failed`. Contains `code`, `message`, and optional `details`.
 </ResponseField>
+
+## Dispatch Behavior
+
+Most successful creates return `200` with a `queued` job. If the job record is stored successfully but task dispatch is temporarily delayed, Retab returns `202 Accepted` with the job already created and a warning like `dispatch_delayed`. In that case, poll the returned `job.id` instead of creating a duplicate job.
 
 <ResponseField name="created_at" type="integer">
   Unix timestamp when the job was created.
