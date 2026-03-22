@@ -81,7 +81,7 @@ Entry point for structured JSON data. Define a schema and pass JSON data when ru
 - Use JSON Input nodes to pass structured data into workflows without documents
 - Combine with Document nodes to enrich extractions with external data
 - Connect to Extract nodes as additional context for AI-powered extraction
-- Use with Functions or If/Else nodes for data-driven workflow logic
+- Use with Formula or If/Else nodes for data-driven workflow logic
 
 **SDK Example:**
 ```python
@@ -374,7 +374,7 @@ Pause workflow execution for human review and approval.
 **Configuration:** None (inherits schema from connected source)
 
 **How It Works:**
-1. Connect to an Extract or Functions node (schema is automatically inherited)
+1. Connect to an Extract or Formula node (schema is automatically inherited)
 2. When the workflow runs, it pauses at the HIL node
 3. A reviewer sees the extracted data alongside the source document
 4. The reviewer can approve, modify, or reject the data
@@ -386,37 +386,36 @@ Pause workflow execution for human review and approval.
 - Compliance requirements that mandate human oversight
 
 <Note>
-The HIL node automatically inherits the JSON schema from the connected upstream node. It also preserves any computed fields from Functions nodes.
+The HIL node automatically inherits the JSON schema from the connected upstream node. It also preserves any computed fields from Formula nodes.
 </Note>
 
 ---
 
-### Functions
+### Formula
 
-<Card title="Functions" icon="function-square" color="#6366f1">
+<Card title="Formula" icon="function-square" color="#6366f1">
 Add computed fields using Excel-like formulas.
 </Card>
 
-**Inputs:** JSON  
+**Inputs:** JSON
 **Outputs:** JSON (with computed fields)
 
 **Configuration:**
 
 | Setting | Description |
 |---------|-------------|
-| **Functions** | List of computed fields with target paths and expressions |
+| **Formulas** | List of computed fields with target paths and expressions |
 
-**Supported Functions:**
+**Common Functions:**
 
-| Function | Description | Example |
-|----------|-------------|---------|
-| `SUM` | Sum of values | `SUM(items.*.price)` |
-| `AVERAGE` | Average of values | `AVERAGE(scores.*)` |
-| `COUNT` | Count of items | `COUNT(line_items.*)` |
-| `MIN` / `MAX` | Minimum/maximum value | `MAX(items.*.quantity)` |
-| `IF` | Conditional | `IF(total > 1000, "Large", "Small")` |
-| `CONCAT` | Join strings | `CONCAT(first_name, " ", last_name)` |
-| `ROUND` | Round number | `ROUND(amount, 2)` |
+| Category | Functions | Example |
+|----------|-----------|---------|
+| Aggregation | `SUM`, `AVERAGE`, `COUNT`, `MIN`, `MAX` | `SUM(items.*.price)` |
+| Logic | `IF`, `AND`, `OR`, `NOT` | `IF(total > 1000, "Large", "Small")` |
+| Strings | `CONCAT`, `TRIM`, `UPPER`, `LOWER`, `REPLACE`, `LEN` | `CONCAT(first_name, " ", last_name)` |
+| String matching | `STARTS_WITH`, `ENDS_WITH`, `CONTAINS` | `ENDS_WITH(email, "@workflows.retab.com")` |
+| String extraction | `BEFORE`, `AFTER`, `SPLIT_PART`, `REGEX_EXTRACT` | `BEFORE(BEFORE(email, "@"), ".")` |
+| Math | `ABS`, `SQRT`, `LOG`, `POW` | `ABS(total - expected_total)` |
 
 **Example Configuration:**
 ```
@@ -431,10 +430,14 @@ Expression: subtotal + tax
 ```
 
 <Note>
-Functions are evaluated in dependency order. You can reference other computed fields in expressions.
+Formulas are evaluated in dependency order. You can reference other computed fields in expressions.
 </Note>
 
-See [Functions Documentation](/projects/Functions) for the complete formula reference.
+<Note>
+String extraction helpers return `null` when they cannot extract a value. For example, `BEFORE(email, "@")` returns `null` if `email` does not contain `@`.
+</Note>
+
+See [Formulas Documentation](/workflows/Formulas) for the complete formula reference.
 
 ---
 
@@ -873,8 +876,8 @@ Understanding input/output types helps you connect nodes correctly:
     Identify what data you need at the end, then work backwards to determine which nodes you need.
   </Accordion>
   
-  <Accordion title="Add Functions for calculations">
-    Instead of computing values after receiving webhook data, use Functions nodes to add totals, percentages, and derived fields directly in the workflow.
+  <Accordion title="Add Formula nodes for calculations">
+    Instead of computing values after receiving webhook data, use Formula nodes to add totals, percentages, and derived fields directly in the workflow.
   </Accordion>
   
   <Accordion title="Use Classifier for routing">
