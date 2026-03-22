@@ -1,8 +1,8 @@
 ---
-title: Functions
+title: Formulas
 ---
 
-Functions allow you to define computed fields in your extraction schema—fields whose values are calculated from other extracted data rather than directly pulled from the document. Use Functions to create totals, apply business rules, validate consistency, and derive new values from your extracted data.
+Formulas allow you to define computed fields in your extraction schema—fields whose values are calculated from other extracted data rather than directly pulled from the document. Use Formulas to create totals, apply business rules, validate consistency, and derive new values from your extracted data.
 
 ## Overview
 
@@ -13,7 +13,7 @@ When extracting structured data from documents, you often need values that aren'
 - **Reconciliation checks**: Verify that computed totals match stated totals
 - **Conditional values**: Apply different logic based on field values
 
-Functions use a formula-based expression language that supports:
+Formulas use a formula-based expression language that supports:
 
 - **Arithmetic operations**: `+`, `-`, `*`, `/`
 - **Mathematical functions**: `ABS`, `SQRT`, `LOG`, `POW`
@@ -21,13 +21,14 @@ Functions use a formula-based expression language that supports:
 - **Array operations**: `FILTER`, `FLATTEN`, `LOOKUP`, `MATCH`
 - **Logical operations**: `AND`, `OR`, `NOT`, `IF`
 - **Comparison operators**: `=`, `!=`, `>`, `>=`, `<`, `<=`
-- **String operations**: `CONCAT`
+- **String operations**: `CONCAT`, `TRIM`, `UPPER`, `LOWER`, `REPLACE`, `LEN`
+- **String matching and extraction**: `STARTS_WITH`, `ENDS_WITH`, `CONTAINS`, `BEFORE`, `AFTER`, `SPLIT_PART`, `REGEX_EXTRACT`
 
 ---
 
 ## Defining Computed Fields
 
-Computed fields are defined in the project section of the dashboard (schema editor/functions).
+Computed fields are defined in the project section of the dashboard (schema editor/formulas).
 
 ---
 
@@ -290,11 +291,40 @@ IF(items.*.price > 50, "premium", "standard")
 
 ## String Functions
 
-| Function | Syntax                            | Description                | Example                                  |
-| -------- | --------------------------------- | -------------------------- | ---------------------------------------- |
-| CONCAT   | `CONCAT(part1, part2, ..., partN)` | Join values into a string  | `CONCAT("Hello ", name, "!")` → "Hello Alice!" |
+| Function | Syntax | Description | Example |
+| -------- | ------ | ----------- | ------- |
+| CONCAT | `CONCAT(part1, part2, ..., partN)` | Join values into a string | `CONCAT("Hello ", name, "!")` → `"Hello Alice!"` |
+| TRIM | `TRIM(text)` | Remove leading and trailing whitespace | `TRIM("  Alice  ")` → `"Alice"` |
+| UPPER | `UPPER(text)` | Convert text to uppercase | `UPPER(code)` → `"FE50"` |
+| LOWER | `LOWER(text)` | Convert text to lowercase | `LOWER(email)` |
+| REPLACE | `REPLACE(text, from, to)` | Replace all literal matches | `REPLACE(email, ".xpo", "")` |
+| LEN | `LEN(text)` | Return string length | `LEN(invoice_number)` |
+| STARTS_WITH | `STARTS_WITH(text, prefix)` | Case-sensitive prefix check | `STARTS_WITH(email, "FE50")` |
+| ENDS_WITH | `ENDS_WITH(text, suffix)` | Case-sensitive suffix check | `ENDS_WITH(email, "@workflows.retab.com")` |
+| CONTAINS | `CONTAINS(text, needle)` | Case-sensitive substring check | `CONTAINS(email, ".xpo@")` |
+| BEFORE | `BEFORE(text, delimiter)` | Return text before the first delimiter | `BEFORE(email, "@")` |
+| AFTER | `AFTER(text, delimiter)` | Return text after the first delimiter | `AFTER(email, "@")` |
+| SPLIT_PART | `SPLIT_PART(text, delimiter, index)` | Return the 0-based token at `index` | `SPLIT_PART(email, ".", 0)` |
+| REGEX_EXTRACT | `REGEX_EXTRACT(text, pattern, [group])` | Extract a regex capture group | `REGEX_EXTRACT(email, "^([^.@]+)")` |
 
-Non-string values are automatically converted. Null values become empty strings.
+### String Function Semantics
+
+- String helpers coerce scalar non-null inputs to strings.
+- `null` string inputs return `null`, except `CONCAT`, where `null` becomes an empty string.
+- Arrays and objects are invalid string inputs and return `null`.
+- `REPLACE` is literal, case-sensitive, and replaces all non-overlapping matches.
+- `STARTS_WITH`, `ENDS_WITH`, and formula `CONTAINS` are case-sensitive.
+- `BEFORE` and `AFTER` use the first delimiter occurrence.
+- `SPLIT_PART` is 0-based.
+- `REGEX_EXTRACT` defaults to capture group `1`. Pass `0` to return the full match.
+- `REGEX_EXTRACT` does not support regex flags.
+- Missing delimiter, out-of-range split index, invalid regex, missing regex match, or invalid capture group all return `null`.
+
+<Note>
+The formula function `CONTAINS(text, needle)` is case-sensitive. This is different from the `"contains"` comparator used by `FILTER`, `LOOKUP`, and `MATCH`, which performs case-insensitive substring matching.
+</Note>
+
+Non-string scalar values are automatically converted when used with string helpers. For `CONCAT`, null values become empty strings.
 
 ```text
 # Build order reference
@@ -303,6 +333,13 @@ CONCAT(order.prefix, "-", order.number)
 
 # Format full name
 CONCAT(first_name, " ", last_name)
+
+# Extract the sender code from an email-like identifier
+BEFORE(BEFORE(email, "@"), ".")
+# "FE50.xpo@workflows.retab.com" -> "FE50"
+
+# Equivalent regex-based extraction
+REGEX_EXTRACT(email, "^([^.@]+)")
 ```
 
 ---
@@ -314,6 +351,7 @@ CONCAT(first_name, " ", last_name)
 | Numeric op with `null`  | Treated as `0` (e.g., `5 + null` → `5`)              |
 | Logical op with `null`  | Treated as `false`                                   |
 | Missing field           | Returns `null`; use `IF` for safe defaults           |
+| String extraction miss  | Returns `null`                                      |
 
 **Safe default pattern:**
 
@@ -396,6 +434,20 @@ IF(
 )
 ```
 
+### Example 6: Extract a Sender Code from an Email
+
+Extract `FE50` from `FE50.xpo@workflows.retab.com`:
+
+```text
+BEFORE(BEFORE(email, "@"), ".")
+```
+
+Or with regex:
+
+```text
+REGEX_EXTRACT(email, "^([^.@]+)")
+```
+
 ---
 
 ## Best Practices
@@ -448,6 +500,18 @@ SUM(FILTER(items, "active", "=", true), "price")
 
 # Count items by status
 COUNT(FILTER(items, "status", "=", "pending"), "_")
+```
+
+### 6. Prefer Delimiter Helpers Before Regex
+
+If your input has a stable delimiter structure, `BEFORE`, `AFTER`, and `SPLIT_PART` are easier to read and maintain than regex:
+
+```text
+# Preferred when structure is stable
+BEFORE(BEFORE(email, "@"), ".")
+
+# Use regex only when the format is less regular
+REGEX_EXTRACT(email, "^([^.@]+)")
 ```
 
 ---
@@ -529,6 +593,19 @@ SUM(
 | LOOKUP | `LOOKUP(users, "id", "=", 5)` | Find user by id |
 | MATCH | `MATCH(items, "status", "=", "pending")` | Index of first match |
 
+### String Functions
+| Function | Example | Description |
+|----------|---------|-------------|
+| CONCAT | `CONCAT(first_name, " ", last_name)` | Join values into a string |
+| TRIM | `TRIM(name)` | Remove surrounding whitespace |
+| UPPER / LOWER | `LOWER(email)` | Normalize text casing |
+| REPLACE | `REPLACE(email, ".xpo", "")` | Replace literal substrings |
+| LEN | `LEN(invoice_number)` | Get string length |
+| STARTS_WITH / ENDS_WITH / CONTAINS | `ENDS_WITH(email, "@workflows.retab.com")` | Case-sensitive string matching |
+| BEFORE / AFTER | `AFTER(email, "@")` | Extract around first delimiter |
+| SPLIT_PART | `SPLIT_PART(email, ".", 0)` | Extract the 0-based token at an index |
+| REGEX_EXTRACT | `REGEX_EXTRACT(email, "^([^.@]+)")` | Extract a regex capture group |
+
 ### Comparators for Array Functions
 | Comparator | Meaning | Example |
 |------------|---------|---------|
@@ -547,4 +624,3 @@ SUM(
 - [Extraction](https://docs.retab.com/core-concepts/Extraction) - Learn how to extract structured data
 - [Reasoning](https://docs.retab.com/core-concepts/Reasoning) - Add step-by-step reasoning for complex calculations
 - [Schema](https://docs.retab.com/core-concepts/Schema) - Design your extraction schemas
-
