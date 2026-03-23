@@ -1,11 +1,17 @@
-import requests
 import json
+import sys
+from pathlib import Path
 
 
 def generate_openapi() -> None:
-    # Fetch OpenAPI specification from local server
-    response = requests.get("http://localhost:4000/openapi.json")
-    spec = response.json()
+    repo_root = Path(__file__).resolve().parents[3]
+    backend_main_server = repo_root / "backend" / "main_server"
+    if str(backend_main_server) not in sys.path:
+        sys.path.insert(0, str(backend_main_server))
+
+    from main_server.main import app
+
+    spec = app.openapi()
 
     # Update security schemes
     spec["components"]["securitySchemes"] = {"API Key": {"type": "apiKey", "in": "header", "name": "Api-Key"}}
@@ -14,7 +20,8 @@ def generate_openapi() -> None:
     spec["servers"] = [{"url": "https://api.retab.com"}]
 
     # Write updated spec to file
-    with open("openapi.json", "w") as f:
+    output_path = Path(__file__).resolve().parent / "openapi.json"
+    with output_path.open("w") as f:
         json.dump(spec, f, indent=2)
 
 
