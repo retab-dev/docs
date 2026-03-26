@@ -1,0 +1,20 @@
+---
+title: 'Submit HIL Decision'
+openapi: 'POST /v1/workflows/runs/{run_id}/hil-decisions'
+---
+
+Submit an approve/reject decision for a human-in-the-loop node on a workflow run.
+
+This endpoint is command-oriented:
+- it records the decision with Temporal as the source of truth
+- it returns decision receipt state, not a refreshed `WorkflowRun`
+- the run projection in Mongo may update shortly afterward
+
+Use [Get Run](/api-reference/workflows/runs/get) to refresh the projected run state after submission, or [Get HIL Decision](/api-reference/workflows/runs/get-hil-decision) when you need command-side decision truth.
+
+Common outcomes:
+- `submission_status="accepted"`: a new matching decision was accepted
+- `submission_status="already_received"`: the same logical decision had already been received
+
+If the node already has the opposite decision or is no longer eligible to accept a decision, the endpoint returns `409`.
+
