@@ -1,0 +1,222 @@
+---
+title: Functions
+---
+
+Function blocks execute custom Python code in a sandboxed environment. They receive upstream data as a typed `Input` Pydantic model and return a typed `Output` model, enabling arbitrary transformations, validations, and computed fields.
+
+## Overview
+
+When processing documents, you often need values that aren't directly extracted but can be computed from other fields. For example:
+
+- **Line item totals**: `quantity * unit_price`
+- **Invoice totals**: Sum of all line item amounts
+- **Reconciliation checks**: Verify that computed totals match stated totals
+- **Conditional values**: Apply different logic based on field values
+
+Function blocks let you write Python code with access to the full standard library plus packages like **pydantic**, **pandas**, **numpy**, **duckdb**, and **rapidfuzz**.
+
+---
+
+## Configuration
+
+| Field | Description |
+|---|---|
+| **output_schema** | JSON schema defining the output structure. Required for stable downstream typing. |
+| **code** | Python code containing a `transform(input_data: Input) -> Output` function. |
+| **timeout_seconds** | Sandbox execution timeout (1--300, default 60). |
+| **table_refs** | Optional list of workflow tables to mount as CSV files in the sandbox. |
+
+---
+
+## Output Schema
+
+Define the output contract as a JSON schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "subtotal": { "type": "number", "description": "Sum of line item amounts" },
+    "tax": { "type": "number", "description": "Tax amount" },
+    "total": { "type": "number", "description": "Grand total" },
+    "is_valid": { "type": "boolean", "description": "Whether totals reconcile" },
+    "error_message": { "type": "string", "description": "Validation error details" }
+  },
+  "required": ["subtotal", "tax", "total", "is_valid", "error_message"]
+}
+```
+
+---
+
+## Code
+
+Import the auto-generated `Input` and `Output` models from the virtual `models` module:
+
+```python
+from models import Input, Output
+
+def transform(input_data: Input) -> Output:
+    subtotal = sum(item.amount for item in input_data.line_items)
+    tax = subtotal * input_data.tax_rate
+    total = subtotal + tax
+    is_valid = abs(total - input_data.stated_total) <= 0.01 * abs(input_data.stated_total)
+    error = "" if is_valid else f"Total mismatch: computed {total}, stated {input_data.stated_total}"
+    return Output(
+        subtotal=subtotal,
+        tax=tax,
+        total=total,
+        is_valid=is_valid,
+        error_message=error,
+    )
+```
+
+---
+
+## Validation Patterns
+
+Function blocks are commonly used after Extract blocks to validate extracted data.
+
+### Sum Check
+
+Verify a total matches the sum of its parts:
+
+```python
+from models import Input, Output
+
+def transform(input_data: Input) -> Output:
+    item_sum = sum(item.amount for item in input_data.line_items)
+    total = input_data.total or 0
+    is_valid = abs(total - item_sum) <= 0.01 * abs(total) if total else item_sum == 0
+    error = "" if is_valid else f"Total mismatch: sum is {item_sum} but total is {total}"
+    return Output(total_check_valid=is_valid, total_check_error=error)
+```
+
+### Difference Check
+
+Verify a result equals A - B - C:
+
+```python
+from models import Input, Output
+
+def transform(input_data: Input) -> Output:
+    expected = input_data.gross_value - input_data.deductions - input_data.taxes
+    is_valid = abs(input_data.net_value - expected) <= 0.01
+    error = "" if is_valid else f"Net mismatch: expected {expected}, got {input_data.net_value}"
+    return Output(net_calc_valid=is_valid, net_calc_error=error)
+```
+
+### Equality Check
+
+Verify two fields match:
+
+```python
+from models import Input, Output
+
+def transform(input_data: Input) -> Output:
+    is_valid = abs(input_data.field_a - input_data.field_b) <= 0.01
+    error = "" if is_valid else f"Fields differ: {input_data.field_a} vs {input_data.field_b}"
+    return Output(equality_valid=is_valid, equality_error=error)
+```
+
+### Conditional Labeling
+
+Categorize values:
+
+```python
+from models import Input, Output
+
+def transform(input_data: Input) -> Output:
+    if input_data.total >= 10000:
+        category = "enterprise"
+    elif input_data.total >= 1000:
+        category = "business"
+    else:
+        category = "personal"
+    return Output(category=category)
+```
+
+### String Extraction
+
+Extract structured parts from text:
+
+```python
+from models import Input, Output
+
+def transform(input_data: Input) -> Output:
+    email = input_data.email or ""
+    local = email.split("@")[0] if "@" in email else ""
+    sender_code = local.split(".")[0] if "." in local else local
+    return Output(sender_code=sender_code)
+```
+
+### Fuzzy Matching with DuckDB
+
+Look up values in a mounted workflow table:
+
+```python
+from models import Input, Output
+import duckdb
+
+def transform(input_data: Input) -> Output:
+    db = duckdb.connect(":memory:")
+    db.execute("CREATE TABLE ports AS SELECT * FROM read_csv('/tmp/data/ports.csv')")
+    result = db.execute(
+        "SELECT unlocode FROM ports ORDER BY jaro_winkler_similarity(name, ?) DESC LIMIT 1",
+        [input_data.port_name],
+    ).fetchone()
+    return Output(unlocode=result[0] if result else None)
+```
+
+---
+
+## Available Packages
+
+Standard library (json, re, datetime, math, os, collections, itertools, etc.), plus:
+
+| Package | Use Case |
+|---------|----------|
+| **pydantic** | Input/Output models (auto-generated) |
+| **pandas**, **numpy**, **scipy** | Data manipulation and math |
+| **python-dateutil** | Date parsing |
+| **beautifulsoup4**, **lxml** | HTML/XML parsing |
+| **duckdb** | In-memory SQL analytics, fuzzy string matching |
+| **rapidfuzz** | Fast fuzzy string matching |
+
+<Note>
+Outbound network access is disabled inside function sandboxes. Use the `api_call` block when you need to call external HTTP APIs, then pass the response into the function block.
+</Note>
+
+---
+
+## Workflow Tables
+
+Mount workflow tables (managed via the Tables UI or API) as CSV files in the sandbox:
+
+```json
+{
+  "table_refs": [
+    { "table_id": "workflow_table_abc123", "mount_path": "/tmp/data/ports.csv" }
+  ]
+}
+```
+
+Use `/tmp/` as mount prefix (not `/data/`). In local dev mode the sandbox runs on the host filesystem and `/tmp/` is always writable.
+
+---
+
+## Rules
+
+1. Always provide an `output_schema` that matches what `transform()` returns.
+2. `transform()` must accept `input_data: Input` and return an `Output` instance.
+3. Access input fields via dot notation: `input_data.field_name`.
+4. Do not redefine the `Input` class -- it is auto-generated from the upstream node's schema.
+5. If the output is nested, return plain dict/list structures matching `output_schema`.
+6. Use `os.environ["VAR_NAME"]` for secrets -- never hardcode credentials.
+
+---
+
+## Go Further
+
+- [Extraction](https://docs.retab.com/core-concepts/Extraction) - Learn how to extract structured data
+- [Reasoning](https://docs.retab.com/core-concepts/Reasoning) - Add step-by-step reasoning for complex calculations
+- [Schema](https://docs.retab.com/core-concepts/Schema) - Design your extraction schemas
