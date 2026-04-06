@@ -81,7 +81,7 @@ Entry point for structured JSON data. Define a schema and pass JSON data when ru
 - Use JSON Input nodes to pass structured data into workflows without documents
 - Combine with Document nodes to enrich extractions with external data
 - Connect to Extract nodes as additional context for AI-powered extraction
-- Use with Formula or If/Else nodes for data-driven workflow logic
+- Use with Function or If/Else nodes for data-driven workflow logic
 
 **SDK Example:**
 ```python
@@ -374,7 +374,7 @@ Pause workflow execution for human review and approval.
 **Configuration:** None (inherits schema from connected source)
 
 **How It Works:**
-1. Connect to an Extract or Formula node (schema is automatically inherited)
+1. Connect to an Extract or Function node (schema is automatically inherited)
 2. When the workflow runs, it pauses at the HIL node
 3. A reviewer sees the extracted data alongside the source document
 4. The reviewer can approve, modify, or reject the data
@@ -386,58 +386,46 @@ Pause workflow execution for human review and approval.
 - Compliance requirements that mandate human oversight
 
 <Note>
-The HIL node automatically inherits the JSON schema from the connected upstream node. It also preserves any computed fields from Formula nodes.
+The HIL node automatically inherits the JSON schema from the connected upstream node. It also preserves any computed fields from Function nodes.
 </Note>
 
 ---
 
-### Formula
+### Function
 
-<Card title="Formula" icon="function-square" color="#6366f1">
-Add computed fields using Excel-like formulas.
+<Card title="Function" icon="code" color="#6366f1">
+Execute custom Python code in a sandboxed environment for transformations and validations.
 </Card>
 
 **Inputs:** JSON
-**Outputs:** JSON (with computed fields)
+**Outputs:** JSON (with computed/transformed fields)
 
 **Configuration:**
 
 | Setting | Description |
 |---------|-------------|
-| **Formulas** | List of computed fields with target paths and expressions |
+| **output_schema** | JSON schema defining the output structure |
+| **code** | Python code with a `transform(input_data: Input) -> Output` function |
+| **timeout_seconds** | Sandbox execution timeout (1--300, default 60) |
 
-**Common Functions:**
+**Example:**
+```python
+from models import Input, Output
 
-| Category | Functions | Example |
-|----------|-----------|---------|
-| Aggregation | `SUM`, `AVERAGE`, `COUNT`, `MIN`, `MAX` | `SUM(items.*.price)` |
-| Logic | `IF`, `AND`, `OR`, `NOT` | `IF(total > 1000, "Large", "Small")` |
-| Strings | `CONCAT`, `TRIM`, `UPPER`, `LOWER`, `REPLACE`, `LEN` | `CONCAT(first_name, " ", last_name)` |
-| String matching | `STARTS_WITH`, `ENDS_WITH`, `CONTAINS` | `ENDS_WITH(email, "@workflows.retab.com")` |
-| String extraction | `BEFORE`, `AFTER`, `SPLIT_PART`, `REGEX_EXTRACT` | `BEFORE(BEFORE(email, "@"), ".")` |
-| Math | `ABS`, `SQRT`, `LOG`, `POW` | `ABS(total - expected_total)` |
-
-**Example Configuration:**
-```
-Target: subtotal
-Expression: SUM(line_items.*.amount)
-
-Target: tax
-Expression: subtotal * 0.1
-
-Target: total
-Expression: subtotal + tax
+def transform(input_data: Input) -> Output:
+    subtotal = sum(item.amount for item in input_data.line_items)
+    tax = subtotal * 0.1
+    total = subtotal + tax
+    return Output(subtotal=subtotal, tax=tax, total=total)
 ```
 
-<Note>
-Formulas are evaluated in dependency order. You can reference other computed fields in expressions.
-</Note>
+**Available packages:** pydantic, pandas, numpy, scipy, duckdb, rapidfuzz, beautifulsoup4, lxml, python-dateutil.
 
 <Note>
-String extraction helpers return `null` when they cannot extract a value. For example, `BEFORE(email, "@")` returns `null` if `email` does not contain `@`.
+Outbound network access is disabled. Use the `api_call` block for HTTP requests.
 </Note>
 
-See [Formulas Documentation](/workflows/Formulas) for the complete formula reference.
+See [Functions Documentation](/workflows/Functions) for the complete reference.
 
 ---
 
@@ -827,8 +815,8 @@ Understanding input/output types helps you connect nodes correctly:
     Identify what data you need at the end, then work backwards to determine which nodes you need.
   </Accordion>
   
-  <Accordion title="Add Formula nodes for calculations">
-    Instead of computing values after receiving webhook data, use Formula nodes to add totals, percentages, and derived fields directly in the workflow.
+  <Accordion title="Add Function nodes for calculations">
+    Instead of computing values after receiving webhook data, use Function nodes to add totals, percentages, and derived fields directly in the workflow.
   </Accordion>
   
   <Accordion title="Use Classifier for routing">
