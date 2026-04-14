@@ -44717,7 +44717,7 @@
           "Workflow Blocks"
         ],
         "summary": "List Blocks",
-        "description": "List all blocks for a workflow.\n\nOptionally filter by subflow_id to get blocks inside a specific subflow container.",
+        "description": "List all blocks for a workflow.\n\nReturns all blocks in the workflow draft.",
         "operationId": "list_blocks_v1_workflows__workflow_id__blocks_get",
         "security": [
           {
@@ -44739,24 +44739,6 @@
               "type": "string",
               "title": "Workflow Id"
             }
-          },
-          {
-            "name": "subflow_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter by subflow ID (blocks inside a subflow)",
-              "title": "Subflow Id"
-            },
-            "description": "Filter by subflow ID (blocks inside a subflow)"
           },
           {
             "name": "access_token",
@@ -48655,6 +48637,96 @@
         }
       }
     },
+    "/v1/workflows/{workflow_id}/experiments/materialize-file-input": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow Experiments"
+        ],
+        "summary": "Materialize File Input",
+        "operationId": "materialize_file_input_v1_workflows__workflow_id__experiments_materialize_file_input_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          },
+          {
+            "name": "operation_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "get_ready_gcp_settings",
+              "title": "Operation Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaterializeExperimentFileInputRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workflows/{workflow_id}/experiments": {
       "get": {
         "tags": [
@@ -50939,7 +51011,7 @@
           "Workflows"
         ],
         "summary": "Create Workflow",
-        "description": "Create a new workflow.\n\nThe workflow is created with the provided draft_config. It starts as unpublished.\nA default \"Document\" input block is automatically created.",
+        "description": "Create a new workflow.\n\nThe workflow starts unpublished and is scaffolded with a default\n\"Document\" input block in the live block collection.",
         "operationId": "create_workflow_v1_workflows_post",
         "security": [
           {
@@ -50986,7 +51058,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workflow"
+                  "$ref": "#/components/schemas/WorkflowResponse"
                 }
               }
             }
@@ -51010,7 +51082,7 @@
           "Workflows"
         ],
         "summary": "Get Workflow",
-        "description": "Get a single workflow by ID.\n\nReturns the workflow document with draft_config and published_config.\nFor the new architecture with separate collections, use GET /{workflow_id}/entities\nto get live blocks, edges, and subflows.",
+        "description": "Get a single workflow by ID.\n\nReturns workflow metadata only.\nUse GET /{workflow_id}/entities for the live draft graph stored in\nseparate block, edge, and subflow collections.",
         "operationId": "get_workflow_v1_workflows__workflow_id__get",
         "security": [
           {
@@ -51056,7 +51128,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workflow"
+                  "$ref": "#/components/schemas/WorkflowResponse"
                 }
               }
             }
@@ -51134,7 +51206,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workflow"
+                  "$ref": "#/components/schemas/WorkflowResponse"
                 }
               }
             }
@@ -51265,7 +51337,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowWithEntities"
+                  "$ref": "#/components/schemas/WorkflowWithEntitiesResponse"
                 }
               }
             }
@@ -51733,7 +51805,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workflow"
+                  "$ref": "#/components/schemas/WorkflowResponse"
                 }
               }
             }
@@ -52093,7 +52165,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workflow"
+                  "$ref": "#/components/schemas/WorkflowResponse"
                 }
               }
             }
@@ -52163,7 +52235,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workflow"
+                  "$ref": "#/components/schemas/WorkflowResponse"
                 }
               }
             }
@@ -52250,7 +52322,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workflow"
+                  "$ref": "#/components/schemas/WorkflowResponse"
                 }
               }
             }
@@ -52337,7 +52409,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workflow"
+                  "$ref": "#/components/schemas/WorkflowResponse"
                 }
               }
             }
@@ -52407,7 +52479,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workflow"
+                  "$ref": "#/components/schemas/WorkflowResponse"
                 }
               }
             }
@@ -52486,7 +52558,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workflow"
+                  "$ref": "#/components/schemas/WorkflowResponse"
                 }
               }
             }
@@ -66754,6 +66826,26 @@
             "$ref": "#/components/schemas/ClassifyResult",
             "description": "The classification result with reasoning"
           },
+          "likelihood": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likelihood",
+            "description": "Consensus likelihood of the winning classification"
+          },
+          "votes": {
+            "items": {
+              "$ref": "#/components/schemas/ClassifyVote"
+            },
+            "type": "array",
+            "title": "Votes",
+            "description": "Individual classification votes used for consensus"
+          },
           "settings": {
             "$ref": "#/components/schemas/ClassifySettings",
             "description": "Settings used for classification"
@@ -66924,6 +67016,12 @@
             "type": "array",
             "title": "Categories",
             "description": "Categories used for classification"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus",
+            "description": "Number of consensus votes used for classification",
+            "default": 1
           }
         },
         "type": "object",
@@ -68227,18 +68325,6 @@
             "title": "Config",
             "description": "Block configuration"
           },
-          "subflow_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subflow Id",
-            "description": "Parent subflow ID if inside a subflow"
-          },
           "parent_id": {
             "anyOf": [
               {
@@ -68557,6 +68643,20 @@
             ],
             "title": "Run Ids"
           },
+          "test_cases": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ExplicitExperimentTestCaseRequest"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Cases"
+          },
           "n_consensus": {
             "type": "integer",
             "enum": [
@@ -68745,19 +68845,9 @@
             "title": "Description",
             "description": "Description of the workflow",
             "default": ""
-          },
-          "draft_config": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WorkflowConfig-Input"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Initial draft configuration"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "CreateWorkflowRequest"
       },
@@ -71753,6 +71843,48 @@
           "status"
         ],
         "title": "ExperimentSnapshotRunResponse"
+      },
+      "ExplicitExperimentTestCaseRequest": {
+        "properties": {
+          "handle_inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Handle Inputs"
+          },
+          "source_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Run Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "handle_inputs"
+        ],
+        "title": "ExplicitExperimentTestCaseRequest"
       },
       "ExportToCsvResponse": {
         "properties": {
@@ -77316,6 +77448,19 @@
         ],
         "title": "MaterializeBlockTestFileInputRequest"
       },
+      "MaterializeExperimentFileInputRequest": {
+        "properties": {
+          "mimeData": {
+            "$ref": "#/components/schemas/MIMEData"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mimeData"
+        ],
+        "title": "MaterializeExperimentFileInputRequest"
+      },
       "MaterializedCategoriesResponse": {
         "properties": {
           "categories": {
@@ -79304,17 +79449,6 @@
             ],
             "title": "Config"
           },
-          "subflow_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subflow Id"
-          },
           "parent_id": {
             "anyOf": [
               {
@@ -79392,17 +79526,6 @@
             "title": "Description",
             "description": "Description of the workflow"
           },
-          "draft_config": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WorkflowConfig-Input"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Draft configuration to update"
-          },
           "email_senders_whitelist": {
             "anyOf": [
               {
@@ -79432,8 +79555,20 @@
             ],
             "title": "Email Domains Whitelist",
             "description": "Whitelisted email domains allowed to trigger this workflow via email"
+          },
+          "email_trigger": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowEmailTriggerPatchRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Email trigger allowlist policy"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "PatchWorkflowRequest"
       },
@@ -81183,7 +81318,7 @@
           },
           "edges": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowEdge"
+              "$ref": "#/components/schemas/WorkflowConfigEdge"
             },
             "type": "array",
             "title": "Edges",
@@ -84873,6 +85008,18 @@
             "title": "Ocr Is Chromadb Collection Initialized",
             "description": "Whether the ChromaDB collection has been initialized for this file",
             "default": false
+          },
+          "gcs_path_override": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gcs Path Override",
+            "description": "Explicit GCS blob path when the file is not stored at the canonical {organization_id}/file/{id}.{extension} location (e.g. block artifact uploads)."
           }
         },
         "type": "object",
@@ -86729,6 +86876,20 @@
             ],
             "title": "Run Ids"
           },
+          "test_cases": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ExplicitExperimentTestCaseRequest"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Cases"
+          },
           "n_consensus": {
             "anyOf": [
               {
@@ -88327,109 +88488,6 @@
         ],
         "title": "WorkbookAnalysis"
       },
-      "Workflow": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "The name of the workflow",
-            "default": "Untitled Workflow"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "description": "Description of the workflow",
-            "default": ""
-          },
-          "is_published": {
-            "type": "boolean",
-            "title": "Is Published",
-            "description": "Whether the workflow has been published",
-            "default": false
-          },
-          "published_snapshot_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Published Snapshot Id",
-            "description": "Reference to workflow_snapshots collection for published version"
-          },
-          "published_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Published At",
-            "description": "When the workflow was last published"
-          },
-          "draft_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Draft Version",
-            "description": "Current draft version for live entities"
-          },
-          "organization_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Organization Id",
-            "description": "The organization that owns this workflow"
-          },
-          "email_senders_whitelist": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Email Senders Whitelist",
-            "description": "Whitelisted email addresses allowed to trigger this workflow via email"
-          },
-          "email_domains_whitelist": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Email Domains Whitelist",
-            "description": "Whitelisted email domains allowed to trigger this workflow via email"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          }
-        },
-        "type": "object",
-        "title": "Workflow"
-      },
       "WorkflowAgentRequest": {
         "properties": {
           "messages": {
@@ -88747,18 +88805,6 @@
             ],
             "title": "Config",
             "description": "Block-specific configuration"
-          },
-          "subflow_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subflow Id",
-            "description": "If inside a subflow container, the subflow ID"
           },
           "parent_id": {
             "anyOf": [
@@ -90881,7 +90927,7 @@
           },
           "edges": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowEdge"
+              "$ref": "#/components/schemas/WorkflowConfigEdge"
             },
             "type": "array",
             "title": "Edges",
@@ -90904,7 +90950,7 @@
           },
           "edges": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowEdge"
+              "$ref": "#/components/schemas/WorkflowConfigEdge"
             },
             "type": "array",
             "title": "Edges",
@@ -91013,6 +91059,57 @@
           "label"
         ],
         "title": "WorkflowConfigBlock"
+      },
+      "WorkflowConfigEdge": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "ID of the source node"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target",
+            "description": "ID of the target node"
+          },
+          "source_handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Handle"
+          },
+          "target_handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Handle"
+          },
+          "animated": {
+            "type": "boolean",
+            "title": "Animated",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "target"
+        ],
+        "title": "WorkflowConfigEdge"
       },
       "WorkflowDiagnosisIssue": {
         "properties": {
@@ -91129,57 +91226,6 @@
         "type": "object",
         "title": "WorkflowDiagnosisStats"
       },
-      "WorkflowEdge": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "source": {
-            "type": "string",
-            "title": "Source",
-            "description": "ID of the source node"
-          },
-          "target": {
-            "type": "string",
-            "title": "Target",
-            "description": "ID of the target node"
-          },
-          "source_handle": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Handle"
-          },
-          "target_handle": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Target Handle"
-          },
-          "animated": {
-            "type": "boolean",
-            "title": "Animated",
-            "default": true
-          }
-        },
-        "type": "object",
-        "required": [
-          "source",
-          "target"
-        ],
-        "title": "WorkflowEdge"
-      },
       "WorkflowEdgeDoc": {
         "properties": {
           "id": {
@@ -91257,6 +91303,64 @@
         ],
         "title": "WorkflowEdgeDoc",
         "description": "Edge document connecting two blocks.\n\nStored in workflow_edges collection. Edges are independently\ncreatable and deletable without affecting block documents."
+      },
+      "WorkflowEmailTrigger": {
+        "properties": {
+          "allowed_senders": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed Senders",
+            "description": "Allowed sender email addresses for workflow email triggers"
+          },
+          "allowed_domains": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed Domains",
+            "description": "Allowed sender email domains for workflow email triggers"
+          }
+        },
+        "type": "object",
+        "title": "WorkflowEmailTrigger"
+      },
+      "WorkflowEmailTriggerPatchRequest": {
+        "properties": {
+          "allowed_senders": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Senders",
+            "description": "Allowed sender email addresses for workflow email triggers"
+          },
+          "allowed_domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Domains",
+            "description": "Allowed sender email domains for workflow email triggers"
+          }
+        },
+        "type": "object",
+        "title": "WorkflowEmailTriggerPatchRequest"
       },
       "WorkflowEnvVar": {
         "properties": {
@@ -91899,7 +92003,7 @@
           },
           "edges": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowEdge"
+              "$ref": "#/components/schemas/WorkflowConfigEdge"
             },
             "type": "array",
             "title": "Edges",
@@ -92180,6 +92284,37 @@
         "title": "WorkflowPublishHistoryListResponse",
         "description": "Response for listing workflow publish history."
       },
+      "WorkflowPublished": {
+        "properties": {
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id",
+            "description": "Published workflow snapshot ID"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At",
+            "description": "When the workflow was last published"
+          }
+        },
+        "type": "object",
+        "title": "WorkflowPublished"
+      },
       "WorkflowRequestSampleDocumentResponse": {
         "properties": {
           "sample_document": {
@@ -92195,6 +92330,70 @@
         },
         "type": "object",
         "title": "WorkflowRequestSampleDocumentResponse"
+      },
+      "WorkflowResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique ID for this workflow"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "The name of the workflow",
+            "default": "Untitled Workflow"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the workflow",
+            "default": ""
+          },
+          "organization_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Id",
+            "description": "The organization that owns this workflow"
+          },
+          "published": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowPublished"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Published workflow metadata when a published snapshot exists"
+          },
+          "email_trigger": {
+            "$ref": "#/components/schemas/WorkflowEmailTrigger",
+            "description": "Email trigger allowlist policy"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "WorkflowResponse",
+        "description": "Public workflow resource returned by workflow metadata endpoints."
       },
       "WorkflowRun": {
         "properties": {
@@ -93522,10 +93721,10 @@
         ],
         "title": "WorkflowTableRowsResponse"
       },
-      "WorkflowWithEntities": {
+      "WorkflowWithEntitiesResponse": {
         "properties": {
           "workflow": {
-            "$ref": "#/components/schemas/Workflow"
+            "$ref": "#/components/schemas/WorkflowResponse"
           },
           "blocks": {
             "items": {
@@ -93553,8 +93752,8 @@
         "required": [
           "workflow"
         ],
-        "title": "WorkflowWithEntities",
-        "description": "Complete workflow data assembled from separate collections.\n\nUsed when returning a full workflow view to the client."
+        "title": "WorkflowWithEntitiesResponse",
+        "description": "Public workflow payload with graph entities."
       },
       "XpoAddress": {
         "properties": {
@@ -95878,7 +96077,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-04-13T13:05:04.158274Z",
+              "updated_at": "2026-04-14T07:58:12.663956Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
