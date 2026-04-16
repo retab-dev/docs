@@ -1,25 +1,25 @@
 ---
-title: Node Reference
-description: Complete reference for all workflow node types
+title: Block Reference
+description: Complete reference for supported workflow block types
 ---
 
 ## Overview
 
-Workflow nodes are the building blocks of document processing pipelines. Each node has specific inputs, outputs, and configuration options.
+Workflow blocks are the building blocks of document processing pipelines. Each block has specific inputs, outputs, and configuration options.
 
-## Node Categories
+## Block Categories
 
-Nodes are organized into three categories:
+Blocks are organized into three categories:
 
 | Category | Purpose |
 |----------|---------|
-| **Core** | Workflow entry/exit points and utilities |
+| **Core** | Workflow entry points and utilities |
 | **Tools** | Document processing operations |
 | **Logic** | Conditional flows and data transformations |
 
 ---
 
-## Core Nodes
+## Core Blocks
 
 ### Document (Start)
 
@@ -39,9 +39,9 @@ The entry point for your workflow. Upload documents here for processing.
 - Microsoft PowerPoint (.pptx, .ppt)
 
 **Usage:**
-- Drag multiple Document nodes for workflows that combine multiple inputs
-- Each Document node can receive one file per workflow run
-- Files are automatically converted to PDF when required by downstream nodes
+- Drag multiple Document blocks for workflows that combine multiple inputs
+- Each Document block can receive one file per workflow run
+- Files are automatically converted to PDF when required by downstream blocks
 
 ---
 
@@ -78,58 +78,20 @@ Entry point for structured JSON data. Define a schema and pass JSON data when ru
 ```
 
 **Usage:**
-- Use JSON Input nodes to pass structured data into workflows without documents
-- Combine with Document nodes to enrich extractions with external data
-- Connect to Extract nodes as additional context for AI-powered extraction
-- Use with Function or If/Else nodes for data-driven workflow logic
+- Use JSON Input blocks to pass structured data into workflows without documents
+- Combine with Document blocks to enrich extractions with external data
+- Connect to Extract blocks as additional context for AI-powered extraction
+- Use with Function or If/Else blocks for data-driven workflow logic
 
 **SDK Example:**
 ```python
 run = client.workflows.runs.create(
     workflow_id="wf_abc123",
     json_inputs={
-        "json-node-id": {"customer_id": "cust_123", "priority": "high"}
+        "json-block-id": {"customer_id": "cust_123", "priority": "high"}
     }
 )
 ```
-
-### Webhook (End)
-
-<Card title="Webhook" icon="webhook" color="#ef4444">
-Send workflow outputs to an external HTTP endpoint.
-</Card>
-
-**Inputs:** File, JSON
-
-**Configuration:**
-
-| Setting | Description |
-|---------|-------------|
-| **Webhook URL** | The HTTPS endpoint to receive the data |
-| **Headers** | Custom HTTP headers (e.g., authentication tokens) |
-
-**Example Configuration:**
-```json
-{
-  "webhook_url": "https://api.yourapp.com/webhook",
-  "webhook_headers": {
-    "Authorization": "Bearer your-token",
-    "X-Custom-Header": "value"
-  }
-}
-```
-
-**Webhook Payload:**
-
-The webhook receives a JSON payload containing:
-- `completion`: The extraction result with parsed data
-- `file_payload`: Document metadata including filename and URL
-- `user`: User email address (if authenticated)
-- `metadata`: Additional workflow metadata
-
-See [Webhooks](/workflows/Webhooks) for details on securing and handling webhook requests.
-
----
 
 ### Note
 
@@ -147,7 +109,7 @@ Notes don't affect workflow execution—they're purely for documentation. Use th
 
 ---
 
-## Tools Nodes
+## Tool Blocks
 
 ### Extract
 
@@ -187,14 +149,14 @@ Extract structured data from documents using a JSON schema.
 ```
 
 **Consensus Mode:**  
-When `n_consensus > 1`, the node runs multiple extractions in parallel and returns:
+When `n_consensus > 1`, the block runs multiple extractions in parallel and returns:
 - **data**: The consensus result
 - **likelihoods**: Confidence scores for each field (0-1)
 
 **Additional Inputs:**
 
 You can add named input handles to provide extra context during extraction:
-- **JSON inputs**: Structured data from other nodes
+- **JSON inputs**: Structured data from other blocks
 - **File inputs**: Additional reference documents
 
 ---
@@ -258,7 +220,7 @@ Split multi-page documents into separate PDFs by subdocument.
 }
 ```
 
-Each category creates a separate output handle. Connect downstream nodes to process each category differently.
+Each category creates a separate output handle. Connect downstream blocks to process each category differently.
 
 <Note>
 Non-PDF documents are automatically converted to PDF before splitting.
@@ -310,7 +272,7 @@ Classify documents into one of the predefined categories.
 }
 ```
 
-The AI analyzes the document and routes it to exactly one category. Downstream nodes connected to other categories are skipped.
+The AI analyzes the document and routes it to exactly one category. Downstream blocks connected to other categories are skipped.
 
 ---
 
@@ -337,7 +299,7 @@ Fill PDF forms using AI with JSON instructions or pre-defined templates.
 **Two Operating Modes:**
 
 1. **Document Mode** (default): Edit an input document using AI
-   - Connect a document from another node (e.g., Start, Split)
+   - Connect a document from another block (e.g., Start, Split)
    - Provide instructions via the JSON input
    - The AI fills the form fields based on your instructions
 
@@ -356,11 +318,11 @@ Fill PDF forms using AI with JSON instructions or pre-defined templates.
 }
 ```
 
-The JSON input provides instructions/data for filling. Connect this to an Extract node's JSON output for end-to-end automation.
+The JSON input provides instructions/data for filling. Connect this to an Extract block's JSON output for end-to-end automation.
 
 ---
 
-## Logic Nodes
+## Logic Blocks
 
 ### Human in the Loop (HIL)
 
@@ -374,8 +336,8 @@ Pause workflow execution for human review and approval.
 **Configuration:** None (inherits schema from connected source)
 
 **How It Works:**
-1. Connect to an Extract or Function node (schema is automatically inherited)
-2. When the workflow runs, it pauses at the HIL node
+1. Connect to an Extract or Function block (schema is automatically inherited)
+2. When the workflow runs, it pauses at the HIL block
 3. A reviewer sees the extracted data alongside the source document
 4. The reviewer can approve, modify, or reject the data
 5. After approval, the verified data continues through the workflow
@@ -386,7 +348,7 @@ Pause workflow execution for human review and approval.
 - Compliance requirements that mandate human oversight
 
 <Note>
-The HIL node automatically inherits the JSON schema from the connected upstream node. It also preserves any computed fields from Function nodes.
+The HIL block automatically inherits the JSON schema from the connected upstream block. It also preserves any computed fields from Function blocks.
 </Note>
 
 ---
@@ -433,7 +395,7 @@ See [Functions Documentation](/workflows/Functions) for the complete reference.
 - Restructure flat data into nested objects for downstream systems
 - Select only the fields you need from a large extraction
 - Rename fields to match your API or database schema
-- Prepare data for webhooks that expect a specific format
+- Prepare data for downstream APIs or databases that expect a specific format
 
 <Note>
 Unmapped fields are excluded from the output. If an input path doesn't exist, the mapping is skipped without error.
@@ -493,7 +455,7 @@ Each condition can have multiple sub-conditions combined with AND/OR:
 2. The first matching condition determines the output branch
 3. Data is routed to exactly one branch
 4. If no conditions match and `has_else` is true, data goes to the Else branch
-5. Downstream nodes on non-matched branches are skipped
+5. Downstream blocks on non-matched branches are skipped
 
 **Example Use Cases:**
 - Route high-value invoices for additional approval
@@ -550,7 +512,7 @@ Use `{{path.to.field}}` syntax to reference values from the input JSON:
 - `{{data.line_items[0].amount}}` → Inserts array elements
 
 <Note>
-API Call nodes execute synchronously. For long-running operations, consider using webhooks to trigger external workflows asynchronously.
+API Call blocks execute synchronously. For long-running operations, prefer async endpoints or job-based integrations on the external system.
 </Note>
 
 ---
@@ -602,7 +564,7 @@ This is useful for:
 ### While Loop
 
 <Card title="While Loop" icon="refresh-cw" color="#64748b">
-Repeat contained nodes until a termination condition is met.
+Repeat contained blocks until a termination condition is met.
 </Card>
 
 **Inputs:** JSON or File
@@ -614,12 +576,12 @@ Repeat contained nodes until a termination condition is met.
 |---------|-------------|---------|
 | **Max Iterations** | Maximum number of loop iterations | `10` |
 | **Termination Conditions** | Conditions that stop the loop when matched | `[]` |
-| **Loop Context Template** | Text template with loop variables for contained nodes | `""` |
+| **Loop Context Template** | Text template with loop variables for contained blocks | `""` |
 
 **How It Works:**
 
 1. Data enters the loop through the left input handle
-2. Contained nodes inside the loop process the data
+2. Contained blocks inside the loop process the data
 3. After each iteration, termination conditions are evaluated
 4. If a condition matches (or max iterations reached), the loop exits
 5. Final output is passed through the right output handle
@@ -741,7 +703,7 @@ Split a document containing multiple invoices by invoice number:
 
 **Iteration Context:**
 
-Inside the loop, contained nodes can access:
+Inside the loop, contained blocks can access:
 - `{{key}}` - The partition key for the current item (page range or semantic key)
 - `{{input_json}}` - The full input JSON (for `iterate_array` method)
 
@@ -757,9 +719,9 @@ For Each processes items sequentially. The reduce phase runs after all iteration
 
 ---
 
-## Node I/O Types
+## Block I/O Types
 
-Understanding input/output types helps you connect nodes correctly:
+Understanding input/output types helps you connect blocks correctly:
 
 | Type | Color | Description |
 |------|-------|-------------|
@@ -779,11 +741,11 @@ Understanding input/output types helps you connect nodes correctly:
 
 <AccordionGroup>
   <Accordion title="Start with the output in mind">
-    Identify what data you need at the end, then work backwards to determine which nodes you need.
+    Identify what data you need at the end, then work backwards to determine which blocks you need.
   </Accordion>
   
-  <Accordion title="Add Function nodes for calculations">
-    Instead of computing values after receiving webhook data, use Function nodes to add totals, percentages, and derived fields directly in the workflow.
+  <Accordion title="Add Function blocks for calculations">
+    Instead of computing values after reading workflow results elsewhere, use Function blocks to add totals, percentages, and derived fields directly in the workflow.
   </Accordion>
   
   <Accordion title="Use Classifier for routing">
@@ -799,7 +761,7 @@ Understanding input/output types helps you connect nodes correctly:
   </Accordion>
   
   <Accordion title="Use If/Else for conditional logic">
-    Route data based on extracted values—for example, send high-value invoices to a different webhook or flag certain conditions for review.
+    Route data based on extracted values—for example, send high-value invoices to a different API endpoint or flag certain conditions for review.
   </Accordion>
 
   <Accordion title="Use Reshape to prepare data for external systems">
