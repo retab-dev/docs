@@ -73,12 +73,20 @@ Key features of the Classify API:
 </ParamField>
 
 <ResponseField name="Returns" type="ClassifyResponse Object">
-A ClassifyResponse object containing the classification result with reasoning.
+A ClassifyResponse object containing the classification result, consensus metadata, and usage.
   <Expandable title="properties">
-    <ResponseField name="result" type="ClassifyResult">
+    <ResponseField name="classification" type="ClassifyResult">
       The classification result containing:
-      - `classification`: The category name that the document belongs to
+      - `category`: The category name that the document belongs to
       - `reasoning`: Step-by-step explanation of why this classification was chosen
+    </ResponseField>
+    <ResponseField name="consensus" type="ClassifyConsensus">
+      Consensus metadata containing:
+      - `choices`: Alternative classification vote outputs
+      - `likelihood`: Consensus likelihood for the winning classification
+    </ResponseField>
+    <ResponseField name="usage" type="RetabUsage">
+      Usage information for the classification request.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -108,11 +116,11 @@ result = client.documents.classify(
     categories=categories
 )
 
-print(f"Document classified as: {result.result.classification}")
-print(f"Reasoning: {result.result.reasoning}")
+print(f"Document classified as: {result.classification.category}")
+print(f"Reasoning: {result.classification.reasoning}")
 
 # Route to appropriate extraction pipeline
-if result.result.classification == "invoice":
+if result.classification.category == "invoice":
     # Use invoice extraction schema
     invoice_schema = {...}
     extraction = client.documents.extract(
@@ -120,7 +128,7 @@ if result.result.classification == "invoice":
         model="retab-small",
         json_schema=invoice_schema
     )
-elif result.result.classification == "contract":
+elif result.classification.category == "contract":
     # Use contract extraction schema
     contract_schema = {...}
     extraction = client.documents.extract(
@@ -150,11 +158,11 @@ const result = await client.documents.classify({
     categories: categories
 });
 
-console.log(`Document classified as: ${result.result.classification}`);
-console.log(`Reasoning: ${result.result.reasoning}`);
+console.log(`Document classified as: ${result.classification.category}`);
+console.log(`Reasoning: ${result.classification.reasoning}`);
 
 // Route to appropriate extraction pipeline
-if (result.result.classification === "invoice") {
+if (result.classification.category === "invoice") {
     // Use invoice extraction schema
     const invoiceSchema = {...};
     const extraction = await client.documents.extract({
@@ -162,7 +170,7 @@ if (result.result.classification === "invoice") {
         model: "retab-small",
         json_schema: invoiceSchema
     });
-} else if (result.result.classification === "contract") {
+} else if (result.classification.category === "contract") {
     // Use contract extraction schema
     const contractSchema = {...};
     const extraction = await client.documents.extract({
@@ -200,11 +208,11 @@ const classifyRequest: ClassifyRequest = {
 
 const result: ClassifyResponse = await client.documents.classify(classifyRequest);
 
-console.log(`Document classified as: ${result.result.classification}`);
-console.log(`Reasoning: ${result.result.reasoning}`);
+console.log(`Document classified as: ${result.classification.category}`);
+console.log(`Reasoning: ${result.classification.reasoning}`);
 
 // Route to appropriate extraction pipeline based on classification
-switch (result.result.classification) {
+switch (result.classification.category) {
     case "invoice":
         // Process as invoice
         break;
@@ -244,18 +252,18 @@ for attachment in email_attachments:
         categories=categories
     )
     
-    if result.result.classification == "invoice":
+    if result.classification.category == "invoice":
         # High priority - process immediately
         process_invoice(attachment)
-    elif result.result.classification == "quote":
+    elif result.classification.category == "quote":
         # Medium priority - queue for review
         queue_for_review(attachment)
-    elif result.result.classification == "marketing":
+    elif result.classification.category == "marketing":
         # Low priority - skip or archive
         archive_document(attachment)
     
-    print(f"{attachment.name}: {result.result.classification}")
-    print(f"  Reason: {result.result.reasoning[:100]}...")
+    print(f"{attachment.name}: {result.classification.category}")
+    print(f"  Reason: {result.classification.reasoning[:100]}...")
 ```
 
 ```javascript Javascript
@@ -279,19 +287,19 @@ for (const attachment of emailAttachments) {
         categories: categories
     });
     
-    if (result.result.classification === "invoice") {
+    if (result.classification.category === "invoice") {
         // High priority - process immediately
         await processInvoice(attachment);
-    } else if (result.result.classification === "quote") {
+    } else if (result.classification.category === "quote") {
         // Medium priority - queue for review
         await queueForReview(attachment);
-    } else if (result.result.classification === "marketing") {
+    } else if (result.classification.category === "marketing") {
         // Low priority - skip or archive
         await archiveDocument(attachment);
     }
     
-    console.log(`${attachment.name}: ${result.result.classification}`);
-    console.log(`  Reason: ${result.result.reasoning.slice(0, 100)}...`);
+    console.log(`${attachment.name}: ${result.classification.category}`);
+    console.log(`  Reason: ${result.classification.reasoning.slice(0, 100)}...`);
 }
 ```
 </CodeGroup>

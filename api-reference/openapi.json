@@ -42758,7 +42758,7 @@
           "Workflow Runs"
         ],
         "summary": "Simulate Block",
-        "description": "Simulate a single block using inputs from a previous run and the current draft config.\n\nThis endpoint:\n1. Optionally checks that the run's upstream subgraph is unchanged vs the current draft\n2. Fetches handle_inputs from the previous run's step data\n3. Loads the draft block config (current live config, not published snapshot)\n4. Executes the block using the block executor registry\n5. Returns results without persisting\n\nUseful for testing config changes on a block before re-running the entire workflow.\n\nQuery params:\n- step_id: Select a specific iteration step (for blocks inside loops/for-each).\n  When omitted, uses the base step or falls back to the first iteration step.\n- check_eligibility: When true (default), verifies the upstream subgraph hasn't changed\n  since the run executed. Returns 409 if ineligible. Set to false to skip the check.",
+        "description": "Simulate a single block using inputs from a previous run and the current draft config.\n\nThis endpoint:\n1. Optionally checks that the run's upstream subgraph is unchanged vs the current draft\n2. Fetches handle_inputs from the previous run's step data\n3. Loads the draft block config (current live config, not published snapshot)\n4. Executes the block using the workflow execution registry\n5. Returns results without persisting\n\nUseful for testing config changes on a block before re-running the entire workflow.\n\nQuery params:\n- step_id: Select a specific iteration step (for blocks inside loops/for-each).\n  When omitted, uses the base step or falls back to the first iteration step.\n- check_eligibility: When true (default), verifies the upstream subgraph hasn't changed\n  since the run executed. Returns 409 if ineligible. Set to false to skip the check.",
         "operationId": "simulate_block_v1_workflows_runs__run_id__steps__block_id__simulate_post",
         "security": [
           {
@@ -42855,7 +42855,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NodeSimulation"
+                  "$ref": "#/components/schemas/BlockSimulation"
                 }
               }
             }
@@ -42949,7 +42949,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NodeSimulation"
+                    "$ref": "#/components/schemas/BlockSimulation"
                   },
                   "title": "Response List Block Simulations V1 Workflows Runs  Run Id  Steps  Block Id  Simulations Get"
                 }
@@ -48276,7 +48276,25 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/WorkflowBlockExperimentRunRecord"
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/ExtractWorkflowBlockExperimentRunRecord"
+                        },
+                        {
+                          "$ref": "#/components/schemas/SplitWorkflowBlockExperimentRunRecord"
+                        },
+                        {
+                          "$ref": "#/components/schemas/ClassifierWorkflowBlockExperimentRunRecord"
+                        }
+                      ],
+                      "discriminator": {
+                        "propertyName": "block_type",
+                        "mapping": {
+                          "extract": "#/components/schemas/ExtractWorkflowBlockExperimentRunRecord",
+                          "split": "#/components/schemas/SplitWorkflowBlockExperimentRunRecord",
+                          "classifier": "#/components/schemas/ClassifierWorkflowBlockExperimentRunRecord"
+                        }
+                      }
                     },
                     {
                       "$ref": "#/components/schemas/BlockExperimentBatchExecutionResult"
@@ -49445,7 +49463,25 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ExperimentSnapshotRunResponse"
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/ExtractExperimentSnapshotRunResponse"
+                      },
+                      {
+                        "$ref": "#/components/schemas/SplitExperimentSnapshotRunResponse"
+                      },
+                      {
+                        "$ref": "#/components/schemas/ClassifierExperimentSnapshotRunResponse"
+                      }
+                    ],
+                    "discriminator": {
+                      "propertyName": "block_kind",
+                      "mapping": {
+                        "extract": "#/components/schemas/ExtractExperimentSnapshotRunResponse",
+                        "split": "#/components/schemas/SplitExperimentSnapshotRunResponse",
+                        "classifier": "#/components/schemas/ClassifierExperimentSnapshotRunResponse"
+                      }
+                    }
                   },
                   "title": "Response List Results V1 Workflows  Workflow Id  Experiments  Experiment Id  Results Get"
                 }
@@ -49770,7 +49806,26 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExperimentSnapshotRunResponse"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ExtractExperimentSnapshotRunResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SplitExperimentSnapshotRunResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ClassifierExperimentSnapshotRunResponse"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "block_kind",
+                    "mapping": {
+                      "extract": "#/components/schemas/ExtractExperimentSnapshotRunResponse",
+                      "split": "#/components/schemas/SplitExperimentSnapshotRunResponse",
+                      "classifier": "#/components/schemas/ClassifierExperimentSnapshotRunResponse"
+                    }
+                  },
+                  "title": "Response Get Snapshot Run V1 Workflows  Workflow Id  Experiments  Experiment Id  Snapshots  Snapshot Id  Runs  Run Id  Get"
                 }
               }
             }
@@ -51844,7 +51899,7 @@
           "Workflows"
         ],
         "summary": "Create Workflow From Playground",
-        "description": "Create a new workflow with initial blocks and edges from the playground.\n\nThis endpoint is used by playground pages (Extract, Split, Classify, etc.) to create\na workflow pre-populated with blocks and edges. Unlike the standard create endpoint,\nthis does NOT create a default \"Document\" block - it uses the provided draft_config.\n\nThe draft_config.nodes are converted to WorkflowBlock documents and\nthe draft_config.edges are converted to WorkflowEdgeDoc documents.",
+        "description": "Create a new workflow with initial blocks and edges from the playground.\n\nThis endpoint is used by playground pages (Extract, Split, Classify, etc.) to create\na workflow pre-populated with blocks and edges. Unlike the standard create endpoint,\nthis does NOT create a default \"Document\" block - it uses the provided draft_config.\n\nThe draft_config.blocks are converted to WorkflowBlock documents and\nthe draft_config.edges are converted to WorkflowEdgeDoc documents.",
         "operationId": "create_workflow_from_playground_v1_workflows_from_playground_post",
         "security": [
           {
@@ -63960,6 +64015,187 @@
         ],
         "title": "BlockRunQueryRequest"
       },
+      "BlockSimulation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique simulation ID"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organization that owns this simulation"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "Workflow the block belongs to"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "Run whose inputs were used"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id",
+            "description": "ID of the block that was simulated"
+          },
+          "block_type": {
+            "type": "string",
+            "title": "Block Type",
+            "description": "Type of the block"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "description": "Whether simulation succeeded"
+          },
+          "handle_inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Inputs",
+            "description": "Input payloads keyed by handle ID (file metadata for files, data for json)"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output",
+            "description": "Raw output data from the block executor"
+          },
+          "handle_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Outputs",
+            "description": "Output payloads keyed by handle ID"
+          },
+          "routing_decision": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Decision",
+            "description": "Active output handles for routing decisions"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Error message if simulation failed"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "Duration of the simulation in milliseconds"
+          },
+          "skipped": {
+            "type": "boolean",
+            "title": "Skipped",
+            "description": "Whether the block was skipped due to missing inputs",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "block_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Config",
+            "description": "The draft block config used for this simulation"
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id",
+            "description": "The step ID that was used for inputs (includes iteration prefix if applicable)"
+          },
+          "available_iterations": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Iterations",
+            "description": "When the block has multiple iterations, lists all available ones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "organization_id",
+          "workflow_id",
+          "run_id",
+          "block_id",
+          "block_type",
+          "success"
+        ],
+        "title": "BlockSimulation",
+        "description": "A stored simulation result for a single workflow block."
+      },
       "BlockTestBatchExecutionCounts": {
         "properties": {
           "passed": {
@@ -66880,7 +67116,7 @@
             "description": "Information about the classified file"
           },
           "result": {
-            "$ref": "#/components/schemas/ClassifyResult",
+            "$ref": "#/components/schemas/StoredClassifyResult",
             "description": "The classification result with reasoning"
           },
           "likelihood": {
@@ -66897,7 +67133,7 @@
           },
           "votes": {
             "items": {
-              "$ref": "#/components/schemas/ClassifyVote"
+              "$ref": "#/components/schemas/StoredClassifyVote"
             },
             "type": "array",
             "title": "Votes",
@@ -66934,6 +67170,490 @@
         ],
         "title": "Classification",
         "description": "Stored classification result."
+      },
+      "ClassifierExperimentSnapshotRunResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          },
+          "experiment_id": {
+            "type": "string",
+            "title": "Experiment Id"
+          },
+          "block_kind": {
+            "type": "string",
+            "const": "classifier",
+            "title": "Block Kind"
+          },
+          "source_run_id": {
+            "type": "string",
+            "title": "Source Run Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "handle_inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Handle Inputs"
+          },
+          "overall_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Score"
+          },
+          "scores": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/NormalizedMetricScore"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scores"
+          },
+          "choices": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/NormalizedMetricChoice"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "is_placeholder": {
+            "type": "boolean",
+            "title": "Is Placeholder",
+            "default": false
+          },
+          "likelihoods": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likelihoods"
+          },
+          "consensus_prediction": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Prediction"
+          },
+          "consensus_details": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "snapshot_id",
+          "experiment_id",
+          "block_kind",
+          "source_run_id",
+          "status"
+        ],
+        "title": "ClassifierExperimentSnapshotRunResponse"
+      },
+      "ClassifierWorkflowBlockExperimentRunRecord": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "block_type": {
+            "type": "string",
+            "const": "classifier",
+            "title": "Block Type"
+          },
+          "handle_inputs_fingerprint": {
+            "type": "string",
+            "title": "Handle Inputs Fingerprint",
+            "default": ""
+          },
+          "workflow_draft_fingerprint": {
+            "type": "string",
+            "title": "Workflow Draft Fingerprint",
+            "default": ""
+          },
+          "block_config_fingerprint": {
+            "type": "string",
+            "title": "Block Config Fingerprint",
+            "default": ""
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "handle_inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Handle Inputs"
+          },
+          "output": {
+            "title": "Output"
+          },
+          "handle_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Outputs"
+          },
+          "routing_decision": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Decision"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "skipped": {
+            "type": "boolean",
+            "title": "Skipped",
+            "default": false
+          },
+          "experiment_id": {
+            "type": "string",
+            "title": "Experiment Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scored",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "metric_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "consensus_likelihood"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Kind"
+          },
+          "metric_direction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "higher_is_better"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Direction"
+          },
+          "metric_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Value"
+          },
+          "metric_display_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Display Value"
+          },
+          "experiment_config_snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Experiment Config Snapshot"
+          },
+          "consensus_prediction": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Prediction"
+          },
+          "likelihoods": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likelihoods"
+          },
+          "consensus_details": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "organization_id",
+          "block_id",
+          "block_type",
+          "experiment_id",
+          "status"
+        ],
+        "title": "ClassifierWorkflowBlockExperimentRunRecord"
+      },
+      "ClassifyChoice": {
+        "properties": {
+          "classification": {
+            "$ref": "#/components/schemas/ClassifyVote",
+            "description": "One alternative classification vote output"
+          }
+        },
+        "type": "object",
+        "required": [
+          "classification"
+        ],
+        "title": "ClassifyChoice"
+      },
+      "ClassifyConsensus": {
+        "properties": {
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/ClassifyChoice"
+            },
+            "type": "array",
+            "title": "Choices",
+            "description": "Alternative classification vote outputs used to build the consolidated result"
+          },
+          "likelihood": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likelihood",
+            "description": "Consensus likelihood score (0.0-1.0) of the winning classification."
+          }
+        },
+        "type": "object",
+        "title": "ClassifyConsensus"
       },
       "ClassifyRequest": {
         "properties": {
@@ -67003,29 +67723,13 @@
       },
       "ClassifyResponse": {
         "properties": {
-          "result": {
+          "classification": {
             "$ref": "#/components/schemas/ClassifyResult",
             "description": "The classification result with reasoning"
           },
-          "likelihood": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Likelihood",
-            "description": "Likelihood score (0.0-1.0) of the consensus classification. Only set when n_consensus > 1 and at least two votes succeed."
-          },
-          "votes": {
-            "items": {
-              "$ref": "#/components/schemas/ClassifyVote"
-            },
-            "type": "array",
-            "title": "Votes",
-            "description": "Individual LLM votes used to build the consensus. Empty when n_consensus <= 1."
+          "consensus": {
+            "$ref": "#/components/schemas/ClassifyConsensus",
+            "description": "Consensus metadata for multi-vote classification runs"
           },
           "usage": {
             "$ref": "#/components/schemas/RetabUsage",
@@ -67034,7 +67738,7 @@
         },
         "type": "object",
         "required": [
-          "result",
+          "classification",
           "usage"
         ],
         "title": "ClassifyResponse"
@@ -67046,16 +67750,16 @@
             "title": "Reasoning",
             "description": "The reasoning for the classification decision"
           },
-          "classification": {
+          "category": {
             "type": "string",
-            "title": "Classification",
+            "title": "Category",
             "description": "The category name that the document belongs to"
           }
         },
         "type": "object",
         "required": [
           "reasoning",
-          "classification"
+          "category"
         ],
         "title": "ClassifyResult"
       },
@@ -67096,16 +67800,16 @@
             "title": "Reasoning",
             "description": "The reasoning produced by this classification vote"
           },
-          "classification": {
+          "category": {
             "type": "string",
-            "title": "Classification",
+            "title": "Category",
             "description": "The category chosen by this classification vote"
           }
         },
         "type": "object",
         "required": [
           "reasoning",
-          "classification"
+          "category"
         ],
         "title": "ClassifyVote",
         "description": "A single LLM vote from a consensus classification run."
@@ -71700,188 +72404,6 @@
         ],
         "title": "ExperimentResponse"
       },
-      "ExperimentSnapshotRunResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "snapshot_id": {
-            "type": "string",
-            "title": "Snapshot Id"
-          },
-          "experiment_id": {
-            "type": "string",
-            "title": "Experiment Id"
-          },
-          "source_run_id": {
-            "type": "string",
-            "title": "Source Run Id"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "completed",
-              "error"
-            ],
-            "title": "Status"
-          },
-          "handle_inputs": {
-            "additionalProperties": {
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/JsonHandleInput"
-                },
-                {
-                  "$ref": "#/components/schemas/FileHandleInput"
-                }
-              ],
-              "discriminator": {
-                "propertyName": "type",
-                "mapping": {
-                  "file": "#/components/schemas/FileHandleInput",
-                  "json": "#/components/schemas/JsonHandleInput"
-                }
-              }
-            },
-            "type": "object",
-            "title": "Handle Inputs"
-          },
-          "overall_score": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Overall Score"
-          },
-          "scores": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/NormalizedMetricScore"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scores"
-          },
-          "choices": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/NormalizedMetricChoice"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Choices"
-          },
-          "likelihoods": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Likelihoods"
-          },
-          "consensus_prediction": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Consensus Prediction"
-          },
-          "consensus_details": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Consensus Details"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
-          },
-          "is_placeholder": {
-            "type": "boolean",
-            "title": "Is Placeholder",
-            "default": false
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "id",
-          "snapshot_id",
-          "experiment_id",
-          "source_run_id",
-          "status"
-        ],
-        "title": "ExperimentSnapshotRunResponse"
-      },
       "ExplicitExperimentTestCaseRequest": {
         "properties": {
           "handle_inputs": {
@@ -72023,6 +72545,451 @@
           "duration_ms"
         ],
         "title": "ExternalRequestLog"
+      },
+      "ExtractExperimentSnapshotRunResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          },
+          "experiment_id": {
+            "type": "string",
+            "title": "Experiment Id"
+          },
+          "block_kind": {
+            "type": "string",
+            "const": "extract",
+            "title": "Block Kind"
+          },
+          "source_run_id": {
+            "type": "string",
+            "title": "Source Run Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "handle_inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Handle Inputs"
+          },
+          "overall_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Score"
+          },
+          "scores": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/NormalizedMetricScore"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scores"
+          },
+          "choices": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/NormalizedMetricChoice"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "is_placeholder": {
+            "type": "boolean",
+            "title": "Is Placeholder",
+            "default": false
+          },
+          "likelihoods": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likelihoods"
+          },
+          "consensus_prediction": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Prediction"
+          },
+          "consensus_details": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "snapshot_id",
+          "experiment_id",
+          "block_kind",
+          "source_run_id",
+          "status"
+        ],
+        "title": "ExtractExperimentSnapshotRunResponse"
+      },
+      "ExtractWorkflowBlockExperimentRunRecord": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "block_type": {
+            "type": "string",
+            "const": "extract",
+            "title": "Block Type"
+          },
+          "handle_inputs_fingerprint": {
+            "type": "string",
+            "title": "Handle Inputs Fingerprint",
+            "default": ""
+          },
+          "workflow_draft_fingerprint": {
+            "type": "string",
+            "title": "Workflow Draft Fingerprint",
+            "default": ""
+          },
+          "block_config_fingerprint": {
+            "type": "string",
+            "title": "Block Config Fingerprint",
+            "default": ""
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "handle_inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Handle Inputs"
+          },
+          "output": {
+            "title": "Output"
+          },
+          "handle_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Outputs"
+          },
+          "routing_decision": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Decision"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "skipped": {
+            "type": "boolean",
+            "title": "Skipped",
+            "default": false
+          },
+          "experiment_id": {
+            "type": "string",
+            "title": "Experiment Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scored",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "metric_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "consensus_likelihood"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Kind"
+          },
+          "metric_direction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "higher_is_better"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Direction"
+          },
+          "metric_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Value"
+          },
+          "metric_display_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Display Value"
+          },
+          "experiment_config_snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Experiment Config Snapshot"
+          },
+          "consensus_prediction": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Prediction"
+          },
+          "likelihoods": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likelihoods"
+          },
+          "consensus_details": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "organization_id",
+          "block_id",
+          "block_type",
+          "experiment_id",
+          "status"
+        ],
+        "title": "ExtractWorkflowBlockExperimentRunRecord"
       },
       "Extraction": {
         "properties": {
@@ -73452,7 +74419,7 @@
           "type"
         ],
         "title": "HandlePayload",
-        "description": "Payload for a single output handle.\n\nEach output handle on a block produces a typed payload that can be:\n- file: A document reference (PDF, image, etc.)\n- json: Structured JSON data (extracted data, etc.)\n\nHandle IDs follow the convention: \"output-{type}-{index_or_name}\"\nExamples: \"output-file-0\", \"output-json-0\", \"output-file-SubdocumentName\""
+        "description": "Payload for a single block output handle.\n\nEach output handle on a block produces a typed payload that can be:\n- file: A document reference (PDF, image, etc.)\n- json: Structured JSON data (extracted data, etc.)\n\nHandle IDs follow the convention: \"output-{type}-{index_or_name}\"\nExamples: \"output-file-0\", \"output-json-0\", \"output-file-SubdocumentName\""
       },
       "HasKeysCondition": {
         "properties": {
@@ -75820,8 +76787,15 @@
           "consensus_prediction": {
             "anyOf": [
               {
+                "$ref": "#/components/schemas/ProjectedSplitOutputEnvelope"
+              },
+              {
                 "additionalProperties": true,
                 "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
               },
               {
                 "type": "null"
@@ -77993,187 +78967,6 @@
         "title": "ModelCostEntry",
         "description": "Per-model cost and token tracking."
       },
-      "NodeSimulation": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Unique simulation ID"
-          },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id",
-            "description": "Organization that owns this simulation"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id",
-            "description": "Workflow the block belongs to"
-          },
-          "run_id": {
-            "type": "string",
-            "title": "Run Id",
-            "description": "Run whose inputs were used"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id",
-            "description": "ID of the block that was simulated"
-          },
-          "block_type": {
-            "type": "string",
-            "title": "Block Type",
-            "description": "Type of the block"
-          },
-          "success": {
-            "type": "boolean",
-            "title": "Success",
-            "description": "Whether simulation succeeded"
-          },
-          "handle_inputs": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Handle Inputs",
-            "description": "Input payloads keyed by handle ID (file metadata for files, data for json)"
-          },
-          "output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output",
-            "description": "Raw output data from the block executor"
-          },
-          "handle_outputs": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Handle Outputs",
-            "description": "Output payloads keyed by handle ID"
-          },
-          "routing_decision": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Routing Decision",
-            "description": "Active output handles for routing decisions"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error",
-            "description": "Error message if simulation failed"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms",
-            "description": "Duration of the simulation in milliseconds"
-          },
-          "skipped": {
-            "type": "boolean",
-            "title": "Skipped",
-            "description": "Whether the block was skipped due to missing inputs",
-            "default": false
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "block_config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Block Config",
-            "description": "The draft block config used for this simulation"
-          },
-          "step_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Step Id",
-            "description": "The step ID that was used for inputs (includes iteration prefix if applicable)"
-          },
-          "available_iterations": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Available Iterations",
-            "description": "When a block has multiple iterations, lists all available ones"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "organization_id",
-          "workflow_id",
-          "run_id",
-          "block_id",
-          "block_type",
-          "success"
-        ],
-        "title": "NodeSimulation",
-        "description": "A stored simulation result for a single workflow block."
-      },
       "NormalizedBlockMetrics": {
         "properties": {
           "metric_family": {
@@ -78486,18 +79279,32 @@
       },
       "Organization": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
           "object": {
             "type": "string",
             "const": "organization",
             "title": "Object"
           },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "domains": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizationDomain"
+            },
+            "type": "array",
+            "title": "Domains"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metadata"
           },
           "external_id": {
             "anyOf": [
@@ -78510,24 +79317,15 @@
             ],
             "title": "External Id"
           },
-          "domains": {
-            "items": {
-              "$ref": "#/components/schemas/OrganizationDomain"
-            },
-            "type": "array",
-            "title": "Domains"
-          },
           "created_at": {
             "type": "string",
+            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
             "type": "string",
+            "format": "date-time",
             "title": "Updated At"
-          },
-          "allow_profiles_outside_organization": {
-            "type": "boolean",
-            "title": "Allow Profiles Outside Organization"
           },
           "stripe_customer_id": {
             "anyOf": [
@@ -78540,28 +79338,59 @@
             ],
             "title": "Stripe Customer Id"
           },
-          "metadata": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Metadata"
+          "allow_profiles_outside_organization": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allow Profiles Outside Organization"
           }
         },
         "type": "object",
         "required": [
-          "id",
           "object",
+          "id",
           "name",
           "domains",
+          "metadata",
+          "external_id",
           "created_at",
-          "updated_at",
-          "allow_profiles_outside_organization"
+          "updated_at"
         ],
         "title": "Organization"
       },
+      "OrganizationCreatedDataDomainState": {
+        "type": "string",
+        "enum": [
+          "failed",
+          "legacy_verified",
+          "pending",
+          "unverified",
+          "verified"
+        ],
+        "title": "OrganizationCreatedDataDomainState",
+        "description": "Known values for OrganizationCreatedDataDomainState."
+      },
+      "OrganizationCreatedDataDomainVerificationStrategy": {
+        "type": "string",
+        "enum": [
+          "dns",
+          "manual"
+        ],
+        "title": "OrganizationCreatedDataDomainVerificationStrategy",
+        "description": "Known values for OrganizationCreatedDataDomainVerificationStrategy."
+      },
       "OrganizationDomain": {
         "properties": {
+          "object": {
+            "type": "string",
+            "const": "organization_domain",
+            "title": "Object"
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -78570,57 +79399,29 @@
             "type": "string",
             "title": "Organization Id"
           },
-          "object": {
-            "type": "string",
-            "const": "organization_domain",
-            "title": "Object"
-          },
           "domain": {
             "type": "string",
             "title": "Domain"
           },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
           "state": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "failed",
-                  "pending",
-                  "legacy_verified",
-                  "verified"
-                ]
+                "$ref": "#/components/schemas/OrganizationCreatedDataDomainState"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "State"
-          },
-          "verification_strategy": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "manual",
-                  "dns"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verification Strategy"
-          },
-          "verification_token": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verification Token"
+            ]
           },
           "verification_prefix": {
             "anyOf": [
@@ -78633,20 +79434,33 @@
             ],
             "title": "Verification Prefix"
           },
-          "created_at": {
-            "type": "string",
-            "title": "Created At"
+          "verification_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Token"
           },
-          "updated_at": {
-            "type": "string",
-            "title": "Updated At"
+          "verification_strategy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationCreatedDataDomainVerificationStrategy"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
+          "object",
           "id",
           "organization_id",
-          "object",
           "domain",
           "created_at",
           "updated_at"
@@ -79424,18 +80238,6 @@
             "type": "array",
             "title": "Pages",
             "description": "The pages of the partition (1-indexed)"
-          },
-          "first_page_y_start": {
-            "type": "number",
-            "title": "First Page Y Start",
-            "description": "The y coordinate of the first page of the partition",
-            "default": 0.0
-          },
-          "last_page_y_end": {
-            "type": "number",
-            "title": "Last Page Y End",
-            "description": "The y coordinate of the last page of the partition",
-            "default": 1.0
           }
         },
         "type": "object",
@@ -79444,6 +80246,32 @@
           "pages"
         ],
         "title": "Partition"
+      },
+      "PartitionLikelihood": {
+        "properties": {
+          "key": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key",
+            "description": "Confidence that this partition key is correct"
+          },
+          "pages": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Pages",
+            "description": "Confidence for each page in the corresponding partition.pages array"
+          }
+        },
+        "type": "object",
+        "title": "PartitionLikelihood"
       },
       "PatchBlockRequest": {
         "properties": {
@@ -81113,6 +81941,147 @@
         ],
         "title": "ProjectLatencyStats"
       },
+      "ProjectedSplitChoice": {
+        "properties": {
+          "splits": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectedSplitRecord"
+            },
+            "type": "array",
+            "title": "Splits"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ProjectedSplitChoice"
+      },
+      "ProjectedSplitConsensus": {
+        "properties": {
+          "likelihoods": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Likelihoods"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectedSplitChoice"
+            },
+            "type": "array",
+            "title": "Choices"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ProjectedSplitConsensus"
+      },
+      "ProjectedSplitOutputEnvelope": {
+        "properties": {
+          "splits": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectedSplitRecord"
+            },
+            "type": "array",
+            "title": "Splits"
+          },
+          "consensus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectedSplitConsensus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ProjectedSplitOutputEnvelope"
+      },
+      "ProjectedSplitPartition": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "default": ""
+          },
+          "pages": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ProjectedSplitPartition"
+      },
+      "ProjectedSplitRecord": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "metric_key": {
+            "type": "string",
+            "title": "Metric Key"
+          },
+          "display_label": {
+            "type": "string",
+            "title": "Display Label"
+          },
+          "instance_index": {
+            "type": "integer",
+            "title": "Instance Index"
+          },
+          "pages": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Pages"
+          },
+          "page_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Start"
+          },
+          "page_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page End"
+          },
+          "partitions": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectedSplitPartition"
+            },
+            "type": "array",
+            "title": "Partitions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "metric_key",
+          "display_label",
+          "instance_index"
+        ],
+        "title": "ProjectedSplitRecord"
+      },
       "PromptTokensDetails": {
         "properties": {
           "audio_tokens": {
@@ -81383,12 +82352,12 @@
       },
       "PublishedWorkflowConfig": {
         "properties": {
-          "nodes": {
+          "blocks": {
             "items": {
               "$ref": "#/components/schemas/WorkflowConfigBlock"
             },
             "type": "array",
-            "title": "Nodes",
+            "title": "Blocks",
             "description": "The blocks in this workflow version"
           },
           "edges": {
@@ -84183,6 +85152,20 @@
         ],
         "title": "SnapshotListResponse"
       },
+      "SplitChoice": {
+        "properties": {
+          "splits": {
+            "items": {
+              "$ref": "#/components/schemas/SplitResult"
+            },
+            "type": "array",
+            "title": "Splits",
+            "description": "One alternative split vote output"
+          }
+        },
+        "type": "object",
+        "title": "SplitChoice"
+      },
       "SplitConfigOverrides-Input": {
         "properties": {
           "descriptions_override": {
@@ -84308,6 +85291,186 @@
         ],
         "title": "SplitConfigOverrides"
       },
+      "SplitConsensus": {
+        "properties": {
+          "likelihoods": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitLikelihoodTree"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Consensus likelihood tree mirroring the split output"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/SplitChoice"
+            },
+            "type": "array",
+            "title": "Choices",
+            "description": "Alternative split vote outputs used to build the consolidated result"
+          }
+        },
+        "type": "object",
+        "title": "SplitConsensus"
+      },
+      "SplitExperimentSnapshotRunResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          },
+          "experiment_id": {
+            "type": "string",
+            "title": "Experiment Id"
+          },
+          "block_kind": {
+            "type": "string",
+            "const": "split",
+            "title": "Block Kind"
+          },
+          "source_run_id": {
+            "type": "string",
+            "title": "Source Run Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "handle_inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Handle Inputs"
+          },
+          "overall_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Score"
+          },
+          "scores": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/NormalizedMetricScore"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scores"
+          },
+          "choices": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/NormalizedMetricChoice"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "is_placeholder": {
+            "type": "boolean",
+            "title": "Is Placeholder",
+            "default": false
+          },
+          "consensus_prediction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectedSplitOutputEnvelope"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "snapshot_id",
+          "experiment_id",
+          "block_kind",
+          "source_run_id",
+          "status"
+        ],
+        "title": "SplitExperimentSnapshotRunResponse"
+      },
       "SplitIOUCondition": {
         "properties": {
           "kind": {
@@ -84332,7 +85495,55 @@
           "expected"
         ],
         "title": "SplitIOUCondition",
-        "description": "Intersection-over-Union for split page assignments.\n\n``expected`` is stored in the canonical split-eval payload shape:\n``{\"splits\": [{\"name\", \"pages\", \"partitions\"}]}``\n\nLegacy block-test payloads using ``{subdoc_name: {partition_key: [pages]}}``\nare accepted and normalized automatically."
+        "description": "Intersection-over-Union for split page assignments.\n\n``expected`` is stored in the canonical split-eval payload shape:\n``{\"splits\": [{\"name\", \"pages\", \"partitions\"}]}``"
+      },
+      "SplitLikelihood": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Confidence that this split label is correct"
+          },
+          "pages": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Pages",
+            "description": "Confidence for each page in the corresponding split.pages array"
+          },
+          "partitions": {
+            "items": {
+              "$ref": "#/components/schemas/PartitionLikelihood"
+            },
+            "type": "array",
+            "title": "Partitions",
+            "description": "Partition likelihoods aligned with split.partitions"
+          }
+        },
+        "type": "object",
+        "title": "SplitLikelihood"
+      },
+      "SplitLikelihoodTree": {
+        "properties": {
+          "splits": {
+            "items": {
+              "$ref": "#/components/schemas/SplitLikelihood"
+            },
+            "type": "array",
+            "title": "Splits",
+            "description": "Likelihood tree aligned with the top-level splits array"
+          }
+        },
+        "type": "object",
+        "title": "SplitLikelihoodTree"
       },
       "SplitPartitionMetrics": {
         "properties": {
@@ -84448,6 +85659,17 @@
             "title": "Splits",
             "description": "The list of document splits with their assigned pages"
           },
+          "consensus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitConsensus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Consensus metadata for multi-vote split runs"
+          },
           "usage": {
             "$ref": "#/components/schemas/RetabUsage",
             "description": "Usage information for the split operation"
@@ -84474,26 +85696,6 @@
             "type": "array",
             "title": "Pages",
             "description": "The pages of the subdocument (1-indexed)"
-          },
-          "likelihood": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Likelihood",
-            "description": "Likelihood score (0.0-1.0) of the split result. Only set when n_consensus > 1."
-          },
-          "votes": {
-            "items": {
-              "$ref": "#/components/schemas/SplitVote"
-            },
-            "type": "array",
-            "title": "Votes",
-            "description": "Individual LLM votes used to build the consensus. Empty when n_consensus <= 1."
           },
           "partitions": {
             "items": {
@@ -84594,6 +85796,17 @@
             "title": "Splits",
             "description": "The list of document splits with their assigned pages"
           },
+          "consensus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitConsensus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Consensus metadata for multi-vote split runs"
+          },
           "usage": {
             "$ref": "#/components/schemas/RetabUsage",
             "description": "Usage information for the split operation"
@@ -84614,23 +85827,229 @@
         "title": "SplitTestResponse",
         "description": "Extended split response with per-voter results for testing/diagnostics."
       },
-      "SplitVote": {
+      "SplitWorkflowBlockExperimentRunRecord": {
         "properties": {
-          "pages": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "block_type": {
+            "type": "string",
+            "const": "split",
+            "title": "Block Type"
+          },
+          "handle_inputs_fingerprint": {
+            "type": "string",
+            "title": "Handle Inputs Fingerprint",
+            "default": ""
+          },
+          "workflow_draft_fingerprint": {
+            "type": "string",
+            "title": "Workflow Draft Fingerprint",
+            "default": ""
+          },
+          "block_config_fingerprint": {
+            "type": "string",
+            "title": "Block Config Fingerprint",
+            "default": ""
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "handle_inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Handle Inputs"
+          },
+          "output": {
+            "title": "Output"
+          },
+          "handle_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Outputs"
+          },
+          "routing_decision": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Decision"
+          },
+          "warnings": {
             "items": {
-              "type": "integer"
+              "type": "string"
             },
             "type": "array",
-            "title": "Pages",
-            "description": "The pages assigned to this subdocument by this vote (1-indexed)"
+            "title": "Warnings"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "skipped": {
+            "type": "boolean",
+            "title": "Skipped",
+            "default": false
+          },
+          "experiment_id": {
+            "type": "string",
+            "title": "Experiment Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scored",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "metric_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "consensus_likelihood"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Kind"
+          },
+          "metric_direction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "higher_is_better"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Direction"
+          },
+          "metric_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Value"
+          },
+          "metric_display_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Display Value"
+          },
+          "experiment_config_snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Experiment Config Snapshot"
+          },
+          "consensus_prediction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectedSplitOutputEnvelope"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
-          "pages"
+          "workflow_id",
+          "organization_id",
+          "block_id",
+          "block_type",
+          "experiment_id",
+          "status"
         ],
-        "title": "SplitVote",
-        "description": "A single LLM vote from a consensus run."
+        "title": "SplitWorkflowBlockExperimentRunRecord"
       },
       "StartsWithCondition": {
         "properties": {
@@ -84750,8 +86169,7 @@
           "step_id": {
             "type": "string",
             "title": "Step Id",
-            "description": "Full step ID with iteration context (e.g., 'mr1_iter_0_extract-123'). Assigned once at creation, never recomputed.",
-            "default": ""
+            "description": "Full step ID with iteration context (e.g., 'mr1_iter_0_extract-123'). Assigned once at creation, never recomputed."
           },
           "block_type": {
             "anyOf": [
@@ -84989,10 +86407,47 @@
         "type": "object",
         "required": [
           "block_id",
+          "step_id",
           "status"
         ],
         "title": "StepStatusSummary",
         "description": "Lightweight step status stored in WorkflowRun.\n\nContains only essential information for listing/displaying runs.\nFull step details are stored in workflow_run_steps collection."
+      },
+      "StoredClassifyResult": {
+        "properties": {
+          "reasoning": {
+            "type": "string",
+            "title": "Reasoning"
+          },
+          "classification": {
+            "type": "string",
+            "title": "Classification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reasoning",
+          "classification"
+        ],
+        "title": "StoredClassifyResult"
+      },
+      "StoredClassifyVote": {
+        "properties": {
+          "reasoning": {
+            "type": "string",
+            "title": "Reasoning"
+          },
+          "classification": {
+            "type": "string",
+            "title": "Classification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reasoning",
+          "classification"
+        ],
+        "title": "StoredClassifyVote"
       },
       "StoredFileRecord": {
         "properties": {
@@ -85302,10 +86757,20 @@
           },
           "splits": {
             "items": {
-              "$ref": "#/components/schemas/SplitResult"
+              "$ref": "#/components/schemas/StoredSplitResult"
             },
             "type": "array",
             "title": "Splits"
+          },
+          "consensus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitConsensus"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "page_count": {
             "type": "integer",
@@ -85347,6 +86812,34 @@
         },
         "type": "object",
         "title": "StoredSplit"
+      },
+      "StoredSplitResult": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "pages": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Pages"
+          },
+          "partitions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Partitions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "StoredSplitResult"
       },
       "Subdocument": {
         "properties": {
@@ -87868,51 +89361,6 @@
         ],
         "title": "UsageTimeSeries"
       },
-      "UserParameters": {
-        "properties": {
-          "language": {
-            "type": "string",
-            "enum": [
-              "fr",
-              "en",
-              "de",
-              "es",
-              "it",
-              "nl",
-              "pt",
-              "pl"
-            ],
-            "title": "Language"
-          },
-          "agency_id": {
-            "type": "string",
-            "title": "Agency Id"
-          },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id"
-          },
-          "phone_number": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone Number",
-            "description": "Phone number of the user"
-          }
-        },
-        "type": "object",
-        "required": [
-          "language",
-          "agency_id",
-          "organization_id"
-        ],
-        "title": "UserParameters"
-      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -89776,7 +91224,25 @@
         "properties": {
           "runs": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowBlockExperimentRunRecord"
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ExtractWorkflowBlockExperimentRunRecord"
+                },
+                {
+                  "$ref": "#/components/schemas/SplitWorkflowBlockExperimentRunRecord"
+                },
+                {
+                  "$ref": "#/components/schemas/ClassifierWorkflowBlockExperimentRunRecord"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "block_type",
+                "mapping": {
+                  "classifier": "#/components/schemas/ClassifierWorkflowBlockExperimentRunRecord",
+                  "extract": "#/components/schemas/ExtractWorkflowBlockExperimentRunRecord",
+                  "split": "#/components/schemas/SplitWorkflowBlockExperimentRunRecord"
+                }
+              }
             },
             "type": "array",
             "title": "Runs"
@@ -89787,258 +91253,6 @@
           "runs"
         ],
         "title": "WorkflowBlockExperimentRunListResponse"
-      },
-      "WorkflowBlockExperimentRunRecord": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          },
-          "block_type": {
-            "type": "string",
-            "title": "Block Type"
-          },
-          "handle_inputs_fingerprint": {
-            "type": "string",
-            "title": "Handle Inputs Fingerprint",
-            "default": ""
-          },
-          "workflow_draft_fingerprint": {
-            "type": "string",
-            "title": "Workflow Draft Fingerprint",
-            "default": ""
-          },
-          "block_config_fingerprint": {
-            "type": "string",
-            "title": "Block Config Fingerprint",
-            "default": ""
-          },
-          "started_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Started At"
-          },
-          "completed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Completed At"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          },
-          "handle_inputs": {
-            "additionalProperties": {
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/JsonHandleInput"
-                },
-                {
-                  "$ref": "#/components/schemas/FileHandleInput"
-                }
-              ],
-              "discriminator": {
-                "propertyName": "type",
-                "mapping": {
-                  "file": "#/components/schemas/FileHandleInput",
-                  "json": "#/components/schemas/JsonHandleInput"
-                }
-              }
-            },
-            "type": "object",
-            "title": "Handle Inputs"
-          },
-          "output": {
-            "title": "Output"
-          },
-          "handle_outputs": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Handle Outputs"
-          },
-          "routing_decision": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Routing Decision"
-          },
-          "warnings": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Warnings"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "skipped": {
-            "type": "boolean",
-            "title": "Skipped",
-            "default": false
-          },
-          "experiment_id": {
-            "type": "string",
-            "title": "Experiment Id"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "scored",
-              "error"
-            ],
-            "title": "Status"
-          },
-          "metric_kind": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "consensus_likelihood"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metric Kind"
-          },
-          "metric_direction": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "higher_is_better"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metric Direction"
-          },
-          "metric_value": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metric Value"
-          },
-          "metric_display_value": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metric Display Value"
-          },
-          "experiment_config_snapshot": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Experiment Config Snapshot"
-          },
-          "consensus_prediction": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Consensus Prediction"
-          },
-          "likelihoods": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Likelihoods"
-          },
-          "consensus_details": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Consensus Details"
-          }
-        },
-        "type": "object",
-        "required": [
-          "workflow_id",
-          "organization_id",
-          "block_id",
-          "block_type",
-          "experiment_id",
-          "status"
-        ],
-        "title": "WorkflowBlockExperimentRunRecord"
       },
       "WorkflowBlockPosition": {
         "properties": {
@@ -90366,8 +91580,15 @@
           "consensus_prediction": {
             "anyOf": [
               {
+                "$ref": "#/components/schemas/ProjectedSplitOutputEnvelope"
+              },
+              {
                 "additionalProperties": true,
                 "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
               },
               {
                 "type": "null"
@@ -91094,7 +92315,7 @@
               }
             ],
             "title": "Config",
-            "description": "Node-specific configuration"
+            "description": "Block-specific configuration"
           },
           "width": {
             "anyOf": [
@@ -92074,12 +93295,12 @@
       },
       "WorkflowGraphDiagnosisRequest": {
         "properties": {
-          "nodes": {
+          "blocks": {
             "items": {
               "$ref": "#/components/schemas/WorkflowConfigBlock"
             },
             "type": "array",
-            "title": "Nodes",
+            "title": "Blocks",
             "description": "The blocks in this workflow version"
           },
           "edges": {
@@ -92097,6 +93318,7 @@
             "default": true
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "WorkflowGraphDiagnosisRequest"
       },
@@ -92886,14 +94108,6 @@
             "type": "array",
             "title": "Executed Block Ids",
             "description": "Block IDs that have completed execution (uses $addToSet for atomic deduplication)"
-          },
-          "parallel_completion_counters": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "type": "object",
-            "title": "Parallel Completion Counters",
-            "description": "DEPRECATED - Use len(parallel_mr_completed[mr_id]) instead. Was {mr_id: completed_count}"
           }
         },
         "type": "object",
@@ -92951,8 +94165,7 @@
           "step_id": {
             "type": "string",
             "title": "Step Id",
-            "description": "Full step ID with iteration context (e.g., 'mr1_iter_0_extract-123'). Assigned once at creation, never recomputed.",
-            "default": ""
+            "description": "Full step ID with iteration context (e.g., 'mr1_iter_0_extract-123'). Assigned once at creation, never recomputed."
           },
           "block_type": {
             "type": "string",
@@ -93199,43 +94412,6 @@
             "title": "Handle Inputs",
             "description": "Input payloads keyed by handle ID (e.g., 'input-file-0', 'input-json-0'). Captures what this block received."
           },
-          "input_document": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FileRef"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Reference to input document"
-          },
-          "output_document": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FileRef"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Reference to output document"
-          },
-          "split_documents": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "$ref": "#/components/schemas/FileRef"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Split Documents",
-            "description": "For split blocks: subdocument -> document reference"
-          },
           "requires_human_review": {
             "anyOf": [
               {
@@ -93350,6 +94526,7 @@
         "type": "object",
         "required": [
           "block_id",
+          "step_id",
           "block_type",
           "block_label",
           "status"
@@ -93489,12 +94666,9 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "while",
-              "parallel"
-            ],
+            "const": "parallel",
             "title": "Type",
-            "description": "Subflow type: 'while' or 'parallel'"
+            "description": "Subflow type: 'parallel'"
           },
           "label": {
             "type": "string",
@@ -93537,7 +94711,7 @@
               }
             ],
             "title": "Config",
-            "description": "Subflow-specific configuration (WhileNodeConfig or ParallelNodeConfig)"
+            "description": "Subflow-specific configuration for parallel block containers"
           },
           "child_block_ids": {
             "items": {
@@ -93560,7 +94734,7 @@
           "type"
         ],
         "title": "WorkflowSubflow",
-        "description": "Subflow container for loops and parallel execution.\n\nStored in workflow_subflows collection. Subflows define a visual\ncontainer that groups child blocks for iteration or parallel execution."
+        "description": "Subflow container for parallel execution.\n\nStored in workflow_subflows collection. Subflows define a visual\ncontainer that groups child blocks for parallel execution."
       },
       "WorkflowTable": {
         "properties": {
@@ -94581,10 +95755,6 @@
             "type": "string",
             "title": "Id"
           },
-          "email": {
-            "type": "string",
-            "title": "Email"
-          },
           "first_name": {
             "anyOf": [
               {
@@ -94607,10 +95777,6 @@
             ],
             "title": "Last Name"
           },
-          "email_verified": {
-            "type": "boolean",
-            "title": "Email Verified"
-          },
           "profile_picture_url": {
             "anyOf": [
               {
@@ -94622,35 +95788,13 @@
             ],
             "title": "Profile Picture Url"
           },
-          "last_sign_in_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Sign In At"
-          },
-          "locale": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Locale"
-          },
-          "created_at": {
+          "email": {
             "type": "string",
-            "title": "Created At"
+            "title": "Email"
           },
-          "updated_at": {
-            "type": "string",
-            "title": "Updated At"
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified"
           },
           "external_id": {
             "anyOf": [
@@ -94663,26 +95807,67 @@
             ],
             "title": "External Id"
           },
+          "last_sign_in_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sign In At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
           "metadata": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Metadata"
           },
-          "parameters": {
-            "$ref": "#/components/schemas/UserParameters"
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
           }
         },
         "type": "object",
         "required": [
           "object",
           "id",
+          "first_name",
+          "last_name",
+          "profile_picture_url",
           "email",
           "email_verified",
+          "external_id",
+          "last_sign_in_at",
           "created_at",
-          "updated_at",
-          "parameters"
+          "updated_at"
         ],
         "title": "User"
       },
@@ -96174,7 +97359,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-04-15T14:32:43.461659Z",
+              "updated_at": "2026-04-16T12:01:26.190282Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
