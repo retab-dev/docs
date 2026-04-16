@@ -67115,29 +67115,13 @@
             "$ref": "#/components/schemas/FileRef",
             "description": "Information about the classified file"
           },
-          "result": {
-            "$ref": "#/components/schemas/StoredClassifyResult",
+          "classification": {
+            "$ref": "#/components/schemas/ClassifyDecision",
             "description": "The classification result with reasoning"
           },
-          "likelihood": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Likelihood",
-            "description": "Consensus likelihood of the winning classification"
-          },
-          "votes": {
-            "items": {
-              "$ref": "#/components/schemas/StoredClassifyVote"
-            },
-            "type": "array",
-            "title": "Votes",
-            "description": "Individual classification votes used for consensus"
+          "consensus": {
+            "$ref": "#/components/schemas/ClassifyConsensus",
+            "description": "Consensus metadata for multi-vote classification runs"
           },
           "settings": {
             "$ref": "#/components/schemas/ClassifySettings",
@@ -67164,7 +67148,7 @@
         "type": "object",
         "required": [
           "file",
-          "result",
+          "classification",
           "settings",
           "organization_id"
         ],
@@ -67619,7 +67603,7 @@
       "ClassifyChoice": {
         "properties": {
           "classification": {
-            "$ref": "#/components/schemas/ClassifyVote",
+            "$ref": "#/components/schemas/ClassifyDecision",
             "description": "One alternative classification vote output"
           }
         },
@@ -67637,7 +67621,7 @@
             },
             "type": "array",
             "title": "Choices",
-            "description": "Alternative classification vote outputs used to build the consolidated result"
+            "description": "Alternative classification vote outputs used to build the consolidated result."
           },
           "likelihood": {
             "anyOf": [
@@ -67654,6 +67638,26 @@
         },
         "type": "object",
         "title": "ClassifyConsensus"
+      },
+      "ClassifyDecision": {
+        "properties": {
+          "reasoning": {
+            "type": "string",
+            "title": "Reasoning",
+            "description": "The reasoning for the classification decision"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "The category name that the document belongs to"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reasoning",
+          "category"
+        ],
+        "title": "ClassifyDecision"
       },
       "ClassifyRequest": {
         "properties": {
@@ -67701,7 +67705,7 @@
           },
           "n_consensus": {
             "type": "integer",
-            "maximum": 8.0,
+            "maximum": 16.0,
             "minimum": 1.0,
             "title": "N Consensus",
             "description": "Number of classification runs to use for consensus voting. Uses deterministic single-pass when set to 1.",
@@ -67724,7 +67728,7 @@
       "ClassifyResponse": {
         "properties": {
           "classification": {
-            "$ref": "#/components/schemas/ClassifyResult",
+            "$ref": "#/components/schemas/ClassifyDecision",
             "description": "The classification result with reasoning"
           },
           "consensus": {
@@ -67742,26 +67746,6 @@
           "usage"
         ],
         "title": "ClassifyResponse"
-      },
-      "ClassifyResult": {
-        "properties": {
-          "reasoning": {
-            "type": "string",
-            "title": "Reasoning",
-            "description": "The reasoning for the classification decision"
-          },
-          "category": {
-            "type": "string",
-            "title": "Category",
-            "description": "The category name that the document belongs to"
-          }
-        },
-        "type": "object",
-        "required": [
-          "reasoning",
-          "category"
-        ],
-        "title": "ClassifyResult"
       },
       "ClassifySettings": {
         "properties": {
@@ -67792,27 +67776,6 @@
         ],
         "title": "ClassifySettings",
         "description": "Settings used for the classify operation."
-      },
-      "ClassifyVote": {
-        "properties": {
-          "reasoning": {
-            "type": "string",
-            "title": "Reasoning",
-            "description": "The reasoning produced by this classification vote"
-          },
-          "category": {
-            "type": "string",
-            "title": "Category",
-            "description": "The category chosen by this classification vote"
-          }
-        },
-        "type": "object",
-        "required": [
-          "reasoning",
-          "category"
-        ],
-        "title": "ClassifyVote",
-        "description": "A single LLM vote from a consensus classification run."
       },
       "ClassifyWithProjectRequest": {
         "properties": {
@@ -80249,6 +80212,18 @@
       },
       "PartitionLikelihood": {
         "properties": {
+          "likelihood": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likelihood",
+            "description": "Aggregate confidence for this partition node"
+          },
           "key": {
             "anyOf": [
               {
@@ -85497,45 +85472,11 @@
         "title": "SplitIOUCondition",
         "description": "Intersection-over-Union for split page assignments.\n\n``expected`` is stored in the canonical split-eval payload shape:\n``{\"splits\": [{\"name\", \"pages\", \"partitions\"}]}``"
       },
-      "SplitLikelihood": {
-        "properties": {
-          "name": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name",
-            "description": "Confidence that this split label is correct"
-          },
-          "pages": {
-            "items": {
-              "type": "number"
-            },
-            "type": "array",
-            "title": "Pages",
-            "description": "Confidence for each page in the corresponding split.pages array"
-          },
-          "partitions": {
-            "items": {
-              "$ref": "#/components/schemas/PartitionLikelihood"
-            },
-            "type": "array",
-            "title": "Partitions",
-            "description": "Partition likelihoods aligned with split.partitions"
-          }
-        },
-        "type": "object",
-        "title": "SplitLikelihood"
-      },
       "SplitLikelihoodTree": {
         "properties": {
           "splits": {
             "items": {
-              "$ref": "#/components/schemas/SplitLikelihood"
+              "$ref": "#/components/schemas/SplitSubdocumentLikelihood"
             },
             "type": "array",
             "title": "Splits",
@@ -85735,6 +85676,52 @@
         },
         "type": "object",
         "title": "SplitSettings"
+      },
+      "SplitSubdocumentLikelihood": {
+        "properties": {
+          "likelihood": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likelihood",
+            "description": "Aggregate confidence for this split node"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Confidence that this split label is correct"
+          },
+          "pages": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Pages",
+            "description": "Confidence for each page in the corresponding split.pages array"
+          },
+          "partitions": {
+            "items": {
+              "$ref": "#/components/schemas/PartitionLikelihood"
+            },
+            "type": "array",
+            "title": "Partitions",
+            "description": "Partition likelihoods aligned with split.partitions"
+          }
+        },
+        "type": "object",
+        "title": "SplitSubdocumentLikelihood"
       },
       "SplitSubdocumentMetrics": {
         "properties": {
@@ -86412,42 +86399,6 @@
         ],
         "title": "StepStatusSummary",
         "description": "Lightweight step status stored in WorkflowRun.\n\nContains only essential information for listing/displaying runs.\nFull step details are stored in workflow_run_steps collection."
-      },
-      "StoredClassifyResult": {
-        "properties": {
-          "reasoning": {
-            "type": "string",
-            "title": "Reasoning"
-          },
-          "classification": {
-            "type": "string",
-            "title": "Classification"
-          }
-        },
-        "type": "object",
-        "required": [
-          "reasoning",
-          "classification"
-        ],
-        "title": "StoredClassifyResult"
-      },
-      "StoredClassifyVote": {
-        "properties": {
-          "reasoning": {
-            "type": "string",
-            "title": "Reasoning"
-          },
-          "classification": {
-            "type": "string",
-            "title": "Classification"
-          }
-        },
-        "type": "object",
-        "required": [
-          "reasoning",
-          "classification"
-        ],
-        "title": "StoredClassifyVote"
       },
       "StoredFileRecord": {
         "properties": {
@@ -97359,7 +97310,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-04-16T12:01:26.190282Z",
+              "updated_at": "2026-04-16T12:52:31.970049Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
