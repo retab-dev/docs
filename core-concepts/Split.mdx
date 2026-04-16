@@ -42,7 +42,7 @@ Key features of the Split API:
 - **Vision-Based Analysis**: Uses LLM vision capabilities for accurate page classification
 - **Flexible Subdocuments**: Define custom subdocuments tailored to your document types
 - **Partition Detection**: Add a `partition_key` to break one subdocument into repeated items
-- **Consensus Scoring**: Increase `n_consensus` to get confidence signals like `likelihood` and `votes`
+- **Consensus Scoring**: Increase `n_consensus` to get `consensus.likelihoods` and per-run `consensus.choices`
 
 ## Split API
 
@@ -69,7 +69,7 @@ Key features of the Split API:
 </ParamField>
 
 <ParamField body="n_consensus" type="integer">
-  Number of split passes to run before building the final answer. Leave it at `1` for the fastest deterministic pass, or raise it when boundary quality is business-critical and you want `likelihood` and `votes` in the response.
+  Number of split passes to run before building the final answer. Leave it at `1` for the fastest deterministic pass, or raise it when boundary quality is business-critical and you want `consensus.likelihoods` and `consensus.choices` in the response.
 </ParamField>
 
 </Expandable>
@@ -82,13 +82,14 @@ A SplitResponse object containing the classified sections with their assigned pa
       List of document sections, each containing:
       - `name`: The subdocument name this section belongs to
       - `pages`: List of 1-indexed page numbers belonging to this section
-      - `likelihood`: Confidence score for this split when `n_consensus > 1`
-      - `votes`: Per-run page assignments used to build the consensus result
-      - `partitions`: List of sub-page partitions (populated when `partition_key` is specified on the subdocument)
+      - `partitions`: List of repeated items detected inside this split (populated when `partition_key` is specified on the subdocument)
         - `key`: The partition key value (e.g., property ID, invoice number)
         - `pages`: List of page numbers in this partition
-        - `first_page_y_start`: Y-coordinate (0-1) where content starts on the first page
-        - `last_page_y_end`: Y-coordinate (0-1) where content ends on the last page
+    </ResponseField>
+    <ResponseField name="consensus" type="SplitConsensus | null">
+      Present when `n_consensus > 1` and contains:
+      - `likelihoods`: A likelihood tree that mirrors `splits`, with scores for each split name, page leaf, partition key, and partition page leaf
+      - `choices`: The consolidated output at index `0`, then one entry per consensus run at indices `1..n`
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -114,7 +115,8 @@ result = client.documents.split(
 )
 
 for split in result.splits:
-    print(split.name, split.pages, split.likelihood)
+    print(split.name, split.pages)
+print(result.consensus.likelihoods if result.consensus else None)
 ```
 
 ```typescript TypeScript
@@ -133,8 +135,9 @@ const result = await client.documents.split({
 });
 
 for (const split of result.splits) {
-  console.log(split.name, split.pages, split.likelihood);
+  console.log(split.name, split.pages);
 }
+console.log(result.consensus?.likelihoods);
 ```
 </CodeGroup>
 
@@ -431,36 +434,25 @@ result = client.documents.split(
     ]
 )
 
-# Access partition details for precise content boundaries
+# Access partition details and consensus metadata
 for split in result.splits:
     print(f"{split.name}: pages {split.pages}")
     for partition in split.partitions:
         print(f"  Invoice {partition.key}:")
         print(f"    Pages: {partition.pages}")
-        print(f"    Y-start: {partition.first_page_y_start:.2f}")
-        print(f"    Y-end: {partition.last_page_y_end:.2f}")
+if result.consensus:
+    print(result.consensus.likelihoods)
 
 # Example output:
 # invoice: pages [1, 2]
 #   Invoice INV-001:
 #     Pages: [1]
-#     Y-start: 0.00
-#     Y-end: 0.45
 #   Invoice INV-002:
 #     Pages: [1, 2]
-#     Y-start: 0.45
-#     Y-end: 0.60
 #   Invoice INV-003:
 #     Pages: [2]
-#     Y-start: 0.60
-#     Y-end: 1.00
+# {'splits': [{'name': 0.97, 'pages': [1.0, 0.96], 'partitions': [{'key': 0.99, 'pages': [1.0]}, {'key': 0.95, 'pages': [0.95, 0.95]}, {'key': 0.92, 'pages': [0.92]}]}]}
 ```
-
-The Y-coordinates are normalized values between 0 and 1, where:
-- `0.0` represents the top of the page
-- `1.0` represents the bottom of the page
-- `first_page_y_start` indicates where content begins on the first page of the partition
-- `last_page_y_end` indicates where content ends on the last page of the partition
 
 ## Best Practices
 
