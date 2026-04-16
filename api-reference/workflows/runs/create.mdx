@@ -6,10 +6,10 @@ openapi: 'POST /v1/workflows/{workflow_id}/run'
 Run a workflow with the provided inputs. This endpoint creates a workflow run and starts execution in the background. The response returns immediately with status "running" - use the Get Run endpoint to check for updates.
 
 Workflows can accept two types of inputs:
-- **documents**: File inputs for Document (start) nodes
-- **json_inputs**: JSON data for JSON Input (start_json) nodes
+- **documents**: File inputs for Document (start) blocks
+- **json_inputs**: JSON data for JSON Input (start_json) blocks
 
-If you do not know the input block IDs yet, call `client.workflows.get_entities(workflow_id)` first and read `.start_nodes` / `.start_json_nodes`.
+If you do not know the input block IDs yet, call `client.workflows.get_entities(workflow_id)` first and read `.start_blocks` / `.start_json_blocks`.
 
 <RequestExample>
 
@@ -20,8 +20,8 @@ from pathlib import Path
 client = Retab()
 
 workflow = client.workflows.get_entities("wf_abc123xyz")
-document_start_id = workflow.start_nodes[0].id
-json_start_id = workflow.start_json_nodes[0].id
+document_start_id = workflow.start_blocks[0].id
+json_start_id = workflow.start_json_blocks[0].id
 
 # Run with documents only
 run = client.workflows.runs.create(
@@ -55,7 +55,7 @@ const client = new Retab();
 const run = await client.workflows.runs.create({
     workflowId: "wf_abc123xyz",
     documents: {
-        "start-node-1": "./invoice.pdf",
+        "start-block-1": "./invoice.pdf",
     }
 });
 
@@ -63,10 +63,10 @@ const run = await client.workflows.runs.create({
 const run2 = await client.workflows.runs.create({
     workflowId: "wf_abc123xyz",
     documents: {
-        "start-node-1": "./invoice.pdf",
+        "start-block-1": "./invoice.pdf",
     },
     jsonInputs: {
-        "json-node-1": { customerId: "cust_123", priority: "high" },
+        "start-json-block-1": { customerId: "cust_123", priority: "high" },
     }
 });
 
@@ -82,7 +82,7 @@ curl -X 'POST' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
     "documents": {
-      "start-node-1": {
+      "start-block-1": {
         "filename": "invoice.pdf",
         "content": "<BASE64_ENCODED_FILE_CONTENT>",
         "mime_type": "application/pdf"
@@ -97,14 +97,14 @@ curl -X 'POST' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
     "documents": {
-      "start-node-1": {
+      "start-block-1": {
         "filename": "invoice.pdf",
         "content": "<BASE64_ENCODED_FILE_CONTENT>",
         "mime_type": "application/pdf"
       }
     },
     "json_inputs": {
-      "json-node-1": {
+      "start-json-block-1": {
         "customer_id": "cust_123",
         "priority": "high"
       }
@@ -129,7 +129,7 @@ curl -X 'POST' \
   "duration_ms": null,
   "steps": [
     {
-      "block_id": "start-node-1",
+      "block_id": "start-block-1",
       "block_type": "start",
       "block_label": "Invoice Input",
       "status": "completed",
@@ -138,7 +138,7 @@ curl -X 'POST' \
       "duration_ms": 1000
     },
     {
-      "block_id": "extract-node-1",
+      "block_id": "extract-block-1",
       "block_type": "extract",
       "block_label": "Extract Data",
       "status": "running",
@@ -146,7 +146,7 @@ curl -X 'POST' \
     }
   ],
   "input_documents": {
-    "start-node-1": {
+    "start-block-1": {
       "id": "file_123",
       "filename": "invoice.pdf",
       "mime_type": "application/pdf"
@@ -162,7 +162,7 @@ curl -X 'POST' \
 
 ```json 400
 {
-  "detail": "Missing input documents for start nodes: Invoice Input, Receipt Input"
+  "detail": "Missing input documents for start blocks: Invoice Input, Receipt Input"
 }
 ```
 
