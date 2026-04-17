@@ -1,0 +1,213 @@
+---
+title: 'Create Extraction'
+openapi: 'POST /v1/extractions'
+---
+
+Extract structured data from a document against a JSON schema and persist the result as an `Extraction` resource that can later be retrieved via `GET /v1/extractions/{extraction_id}` or listed via `GET /v1/extractions`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+extraction = client.extractions.create(
+    document="Invoice.pdf",
+    json_schema="Invoice_schema.json",
+    model="retab-small",
+    n_consensus=1,
+    metadata={"source": "docs"},
+)
+
+print(f"Extraction ID: {extraction.id}")
+print(f"Filename: {extraction.file.filename}")
+print(extraction.output)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const extraction = await client.extractions.create({
+    document: "Invoice.pdf",
+    json_schema: "Invoice_schema.json",
+    model: "retab-small",
+    n_consensus: 1,
+    metadata: { source: "docs" },
+});
+
+console.log(`Extraction ID: ${extraction.id}`);
+console.log(extraction.output);
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/extractions' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "Invoice.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  },
+  "model": "retab-small",
+  "image_resolution_dpi": 192,
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "invoice_number": {"type": "string"},
+      "total": {"type": "number"}
+    },
+    "required": ["invoice_number", "total"]
+  },
+  "n_consensus": 1,
+  "metadata": {"source": "docs"}
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "extr_01G34H8J2K",
+  "organization_id": "org_abc123",
+  "file": {
+    "id": "file_6dd6eb00688ad8d1",
+    "filename": "Invoice.pdf",
+    "mime_type": "application/pdf"
+  },
+  "model": "retab-small",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "invoice_number": {"type": "string"},
+      "total": {"type": "number"}
+    }
+  },
+  "n_consensus": 1,
+  "image_resolution_dpi": 192,
+  "output": {
+    "invoice_number": "INV-2024-0042",
+    "total": 1234.56
+  },
+  "consensus": {
+    "choices": [],
+    "likelihoods": {
+      "invoice_number": 0.98,
+      "total": 0.97
+    }
+  },
+  "metadata": {
+    "source": "docs"
+  },
+  "usage": {
+    "prompt_tokens": 2760,
+    "completion_tokens": 20,
+    "total_tokens": 2780
+  },
+  "created_at": "2024-03-15T10:30:00Z",
+  "updated_at": "2024-03-15T10:30:00Z"
+}
+```
+
+</ResponseExample>
+
+## Request Body
+
+<ParamField body="document" type="MIMEData" required>
+  The document to extract from. HTTP callers must pass a `MIMEData` object with `filename` and `url` (data URL or https URL). The Python and Node SDKs also accept file paths, file-like objects, buffers, and URLs and convert them for you.
+</ParamField>
+
+<ParamField body="json_schema" type="object" required>
+  JSON Schema describing the structured output.
+</ParamField>
+
+<ParamField body="model" type="string" default="retab-small">
+  The model used for the extraction.
+</ParamField>
+
+<ParamField body="image_resolution_dpi" type="integer" default="192">
+  DPI used when rasterizing pages. Accepted values are `96` to `300`.
+</ParamField>
+
+<ParamField body="chunking_keys" type="object">
+  Parallel OCR chunking keys for long list fields, e.g. `{"line_items": "identity.id"}`.
+</ParamField>
+
+<ParamField body="context" type="string">
+  Additional context for the extraction (e.g. iteration context from a workflow loop).
+</ParamField>
+
+<ParamField body="n_consensus" type="integer" default="1">
+  Number of consensus extraction runs to perform. Uses a deterministic single-pass when set to `1`. Max: `16`.
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  User-defined metadata to associate with this extraction.
+</ParamField>
+
+<ParamField body="bust_cache" type="boolean" default="false">
+  When `true`, bypass the cache and re-run the extraction.
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="id" type="string">
+  Unique extraction identifier.
+</ResponseField>
+
+<ResponseField name="file" type="object">
+  File metadata: `id`, `filename`, `mime_type`.
+</ResponseField>
+
+<ResponseField name="model" type="string">
+  Model used for the extraction.
+</ResponseField>
+
+<ResponseField name="json_schema" type="object">
+  JSON Schema used for the extraction.
+</ResponseField>
+
+<ResponseField name="output" type="object">
+  The extracted structured data matching `json_schema`.
+</ResponseField>
+
+<ResponseField name="consensus" type="object">
+  Consensus metadata.
+  <Expandable title="properties">
+    <ResponseField name="choices" type="array">
+      Alternative extraction vote outputs used to build the consolidated result.
+    </ResponseField>
+    <ResponseField name="likelihoods" type="object | null">
+      Consensus likelihood tree mirroring the extraction output.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="n_consensus" type="integer">
+  Number of consensus votes used.
+</ResponseField>
+
+<ResponseField name="image_resolution_dpi" type="integer">
+  DPI used when rendering images.
+</ResponseField>
+
+<ResponseField name="metadata" type="object">
+  User-defined metadata echoed from the request.
+</ResponseField>
+
+<ResponseField name="usage" type="RetabUsage | null">
+  Token and credit usage information.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 creation timestamp.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 last update timestamp.
+</ResponseField>

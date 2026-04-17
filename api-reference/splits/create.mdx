@@ -1,0 +1,182 @@
+---
+title: 'Create Split'
+openapi: 'POST /v1/splits'
+---
+
+Split a multi-page document into labeled subdocuments, optionally partitioned by a key, and persist the result as a `Split` resource that can later be retrieved via `GET /v1/splits/{split_id}` or listed via `GET /v1/splits`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+split = client.splits.create(
+    document="invoice_batch.pdf",
+    model="retab-small",
+    subdocuments=[
+        {
+            "name": "invoice",
+            "description": "Invoice documents with billing information",
+            "partition_key": "invoice number",
+            "allow_multiple_instances": True,
+        },
+        {"name": "receipt", "description": "Receipt documents for payments"},
+        {"name": "contract", "description": "Legal contract documents"},
+    ],
+    context="Processing Q4 2024 vendor document batch",
+    n_consensus=1,
+)
+
+for sub in split.output:
+    print(f"{sub.name}: pages {sub.pages}")
+    for partition in sub.partitions:
+        print(f"  {partition.key}: pages {partition.pages}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const split = await client.splits.create({
+    document: "invoice_batch.pdf",
+    model: "retab-small",
+    subdocuments: [
+        { name: "invoice", description: "Invoice documents", partition_key: "invoice number", allow_multiple_instances: true },
+        { name: "receipt", description: "Receipts" },
+        { name: "contract", description: "Contracts" },
+    ],
+    n_consensus: 1,
+});
+
+split.output.forEach(sub => {
+    console.log(`${sub.name}: pages ${sub.pages}`);
+});
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/splits' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "invoice_batch.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  },
+  "model": "retab-small",
+  "subdocuments": [
+    {"name": "invoice", "description": "Invoice documents", "partition_key": "invoice number", "allow_multiple_instances": true},
+    {"name": "receipt", "description": "Receipts"},
+    {"name": "contract", "description": "Contracts"}
+  ],
+  "n_consensus": 1
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "split_01G34H8J2K",
+  "organization_id": "org_abc123",
+  "file": {
+    "id": "file_6dd6eb00688ad8d1",
+    "filename": "invoice_batch.pdf",
+    "mime_type": "application/pdf"
+  },
+  "model": "retab-small",
+  "subdocuments": [
+    {"name": "invoice", "description": "Invoice documents", "partition_key": "invoice number", "allow_multiple_instances": true},
+    {"name": "receipt", "description": "Receipts", "partition_key": null, "allow_multiple_instances": false}
+  ],
+  "n_consensus": 1,
+  "output": [
+    {
+      "name": "invoice",
+      "pages": [1, 2, 3],
+      "partitions": [
+        {"key": "INV-001", "pages": [1, 2]},
+        {"key": "INV-002", "pages": [3]}
+      ]
+    },
+    {"name": "receipt", "pages": [4, 5], "partitions": []}
+  ],
+  "consensus": null,
+  "created_at": "2024-03-15T10:30:00Z",
+  "updated_at": "2024-03-15T10:30:00Z"
+}
+```
+
+</ResponseExample>
+
+## Request Body
+
+<ParamField body="document" type="MIMEData" required>
+  The document to split.
+</ParamField>
+
+<ParamField body="subdocuments" type="array[Subdocument]" required>
+  The labeled subdocuments to split the document into. Each entry has `name`, optional `description`, optional `partition_key`, and `allow_multiple_instances` (when `true`, the split runs an extra vision-based refinement pass for repeated instances).
+</ParamField>
+
+<ParamField body="model" type="string" default="retab-small">
+  The model used for the split operation.
+</ParamField>
+
+<ParamField body="context" type="string">
+  Additional context for the split (e.g. iteration context from a workflow loop).
+</ParamField>
+
+<ParamField body="n_consensus" type="integer" default="1">
+  Number of consensus split runs to perform. Max: `8`.
+</ParamField>
+
+<ParamField body="bust_cache" type="boolean" default="false">
+  When `true`, bypass the cache and re-run the split.
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="id" type="string">
+  Unique split identifier.
+</ResponseField>
+
+<ResponseField name="file" type="object">
+  File metadata: `id`, `filename`, `mime_type`.
+</ResponseField>
+
+<ResponseField name="output" type="array[SplitResult]">
+  The list of subdocuments with their assigned pages.
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">
+      The name of the subdocument label.
+    </ResponseField>
+    <ResponseField name="pages" type="array[integer]">
+      Pages (1-indexed) assigned to this subdocument.
+    </ResponseField>
+    <ResponseField name="partitions" type="array[Partition]">
+      Partitions within this subdocument, each with `key` and `pages`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="consensus" type="object | null">
+  Consensus metadata (`likelihoods`, `choices`).
+</ResponseField>
+
+<ResponseField name="usage" type="RetabUsage | null">
+  Token and credit usage information.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 creation timestamp.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 last update timestamp.
+</ResponseField>

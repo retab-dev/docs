@@ -59,7 +59,7 @@ from retab import Retab
 client = Retab()
 
 job = client.jobs.create(
-    endpoint="/v1/documents/extract",
+    endpoint="/v1/extractions",
     request={
         "document": document,
         "json_schema": schema,
@@ -77,7 +77,7 @@ import { Retab } from '@retab/node';
 const client = new Retab();
 
 const job = await client.jobs.create({
-    endpoint: "/v1/documents/extract",
+    endpoint: "/v1/extractions",
     request: {
         document: document,
         json_schema: schema,
@@ -94,7 +94,7 @@ curl -X POST https://api.retab.com/v1/jobs \
   -H "Api-Key: $RETAB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "endpoint": "/v1/documents/extract",
+    "endpoint": "/v1/extractions",
     "request": {
       "document": {
         "filename": "invoice.pdf",
@@ -294,7 +294,7 @@ schema = {
 
 # Create extraction job
 job = client.jobs.create(
-    endpoint="/v1/documents/extract",
+    endpoint="/v1/extractions",
     request={
         "document": document,
         "json_schema": schema,
@@ -312,7 +312,7 @@ while job.status not in ("completed", "failed", "cancelled", "expired"):
 # Get extracted data
 if job.status == "completed":
     job = client.jobs.retrieve_full(job.id)
-    extracted = job.response.body["choices"][0]["message"]["parsed"]
+    extracted = job.response.body["output"]
     print(f"Invoice: {extracted['invoice_number']}")
     print(f"Total: ${extracted['total_amount']}")
 else:
@@ -346,7 +346,7 @@ const schema = {
 
 // Create extraction job
 let job = await client.jobs.create({
-    endpoint: "/v1/documents/extract",
+    endpoint: "/v1/extractions",
     request: {
         document: document,
         json_schema: schema,
@@ -366,7 +366,7 @@ while (!terminalStatuses.includes(job.status)) {
 // Get extracted data
 if (job.status === "completed") {
     job = await client.jobs.retrieveFull(job.id);
-    const extracted = job.response.body.choices[0].message.parsed;
+    const extracted = job.response.body.output;
     console.log(`Invoice: ${extracted.invoice_number}`);
     console.log(`Total: $${extracted.total_amount}`);
 } else {
@@ -397,7 +397,7 @@ with open("document.pdf", "rb") as f:
 
 # Create parse job
 job = client.jobs.create(
-    endpoint="/v1/documents/parse",
+    endpoint="/v1/parses",
     request={
         "document": document,
     },
@@ -414,8 +414,8 @@ while job.status not in ("completed", "failed", "cancelled", "expired"):
 if job.status == "completed":
     job = client.jobs.retrieve_full(job.id)
     result = job.response.body
-    print(f"Parsed text:\n{result['text']}")
-    print(f"Total pages: {len(result['pages'])}")
+    print(f"Parsed text:\n{result['output']['text']}")
+    print(f"Total pages: {len(result['output']['pages'])}")
 else:
     print(f"Job failed: {job.error.message}")
 ```
@@ -435,7 +435,7 @@ const document = {
 
 // Create parse job
 let job = await client.jobs.create({
-    endpoint: "/v1/documents/parse",
+    endpoint: "/v1/parses",
     request: {
         document: document,
     },
@@ -454,8 +454,8 @@ while (!terminalStatuses.includes(job.status)) {
 if (job.status === "completed") {
     job = await client.jobs.retrieveFull(job.id);
     const result = job.response.body;
-    console.log(`Parsed text:\n${result.text}`);
-    console.log(`Total pages: ${result.pages.length}`);
+    console.log(`Parsed text:\n${result.output.text}`);
+    console.log(`Total pages: ${result.output.pages.length}`);
 } else {
     console.log(`Job failed: ${job.error.message}`);
 }
@@ -494,7 +494,7 @@ categories = [
 
 # Create classification job
 job = client.jobs.create(
-    endpoint="/v1/documents/classify",
+    endpoint="/v1/classifications",
     request={
         "document": document,
         "model": "retab-small",
@@ -512,7 +512,7 @@ while job.status not in ("completed", "failed", "cancelled", "expired"):
 # Get classification result
 if job.status == "completed":
     job = client.jobs.retrieve_full(job.id)
-    result = job.response.body["classification"]
+    result = job.response.body["output"]
     print(f"Classification: {result['category']}")
     print(f"Reasoning: {result['reasoning']}")
 else:
@@ -544,7 +544,7 @@ const categories = [
 
 // Create classification job
 let job = await client.jobs.create({
-    endpoint: "/v1/documents/classify",
+    endpoint: "/v1/classifications",
     request: {
         document: document,
         model: "retab-small",
@@ -564,7 +564,7 @@ while (!terminalStatuses.includes(job.status)) {
 // Get classification result
 if (job.status === "completed") {
     job = await client.jobs.retrieveFull(job.id);
-    const result = job.response.body.classification;
+    const result = job.response.body.output;
     console.log(`Classification: ${result.category}`);
     console.log(`Reasoning: ${result.reasoning}`);
 } else {
@@ -579,14 +579,14 @@ The Jobs API supports the following endpoints:
 
 | Endpoint | Description |
 |----------|-------------|
-| `/v1/documents/extract` | Extract structured data from documents |
-| `/v1/documents/parse` | Parse documents to text/markdown |
-| `/v1/documents/split` | Split multi-page documents |
-| `/v1/documents/classify` | Classify documents into categories |
+| `/v1/extractions` | Extract structured data from documents |
+| `/v1/parses` | Parse documents to text/markdown |
+| `/v1/splits` | Split multi-page documents |
+| `/v1/classifications` | Create a classification resource |
 | `/v1/schemas/generate` | Generate JSON schemas from documents |
-| `/v1/edit/agent/fill` | Fill form fields using AI agent |
-| `/v1/edit/templates/fill` | Fill templates with data |
-| `/v1/edit/templates/generate` | Generate form schemas from PDFs |
+| `/v1/edits` | Fill form fields with AI (direct document or template) |
+| `/v1/edits/templates/fill` | Fill a saved template with data |
+| `/v1/edits/templates` | Register a reusable PDF form template |
 
 ## Job Lifecycle
 
@@ -648,21 +648,18 @@ When a job completes successfully, the result is available in the `response` fie
   "id": "job_abc123xyz",
   "object": "job",
   "status": "completed",
-  "endpoint": "/v1/documents/extract",
+  "endpoint": "/v1/extractions",
   "request": { ... },
   "response": {
     "status_code": 200,
     "body": {
-      "choices": [
-        {
-          "message": {
-            "parsed": {
-              "invoice_number": "INV-2024-001",
-              "total": 1250.00
-            }
-          }
-        }
-      ]
+      "id": "extr_01HZX0ABCDEF123456",
+      "output": {
+        "invoice_number": "INV-2024-001",
+        "total": 1250.00
+      },
+      "consensus": { "choices": [], "likelihoods": null },
+      "usage": { "total_tokens": 2780 }
     }
   },
   "created_at": 1705420800,
@@ -744,7 +741,7 @@ Use the `metadata` field to attach context to jobs for tracking and filtering:
 
 ```python
 job = client.jobs.create(
-    endpoint="/v1/documents/extract",
+    endpoint="/v1/extractions",
     request={ ... },
     metadata={
         "batch_id": "batch_20240115",
@@ -794,7 +791,7 @@ def process_document(doc_path):
         content = base64.b64encode(f.read()).decode()
 
     job = client.jobs.create(
-        endpoint="/v1/documents/extract",
+        endpoint="/v1/extractions",
         request={
             "document": {"filename": doc_path, "url": f"data:application/pdf;base64,{content}"},
             "json_schema": schema,

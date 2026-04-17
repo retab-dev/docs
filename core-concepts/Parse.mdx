@@ -4,14 +4,19 @@ title: Parsing
 
 ### Introduction
 
-The `parse` method turns a document into normalized text content, returned both page-by-page and as one combined string. It is the right tool when you need readable document text for RAG pipelines, search indexing, prompting, debugging, or any workflow that works on free text rather than schema-constrained extraction.
+<Note>
+  Parse is a first-class resource: `client.parses.create(...)` (Python) / `client.parses.create({...})` (Node) persist the result and make it retrievable via `client.parses.get(id)` and `client.parses.list()`.
+</Note>
 
-Unlike `extract`, `parse` does not try to fit the document into a JSON schema. Instead, it returns:
+The `parses.create` method turns a document into normalized text content, returned both page-by-page and as one combined string. It is the right tool when you need readable document text for RAG pipelines, search indexing, prompting, debugging, or any workflow that works on free text rather than schema-constrained extraction.
 
-- `pages`: one parsed string per page
-- `text`: the full document content as a single string
-- `document`: basic file metadata
+Unlike `extract`, parse does not try to fit the document into a JSON schema. Instead, it returns a `Parse` resource with:
+
+- `output.pages`: one parsed string per page
+- `output.text`: the full document content as a single string
+- `file`: basic file metadata (`id`, `filename`, `mime_type`)
 - `usage`: page count and credits consumed
+- `id`, `created_at`, `updated_at`: resource identifiers and timestamps
 
 Table content can be rendered as `html`, `markdown`, `yaml`, or `json`, depending on what your downstream system expects.
 
@@ -62,23 +67,43 @@ For chunking, [chonkie](https://chonkie.ai/) is a good fit for RAG-style pipelin
   </Expandable>
 </ParamField>
 
-<ResponseField name="Returns" type="ParseResponse">
-  A parsed document payload with text content and usage metadata.
+<ResponseField name="Returns" type="Parse">
+  A persisted parse resource with text content and usage metadata.
   <Expandable title="properties">
-    <ResponseField name="document" type="FileRef">
+    <ResponseField name="id" type="string">
+      Unique parse identifier.
+    </ResponseField>
+
+    <ResponseField name="file" type="FileRef">
       Processed document metadata with `id`, `filename`, and `mime_type`.
+    </ResponseField>
+
+    <ResponseField name="model" type="string">
+      The model that produced this parse.
+    </ResponseField>
+
+    <ResponseField name="table_parsing_format" type="string">
+      Table rendering format used for this parse.
+    </ResponseField>
+
+    <ResponseField name="image_resolution_dpi" type="integer">
+      DPI used when rasterizing pages.
+    </ResponseField>
+
+    <ResponseField name="output" type="ParseOutput">
+      Nested parse output with `pages` (one string per page) and `text` (full document content as a single string).
     </ResponseField>
 
     <ResponseField name="usage" type="RetabUsage">
       Processing usage information including `page_count` and `credits`.
     </ResponseField>
 
-    <ResponseField name="pages" type="array[string]">
-      Parsed content for each page.
+    <ResponseField name="created_at" type="string">
+      ISO 8601 creation timestamp.
     </ResponseField>
 
-    <ResponseField name="text" type="string">
-      Full document content as a single string.
+    <ResponseField name="updated_at" type="string">
+      ISO 8601 last update timestamp.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -94,7 +119,7 @@ from chonkie import SentenceChunker
 
 client = Retab()
 
-result = client.documents.parse(
+parse = client.parses.create(
     document="technical-manual.pdf",
     model="retab-small",
     table_parsing_format="markdown",
@@ -109,7 +134,7 @@ chunker = SentenceChunker(
 )
 
 all_chunks = []
-for page_num, page_text in enumerate(result.pages, start=1):
+for page_num, page_text in enumerate(parse.output.pages, start=1):
     chunks = list(chunker(page_text))
     for chunk_idx, chunk in enumerate(chunks):
         all_chunks.append(
@@ -117,11 +142,11 @@ for page_num, page_text in enumerate(result.pages, start=1):
                 "page": page_num,
                 "chunk_id": f"page_{page_num}_chunk_{chunk_idx}",
                 "text": str(chunk),
-                "document": result.document.filename,
+                "document": parse.file.filename,
             }
         )
 
-print(f"Created {len(all_chunks)} chunks from {result.usage.page_count} pages")
+print(f"Created {len(all_chunks)} chunks from {parse.usage.page_count} pages")
 ```
 
 ```javascript JavaScript
@@ -129,7 +154,7 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-const result = await client.documents.parse({
+const parse = await client.parses.create({
   document: 'technical-manual.pdf',
   model: 'retab-small',
   table_parsing_format: 'markdown',
@@ -137,7 +162,7 @@ const result = await client.documents.parse({
 });
 
 const allChunks = [];
-result.pages.forEach((pageText, index) => {
+parse.output.pages.forEach((pageText, index) => {
   const pageNum = index + 1;
   const sentences = pageText.split(/[.!?]+/).filter((s) => s.trim().length > 0);
 
@@ -146,17 +171,17 @@ result.pages.forEach((pageText, index) => {
       page: pageNum,
       chunk_id: `page_${pageNum}_chunk_${Math.floor(i / 3)}`,
       text: sentences.slice(i, i + 3).join('. '),
-      document: result.document.filename,
+      document: parse.file.filename,
     });
   }
 });
 
-console.log(`Created ${allChunks.length} chunks from ${result.usage.page_count} pages`);
-console.log(result.text);
+console.log(`Created ${allChunks.length} chunks from ${parse.usage.page_count} pages`);
+console.log(parse.output.text);
 ```
 
 ```typescript TypeScript
-import { Retab, type ParseRequest, type ParseResponse } from '@retab/node';
+import { Retab, type ParseRequest, type Parse } from '@retab/node';
 
 interface ChunkData {
   page: number;
@@ -174,10 +199,10 @@ const parseRequest: ParseRequest = {
   image_resolution_dpi: 192,
 };
 
-const result: ParseResponse = await client.documents.parse(parseRequest);
+const parse: Parse = await client.parses.create(parseRequest);
 
 const allChunks: ChunkData[] = [];
-result.pages.forEach((pageText, index) => {
+parse.output.pages.forEach((pageText, index) => {
   const pageNum = index + 1;
   const sentences = pageText.split(/[.!?]+/).filter((s) => s.trim().length > 0);
 
@@ -186,13 +211,13 @@ result.pages.forEach((pageText, index) => {
       page: pageNum,
       chunk_id: `page_${pageNum}_chunk_${Math.floor(i / 3)}`,
       text: sentences.slice(i, i + 3).join('. '),
-      document: result.document.filename,
+      document: parse.file.filename,
     });
   }
 });
 
-console.log(`Created ${allChunks.length} chunks from ${result.usage.page_count} pages`);
-console.log(result.text);
+console.log(`Created ${allChunks.length} chunks from ${parse.usage.page_count} pages`);
+console.log(parse.output.text);
 ```
 </CodeGroup>
 
@@ -217,5 +242,5 @@ console.log(result.text);
 
 ### Indexing Advice
 
-- Store the page number with every chunk you create from `result.pages`.
-- Keep the original `document.id` or `document.filename` alongside indexed text so retrieval results remain traceable.
+- Store the page number with every chunk you create from `parse.output.pages`.
+- Keep the original `parse.file.id` or `parse.file.filename` alongside indexed text so retrieval results remain traceable.

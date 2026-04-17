@@ -1,0 +1,106 @@
+---
+title: 'List Splits'
+openapi: 'GET /v1/splits'
+---
+
+List persisted splits for your organization, with cursor-based pagination.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+splits = client.splits.list(limit=20, order="desc")
+for s in splits.data:
+    print(f"{s.id}: {s.file.filename}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const splits = await client.splits.list({ limit: 20, order: "desc" });
+for (const s of splits.data) {
+    console.log(`${s.id}: ${s.file.filename}`);
+}
+```
+
+```bash curl
+curl -X GET \
+  'https://api.retab.com/v1/splits?limit=20&order=desc' \
+  -H "Api-Key: $RETAB_API_KEY"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "id": "split_01G34H8J2K",
+      "organization_id": "org_abc123",
+      "file": {
+        "id": "file_6dd6eb00688ad8d1",
+        "filename": "invoice_batch.pdf",
+        "mime_type": "application/pdf"
+      },
+      "model": "retab-small",
+      "output": [
+        {"name": "invoice", "pages": [1, 2, 3], "partitions": []}
+      ],
+      "created_at": "2024-03-15T10:30:00Z",
+      "updated_at": "2024-03-15T10:30:00Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": "split_01G34H8J2K",
+    "total_count": 12
+  }
+}
+```
+
+</ResponseExample>
+
+## Query Parameters
+
+<ParamField query="before" type="string">
+  Cursor for backward pagination.
+</ParamField>
+
+<ParamField query="after" type="string">
+  Cursor for forward pagination.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Maximum number of splits to return.
+</ParamField>
+
+<ParamField query="order" type="string" default="desc">
+  Sort order by `created_at`. Valid values: `asc`, `desc`.
+</ParamField>
+
+<ParamField query="filename" type="string">
+  Case-insensitive substring filter applied to `file.filename`.
+</ParamField>
+
+<ParamField query="from_date" type="string">
+  Return splits created on or after this date, in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="to_date" type="string">
+  Return splits created on or before this date, in `YYYY-MM-DD` format.
+</ParamField>
+
+## Count
+
+```bash
+GET /v1/splits/count?filename=invoice&from_date=2024-01-01
+```
+
+returns `{ "count": <int> }`.

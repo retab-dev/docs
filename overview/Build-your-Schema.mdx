@@ -90,17 +90,20 @@ const CalendarEvent = z.object({
 <CodeGroup>
 ```python Python
 from retab import Retab
+from retab.types.extractions import ExtractionRequest
 
 client = Retab()
 
-result = client.documents.extract(
-    model="retab-small",
-    messages=messages,
-    json_schema=CalendarEvent.model_json_schema(),
-    n_consensus=4,
+result = client.extractions.create(
+    ExtractionRequest(
+        document="event_flyer.pdf",
+        model="retab-small",
+        json_schema=CalendarEvent.model_json_schema(),
+        n_consensus=4,
+    )
 )
 
-print(json.dumps(result.likelihoods, indent=2))
+print(json.dumps(result.consensus.likelihoods, indent=2))
 ```
 
 ```javascript JavaScript
@@ -109,29 +112,29 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 
 const client = new Retab();
 
-const result = await client.documents.extract({
+const result = await client.extractions.create({
+    document: "event_flyer.pdf",
     model: "retab-small",
-    messages: messages,
     json_schema: zodToJsonSchema(CalendarEvent),
     n_consensus: 5,
 });
 
-console.log(JSON.stringify(result.likelihoods, null, 2));
+console.log(JSON.stringify(result.consensus?.likelihoods, null, 2));
 ```
 </CodeGroup>
 
 **Sample output:**
 <CodeGroup>
 ```json Consolidated output
-# Obtained from result.choices[0].message.content
+# result.output
 {
   "name": "Science Fair",
   "date": "Friday",
   "address": "123 Main St, Anytown, USA"
 }
 ```
-```json Response #1
-# Obtained from result.choices[1].message.content
+```json Vote #1
+# result.consensus.choices[0]
 {
   "name": "Science Fair",
   "date": "Friday",
@@ -139,8 +142,8 @@ console.log(JSON.stringify(result.likelihoods, null, 2));
 }
 ```
 
-```json Response #2
-# Obtained from result.choices[2].message.content
+```json Vote #2
+# result.consensus.choices[1]
 {
   "name": "Science Fair",
   "date": "Friday",
@@ -148,8 +151,8 @@ console.log(JSON.stringify(result.likelihoods, null, 2));
 }
 ```
 
-```json Response #3
-# Obtained from result.choices[3].message.content
+```json Vote #3
+# result.consensus.choices[2]
 {
   "name": "Science Fair",
   "date": "2024-03-15",
@@ -157,8 +160,8 @@ console.log(JSON.stringify(result.likelihoods, null, 2));
 }
 ```
 
-```json Response #4
-# Obtained from result.choices[4].message.content
+```json Vote #4
+# result.consensus.choices[3]
 {
   "name": "Science Fair",
   "date": "2024-03-15",
@@ -166,6 +169,7 @@ console.log(JSON.stringify(result.likelihoods, null, 2));
 }
 ```
 ```json Likelihoods
+# result.consensus.likelihoods
 {
   "name": 1.0,
   "date": 0.5,

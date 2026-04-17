@@ -12,7 +12,7 @@ client = Retab()
 
 # Create an async extraction job
 job = client.jobs.create(
-    endpoint="/v1/documents/extract",
+    endpoint="/v1/extractions",
     request={
         "document": {
             "filename": "invoice.pdf",
@@ -42,7 +42,7 @@ const client = new Retab();
 
 // Create an async extraction job
 const job = await client.jobs.create({
-    endpoint: "/v1/documents/extract",
+    endpoint: "/v1/extractions",
     request: {
         document: {
             filename: "invoice.pdf",
@@ -71,7 +71,7 @@ curl -X POST \
   -H "Api-Key: $RETAB_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{
-    "endpoint": "/v1/documents/extract",
+    "endpoint": "/v1/extractions",
     "request": {
       "document": {
         "filename": "invoice.pdf",
@@ -103,7 +103,7 @@ curl -X POST \
   "id": "job_V1StGXR8_Z5jdHi6B-myT",
   "object": "job",
   "status": "queued",
-  "endpoint": "/v1/documents/extract",
+  "endpoint": "/v1/extractions",
   "request": {
     "document": {
       "filename": "invoice.pdf",
@@ -135,7 +135,7 @@ curl -X POST \
 
 ```json 400
 {
-  "detail": "Invalid request body for /v1/documents/extract: validation error..."
+  "detail": "Invalid request body for /v1/extractions: validation error..."
 }
 ```
 
@@ -144,7 +144,7 @@ curl -X POST \
   "detail": [
     {
       "loc": ["body", "endpoint"],
-      "msg": "Input should be '/v1/documents/extract', '/v1/documents/parse', ...",
+      "msg": "Input should be '/v1/extractions', '/v1/parses', '/v1/splits', '/v1/classifications', '/v1/edits', ...",
       "type": "literal_error"
     }
   ]
@@ -157,14 +157,20 @@ curl -X POST \
 
 <ParamField body="endpoint" type="string" required>
   The API endpoint to call asynchronously. Supported values:
-  - `/v1/documents/extract` - Extract structured data
-  - `/v1/documents/parse` - Parse to text/markdown
-  - `/v1/documents/split` - Split documents
-  - `/v1/documents/classify` - Classify documents
-  - `/v1/schemas/generate` - Generate schemas
-  - `/v1/edit/agent/fill` - AI agent form filling
-  - `/v1/edit/templates/fill` - Template filling
-  - `/v1/edit/templates/generate` - Generate form schema
+
+  **Resource-oriented (recommended):**
+  - `/v1/extractions` - Create an extraction
+  - `/v1/parses` - Create a parse
+  - `/v1/splits` - Create a split
+  - `/v1/classifications` - Create a classification
+  - `/v1/edits` - Create an edit (document or template)
+  - `/v1/edits/templates/fill` - Fill a registered template
+  - `/v1/edits/templates/generate` - Generate a form schema from a PDF
+  - `/v1/schemas/generate` - Generate extraction schemas
+
+  <Note>
+  Legacy document-scoped endpoints (`/v1/documents/extract`, `/v1/documents/split`, `/v1/documents/classify`, `/v1/documents/parse`, `/v1/documents/edit`, `/v1/edit/agent/fill`, `/v1/edit/templates/fill`, `/v1/edit/templates/generate`) are still accepted for backward compat but are deprecated. New jobs should target the resource-oriented URLs so the result is retrievable via `GET /v1/{resource}/{id}`.
+  </Note>
 </ParamField>
 
 <ParamField body="request" type="object" required>

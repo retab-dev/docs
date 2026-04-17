@@ -1,0 +1,192 @@
+---
+title: 'Create Classification'
+openapi: 'POST /v1/classifications'
+---
+
+Classify a document into one of the provided categories and persist the result as a `Classification` resource that can later be retrieved via `GET /v1/classifications/{classification_id}` or listed via `GET /v1/classifications`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+classification = client.classifications.create(
+    document="invoice.pdf",
+    model="retab-small",
+    categories=[
+        {"name": "invoice", "description": "Invoice documents with billing information"},
+        {"name": "receipt", "description": "Receipt documents for payments"},
+        {"name": "contract", "description": "Legal contract documents"},
+    ],
+    first_n_pages=3,
+    context="Processing batch from Q4 2024 vendor submissions",
+    n_consensus=1,
+)
+
+print(f"Classification ID: {classification.id}")
+print(f"Category: {classification.output.category}")
+print(f"Reasoning: {classification.output.reasoning}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const classification = await client.classifications.create({
+    document: "invoice.pdf",
+    model: "retab-small",
+    categories: [
+        { name: "invoice", description: "Invoice documents with billing information" },
+        { name: "receipt", description: "Receipt documents for payments" },
+        { name: "contract", description: "Legal contract documents" },
+    ],
+    first_n_pages: 3,
+    context: "Processing batch from Q4 2024 vendor submissions",
+    n_consensus: 1,
+});
+
+console.log(`Classification ID: ${classification.id}`);
+console.log(`Category: ${classification.output.category}`);
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/classifications' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "invoice.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  },
+  "model": "retab-small",
+  "categories": [
+    {"name": "invoice", "description": "Invoice documents with billing information"},
+    {"name": "receipt", "description": "Receipt documents for payments"},
+    {"name": "contract", "description": "Legal contract documents"}
+  ],
+  "first_n_pages": 3,
+  "context": "Processing batch from Q4 2024 vendor submissions",
+  "n_consensus": 1
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "cls_01G34H8J2K",
+  "organization_id": "org_abc123",
+  "file": {
+    "id": "file_6dd6eb00688ad8d1",
+    "filename": "invoice.pdf",
+    "mime_type": "application/pdf"
+  },
+  "model": "retab-small",
+  "categories": [
+    {"name": "invoice", "description": "Invoice documents with billing information"},
+    {"name": "receipt", "description": "Receipt documents for payments"},
+    {"name": "contract", "description": "Legal contract documents"}
+  ],
+  "n_consensus": 1,
+  "context": "Processing batch from Q4 2024 vendor submissions",
+  "output": {
+    "reasoning": "The document contains billing details including line items, unit prices, quantities, and a total amount due.",
+    "category": "invoice"
+  },
+  "consensus": {
+    "choices": [],
+    "likelihood": null
+  },
+  "usage": {
+    "prompt_tokens": 1500,
+    "completion_tokens": 40,
+    "total_tokens": 1540
+  },
+  "created_at": "2024-03-15T10:30:00Z",
+  "updated_at": "2024-03-15T10:30:00Z"
+}
+```
+
+</ResponseExample>
+
+## Request Body
+
+<ParamField body="document" type="MIMEData" required>
+  The document to classify.
+</ParamField>
+
+<ParamField body="categories" type="array[Category]" required>
+  The candidate categories. Each `Category` has a `name` and optional `description`.
+</ParamField>
+
+<ParamField body="model" type="string" default="retab-small">
+  The model used for classification.
+</ParamField>
+
+<ParamField body="first_n_pages" type="integer">
+  Only use the first N pages of the document for classification. Useful for long documents where the classification signal sits on the first page.
+</ParamField>
+
+<ParamField body="context" type="string">
+  Additional context (e.g. iteration context from a workflow loop).
+</ParamField>
+
+<ParamField body="n_consensus" type="integer" default="1">
+  Number of classification runs to use for consensus voting. Max: `16`.
+</ParamField>
+
+<ParamField body="bust_cache" type="boolean" default="false">
+  When `true`, bypass the cache and re-run the classification.
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="id" type="string">
+  Unique classification identifier.
+</ResponseField>
+
+<ResponseField name="file" type="object">
+  File metadata: `id`, `filename`, `mime_type`.
+</ResponseField>
+
+<ResponseField name="model" type="string">
+  Model used for classification.
+</ResponseField>
+
+<ResponseField name="categories" type="array[Category]">
+  Categories the document was classified against.
+</ResponseField>
+
+<ResponseField name="output" type="object">
+  The classification decision.
+  <Expandable title="properties">
+    <ResponseField name="category" type="string">
+      The category name that the document belongs to.
+    </ResponseField>
+    <ResponseField name="reasoning" type="string">
+      The reasoning for the decision.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="consensus" type="object">
+  Consensus metadata (`choices`, `likelihood`).
+</ResponseField>
+
+<ResponseField name="usage" type="RetabUsage | null">
+  Token and credit usage information.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 creation timestamp.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 last update timestamp.
+</ResponseField>
