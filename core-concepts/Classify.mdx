@@ -6,94 +6,111 @@
 
 ### Introduction
 
-The `classify` method in Retab's document processing pipeline analyzes a document and classifies it into exactly one of the user-defined categories.  
-Unlike multi-section routing workflows, `classify` determines the single most appropriate category for the entire document and returns the classification with reasoning.
+Retab classifications use the resource-based `POST /v1/classifications` API. A classification request analyzes a document, chooses exactly one category, and persists the result as a `Classification` object that you can later retrieve or list.
 
 Common use cases include:
 
-1. **Document Routing**: Automatically route incoming documents to the appropriate processing pipeline based on their type
-2. **Pre-filtering**: Classify documents before extraction to apply the correct schema
-3. **Mailroom Automation**: Sort incoming mail and attachments by document type
-4. **Quality Control**: Verify document types match expected categories in a workflow
+1. **Document Routing**: Route incoming files to the right downstream extraction pipeline
+2. **Pre-filtering**: Choose the right schema before extraction
+3. **Mailroom Automation**: Sort attachments by document type
+4. **Quality Control**: Verify documents match the expected category in a workflow
 
 ```mermaid
 flowchart LR
     A[Document] --> B
-    
-    subgraph Retab["Retab Classify API"]
+
+    subgraph Retab["Retab Classification API"]
         B[1. Document Analysis]
         B --> C[2. Category Matching]
-        C --> D[3. Reasoning Generation]
+        C --> D[3. Decision + Reasoning]
     end
-    
+
     D --> E
-    
-    subgraph Output["Classification Result"]
-        E[Category: invoice]
-        F[Reasoning: Chain-of-thought explanation]
+
+    subgraph Output["Classification Object"]
+        E[output.category: invoice]
+        F[output.reasoning: why this category won]
     end
 ```
 
-Key features of the Classify API:
+Key features of the Classification API:
 
-- **Single Classification**: Returns exactly one category for the entire document
-- **Chain-of-Thought Reasoning**: Provides detailed explanation for the classification decision
-- **Vision-Based Analysis**: Uses LLM vision capabilities for accurate document understanding
-- **Flexible Categories**: Define custom categories tailored to your document types
-- **Explainable Results**: Understand why a document was classified a certain way
+- **Single Decision**: Returns exactly one category for the document
+- **Reasoned Output**: Includes an explanation for the selected category
+- **Custom Categories**: Define categories specific to your workflow
+- **Consensus Support**: Run multiple votes with `n_consensus` when you want more stability
+- **Stored Resource**: The result is persisted and can be fetched later
 
-## Classify API
+## Classification API
 
-<ParamField body="ClassifyRequest" type="ClassifyRequest">
+<ParamField body="ClassificationRequest" type="ClassificationRequest">
   <Expandable title="properties">
 
 <ParamField body="document" type="MIMEData" required>
-  The document to classify. Can be a file path, bytes, or PIL.Image.Image object.
+  The document to classify. Can be a file path, bytes, or image input.
 </ParamField>
 
-<ParamField body="model" type="LLMModel" required>
-  The AI model to use for document classification. Recommended: `retab-small` for best balance of speed and accuracy.
+<ParamField body="model" type="LLMModel">
+  The model to use for classification. Recommended: `retab-small` for most cases.
 </ParamField>
 
 <ParamField body="categories" type="array[Category]" required>
-  List of categories to classify the document into. Each category has:
-  - `name`: Unique identifier for the category
-  - `description`: Detailed description to help the model identify this category
+  The candidate categories. Each category has:
+  - `name`: Stable identifier for the category
+  - `description`: Instructions that help the model distinguish that category
 </ParamField>
 
 <ParamField body="first_n_pages" type="integer">
-  Only use the first N pages of the document for classification. Useful for large documents where classification can be determined from early pages, reducing processing time and cost. Supports PDF and Office documents (docx, pptx, doc, ppt).
+  Restrict classification to the first N pages. Useful for large documents when the signal appears early.
 </ParamField>
 
 <ParamField body="context" type="string">
-  Additional context to guide the classification. Useful for providing iteration context from a loop, business rules, or other relevant information that helps the model make more accurate classification decisions.
+  Additional context or routing instructions to guide the model.
+</ParamField>
+
+<ParamField body="n_consensus" type="integer" default="1">
+  Number of votes to run for consensus. Max: `16`.
 </ParamField>
 
 </Expandable>
 </ParamField>
 
-<ResponseField name="Returns" type="ClassifyResponse Object">
-A ClassifyResponse object containing the classification result, consensus metadata, and usage.
+<ResponseField name="Returns" type="Classification Object">
+A stored classification resource containing the decision, consensus metadata, and usage.
   <Expandable title="properties">
-    <ResponseField name="classification" type="ClassifyDecision">
-      The classification result containing:
-      - `category`: The category name that the document belongs to
-      - `reasoning`: Step-by-step explanation of why this classification was chosen
+    <ResponseField name="id" type="string">
+      Unique identifier of the classification.
     </ResponseField>
-    <ResponseField name="consensus" type="ClassifyConsensus">
-      Consensus metadata containing:
-      - `choices`: Alternative classification vote outputs
-      - `likelihood`: Consensus likelihood for the winning classification
+    <ResponseField name="file" type="object">
+      File metadata for the classified document.
     </ResponseField>
-    <ResponseField name="usage" type="RetabUsage">
-      Usage information for the classification request.
+    <ResponseField name="model" type="string">
+      Model used for classification.
+    </ResponseField>
+    <ResponseField name="categories" type="array[Category]">
+      Categories the document was classified against.
+    </ResponseField>
+    <ResponseField name="n_consensus" type="integer">
+      Number of votes used for the classification.
+    </ResponseField>
+    <ResponseField name="context" type="string | null">
+      Optional context supplied with the request.
+    </ResponseField>
+    <ResponseField name="output" type="ClassificationDecision">
+      Final classification decision.
+    </ResponseField>
+    <ResponseField name="consensus" type="ClassificationConsensus">
+      Consensus metadata with flat `choices` entries.
+    </ResponseField>
+    <ResponseField name="usage" type="RetabUsage | null">
+      Usage information for the request.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
 ## Use Case: Document Routing in a Processing Pipeline
 
-Classify incoming documents to route them to the appropriate extraction schema.
+Classify incoming documents, then route them to the right extraction schema based on `output.category`.
 
 <CodeGroup>
 ```python Python
@@ -101,7 +118,6 @@ from retab import Retab
 
 client = Retab()
 
-# Define document type categories
 categories = [
     {"name": "invoice", "description": "Invoice documents with billing details, line items, totals, and payment terms"},
     {"name": "receipt", "description": "Payment receipts showing transaction confirmation and amounts paid"},
@@ -109,32 +125,28 @@ categories = [
     {"name": "purchase_order", "description": "Purchase order documents with order details and shipping information"},
 ]
 
-# Classify the document
-result = client.documents.classify(
+classification = client.classifications.create(
     document="incoming_document.pdf",
     model="retab-small",
-    categories=categories
+    categories=categories,
 )
 
-print(f"Document classified as: {result.classification.category}")
-print(f"Reasoning: {result.classification.reasoning}")
+print(f"Document classified as: {classification.output.category}")
+print(f"Reasoning: {classification.output.reasoning}")
 
-# Route to appropriate extraction pipeline
-if result.classification.category == "invoice":
-    # Use invoice extraction schema
+if classification.output.category == "invoice":
     invoice_schema = {...}
-    extraction = client.documents.extract(
+    extraction = client.extractions.create(
         document="incoming_document.pdf",
         model="retab-small",
-        json_schema=invoice_schema
+        json_schema=invoice_schema,
     )
-elif result.classification.category == "contract":
-    # Use contract extraction schema
+elif classification.output.category == "contract":
     contract_schema = {...}
-    extraction = client.documents.extract(
+    extraction = client.extractions.create(
         document="incoming_document.pdf",
         model="retab-small",
-        json_schema=contract_schema
+        json_schema=contract_schema,
     )
 ```
 
@@ -143,7 +155,6 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-// Define document type categories
 const categories = [
     { name: "invoice", description: "Invoice documents with billing details, line items, totals, and payment terms" },
     { name: "receipt", description: "Payment receipts showing transaction confirmation and amounts paid" },
@@ -151,38 +162,34 @@ const categories = [
     { name: "purchase_order", description: "Purchase order documents with order details and shipping information" },
 ];
 
-// Classify the document
-const result = await client.documents.classify({
+const classification = await client.classifications.create({
     document: "incoming_document.pdf",
     model: "retab-small",
-    categories: categories
+    categories,
 });
 
-console.log(`Document classified as: ${result.classification.category}`);
-console.log(`Reasoning: ${result.classification.reasoning}`);
+console.log(`Document classified as: ${classification.output.category}`);
+console.log(`Reasoning: ${classification.output.reasoning}`);
 
-// Route to appropriate extraction pipeline
-if (result.classification.category === "invoice") {
-    // Use invoice extraction schema
+if (classification.output.category === "invoice") {
     const invoiceSchema = {...};
-    const extraction = await client.documents.extract({
+    const extraction = await client.extractions.create({
         document: "incoming_document.pdf",
         model: "retab-small",
-        json_schema: invoiceSchema
+        json_schema: invoiceSchema,
     });
-} else if (result.classification.category === "contract") {
-    // Use contract extraction schema
+} else if (classification.output.category === "contract") {
     const contractSchema = {...};
-    const extraction = await client.documents.extract({
+    const extraction = await client.extractions.create({
         document: "incoming_document.pdf",
         model: "retab-small",
-        json_schema: contractSchema
+        json_schema: contractSchema,
     });
 }
 ```
 
 ```typescript TypeScript
-import { Retab, type ClassifyRequest, type ClassifyResponse } from '@retab/node';
+import { Retab } from '@retab/node';
 
 interface Category {
     name: string;
@@ -191,7 +198,6 @@ interface Category {
 
 const client = new Retab();
 
-// Define document type categories
 const categories: Category[] = [
     { name: "invoice", description: "Invoice documents with billing details, line items, totals, and payment terms" },
     { name: "receipt", description: "Payment receipts showing transaction confirmation and amounts paid" },
@@ -199,28 +205,21 @@ const categories: Category[] = [
     { name: "purchase_order", description: "Purchase order documents with order details and shipping information" },
 ];
 
-// Classify the document
-const classifyRequest: ClassifyRequest = {
+const classification = await client.classifications.create({
     document: "incoming_document.pdf",
     model: "retab-small",
-    categories: categories
-};
+    categories,
+});
 
-const result: ClassifyResponse = await client.documents.classify(classifyRequest);
+console.log(`Document classified as: ${classification.output.category}`);
+console.log(`Reasoning: ${classification.output.reasoning}`);
 
-console.log(`Document classified as: ${result.classification.category}`);
-console.log(`Reasoning: ${result.classification.reasoning}`);
-
-// Route to appropriate extraction pipeline based on classification
-switch (result.classification.category) {
+switch (classification.output.category) {
     case "invoice":
-        // Process as invoice
         break;
     case "contract":
-        // Process as contract
         break;
     default:
-        // Handle other document types
         break;
 }
 ```
@@ -228,7 +227,7 @@ switch (result.classification.category) {
 
 ## Use Case: Email Attachment Filtering
 
-Classify email attachments to filter out irrelevant documents.
+Classify attachments first, then branch on `output.category`.
 
 <CodeGroup>
 ```python Python
@@ -236,7 +235,6 @@ from retab import Retab
 
 client = Retab()
 
-# Define categories for email attachments
 categories = [
     {"name": "invoice", "description": "Invoice or billing documents requiring payment"},
     {"name": "quote", "description": "Price quotes or proposals from vendors"},
@@ -244,26 +242,22 @@ categories = [
     {"name": "other", "description": "Miscellaneous documents not fitting other categories"},
 ]
 
-# Process each attachment
 for attachment in email_attachments:
-    result = client.documents.classify(
+    classification = client.classifications.create(
         document=attachment,
         model="retab-small",
-        categories=categories
+        categories=categories,
     )
-    
-    if result.classification.category == "invoice":
-        # High priority - process immediately
+
+    if classification.output.category == "invoice":
         process_invoice(attachment)
-    elif result.classification.category == "quote":
-        # Medium priority - queue for review
+    elif classification.output.category == "quote":
         queue_for_review(attachment)
-    elif result.classification.category == "marketing":
-        # Low priority - skip or archive
+    elif classification.output.category == "marketing":
         archive_document(attachment)
-    
-    print(f"{attachment.name}: {result.classification.category}")
-    print(f"  Reason: {result.classification.reasoning[:100]}...")
+
+    print(f"{attachment.name}: {classification.output.category}")
+    print(f"  Reason: {classification.output.reasoning[:100]}...")
 ```
 
 ```javascript Javascript
@@ -271,7 +265,6 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-// Define categories for email attachments
 const categories = [
     { name: "invoice", description: "Invoice or billing documents requiring payment" },
     { name: "quote", description: "Price quotes or proposals from vendors" },
@@ -279,74 +272,60 @@ const categories = [
     { name: "other", description: "Miscellaneous documents not fitting other categories" },
 ];
 
-// Process each attachment
 for (const attachment of emailAttachments) {
-    const result = await client.documents.classify({
+    const classification = await client.classifications.create({
         document: attachment,
         model: "retab-small",
-        categories: categories
+        categories,
     });
-    
-    if (result.classification.category === "invoice") {
-        // High priority - process immediately
+
+    if (classification.output.category === "invoice") {
         await processInvoice(attachment);
-    } else if (result.classification.category === "quote") {
-        // Medium priority - queue for review
+    } else if (classification.output.category === "quote") {
         await queueForReview(attachment);
-    } else if (result.classification.category === "marketing") {
-        // Low priority - skip or archive
+    } else if (classification.output.category === "marketing") {
         await archiveDocument(attachment);
     }
-    
-    console.log(`${attachment.name}: ${result.classification.category}`);
-    console.log(`  Reason: ${result.classification.reasoning.slice(0, 100)}...`);
+
+    console.log(`${attachment.name}: ${classification.output.category}`);
+    console.log(`  Reason: ${classification.output.reasoning.slice(0, 100)}...`);
 }
 ```
 </CodeGroup>
 
-## Classify vs Split: When to Use Each
+## Classify vs Split
 
 | Feature | Classify | Split |
 |---------|----------|-------|
-| **Purpose** | Categorize entire document | Identify sections within document |
-| **Output** | Single category | Multiple section-level page assignments |
-| **Use Case** | Document routing, filtering | Batch separation, section extraction |
-| **Input** | Any document | Typically multi-page documents |
-| **Result** | One classification with reasoning | List of sections with assigned pages |
+| **Purpose** | Categorize the whole document | Identify sections within a document |
+| **Output** | One `output` decision | Multiple subdocument assignments |
+| **Use Case** | Routing, filtering, triage | Batch separation, section extraction |
+| **Result Shape** | `output.category`, `output.reasoning` | `output[]` with pages per subdocument |
 
 **Use Classify when:**
-- You need to determine what type of document you have
-- Documents are single-purpose (one invoice, one contract, etc.)
-- Building a document routing or triage system
-- Pre-filtering before extraction
+- You need to know what kind of document you have
+- The document should map to one main category
+- You are routing to another workflow or extraction schema
 
 **Use Split when:**
-- Documents contain multiple sections of different types
-- Processing batched/combined PDFs
-- Need to locate specific sections within a document
-- Extracting assigned pages for further processing
+- The file contains multiple sections with different meanings
+- You need page-level grouping
+- You plan to extract multiple subdocuments from one upload
 
 ## Best Practices
 
 ### Category Definition
-- **Be Specific**: Provide detailed descriptions that distinguish categories clearly
-- **Use Visual Cues**: Mention distinctive visual elements (logos, headers, layouts)
-- **Include Examples**: Reference typical content found in each category
-- **Add Catch-all**: Consider an "other" category for documents that don't fit
+- **Be Specific**: Describe what makes each category unique
+- **Use Visual Cues**: Mention layouts, headers, logos, or tables when useful
+- **Keep Overlap Low**: Categories should be distinguishable from each other
+- **Add a Catch-all**: Include an `other` category when documents can fall outside the expected set
 
-### Leveraging Reasoning
-- **Quality Assurance**: Use reasoning to validate classification decisions
-- **Audit Trail**: Store reasoning for compliance and debugging
-- **Confidence Assessment**: Longer, more detailed reasoning often indicates higher confidence
-- **Human Review**: Flag documents with ambiguous reasoning for manual review
+### Reasoning and Consensus
+- **Review `output.reasoning`** when you need an audit trail or human validation
+- **Use `n_consensus > 1`** for noisy or ambiguous document sets
+- **Inspect `consensus.choices`** to understand close calls between categories
 
-### Model Selection
-- **`retab-small`**: Best balance of speed and accuracy for most use cases
-- **`retab-large`**: Higher accuracy for complex or ambiguous documents
-- **`retab-micro`**: Fastest option for high-volume, straightforward classification
-
-### Performance Tips
-- **Limit Categories**: Use 3-7 well-defined categories for best accuracy
-- **Test Descriptions**: Iterate on category descriptions to improve classification
-- **Parallel Processing**: Classify multiple documents concurrently for higher throughput
-- **Use `first_n_pages`**: For large documents where classification can be determined from early pages, use `first_n_pages` to limit processing to the first N pages, reducing latency and cost
+### Performance
+- **Use 3-7 categories** for best results in most routing setups
+- **Limit pages** with `first_n_pages` when the first page contains enough signal
+- **Start with `retab-small`** and only scale up when accuracy demands it

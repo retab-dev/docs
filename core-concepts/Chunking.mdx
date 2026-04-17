@@ -54,15 +54,19 @@ Enable Chunking by specifying the `chunking_keys` parameter in your extraction r
 
 ```python
 from retab import Retab
+from retab.types.extractions import ExtractionRequest
 
 client = Retab()
 
-response = client.documents.extract(
-    document="invoice.pdf",
-    json_schema=my_schema,
-    chunking_keys={
-        "line_items": "product_name"  # parent_path: child_key_path
-    }
+response = client.extractions.create(
+    ExtractionRequest(
+        document="invoice.pdf",
+        model="retab-small",
+        json_schema=my_schema,
+        chunking_keys={
+            "line_items": "product_name"  # parent_path: child_key_path
+        },
+    )
 )
 ```
 
@@ -128,11 +132,14 @@ Chunking fully supports the `n_consensus` parameter. When enabled, each item is 
 - Compliance-critical extractions
 
 ```python
-response = client.documents.extract(
-    document="invoice.pdf",
-    json_schema=my_schema,
-    chunking_keys={"line_items": "sku"},
-    n_consensus=3  # Each item extracted 3 times for verification
+response = client.extractions.create(
+    ExtractionRequest(
+        document="invoice.pdf",
+        model="retab-small",
+        json_schema=my_schema,
+        chunking_keys={"line_items": "sku"},
+        n_consensus=3,  # Each item extracted 3 times for verification
+    )
 )
 ```
 

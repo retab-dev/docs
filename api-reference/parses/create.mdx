@@ -1,0 +1,166 @@
+---
+title: 'Create Parse'
+openapi: 'POST /v1/parses'
+---
+
+Parse a document into normalized text and persist the result as a `Parse` resource that can later be retrieved via `GET /v1/parses/{parse_id}` or listed via `GET /v1/parses`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+parse = client.parses.create(
+    document="document.pdf",
+    model="retab-small",
+    table_parsing_format="markdown",
+    image_resolution_dpi=192,
+)
+
+print(f"Parse ID: {parse.id}")
+print(f"Filename: {parse.file.filename}")
+print(f"Full text: {parse.output.text}")
+for i, page in enumerate(parse.output.pages):
+    print(f"Page {i + 1}: {page}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const parse = await client.parses.create({
+    document: "document.pdf",
+    model: "retab-small",
+    table_parsing_format: "markdown",
+    image_resolution_dpi: 192,
+});
+
+console.log(`Parse ID: ${parse.id}`);
+console.log(`Filename: ${parse.file.filename}`);
+console.log(`Full text: ${parse.output.text}`);
+parse.output.pages.forEach((page, index) => {
+    console.log(`Page ${index + 1}: ${page}`);
+});
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/parses' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "document.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsO..."
+  },
+  "model": "retab-small",
+  "table_parsing_format": "markdown",
+  "image_resolution_dpi": 192
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "parse_01G34H8J2K",
+  "organization_id": "org_abc123",
+  "file": {
+    "id": "file_6dd6eb00688ad8d1",
+    "filename": "document.pdf",
+    "mime_type": "application/pdf"
+  },
+  "model": "retab-small",
+  "table_parsing_format": "markdown",
+  "image_resolution_dpi": 192,
+  "output": {
+    "pages": [
+      "# Document Title\n\nFirst page content with a markdown table...",
+      "Second page content continues here...",
+      "Third and final page content..."
+    ],
+    "text": "# Document Title\n\nFirst page content with a markdown table...\n\nSecond page content continues here...\n\nThird and final page content..."
+  },
+  "usage": {
+    "page_count": 3,
+    "credits": 1.5
+  },
+  "created_at": "2024-03-15T10:30:00Z",
+  "updated_at": "2024-03-15T10:30:00Z"
+}
+```
+
+</ResponseExample>
+
+## Request Body
+
+<ParamField body="document" type="MIMEData" required>
+  The document to parse. HTTP callers must pass a `MIMEData` object with `filename` and `url` (a data URL or an https URL). The Python and Node SDKs also accept file paths, file-like objects, images, buffers, and URLs and convert them for you.
+</ParamField>
+
+<ParamField body="model" type="string" default="retab-small">
+  The model used for parsing.
+</ParamField>
+
+<ParamField body="table_parsing_format" type='"markdown" | "yaml" | "html" | "json"' default="html">
+  Controls how tables are represented in the parsed text.
+</ParamField>
+
+<ParamField body="image_resolution_dpi" type="integer" default="192">
+  DPI used when rasterizing pages for OCR-backed parsing. Accepted values are `96` to `300`.
+</ParamField>
+
+<ParamField body="bust_cache" type="boolean" default="false">
+  When `true`, bypass the parse cache and re-run the parse even if an identical request was recently fulfilled.
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="id" type="string">
+  Unique parse identifier.
+</ResponseField>
+
+<ResponseField name="file" type="object">
+  The parsed document's file metadata: `id`, `filename`, `mime_type`.
+</ResponseField>
+
+<ResponseField name="model" type="string">
+  The model that produced this parse.
+</ResponseField>
+
+<ResponseField name="table_parsing_format" type="string">
+  Table rendering format used for this parse.
+</ResponseField>
+
+<ResponseField name="image_resolution_dpi" type="integer">
+  DPI used when rasterizing pages.
+</ResponseField>
+
+<ResponseField name="output" type="object">
+  The parsed content.
+  <Expandable title="properties">
+    <ResponseField name="pages" type="array[string]">
+      Parsed text for each page, in order.
+    </ResponseField>
+    <ResponseField name="text" type="string">
+      The full document content as a single string.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="usage" type="RetabUsage | null">
+  Processing usage information including `page_count` and `credits`.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 creation timestamp.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 last update timestamp.
+</ResponseField>

@@ -6,12 +6,12 @@
 
 ### Introduction
 
-The `extract` method in Retab's document processing pipeline uses AI models to extract structured data from any document based on a provided JSON schema. This endpoint is ideal for automating data extraction tasks, such as pulling key information from invoices, forms, receipts, images, or scanned documents, for use in workflows like data entry automation, analytics, or integration with databases and applications.
+The `extractions.create` method in Retab's document processing pipeline uses AI models to extract structured data from any document based on a provided JSON schema. This endpoint is ideal for automating data extraction tasks, such as pulling key information from invoices, forms, receipts, images, or scanned documents, for use in workflows like data entry automation, analytics, or integration with databases and applications.
 
 The typical extraction workflow follows these steps:
 
 1. **Schema Definition**: Define a JSON schema that describes the structure of the data you want to extract.
-2. **Extraction**: Use Retab's `extract` method to process the document and retrieve structured data.
+2. **Extraction**: Call `client.extractions.create(...)` to process the document and retrieve structured data.
 3. **Validation & Usage**: Validate the extracted data (optionally using likelihood scores) and integrate it into your application.
 
 The SDKs already help here:
@@ -52,7 +52,7 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
 
 ## Extract API
 
-<ParamField body="ExtractRequest" type="ExtractRequest">
+<ParamField body="ExtractionRequest" type="ExtractionRequest">
   <Expandable title="properties">
 
 <ParamField body="document" type="string | object" required>
@@ -84,30 +84,30 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
   Number of consensus runs. Set to >1 for multi-run averaging to improve accuracy on uncertain extractions (increases cost).
 </ParamField>
 
-<ParamField body="additional_messages" type="list[ChatCompletionRetabMessage]" default="null">
-  Additional chat messages to append after the document content. Useful for extra context, clarifications, or domain-specific instructions. Roles follow the chat message format used by the SDKs, including `system`, `developer`, `user`, and `assistant`.
+<ParamField body="context" type="string | null" default="null">
+  Additional context for the extraction (e.g., iteration context from a loop). Freeform string appended to the prompt.
 </ParamField>
 
   </Expandable>
 </ParamField>
 
-<ResponseField name="Returns" type="RetabParsedChatCompletion">
-A `RetabParsedChatCompletion` with the extracted data, usage details, likelihood scores, and a persisted `extraction_id`.
+<ResponseField name="Returns" type="Extraction">
+An `Extraction` record with the extracted data, usage details, consensus likelihoods, and a persisted `id`.
   <Expandable title="properties">
     <ResponseField name="id" type="string">
-      Unique identifier for the completion.
+      Unique identifier for the stored extraction record.
     </ResponseField>
-    <ResponseField name="choices" type="array[object]">
-      Array of completion choices. `choices[0].message.parsed` contains the structured output.
+    <ResponseField name="output" type="object">
+      The extracted structured data (parsed against your `json_schema`).
+    </ResponseField>
+    <ResponseField name="consensus" type="object">
+      Consensus metadata. `consensus.likelihoods` holds per-field confidence scores (populated when `n_consensus > 1`).
     </ResponseField>
     <ResponseField name="usage" type="object">
       Token usage details.
     </ResponseField>
-    <ResponseField name="likelihoods" type="object | null">
-      Confidence scores for each extracted field.
-    </ResponseField>
-    <ResponseField name="extraction_id" type="string | null">
-      Identifier for the stored extraction record, usable with `client.extractions.*`.
+    <ResponseField name="file" type="object">
+      Information about the extracted file.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -115,45 +115,46 @@ A `RetabParsedChatCompletion` with the extracted data, usage details, likelihood
 <CodeGroup>
 ```python Python
 from retab import Retab
+from retab.types.extractions import ExtractionRequest
 
 client = Retab()
 
-# Use client.documents.extract_stream(...) for stream mode
-doc_msg = client.documents.extract(
-    document = "freight/booking_confirmation.jpg", 
-    model="retab-micro",
-    json_schema = {
-      'X-SystemPrompt': 'You are a useful assistant.',
-      'properties': {
-          'name': {
-              'description': 'The name of the calendar event.',
-              'title': 'Name',
-              'type': 'string'
-          },
-          'date': {
-              'description': 'The date of the calendar event in ISO 8601 format.',
-              'title': 'Date',
-              'type': 'string'
-          }
-      },
-      'required': ['name', 'date'],
-      'title': 'CalendarEvent',
-      'type': 'object'
-    },
-    n_consensus=1 # 1 means disabled (default), if greater than 1 it will run the extraction with n-consensus mode
+extraction = client.extractions.create(
+    ExtractionRequest(
+        document="freight/booking_confirmation.jpg",
+        model="retab-micro",
+        json_schema={
+            'X-SystemPrompt': 'You are a useful assistant.',
+            'properties': {
+                'name': {
+                    'description': 'The name of the calendar event.',
+                    'title': 'Name',
+                    'type': 'string'
+                },
+                'date': {
+                    'description': 'The date of the calendar event in ISO 8601 format.',
+                    'title': 'Date',
+                    'type': 'string'
+                }
+            },
+            'required': ['name', 'date'],
+            'title': 'CalendarEvent',
+            'type': 'object'
+        },
+        n_consensus=1,  # 1 means disabled (default); if > 1 the extraction runs in consensus mode
+    )
 )
 
-print(doc_msg.data)
-print(doc_msg.likelihoods)
-print(doc_msg.extraction_id)
+print(extraction.output)
+print(extraction.consensus.likelihoods)
+print(extraction.id)
 ```
 ```javascript Javascript
 import { Retab } from '@retab/node';
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-// Use client.documents.extract_stream(...) for stream mode
-const docMsg = await client.documents.extract({
+const extraction = await client.extractions.create({
     document: "freight/booking_confirmation.jpg",
     model: "retab-micro",
     json_schema: {
@@ -174,15 +175,15 @@ const docMsg = await client.documents.extract({
         title: "CalendarEvent",
         type: "object"
     },
-    n_consensus: 1 // 1 means disabled (default), if greater than 1 it will run the extraction with n-consensus mode
+    n_consensus: 1 // 1 means disabled (default); if > 1 the extraction runs in consensus mode
 });
 
-console.log(docMsg.choices[0].message.parsed);
-console.log(docMsg.likelihoods);
-console.log(docMsg.extraction_id);
+console.log(extraction.output);
+console.log(extraction.consensus?.likelihoods);
+console.log(extraction.id);
 ```
 ```curl cURL
-curl -X POST https://api.retab.com/v1/documents/extract \
+curl -X POST https://api.retab.com/v1/extractions \
 -H "Api-Key: $RETAB_API_KEY" \
 -H "Content-Type: application/json" \
 -d '{
@@ -214,49 +215,31 @@ curl -X POST https://api.retab.com/v1/documents/extract \
 ```
 ```json Response
 {
-    "id": "chatcmpl-AoBs45TNWTB1VKGSXV7NAwCnxMaNN",
-    "choices": [
-        {
-            "finish_reason": "stop",
-            "index": 0,
-            "logprobs": null,
-            "message": {
-                "content": "{\"name\": \"Confirmation d'affr\\u00e9tement\", \"date\": \"2024-11-08\"}",
-                "refusal": null,
-                "role": "assistant",
-                "audio": null,
-                "function_call": null,
-                "tool_calls": [],
-                "parsed": {
-                    "name": "Confirmation d'affr\u00e9tement",
-                    "date": "2024-11-08"
-                }
-            }
-        }
-    ],
-    "created": 1736525396,
+    "id": "extr_01HZX0ABCDEF123456",
+    "file": {
+        "filename": "booking_confirmation.jpg",
+        "mime_type": "image/jpeg"
+    },
     "model": "retab-micro",
-    "object": "chat.completion",
-    "extraction_id": "extr_01HZX0ABCDEF123456",
+    "json_schema": { "...": "..." },
+    "n_consensus": 1,
+    "output": {
+        "name": "Confirmation d'affrètement",
+        "date": "2024-11-08"
+    },
+    "consensus": {
+        "choices": [],
+        "likelihoods": {
+            "name": 0.7227993785831323,
+            "date": 0.7306298416895017
+        }
+    },
     "usage": {
         "completion_tokens": 20,
         "prompt_tokens": 2760,
-        "total_tokens": 2780,
-        "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 0,
-            "rejected_prediction_tokens": 0
-        },
-        "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cached_tokens": 0
-        }
+        "total_tokens": 2780
     },
-    "likelihoods": {
-        "name": 0.7227993785831323,
-        "date": 0.7306298416895017
-    }
+    "created_at": "2025-01-10T15:30:00Z"
 }
 ```
 </CodeGroup>
@@ -268,49 +251,49 @@ Extract structured calendar event data from a booking confirmation image and val
 <CodeGroup>
 ```python Python
 from retab import Retab
+from retab.types.extractions import ExtractionRequest
 
 client = Retab()
 
 # Extract data
-result = client.documents.extract(
-    document="freight/booking_confirmation.jpg",
-    model="retab-micro",
-    json_schema={
-        'X-SystemPrompt': 'You are a useful assistant.',
-        'properties': {
-            'name': {
-                'description': 'The name of the calendar event.',
-                'title': 'Name',
-                'type': 'string'
+result = client.extractions.create(
+    ExtractionRequest(
+        document="freight/booking_confirmation.jpg",
+        model="retab-micro",
+        json_schema={
+            'X-SystemPrompt': 'You are a useful assistant.',
+            'properties': {
+                'name': {
+                    'description': 'The name of the calendar event.',
+                    'title': 'Name',
+                    'type': 'string'
+                },
+                'date': {
+                    'description': 'The date of the calendar event in ISO 8601 format.',
+                    'title': 'Date',
+                    'type': 'string'
+                }
             },
-            'date': {
-                'description': 'The date of the calendar event in ISO 8601 format.',
-                'title': 'Date',
-                'type': 'string'
-            }
+            'required': ['name', 'date'],
+            'title': 'CalendarEvent',
+            'type': 'object'
         },
-        'required': ['name', 'date'],
-        'title': 'CalendarEvent',
-        'type': 'object'
-    },
-    n_consensus=1
+        n_consensus=1,
+    )
 )
 
-# Python SDK parses against the schema automatically
-extracted_data = result.data
-likelihoods = result.likelihoods or {}
+extracted_data = result.output
+likelihoods = (result.consensus.likelihoods or {}) if result.consensus else {}
 
-if extracted_data is None:
-    print("Schema validation failed")
+print(f"Extracted Event: {extracted_data.get('name')} on {extracted_data.get('date')}")
+
+if likelihoods and all(score > 0.7 for score in likelihoods.values()):
+    print("High likelihood extraction - Saving to DB...")
 else:
-    print(f"Extracted Event: {extracted_data.name} on {extracted_data.date}")
+    print("Low likelihood - Review manually")
 
-    if all(score > 0.7 for score in likelihoods.values()):
-        print("High likelihood extraction - Saving to DB...")
-    else:
-        print("Low likelihood - Review manually")
-
-print(f"Processed with {result.usage.total_tokens} tokens")
+if result.usage:
+    print(f"Processed with {result.usage.total_tokens} tokens")
 ```
 
 ```javascript Javascript
@@ -327,7 +310,7 @@ const CalendarEventSchema = z.object({
 });
 
 // Extract data
-const result = await client.documents.extract({
+const result = await client.extractions.create({
     document: "freight/booking_confirmation.jpg",
     model: "retab-micro",
     json_schema: CalendarEventSchema,
@@ -335,18 +318,18 @@ const result = await client.documents.extract({
 });
 
 // Access extracted data
-const extractedData = result.choices[0].message.parsed;
-const likelihoods = result.likelihoods ?? {};
+const extractedData = result.output;
+const likelihoods = result.consensus?.likelihoods ?? {};
 
 // Validate with Zod
 const validation = CalendarEventSchema.safeParse(extractedData);
 if (validation.success) {
     const event = validation.data;
     console.log(`Extracted Event: ${event.name} on ${event.date}`);
-    
+
     // Check likelihoods
-    const minScore = Math.min(...Object.values(likelihoods));
-    if (minScore > 0.7) {
+    const scores = Object.values(likelihoods);
+    if (scores.length > 0 && Math.min(...scores) > 0.7) {
         console.log("High likelihood extraction - Saving to DB...");
         // db.save(event);  // Pseudo-code for DB integration
     } else {
@@ -360,55 +343,40 @@ console.log(`Processed with ${result.usage?.total_tokens} tokens`);
 ```
 </CodeGroup>
 
-## Use Case: Using Additional Messages for Context
+## Use Case: Passing Extra Context
 
-Use `additional_messages` to provide extra context or specific instructions that help guide the extraction. This is useful when you need to clarify ambiguous fields, provide domain-specific knowledge, or correct the model's behavior.
+Use `context` to provide a freeform note that guides the extraction — useful for iteration context from a loop, tenant-specific conventions, or any hint that isn't captured by the schema itself.
 
 <CodeGroup>
 ```python Python
 from retab import Retab
+from retab.types.extractions import ExtractionRequest
 
 client = Retab()
 
-# Extract invoice data with additional context
-result = client.documents.extract(
-    document="invoices/invoice_001.pdf",
-    model="retab-micro",
-    json_schema={
-        'properties': {
-            'vendor_name': {'type': 'string', 'description': 'Name of the vendor'},
-            'invoice_number': {'type': 'string', 'description': 'Invoice number'},
-            'total_amount': {'type': 'number', 'description': 'Total amount due'},
-            'currency': {'type': 'string', 'description': 'Currency code (e.g., USD, EUR)'}
+result = client.extractions.create(
+    ExtractionRequest(
+        document="invoices/invoice_001.pdf",
+        model="retab-micro",
+        json_schema={
+            'properties': {
+                'vendor_name': {'type': 'string', 'description': 'Name of the vendor'},
+                'invoice_number': {'type': 'string', 'description': 'Invoice number'},
+                'total_amount': {'type': 'number', 'description': 'Total amount due'},
+                'currency': {'type': 'string', 'description': 'Currency code (e.g., USD, EUR)'}
+            },
+            'required': ['vendor_name', 'invoice_number', 'total_amount'],
+            'type': 'object'
         },
-        'required': ['vendor_name', 'invoice_number', 'total_amount'],
-        'type': 'object'
-    },
-    additional_messages=[
-        {
-            "role": "developer",
-            "content": "Extract values exactly as written. Do not infer missing currency."
-        },
-        {
-            "role": "user",
-            "content": "Note: This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
-        },
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": "https://www.example.com/logo.png",
-                        "detail": "auto"
-                    }
-                }
-            ]
-        }
-    ]
+        context=(
+            "This invoice is from our European supplier. "
+            "Amounts should be in EUR unless explicitly stated otherwise. "
+            "Extract values exactly as written; do not infer a missing currency."
+        ),
+    )
 )
 
-print(result.data)
+print(result.output)
 ```
 
 ```javascript Javascript
@@ -416,8 +384,7 @@ import { Retab } from '@retab/node';
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-// Extract invoice data with additional context
-const result = await client.documents.extract({
+const result = await client.extractions.create({
     document: "invoices/invoice_001.pdf",
     model: "retab-micro",
     json_schema: {
@@ -430,23 +397,14 @@ const result = await client.documents.extract({
         required: ["vendor_name", "invoice_number", "total_amount"],
         type: "object"
     },
-    additional_messages: [
-        {
-            role: "developer",
-            content: "Extract values exactly as written. Do not infer missing currency."
-        },
-        {
-            role: "user",
-            content: "Note: This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
-        }
-    ]
+    context: "This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise. Extract values exactly as written; do not infer a missing currency."
 });
 
-console.log(result.choices[0].message.parsed);
+console.log(result.output);
 ```
 
 ```curl cURL
-curl -X POST https://api.retab.com/v1/documents/extract \
+curl -X POST https://api.retab.com/v1/extractions \
 -H "Api-Key: $RETAB_API_KEY" \
 -H "Content-Type: application/json" \
 -d '{
@@ -465,16 +423,7 @@ curl -X POST https://api.retab.com/v1/documents/extract \
         "required": ["vendor_name", "invoice_number", "total_amount"],
         "type": "object"
     },
-    "additional_messages": [
-        {
-            "role": "developer",
-            "content": "Extract values exactly as written. Do not infer missing currency."
-        },
-        {
-            "role": "user",
-            "content": "Note: This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
-        }
-    ]
+    "context": "This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
 }'
 ```
 </CodeGroup>
@@ -490,18 +439,21 @@ This is especially important in multi-tenant systems: always include stable tena
 <CodeGroup>
 ```python Python
 from retab import Retab
+from retab.types.extractions import ExtractionRequest
 
 client = Retab()
 
-result = client.documents.extract(
-    document="freight/booking_confirmation.jpg",
-    model="retab-small",
-    json_schema=my_schema,
-    metadata={
-        "organization_id": "org_123",
-        "source": "sinari_jobs",
-        "project_id": "project_abc",
-    },
+result = client.extractions.create(
+    ExtractionRequest(
+        document="freight/booking_confirmation.jpg",
+        model="retab-small",
+        json_schema=my_schema,
+        metadata={
+            "organization_id": "org_123",
+            "source": "sinari_jobs",
+            "project_id": "project_abc",
+        },
+    )
 )
 ```
 
@@ -510,7 +462,7 @@ import { Retab } from "@retab/node";
 
 const client = new Retab();
 
-const result = await client.documents.extract({
+const result = await client.extractions.create({
   document: "freight/booking_confirmation.jpg",
   model: "retab-small",
   json_schema: mySchema,
@@ -580,23 +532,20 @@ When multiple metadata keys are provided, all keys are applied together as exact
 - Set a threshold (e.g., 0.7) for automated processing.
 - For critical tasks, enable `n_consensus > 1` to average results and boost reliability.
 
-### Using Additional Messages
-- Use `additional_messages` to provide domain-specific context or clarifications.
-- Prefer `developer` or `system` messages for extraction policy and `user` messages for document-specific context.
+### Using Context
+- Use `context` to pass domain-specific hints or iteration context that isn't part of the schema.
 - Ideal for: currency defaults, date format preferences, handling ambiguous abbreviations, or specifying regional conventions.
-- Keep messages concise to avoid diluting the extraction focus.
+- Keep the string concise to avoid diluting the extraction focus.
 
 ```python
-# Create messages from a reference document
+from retab.types.extractions import ExtractionRequest
 
-# Use those messages as additional context for extraction
-result = client.documents.extract(
-    document="invoices/invoice_001.pdf",
-    json_schema=my_schema,
-    model="retab-small",
-    additional_messages=[{
-        "role": "user",
-        "content": "Note: This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
-    }]
+result = client.extractions.create(
+    ExtractionRequest(
+        document="invoices/invoice_001.pdf",
+        json_schema=my_schema,
+        model="retab-small",
+        context="This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise.",
+    )
 )
 ```

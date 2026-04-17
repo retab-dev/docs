@@ -68,8 +68,8 @@ Retab implements rate limiting to ensure stable service for all users. The API u
 
 - **300 requests** per **60-second** window
 - Applies across the following API endpoints:
-  - `POST /v1/documents/extractions`
-  - `POST /v1/documents/parse`
+  - `POST /v1/extractions`
+  - `POST /v1/parses`
 
 When you exceed the rate limit, the API will return a `429 Too Many Requests` response. The response headers will include:
 
@@ -106,22 +106,25 @@ Some additional `_consensus_score` fields are added to the likelihoods object, t
 ```python Python
 import json
 from retab import Retab
+from retab.types.extractions import ExtractionRequest
 
 with open("booking_confirmation_json_schema.json", "r") as f:
     json_schema = json.load(f)
 
 client = Retab()
 
-response = client.documents.extract(
-    json_schema = json_schema,
-    document="booking_confirmation.jpg",
-    model="retab-micro",
-    n_consensus=10  # This will run and combine the results of 10 calls to the same LLM
+response = client.extractions.create(
+    ExtractionRequest(
+        document="booking_confirmation.jpg",
+        model="retab-micro",
+        json_schema=json_schema,
+        n_consensus=10,  # This will run and combine the results of 10 calls to the same LLM
+    )
 )
 ```
 
 ```javascript Node.js
-import Retab from 'retab';
+import { Retab } from '@retab/node';
 import { readFileSync } from 'fs';
 
 const jsonSchema = JSON.parse(
@@ -130,10 +133,10 @@ const jsonSchema = JSON.parse(
 
 const client = new Retab();
 
-const response = await client.documents.extract({
-    json_schema: jsonSchema,
+const response = await client.extractions.create({
     document: 'booking_confirmation.jpg',
     model: 'retab-micro',
+    json_schema: jsonSchema,
     n_consensus: 10  // This will run and combine the results of 10 calls to the same LLM
 });
 ```
@@ -347,6 +350,5 @@ const response = await client.documents.extract({
 ```
 
 </CodeGroup>
-
 
 

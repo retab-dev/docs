@@ -1,0 +1,123 @@
+---
+title: 'Create Template'
+openapi: 'POST /v1/edits/templates'
+---
+
+Register an `EditTemplate` — a PDF plus a set of pre-defined form fields that can be filled repeatedly via `POST /v1/edits/templates/fill` or `POST /v1/edits`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+template = client.edits.templates.create(
+    name="W-9 Form",
+    document="w9_empty.pdf",
+    form_fields=[
+        {
+            "key": "full_name",
+            "description": "Full legal name of the taxpayer",
+            "type": "text",
+            "bbox": {"left": 0.15, "top": 0.20, "width": 0.35, "height": 0.03, "page": 1},
+        },
+        {
+            "key": "tax_id",
+            "description": "Taxpayer Identification Number",
+            "type": "text",
+            "bbox": {"left": 0.15, "top": 0.28, "width": 0.25, "height": 0.03, "page": 1},
+        },
+    ],
+)
+
+print(f"Template ID: {template.id}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const template = await client.edits.templates.create({
+    name: "W-9 Form",
+    document: "w9_empty.pdf",
+    form_fields: [
+        {
+            key: "full_name",
+            description: "Full legal name of the taxpayer",
+            type: "text",
+            bbox: { left: 0.15, top: 0.20, width: 0.35, height: 0.03, page: 1 },
+        },
+    ],
+});
+
+console.log(`Template ID: ${template.id}`);
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/edits/templates' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "W-9 Form",
+  "document": {
+    "filename": "w9_empty.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  },
+  "form_fields": [
+    {
+      "key": "full_name",
+      "description": "Full legal name",
+      "type": "text",
+      "bbox": {"left": 0.15, "top": 0.20, "width": 0.35, "height": 0.03, "page": 1}
+    }
+  ]
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 201
+{
+  "id": "edittplt_abc123",
+  "name": "W-9 Form",
+  "file": {
+    "id": "file_6dd6eb00688ad8d1",
+    "filename": "w9_empty.pdf",
+    "mime_type": "application/pdf"
+  },
+  "form_fields": [
+    {
+      "key": "full_name",
+      "description": "Full legal name",
+      "type": "text",
+      "value": null,
+      "bbox": {"left": 0.15, "top": 0.20, "width": 0.35, "height": 0.03, "page": 1}
+    }
+  ],
+  "field_count": 1,
+  "organization_id": "org_abc123",
+  "created_at": "2024-03-15T10:30:00Z",
+  "updated_at": "2024-03-15T10:30:00Z"
+}
+```
+
+</ResponseExample>
+
+## Request Body
+
+<ParamField body="name" type="string" required>
+  Name of the template.
+</ParamField>
+
+<ParamField body="document" type="MIMEData" required>
+  The PDF to use as the empty template.
+</ParamField>
+
+<ParamField body="form_fields" type="array[FormField]" required>
+  Form fields attached to the template. Each field has `key`, `description`, `type` (`text` or `checkbox`), and a `bbox`.
+</ParamField>

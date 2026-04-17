@@ -329,21 +329,24 @@ Use sources to highlight extracted values in the original document for human rev
 
 ```python Python
 from retab import Retab
+from retab.types.extractions import ExtractionRequest
 
 client = Retab()
 
 # 1. Extract data from a document
-result = client.documents.extract(
-    document="invoices/invoice_001.pdf",
-    model="retab-small",
-    json_schema=my_schema,
+result = client.extractions.create(
+    ExtractionRequest(
+        document="invoices/invoice_001.pdf",
+        model="retab-small",
+        json_schema=my_schema,
+    )
 )
 
 # 2. Get sources for the extraction
-sources = client.extractions.sources(result.extraction_id)
+sources = client.extractions.sources(result.id)
 
 # 3. Use anchors to highlight values in a PDF viewer
-for field, leaf in sources["sources"].items():
+for field, leaf in sources.sources.items():
     if isinstance(leaf, dict) and "source" in leaf and leaf["source"]:
         anchor = leaf["source"]["anchor"]
         if anchor["kind"] == "pdf_bbox":
@@ -358,14 +361,14 @@ import { Retab } from '@retab/node';
 const client = new Retab();
 
 // 1. Extract data from a document
-const result = await client.documents.extract({
+const result = await client.extractions.create({
     document: "invoices/invoice_001.pdf",
     model: "retab-small",
     json_schema: mySchema,
 });
 
 // 2. Get sources for the extraction
-const sources = await client.extractions.sources(result.extraction_id);
+const sources = await client.extractions.sources(result.id);
 
 // 3. Use anchors to highlight values in a PDF viewer
 for (const [field, leaf] of Object.entries(sources.sources)) {
