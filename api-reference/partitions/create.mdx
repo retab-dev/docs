@@ -1,0 +1,135 @@
+---
+title: 'Create Partitions'
+openapi: 'POST /v1/partitions'
+---
+
+Partition a document into repeated chunks keyed by a value such as `invoice_number`, `policy_id`, or `claim_number`. Unlike splits, this endpoint returns derived chunks directly and does not create a persisted resource that you later retrieve or list.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+response = client.partitions.create(
+    document="invoice_batch.pdf",
+    key="invoice_number",
+    instructions="Return one chunk per invoice number and keep all pages for the same invoice together.",
+    model="retab-small",
+)
+
+for chunk in response.chunks:
+    print(chunk.key_value, chunk.pages)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const response = await client.partitions.create({
+    document: "invoice_batch.pdf",
+    key: "invoice_number",
+    instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
+    model: "retab-small",
+});
+
+for (const chunk of response.chunks) {
+    console.log(chunk.key_value, chunk.pages);
+}
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/partitions' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "invoice_batch.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  },
+  "key": "invoice_number",
+  "instructions": "Return one chunk per invoice number and keep all pages for the same invoice together.",
+  "model": "retab-small"
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "chunks": [
+    {
+      "document": {
+        "filename": "invoice-part-1.pdf",
+        "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+      },
+      "key_value": "INV-001",
+      "pages": [1, 2],
+      "y_start": 0.15,
+      "y_end": 0.85
+    },
+    {
+      "document": {
+        "filename": "invoice-part-2.pdf",
+        "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+      },
+      "key_value": "INV-002",
+      "pages": [3, 4],
+      "y_start": 0.0,
+      "y_end": 1.0
+    }
+  ]
+}
+```
+
+</ResponseExample>
+
+## Request Body
+
+<ParamField body="document" type="MIMEData" required>
+  The document to partition.
+</ParamField>
+
+<ParamField body="key" type="string" required>
+  The field or concept used to group the document into chunks, such as `invoice_number` or `claim_id`.
+</ParamField>
+
+<ParamField body="instructions" type="string" required>
+  Natural-language guidance describing how the document should be partitioned.
+</ParamField>
+
+<ParamField body="model" type="string" default="retab-small">
+  The model used for partitioning.
+</ParamField>
+
+<ParamField body="bust_cache" type="boolean" default="false">
+  When `true`, bypass the cache and re-run the partitioning request.
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="chunks" type="array[PartitionChunk]">
+  The partitioned document chunks.
+  <Expandable title="properties">
+    <ResponseField name="document" type="MIMEData | object">
+      The extracted document chunk for this partition.
+    </ResponseField>
+    <ResponseField name="key_value" type="string">
+      The detected value for the requested partition key.
+    </ResponseField>
+    <ResponseField name="pages" type="array[integer]">
+      Pages (1-indexed) assigned to this chunk.
+    </ResponseField>
+    <ResponseField name="y_start" type="number | null">
+      Optional starting Y bound for the first page of the chunk.
+    </ResponseField>
+    <ResponseField name="y_end" type="number | null">
+      Optional ending Y bound for the last page of the chunk.
+    </ResponseField>
+  </Expandable>
+</ResponseField>

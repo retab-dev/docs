@@ -1,0 +1,139 @@
+---
+title: Partitioning
+---
+
+### Introduction
+
+The `partitions.create` method groups a document into repeated chunks based on a key such as `invoice_number`, `policy_id`, or `claim_number`. It is useful when one document contains multiple logical records of the same kind and you need one chunk per detected key value.
+
+Unlike `split`, partitioning does not classify the document into different subdocument types. Unlike `parse`, `extract`, `split`, or `classify`, it also does not create a stored resource that you later retrieve or list. It returns partitioned chunks directly in the response.
+
+Common use cases include:
+
+1. **Invoice Batches**: Separate one PDF into one chunk per invoice number
+2. **Claim Packets**: Group pages by claim ID inside a large insurance packet
+3. **Policy Documents**: Break a carrier export into one chunk per policy number
+4. **Repeated Records**: Segment documents containing many repeated forms of the same type
+
+```mermaid
+flowchart LR
+    A[Document with repeated records] --> B
+
+    subgraph Retab["Retab Partition API"]
+        B[1. Read document]
+        B --> C[2. Detect partition key values]
+        C --> D[3. Return one chunk per key]
+    end
+
+    D --> E
+
+    subgraph Output["PartitionResponse"]
+        E[chunks[0].key_value: INV-001]
+        F[chunks[1].key_value: INV-002]
+    end
+```
+
+Key features of the Partition API:
+
+- **Key-Based Grouping**: Group repeated records by a business key rather than by document type
+- **Chunk Output**: Returns one extracted document chunk per detected key value
+- **Page-Level Mapping**: Each chunk includes the 1-indexed `pages` it covers
+- **Sub-Page Bounds**: Optional `y_start` and `y_end` identify partial-page boundaries when needed
+- **No Persistence Layer**: The endpoint returns derived chunks directly instead of creating a retrievable resource
+
+## Partition API
+
+<ParamField body="PartitionRequest" type="PartitionRequest">
+  <Expandable title="properties">
+
+<ParamField body="document" type="MIMEData" required>
+  The document to partition. The HTTP API accepts `MIMEData`. The SDKs also accept convenient local inputs such as file paths, file-like objects, images, buffers, and URLs, then convert them for you.
+</ParamField>
+
+<ParamField body="key" type="string" required>
+  The field or concept used to separate the document into chunks, such as `invoice_number`, `policy_id`, or `claim_number`.
+</ParamField>
+
+<ParamField body="instructions" type="string" required>
+  Natural-language guidance describing how the document should be partitioned.
+</ParamField>
+
+<ParamField body="model" type="string" default="retab-small">
+  The model used for partitioning.
+</ParamField>
+
+<ParamField body="bust_cache" type="boolean" default="false">
+  When `true`, bypass the cache and force a fresh partitioning run.
+</ParamField>
+
+  </Expandable>
+</ParamField>
+
+<ResponseField name="Returns" type="PartitionResponse">
+  A direct response containing partitioned chunks.
+  <Expandable title="properties">
+    <ResponseField name="chunks" type="array[PartitionChunk]">
+      One chunk per detected partition key value.
+    </ResponseField>
+    <ResponseField name="chunks[].document" type="MIMEData | object">
+      The extracted document chunk for that partition.
+    </ResponseField>
+    <ResponseField name="chunks[].key_value" type="string">
+      The detected value for the requested partition key.
+    </ResponseField>
+    <ResponseField name="chunks[].pages" type="array[integer]">
+      The 1-indexed pages assigned to that chunk.
+    </ResponseField>
+    <ResponseField name="chunks[].y_start" type="number | null">
+      Optional starting Y bound for the first page of the chunk.
+    </ResponseField>
+    <ResponseField name="chunks[].y_end" type="number | null">
+      Optional ending Y bound for the last page of the chunk.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Use Case: Partitioning An Invoice Batch
+
+Use partitioning when every record is the same general document type, but each record has its own identifier and should become its own chunk.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+response = client.partitions.create(
+    document="invoice_batch.pdf",
+    key="invoice_number",
+    instructions="Return one chunk per invoice number and keep all pages for the same invoice together.",
+    model="retab-small",
+)
+
+for chunk in response.chunks:
+    print(chunk.key_value, chunk.pages)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const response = await client.partitions.create({
+  document: 'invoice_batch.pdf',
+  key: 'invoice_number',
+  instructions: 'Return one chunk per invoice number and keep all pages for the same invoice together.',
+  model: 'retab-small',
+});
+
+for (const chunk of response.chunks) {
+  console.log(chunk.key_value, chunk.pages);
+}
+```
+</CodeGroup>
+
+## When To Use Partition vs Split
+
+- Use `partitions.create` when every record is conceptually the same kind of document and you want one chunk per repeated key value.
+- Use `splits.create` when you need to classify a document into different subdocument types such as `invoice`, `receipt`, and `contract`.
+- Use split `partition_key` when partitioning is a refinement inside a split subdocument rather than the whole job.

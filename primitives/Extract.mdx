@@ -240,6 +240,233 @@ curl -X POST https://api.retab.com/v1/extractions \
 ```
 </CodeGroup>
 
+## Build Your Schema
+
+Retab extraction quality depends heavily on schema quality. The fastest way to improve a schema is to run extraction with consensus enabled, inspect unstable fields, and tighten the schema until the low-confidence areas disappear.
+
+```mermaid
+flowchart LR
+    Draft[Define / update schema] --> Test[Execute with n_consensus = 4]
+    Test --> Inspect[Review likelihood metrics]
+    Inspect --> Refine[Adjust prompt, types, or structure]
+    Refine --> Draft
+```
+
+### Why consensus helps
+
+Consensus is Retab's practical schema debugging loop. Multiple extraction runs using the same schema reveal where the model disagrees. Those disagreements usually mean one of three things:
+
+- The field name is ambiguous
+- The field description is too loose
+- The field type or structure is asking the model to normalize too much at once
+
+As a rule of thumb, fields below `0.75` likelihood need attention before production use.
+
+### Schema improvement levers
+
+| Lever | When to apply | Concrete fix |
+|-------|----------------|--------------|
+| Change field names | Models mix up concepts | Rename `name` to `event_name` |
+| Improve descriptions | Correct concept, inconsistent format | Add format instructions and examples |
+| Tighten field types | Strings, numbers, and dates drift across runs | Use stronger types and explicit ISO formats |
+| Restructure nested data | One field combines multiple concepts | Replace `address: string` with nested address fields |
+| Add reasoning prompts | Calculations or conversions are unstable | Add `X-ReasoningPrompt` to the field |
+| Remove weak fields | The field is noisy and non-critical | Drop it or defer it to a later version |
+
+### Example: iterating on a schema
+
+<CodeGroup>
+```python Python
+from retab import Retab
+from retab.types.extractions import ExtractionRequest
+
+client = Retab()
+
+initial_schema = {
+    "title": "CalendarEvent",
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "date": {"type": "string"},
+        "address": {"type": "string"},
+    },
+    "required": ["name", "date", "address"],
+}
+
+result = client.extractions.create(
+    ExtractionRequest(
+        document="event_flyer.pdf",
+        model="retab-small",
+        json_schema=initial_schema,
+        n_consensus=4,
+    )
+)
+
+print(result.output)
+print(result.consensus.likelihoods if result.consensus else None)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const initialSchema = {
+  title: "CalendarEvent",
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    date: { type: "string" },
+    address: { type: "string" },
+  },
+  required: ["name", "date", "address"],
+};
+
+const result = await client.extractions.create({
+  document: "event_flyer.pdf",
+  model: "retab-small",
+  json_schema: initialSchema,
+  n_consensus: 4,
+});
+
+console.log(result.output);
+console.log(result.consensus?.likelihoods);
+```
+</CodeGroup>
+
+Example interpretation:
+
+- `name: 1.0` means the field is stable
+- `date: 0.5` usually means the format is underspecified
+- `address: 0.25` usually means the field should be decomposed into structured subfields
+
+Common next step:
+
+- change `date` to an ISO date field
+- split `address` into `street`, `city`, `zip_code`, and `country`
+
+Best practices:
+
+- Start schema iteration with `n_consensus=4` or `5`
+- Fix the lowest-likelihood fields first
+- Test with diverse documents, not one golden sample
+- Treat consensus as a schema debugging tool, not just a scoring feature
+
+## Reasoning
+
+Use reasoning when a field requires calculation, conversion, or multi-step logic. Retab supports this through the `X-ReasoningPrompt` JSON Schema annotation.
+
+The model then produces an auxiliary `reasoning___<field_name>` output during extraction, which gives it room to work through the logic before returning the final field value.
+
+### Example: Celsius to Fahrenheit
+
+<CodeGroup>
+```python Python
+from pydantic import BaseModel, Field
+
+class TemperatureReport(BaseModel):
+    temperature: float = Field(
+        ...,
+        description="temperature in Fahrenheit",
+        json_schema_extra={
+            "X-ReasoningPrompt": (
+                "If the temperature is given in Celsius, explicitly convert it "
+                "to Fahrenheit. If it is already in Fahrenheit, leave it unchanged."
+            )
+        },
+    )
+
+print(TemperatureReport.model_json_schema())
+```
+
+```javascript JavaScript
+import { z } from 'zod';
+
+const TemperatureReportSchema = z.object({
+  temperature: z.number().describe("temperature in Fahrenheit").openapi({
+    "X-ReasoningPrompt":
+      "If the temperature is given in Celsius, explicitly convert it to Fahrenheit. If it is already in Fahrenheit, leave it unchanged."
+  } as any),
+});
+```
+</CodeGroup>
+
+Without reasoning, a model may copy `22.5` directly. With reasoning enabled, it is more likely to compute `72.5` and explain the conversion in `reasoning___temperature`.
+
+Use reasoning for:
+
+- unit conversions
+- tax or total calculations
+- date normalization
+- derived fields that depend on multiple source values
+
+## Sources
+
+Retab can also return provenance for extraction results. Given an extraction ID, `sources` returns the same output structure, but every scalar leaf becomes a `{ value, source }` object pointing back to the original document location.
+
+This is useful for:
+
+- review UIs with citations
+- provenance audits
+- highlighting extracted fields in viewers
+- debugging incorrect outputs
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+sources = client.extractions.sources("extr_01G34H8J2K")
+
+print(sources.extraction)
+print(sources.sources)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const sources = await client.extractions.sources("extr_01G34H8J2K");
+
+console.log(sources.extraction);
+console.log(sources.sources);
+```
+</CodeGroup>
+
+### Response shape
+
+Every sourced leaf looks like this:
+
+```json
+{
+  "value": "INV-1032",
+  "source": {
+    "content": "INV-1032",
+    "anchor": {
+      "kind": "pdf_bbox",
+      "page": 1,
+      "left": 0.60,
+      "top": 0.12,
+      "width": 0.25,
+      "height": 0.03
+    }
+  }
+}
+```
+
+Common anchor types:
+
+- `pdf_bbox`: normalized bounding box on a PDF page
+- `image_bbox`: normalized bounding box on an image
+- `csv_cell`: row and column reference in CSV
+- `spreadsheet_cell`: sheet and cell reference in XLSX
+- `docx_text_span` or `docx_table_cell`: DOCX paragraph or table-cell location
+- `text_span`: line and character offsets in plain text
+
+If a field cannot be sourced, Retab still returns the value and sets `source` to `null`.
+
 ## Use Case: Extracting Event Information from Documents
 
 Extract structured calendar event data from a booking confirmation image and validate likelihood scores before saving to a database.
