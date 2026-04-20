@@ -2,7 +2,7 @@ Retab is a document processing [worfklow](../workflows/Workflows) builder for th
 
 ---
 
-Retab transforms any document into structured data, with five core functionalities:
+Retab transforms any document into structured data, with six core functionalities:
 
 <a href="../api-reference/parses/create" target="_self" className="endpoint-link">parse -></a>\
 Convert any file (PDFs, Excel, emails, images) into LLM-ready markdown.
@@ -16,10 +16,139 @@ Modify document content while preserving formatting.
 <a href="../api-reference/documents/split" target="_self" className="endpoint-link">split -></a>\
 Intelligently split documents into logical sections.
 
+<a href="../api-reference/partitions/create" target="_self" className="endpoint-link">partition -></a>\
+Group repeated records in a document into chunks by a key such as invoice number or policy ID.
+
 <a href="../api-reference/classifications/create" target="_self" className="endpoint-link">classify -></a>\
 Categorize documents based on content and type.
 
 <br />
+
+## Quickstart
+
+The most basic workflow is extracting structured data from a document. The easiest way to access the API is through the Python or Node SDK.
+
+<Tip>
+  Find your API key in the [dashboard settings](https://retab.com/dashboard/settings).
+</Tip>
+
+<Steps>
+  <Step title="Install the SDK" stepNumber={1}>
+    <CodeGroup>
+      ```python Python
+      pip install retab
+      ```
+
+      ```javascript JavaScript
+      npm install @retab/node
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Generate a Schema" stepNumber={2}>
+    <CodeGroup>
+      ```python Python
+      from retab import Retab
+
+      client = Retab()
+
+      schema_response = client.schemas.generate(
+          documents=["Invoice.pdf"],
+          model="retab-small",
+      )
+      ```
+
+      ```javascript JavaScript
+      import { Retab } from '@retab/node';
+
+      const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+      const schemaResponse = await client.schemas.generate({
+          documents: ["Invoice.pdf"],
+          model: "retab-small",
+      });
+      ```
+
+      ```curl cURL
+      curl https://api.retab.com/v1/schemas/generate \
+        -H "Api-Key: $RETAB_API_KEY" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "documents": [
+            {
+              "filename": "Invoice.pdf",
+              "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMS..."
+            }
+          ],
+          "model": "retab-small"
+        }'
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Extract Data" stepNumber={3}>
+    <CodeGroup>
+      ```python Python
+      from retab import Retab
+
+      client = Retab()
+
+      extraction = client.extractions.create(
+          json_schema=schema_response.json_schema,
+          document="Invoice.pdf",
+          model="retab-micro",
+      )
+
+      print(extraction.id)
+      print(extraction.output)
+      print(extraction.consensus.likelihoods)
+      ```
+
+      ```javascript JavaScript
+      import { Retab } from '@retab/node';
+
+      const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+      const extraction = await client.extractions.create({
+          json_schema: schemaResponse.json_schema,
+          document: "Invoice.pdf",
+          model: "retab-micro",
+      });
+
+      console.log(extraction.id);
+      console.log(extraction.output);
+      console.log(extraction.consensus.likelihoods);
+      ```
+
+      ```curl cURL
+      curl -X POST https://api.retab.com/v1/extractions \
+        -H "Api-Key: $RETAB_API_KEY" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "document": {
+            "filename": "Invoice.pdf",
+            "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMS..."
+          },
+          "model": "retab-micro",
+          "json_schema": {
+            "title": "InvoiceSchema",
+            "type": "object",
+            "properties": {
+              "invoice_number": { "type": "string" },
+              "date_due": { "type": "string" },
+              "total": { "type": "number" }
+            },
+            "required": ["invoice_number", "date_due", "total"]
+          },
+          "n_consensus": 1,
+          "metadata": {
+            "source": "introduction_quickstart"
+          }
+        }'
+      ```
+    </CodeGroup>
+  </Step>
+</Steps>
 
 ## Get Started
 
@@ -37,21 +166,7 @@ Categorize documents based on content and type.
     </div>
   </Card>
 
-  <Card title={<div className="card-title">Quickstart</div>} icon="bolt-lightning" href="./quickstart">
-    <div className="text-lg">
-      Use our SDKs to extract your first document.
-    </div>
-  </Card>
-
-
-  <Card title={<div className="card-title">Learn</div>} icon="book" href="./core-concepts">
-    <div className="text-lg">
-      Understand the core concepts behind Retab.
-    </div>
-  </Card>
 </CardGroup>
-
----
 
 ## Community
 
@@ -63,7 +178,3 @@ Categorize documents based on content and type.
     Star us and contribute to the project.
   </Card>
 </CardGroup>
-
----
-
-<img src="https://mintcdn.com/exa-52/tmzyKnsgpKLGddKC/images/be0cab3-blue-wanderer.png?fit=max&auto=format&n=tmzyKnsgpKLGddKC&q=85&s=ad0d68efd38e9f5e794474adea0f3a68" alt="" data-og-width="1024" width="1024" data-og-height="615" height="615" data-path="images/be0cab3-blue-wanderer.png" data-optimize="true" data-opv="3" srcset="https://mintcdn.com/exa-52/tmzyKnsgpKLGddKC/images/be0cab3-blue-wanderer.png?w=280&fit=max&auto=format&n=tmzyKnsgpKLGddKC&q=85&s=7967dfd3cb9bb98a2bffc66d763cfa2e 280w, https://mintcdn.com/exa-52/tmzyKnsgpKLGddKC/images/be0cab3-blue-wanderer.png?w=560&fit=max&auto=format&n=tmzyKnsgpKLGddKC&q=85&s=6cdcf27e4cda9ab1641c4c4c4f85333c 560w, https://mintcdn.com/exa-52/tmzyKnsgpKLGddKC/images/be0cab3-blue-wanderer.png?w=840&fit=max&auto=format&n=tmzyKnsgpKLGddKC&q=85&s=8c58fce20e785b7bd2f205b0531dc2c1 840w, https://mintcdn.com/exa-52/tmzyKnsgpKLGddKC/images/be0cab3-blue-wanderer.png?w=1100&fit=max&auto=format&n=tmzyKnsgpKLGddKC&q=85&s=463a5f8e5596df3fcd82c9803c4e1a94 1100w, https://mintcdn.com/exa-52/tmzyKnsgpKLGddKC/images/be0cab3-blue-wanderer.png?w=1650&fit=max&auto=format&n=tmzyKnsgpKLGddKC&q=85&s=aadd8fde4f54f9ebe68b3f64785110c6 1650w, https://mintcdn.com/exa-52/tmzyKnsgpKLGddKC/images/be0cab3-blue-wanderer.png?w=2500&fit=max&auto=format&n=tmzyKnsgpKLGddKC&q=85&s=6de1508a386d4206b6f6af84bf2361a1 2500w" />
