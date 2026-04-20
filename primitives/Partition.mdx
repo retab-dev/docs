@@ -4,16 +4,21 @@ title: Partition
 
 ### Introduction
 
-The `partitions.create` method groups a document into repeated chunks based on a key such as `invoice_number`, `policy_id`, or `claim_number`. It is useful when one document contains multiple logical records of the same kind and you need one chunk per detected key value.
+`partitions.create` groups a document into repeated chunks using a key such as `invoice_number`, `policy_id`, or `claim_number`.
 
-Unlike `split`, partitioning does not classify the document into different subdocument types. Unlike `parse`, `extract`, `split`, or `classify`, it also does not create a stored resource that you later retrieve or list. It returns partitioned chunks directly in the response.
+This is a separate primitive from `split`.
+
+- `split` answers: "What subdocument type is on these pages?"
+- `partition` answers: "Which pages belong to each key value?"
+
+Use `partition` when one document contains many records of the same conceptual type and you want one result per detected key.
 
 Common use cases include:
 
-1. **Invoice Batches**: Separate one PDF into one chunk per invoice number
-2. **Claim Packets**: Group pages by claim ID inside a large insurance packet
-3. **Policy Documents**: Break a carrier export into one chunk per policy number
-4. **Repeated Records**: Segment documents containing many repeated forms of the same type
+1. **Invoice batches**: Group one PDF into one chunk per invoice number.
+2. **Claim packets**: Group pages by claim ID inside a large insurance packet.
+3. **Policy exports**: Break a carrier export into one chunk per policy number.
+4. **Repeated forms**: Segment a homogeneous packet into one chunk per repeated identifier.
 
 ```mermaid
 flowchart LR
@@ -21,25 +26,25 @@ flowchart LR
 
     subgraph Retab["Retab Partition API"]
         B[1. Read document]
-        B --> C[2. Detect partition key values]
-        C --> D[3. Return one chunk per key]
+        B --> C[2. Detect key values]
+        C --> D[3. Group pages by key]
     end
 
     D --> E
 
-    subgraph Output["PartitionResponse"]
-        E[chunks[0].key_value: INV-001]
-        F[chunks[1].key_value: INV-002]
+    subgraph Output["Partition output"]
+        E[INV-001: pages 1-2]
+        F[INV-002: pages 3-4]
     end
 ```
 
 Key features of the Partition API:
 
-- **Key-Based Grouping**: Group repeated records by a business key rather than by document type
-- **Chunk Output**: Returns one extracted document chunk per detected key value
-- **Page-Level Mapping**: Each chunk includes the 1-indexed `pages` it covers
-- **Sub-Page Bounds**: Optional `y_start` and `y_end` identify partial-page boundaries when needed
-- **No Persistence Layer**: The endpoint returns derived chunks directly instead of creating a retrievable resource
+- **Key-based grouping**: Separate repeated records by business identifier.
+- **Canonical response**: Returns `output`, `consensus`, and `usage`.
+- **Page-level mapping**: Each chunk includes the 1-indexed pages assigned to it.
+- **Consensus support**: Increase `n_consensus` to inspect `consensus.likelihoods` and `consensus.choices`.
+- **No stored resource**: The endpoint returns derived results directly.
 
 ## Partition API
 
@@ -62,38 +67,37 @@ Key features of the Partition API:
   The model used for partitioning.
 </ParamField>
 
+<ParamField body="n_consensus" type="integer" default="1">
+  Number of partitioning runs to use for consensus voting.
+</ParamField>
+
 <ParamField body="bust_cache" type="boolean" default="false">
-  When `true`, bypass the cache and force a fresh partitioning run.
+  When `true`, bypass the cache and force a fresh partition run.
 </ParamField>
 
   </Expandable>
 </ParamField>
 
 <ResponseField name="Returns" type="PartitionResponse">
-  A direct response containing partitioned chunks.
+  A direct response containing grouped chunks.
   <Expandable title="properties">
-    <ResponseField name="chunks" type="array[PartitionChunk]">
-      One chunk per detected partition key value.
+    <ResponseField name="output" type="array[PartitionChunk]">
+      One chunk per detected key value, each containing:
+      - `key`: The detected partition key value
+      - `pages`: The 1-indexed pages assigned to that chunk
     </ResponseField>
-    <ResponseField name="chunks[].document" type="MIMEData | object">
-      The extracted document chunk for that partition.
+    <ResponseField name="consensus" type="PartitionConsensus">
+      Present for all responses and populated when `n_consensus > 1`:
+      - `likelihoods`: A tree aligned with `output`, with confidence for `key` and for each page leaf
+      - `choices`: One entry per consensus run
     </ResponseField>
-    <ResponseField name="chunks[].key_value" type="string">
-      The detected value for the requested partition key.
-    </ResponseField>
-    <ResponseField name="chunks[].pages" type="array[integer]">
-      The 1-indexed pages assigned to that chunk.
-    </ResponseField>
-    <ResponseField name="chunks[].y_start" type="number | null">
-      Optional starting Y bound for the first page of the chunk.
-    </ResponseField>
-    <ResponseField name="chunks[].y_end" type="number | null">
-      Optional ending Y bound for the last page of the chunk.
+    <ResponseField name="usage" type="RetabUsage | null">
+      Usage information for the partition operation.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
-## Use Case: Partitioning An Invoice Batch
+## Use Case: Partitioning an Invoice Batch
 
 Use partitioning when every record is the same general document type, but each record has its own identifier and should become its own chunk.
 
@@ -108,10 +112,13 @@ response = client.partitions.create(
     key="invoice_number",
     instructions="Return one chunk per invoice number and keep all pages for the same invoice together.",
     model="retab-small",
+    n_consensus=3,
 )
 
-for chunk in response.chunks:
-    print(chunk.key_value, chunk.pages)
+for chunk in response.output:
+    print(chunk.key, chunk.pages)
+
+print(response.consensus.likelihoods)
 ```
 
 ```javascript JavaScript
@@ -120,20 +127,30 @@ import { Retab } from '@retab/node';
 const client = new Retab();
 
 const response = await client.partitions.create({
-  document: 'invoice_batch.pdf',
-  key: 'invoice_number',
-  instructions: 'Return one chunk per invoice number and keep all pages for the same invoice together.',
-  model: 'retab-small',
+  document: "invoice_batch.pdf",
+  key: "invoice_number",
+  instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
+  model: "retab-small",
+  n_consensus: 3,
 });
 
-for (const chunk of response.chunks) {
-  console.log(chunk.key_value, chunk.pages);
+for (const chunk of response.output) {
+  console.log(chunk.key, chunk.pages);
 }
+
+console.log(response.consensus.likelihoods);
 ```
 </CodeGroup>
 
-## When To Use Partition vs Split
+## When to Use Partition vs Split
 
 - Use `partitions.create` when every record is conceptually the same kind of document and you want one chunk per repeated key value.
 - Use `splits.create` when you need to classify a document into different subdocument types such as `invoice`, `receipt`, and `contract`.
-- Use `partitions.create` for key-based grouping whenever repeated records need to be separated by identifiers such as invoice number, claim ID, or policy ID.
+- Use `partitions.create` after `splits.create` when you first need to isolate a subdocument type and then group that subset by a key.
+
+## Best Practices
+
+- Make the `key` semantically precise: `invoice_number`, `claim_id`, `policy_number`.
+- Write `instructions` as grouping guidance, not as extraction schema guidance.
+- Use `partition` only when the packet is homogeneous or when you have already isolated the relevant subdocument pages.
+- Raise `n_consensus` when key assignment quality is important enough to inspect disagreements.

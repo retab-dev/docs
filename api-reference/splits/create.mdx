@@ -3,7 +3,7 @@ title: 'Create Split'
 openapi: 'POST /v1/splits'
 ---
 
-Split a multi-page document into labeled subdocuments, optionally partitioned by a key, and return the split result directly in the response.
+Split a multi-page document into labeled subdocuments and return the canonical split resource. This endpoint is split-only: key-based grouping belongs to [`/v1/partitions`](/api-reference/partitions/create).
 
 <RequestExample>
 
@@ -19,20 +19,18 @@ split = client.splits.create(
         {
             "name": "invoice",
             "description": "Invoice documents with billing information",
-            "partition_key": "invoice number",
             "allow_multiple_instances": True,
         },
         {"name": "receipt", "description": "Receipt documents for payments"},
         {"name": "contract", "description": "Legal contract documents"},
     ],
     instructions="Processing Q4 2024 vendor document batch",
-    n_consensus=1,
+    n_consensus=3,
+    bust_cache=False,
 )
 
 for sub in split.output:
     print(f"{sub.name}: pages {sub.pages}")
-    for partition in sub.partitions:
-        print(f"  {partition.key}: pages {partition.pages}")
 ```
 
 ```javascript javascript
@@ -41,18 +39,24 @@ import { Retab } from '@retab/node';
 const client = new Retab();
 
 const split = await client.splits.create({
-    document: "invoice_batch.pdf",
-    model: "retab-small",
-    subdocuments: [
-        { name: "invoice", description: "Invoice documents", partition_key: "invoice number", allow_multiple_instances: true },
-        { name: "receipt", description: "Receipts" },
-        { name: "contract", description: "Contracts" },
-    ],
-    n_consensus: 1,
+  document: "invoice_batch.pdf",
+  model: "retab-small",
+  subdocuments: [
+    {
+      name: "invoice",
+      description: "Invoice documents with billing information",
+      allow_multiple_instances: true,
+    },
+    { name: "receipt", description: "Receipt documents for payments" },
+    { name: "contract", description: "Legal contract documents" },
+  ],
+  instructions: "Processing Q4 2024 vendor document batch",
+  n_consensus: 3,
+  bust_cache: false,
 });
 
-split.output.forEach(sub => {
-    console.log(`${sub.name}: pages ${sub.pages}`);
+split.output.forEach((sub) => {
+  console.log(`${sub.name}: pages ${sub.pages}`);
 });
 ```
 
@@ -68,11 +72,23 @@ curl -X POST \
   },
   "model": "retab-small",
   "subdocuments": [
-    {"name": "invoice", "description": "Invoice documents", "partition_key": "invoice number", "allow_multiple_instances": true},
-    {"name": "receipt", "description": "Receipts"},
-    {"name": "contract", "description": "Contracts"}
+    {
+      "name": "invoice",
+      "description": "Invoice documents with billing information",
+      "allow_multiple_instances": true
+    },
+    {
+      "name": "receipt",
+      "description": "Receipt documents for payments"
+    },
+    {
+      "name": "contract",
+      "description": "Legal contract documents"
+    }
   ],
-  "n_consensus": 1
+  "instructions": "Processing Q4 2024 vendor document batch",
+  "n_consensus": 3,
+  "bust_cache": false
 }'
 ```
 
@@ -83,7 +99,6 @@ curl -X POST \
 ```json 200
 {
   "id": "split_01G34H8J2K",
-  "organization_id": "org_abc123",
   "file": {
     "id": "file_6dd6eb00688ad8d1",
     "filename": "invoice_batch.pdf",
@@ -91,22 +106,51 @@ curl -X POST \
   },
   "model": "retab-small",
   "subdocuments": [
-    {"name": "invoice", "description": "Invoice documents", "partition_key": "invoice number", "allow_multiple_instances": true},
-    {"name": "receipt", "description": "Receipts", "partition_key": null, "allow_multiple_instances": false}
-  ],
-  "n_consensus": 1,
-  "output": [
     {
       "name": "invoice",
-      "pages": [1, 2, 3],
-      "partitions": [
-        {"key": "INV-001", "pages": [1, 2]},
-        {"key": "INV-002", "pages": [3]}
-      ]
+      "description": "Invoice documents with billing information",
+      "allow_multiple_instances": true
     },
-    {"name": "receipt", "pages": [4, 5], "partitions": []}
+    {
+      "name": "receipt",
+      "description": "Receipt documents for payments",
+      "allow_multiple_instances": false
+    }
   ],
-  "consensus": null,
+  "n_consensus": 3,
+  "instructions": "Processing Q4 2024 vendor document batch",
+  "output": [
+    {"name": "invoice", "pages": [1, 2, 3]},
+    {"name": "invoice", "pages": [4, 5]},
+    {"name": "receipt", "pages": [6]}
+  ],
+  "consensus": {
+    "likelihoods": [
+      {"name": 0.98, "pages": [0.99, 0.97, 0.96]},
+      {"name": 0.95, "pages": [0.95, 0.93]},
+      {"name": 0.99, "pages": [0.99]}
+    ],
+    "choices": [
+      [
+        {"name": "invoice", "pages": [1, 2, 3]},
+        {"name": "invoice", "pages": [4, 5]},
+        {"name": "receipt", "pages": [6]}
+      ],
+      [
+        {"name": "invoice", "pages": [1, 2]},
+        {"name": "invoice", "pages": [3, 4, 5]},
+        {"name": "receipt", "pages": [6]}
+      ],
+      [
+        {"name": "invoice", "pages": [1, 2, 3]},
+        {"name": "invoice", "pages": [4, 5]},
+        {"name": "receipt", "pages": [6]}
+      ]
+    ]
+  },
+  "usage": {
+    "credits": 3.0
+  },
   "created_at": "2024-03-15T10:30:00Z",
   "updated_at": "2024-03-15T10:30:00Z"
 }
@@ -121,7 +165,7 @@ curl -X POST \
 </ParamField>
 
 <ParamField body="subdocuments" type="array[Subdocument]" required>
-  The labeled subdocuments to split the document into. Each entry has `name`, optional `description`, optional `partition_key`, and `allow_multiple_instances` (when `true`, the split runs an extra vision-based refinement pass for repeated instances).
+  The labeled subdocuments to split the document into. Each entry has `name`, optional `description`, and `allow_multiple_instances`.
 </ParamField>
 
 <ParamField body="model" type="string" default="retab-small">
@@ -137,7 +181,7 @@ curl -X POST \
 </ParamField>
 
 <ParamField body="bust_cache" type="boolean" default="false">
-  When `true`, bypass the cache and re-run the split.
+  When `true`, bypass the cache and force a fresh split run.
 </ParamField>
 
 ## Response Fields
@@ -150,33 +194,54 @@ curl -X POST \
   File metadata: `id`, `filename`, `mime_type`.
 </ResponseField>
 
+<ResponseField name="model" type="string">
+  Model used for the split operation.
+</ResponseField>
+
+<ResponseField name="subdocuments" type="array[Subdocument]">
+  The split labels used to produce this result.
+</ResponseField>
+
+<ResponseField name="n_consensus" type="integer">
+  Number of consensus votes used to produce the result.
+</ResponseField>
+
+<ResponseField name="instructions" type="string | null">
+  Free-form instructions supplied with the request.
+</ResponseField>
+
 <ResponseField name="output" type="array[SplitResult]">
   The list of subdocuments with their assigned pages.
   <Expandable title="properties">
     <ResponseField name="name" type="string">
-      The name of the subdocument label.
+      The subdocument label.
     </ResponseField>
     <ResponseField name="pages" type="array[integer]">
       Pages (1-indexed) assigned to this subdocument.
     </ResponseField>
-    <ResponseField name="partitions" type="array[Partition]">
-      Partitions within this subdocument, each with `key` and `pages`.
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="consensus" type="SplitConsensus | null">
+  Consensus metadata for multi-vote runs.
+  <Expandable title="properties">
+    <ResponseField name="likelihoods" type="array[SplitSubdocumentLikelihood] | null">
+      Likelihoods aligned positionally with `output`.
+    </ResponseField>
+    <ResponseField name="choices" type="array[array[SplitResult]]">
+      Alternative split vote outputs used to build the consolidated result.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
-<ResponseField name="consensus" type="object | null">
-  Consensus metadata (`likelihoods`, `choices`).
-</ResponseField>
-
 <ResponseField name="usage" type="RetabUsage | null">
-  Token and credit usage information.
+  Usage information for the split operation.
 </ResponseField>
 
-<ResponseField name="created_at" type="string">
+<ResponseField name="created_at" type="string | null">
   ISO 8601 creation timestamp.
 </ResponseField>
 
-<ResponseField name="updated_at" type="string">
+<ResponseField name="updated_at" type="string | null">
   ISO 8601 last update timestamp.
 </ResponseField>

@@ -29,6 +29,56 @@ LEGACY_SCHEMA_NAMES: set[str] = {
 }
 
 
+def _collect_schema_refs(node: object, refs: set[str]) -> None:
+    """Collect component schema refs from an OpenAPI subtree."""
+    if isinstance(node, dict):
+        ref = node.get("$ref")
+        if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
+            refs.add(ref.rsplit("/", 1)[-1])
+        for value in node.values():
+            _collect_schema_refs(value, refs)
+    elif isinstance(node, list):
+        for item in node:
+            _collect_schema_refs(item, refs)
+
+
+def _prune_unreferenced_schemas(spec: dict[str, object]) -> None:
+    components = spec.get("components")
+    if not isinstance(components, dict):
+        return
+
+    schemas = components.get("schemas")
+    if not isinstance(schemas, dict):
+        return
+
+    reachable_schema_names: set[str] = set()
+
+    # Seed reachability from the public API surface and non-schema components.
+    _collect_schema_refs(spec.get("paths"), reachable_schema_names)
+    for component_name, component_value in components.items():
+        if component_name == "schemas":
+            continue
+        _collect_schema_refs(component_value, reachable_schema_names)
+
+    # Expand transitively through referenced schemas.
+    queue = list(reachable_schema_names)
+    while queue:
+        schema_name = queue.pop()
+        schema = schemas.get(schema_name)
+        if not isinstance(schema, dict):
+            continue
+        nested_refs: set[str] = set()
+        _collect_schema_refs(schema, nested_refs)
+        for nested_ref in nested_refs:
+            if nested_ref not in reachable_schema_names:
+                reachable_schema_names.add(nested_ref)
+                queue.append(nested_ref)
+
+    for schema_name in list(schemas.keys()):
+        if schema_name not in reachable_schema_names:
+            schemas.pop(schema_name, None)
+
+
 def _strip_legacy_from_enums(node: object) -> None:
     """Remove legacy URL entries from any "enum" list deep in the spec."""
     if isinstance(node, dict):
@@ -82,6 +132,9 @@ def generate_openapi() -> None:
     if isinstance(schemas, dict):
         for schema_name in LEGACY_SCHEMA_NAMES:
             schemas.pop(schema_name, None)
+
+    # Keep only schemas reachable from the published API surface.
+    _prune_unreferenced_schemas(spec)
 
     # Write updated spec to file
     output_path = Path(__file__).resolve().parent / "openapi.json"

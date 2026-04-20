@@ -3,7 +3,7 @@ title: 'Create Partitions'
 openapi: 'POST /v1/partitions'
 ---
 
-Partition a document into repeated chunks keyed by a value such as `invoice_number`, `policy_id`, or `claim_number`. Unlike splits, this endpoint returns derived chunks directly and does not create a persisted resource that you later retrieve or list.
+Partition a document into repeated chunks keyed by a value such as `invoice_number`, `policy_id`, or `claim_number`. Unlike splits, this endpoint is key-based grouping only and returns a canonical `output/consensus/usage` response without creating a persisted resource.
 
 <RequestExample>
 
@@ -17,10 +17,12 @@ response = client.partitions.create(
     key="invoice_number",
     instructions="Return one chunk per invoice number and keep all pages for the same invoice together.",
     model="retab-small",
+    n_consensus=3,
+    bust_cache=False,
 )
 
-for chunk in response.chunks:
-    print(chunk.key_value, chunk.pages)
+for chunk in response.output:
+    print(chunk.key, chunk.pages)
 ```
 
 ```javascript javascript
@@ -29,14 +31,16 @@ import { Retab } from '@retab/node';
 const client = new Retab();
 
 const response = await client.partitions.create({
-    document: "invoice_batch.pdf",
-    key: "invoice_number",
-    instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
-    model: "retab-small",
+  document: "invoice_batch.pdf",
+  key: "invoice_number",
+  instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
+  model: "retab-small",
+  n_consensus: 3,
+  bust_cache: false,
 });
 
-for (const chunk of response.chunks) {
-    console.log(chunk.key_value, chunk.pages);
+for (const chunk of response.output) {
+  console.log(chunk.key, chunk.pages);
 }
 ```
 
@@ -52,7 +56,9 @@ curl -X POST \
   },
   "key": "invoice_number",
   "instructions": "Return one chunk per invoice number and keep all pages for the same invoice together.",
-  "model": "retab-small"
+  "model": "retab-small",
+  "n_consensus": 3,
+  "bust_cache": false
 }'
 ```
 
@@ -62,28 +68,45 @@ curl -X POST \
 
 ```json 200
 {
-  "chunks": [
+  "output": [
     {
-      "document": {
-        "filename": "invoice-part-1.pdf",
-        "url": "data:application/pdf;base64,JVBERi0xLjQK..."
-      },
-      "key_value": "INV-001",
-      "pages": [1, 2],
-      "y_start": 0.15,
-      "y_end": 0.85
+      "key": "INV-001",
+      "pages": [1, 2]
     },
     {
-      "document": {
-        "filename": "invoice-part-2.pdf",
-        "url": "data:application/pdf;base64,JVBERi0xLjQK..."
-      },
-      "key_value": "INV-002",
-      "pages": [3, 4],
-      "y_start": 0.0,
-      "y_end": 1.0
+      "key": "INV-002",
+      "pages": [3, 4]
     }
-  ]
+  ],
+  "consensus": {
+    "likelihoods": [
+      {
+        "key": 0.99,
+        "pages": [0.99, 0.98]
+      },
+      {
+        "key": 0.96,
+        "pages": [0.95, 0.95]
+      }
+    ],
+    "choices": [
+      [
+        {"key": "INV-001", "pages": [1, 2]},
+        {"key": "INV-002", "pages": [3, 4]}
+      ],
+      [
+        {"key": "INV-001", "pages": [1, 2]},
+        {"key": "INV-002", "pages": [3, 4]}
+      ],
+      [
+        {"key": "INV-001", "pages": [1, 2]},
+        {"key": "INV-002", "pages": [3, 4]}
+      ]
+    ]
+  },
+  "usage": {
+    "credits": 3.0
+  }
 }
 ```
 
@@ -107,29 +130,40 @@ curl -X POST \
   The model used for partitioning.
 </ParamField>
 
+<ParamField body="n_consensus" type="integer" default="1">
+  Number of partitioning runs to use for consensus voting. Max: `8`.
+</ParamField>
+
 <ParamField body="bust_cache" type="boolean" default="false">
-  When `true`, bypass the cache and re-run the partitioning request.
+  When `true`, bypass the cache and force a fresh partition run.
 </ParamField>
 
 ## Response Fields
 
-<ResponseField name="chunks" type="array[PartitionChunk]">
+<ResponseField name="output" type="array[PartitionChunk]">
   The partitioned document chunks.
   <Expandable title="properties">
-    <ResponseField name="document" type="MIMEData | object">
-      The extracted document chunk for this partition.
-    </ResponseField>
-    <ResponseField name="key_value" type="string">
-      The detected value for the requested partition key.
+    <ResponseField name="key" type="string">
+      The detected partition key value for this chunk.
     </ResponseField>
     <ResponseField name="pages" type="array[integer]">
       Pages (1-indexed) assigned to this chunk.
     </ResponseField>
-    <ResponseField name="y_start" type="number | null">
-      Optional starting Y bound for the first page of the chunk.
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="consensus" type="PartitionConsensus">
+  Consensus metadata for multi-vote runs.
+  <Expandable title="properties">
+    <ResponseField name="likelihoods" type="array[PartitionChunkLikelihood] | null">
+      Likelihoods aligned positionally with `output`.
     </ResponseField>
-    <ResponseField name="y_end" type="number | null">
-      Optional ending Y bound for the last page of the chunk.
+    <ResponseField name="choices" type="array[array[PartitionChunk]]">
+      Alternative partition vote outputs used to build the consolidated result.
     </ResponseField>
   </Expandable>
+</ResponseField>
+
+<ResponseField name="usage" type="RetabUsage | null">
+  Usage information for the partition operation.
 </ResponseField>
