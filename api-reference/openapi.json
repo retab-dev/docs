@@ -48359,12 +48359,15 @@
           },
           "instructions": {
             "anyOf": [
-              {},
+              {
+                "type": "string"
+              },
               {
                 "type": "null"
               }
             ],
-            "title": "Instructions"
+            "title": "Instructions",
+            "description": "Free-form instructions appended to the system prompt to steer the extraction."
           },
           "n_consensus": {
             "type": "integer",
@@ -54367,7 +54370,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-04-20T08:08:24.218765Z",
+              "updated_at": "2026-04-20T08:20:39.642820Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -59590,6 +59593,76 @@
         ],
         "title": "PartitionChunk"
       },
+      "PartitionChunkLikelihood": {
+        "properties": {
+          "likelihood": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likelihood",
+            "description": "Aggregate confidence for this partition chunk"
+          },
+          "key_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Value",
+            "description": "Confidence that this partition key value is correct"
+          },
+          "pages": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Pages",
+            "description": "Confidence for each page in the corresponding partition chunk.pages array"
+          }
+        },
+        "type": "object",
+        "title": "PartitionChunkLikelihood"
+      },
+      "PartitionConsensus": {
+        "properties": {
+          "choices": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/PartitionChunk"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Choices",
+            "description": "Alternative partition vote outputs used to build the consolidated result."
+          },
+          "likelihoods": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PartitionChunkLikelihood"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likelihoods",
+            "description": "Consensus likelihoods aligned with the partition output."
+          }
+        },
+        "type": "object",
+        "title": "PartitionConsensus"
+      },
       "PartitionLikelihood": {
         "properties": {
           "likelihood": {
@@ -59650,6 +59723,14 @@
             "description": "The model to use for partitioning",
             "default": "retab-small"
           },
+          "n_consensus": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "N Consensus",
+            "description": "Number of partitioning runs to use for consensus voting. Uses deterministic single-pass when set to 1.",
+            "default": 1
+          },
           "bust_cache": {
             "type": "boolean",
             "title": "Bust Cache",
@@ -59667,13 +59748,28 @@
       },
       "PartitionResponse": {
         "properties": {
-          "chunks": {
+          "output": {
             "items": {
               "$ref": "#/components/schemas/PartitionChunk"
             },
             "type": "array",
-            "title": "Chunks",
+            "title": "Output",
             "description": "The partitioned document chunks"
+          },
+          "consensus": {
+            "$ref": "#/components/schemas/PartitionConsensus",
+            "description": "Consensus metadata for multi-vote partition runs"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetabUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Usage information for the partition operation"
           }
         },
         "type": "object",
