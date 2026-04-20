@@ -41,10 +41,9 @@ flowchart LR
 Key features of the Partition API:
 
 - **Key-based grouping**: Separate repeated records by business identifier.
-- **Canonical response**: Returns `output`, `consensus`, and `usage`.
+- **Canonical resource**: Returns a stored `Partition` with `id`, `file`, `model`, `output`, `consensus`, and `usage`.
 - **Page-level mapping**: Each chunk includes the 1-indexed pages assigned to it.
 - **Consensus support**: Increase `n_consensus` to inspect `consensus.likelihoods` and `consensus.choices`.
-- **No stored resource**: The endpoint returns derived results directly.
 
 ## Partition API
 
@@ -78,9 +77,27 @@ Key features of the Partition API:
   </Expandable>
 </ParamField>
 
-<ResponseField name="Returns" type="PartitionResponse">
-  A direct response containing grouped chunks.
+<ResponseField name="Returns" type="Partition">
+  The stored partition record with its grouped chunks and metadata.
   <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Unique identifier of the partition run (prefix `prtn_`).
+    </ResponseField>
+    <ResponseField name="file" type="FileRef">
+      Reference to the source document (`id`, `filename`, `mime_type`).
+    </ResponseField>
+    <ResponseField name="model" type="string">
+      Model used for partitioning.
+    </ResponseField>
+    <ResponseField name="key" type="string">
+      Partition key used for the run.
+    </ResponseField>
+    <ResponseField name="instructions" type="string">
+      Instructions supplied with the partition request.
+    </ResponseField>
+    <ResponseField name="n_consensus" type="integer">
+      Number of consensus votes used.
+    </ResponseField>
     <ResponseField name="output" type="array[PartitionChunk]">
       One chunk per detected key value, each containing:
       - `key`: The detected partition key value
@@ -93,6 +110,12 @@ Key features of the Partition API:
     </ResponseField>
     <ResponseField name="usage" type="RetabUsage | null">
       Usage information for the partition operation.
+    </ResponseField>
+    <ResponseField name="created_at" type="datetime | null">
+      Timestamp when the partition was created.
+    </ResponseField>
+    <ResponseField name="updated_at" type="datetime | null">
+      Timestamp when the partition was last updated.
     </ResponseField>
   </Expandable>
 </ResponseField>
