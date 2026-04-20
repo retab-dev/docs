@@ -467,6 +467,119 @@ Common anchor types:
 
 If a field cannot be sourced, Retab still returns the value and sets `source` to `null`.
 
+## Managing Saved Extractions
+
+Extractions are persisted resources. After calling `client.extractions.create(...)`, you can retrieve them later, list them with pagination, and filter them by metadata or date range.
+
+### Listing extractions
+
+Use `client.extractions.list(...)` when you need to browse recent extractions, paginate through large histories, or filter by metadata.
+
+<CodeGroup>
+```python Python
+from datetime import datetime
+from retab import Retab
+
+client = Retab()
+
+recent = client.extractions.list(
+    limit=10,
+    order="desc",
+)
+
+org_specific = client.extractions.list(
+    metadata={"organization_id": "org_acme_corp"},
+    limit=50,
+)
+
+date_filtered = client.extractions.list(
+    from_date=datetime(2024, 1, 1),
+    to_date=datetime(2024, 12, 31),
+)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const recent = await client.extractions.list({
+  limit: 10,
+  order: "desc",
+});
+
+const orgSpecific = await client.extractions.list({
+  metadata: { organization_id: "org_acme_corp" },
+  limit: 50,
+});
+
+const dateFiltered = await client.extractions.list({
+  from_date: new Date("2024-01-01"),
+  to_date: new Date("2024-12-31"),
+});
+```
+</CodeGroup>
+
+Useful list filters:
+
+- `limit`: page size
+- `order`: `asc` or `desc` by creation date
+- `before` and `after`: cursor pagination
+- `from_date` and `to_date`: date-range filters
+- `metadata`: exact-match metadata filtering
+
+### Getting an extraction by ID
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+extraction = client.extractions.get("extr_01G34H8J2K")
+print(extraction)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const extraction = await client.extractions.get("extr_01G34H8J2K");
+console.log(extraction);
+```
+</CodeGroup>
+
+### Filtering by metadata
+
+Metadata is useful when you want to organize extractions by tenant, workflow, batch, or any other business key you attached at creation time.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+org_extractions = client.extractions.list(
+    metadata={"organization_id": "org_acme_corp"},
+    limit=100,
+)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const orgExtractions = await client.extractions.list({
+  metadata: { organization_id: "org_acme_corp" },
+  limit: 100,
+});
+```
+</CodeGroup>
+
+For full request and response details, see the extraction endpoints in the API Reference.
+
 ## Use Case: Extracting Event Information from Documents
 
 Extract structured calendar event data from a booking confirmation image and validate likelihood scores before saving to a database.
