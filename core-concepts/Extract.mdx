@@ -72,10 +72,6 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
   The DPI of the image sent to the LLM. Defaults to 192.
 </ParamField>
 
-<ParamField body="chunking_keys" type="dict[str, str] | None" default="None">
-  If set, keys to be used for the extraction of long lists of data using Parallel OCR. Defaults to None.
-</ParamField>
-
 <ParamField body="metadata" type="dict[str, str]" default="{}">
   User-defined metadata to associate with this extraction. Defaults to {}.
 </ParamField>
@@ -84,8 +80,8 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
   Number of consensus runs. Set to >1 for multi-run averaging to improve accuracy on uncertain extractions (increases cost).
 </ParamField>
 
-<ParamField body="context" type="string | null" default="null">
-  Additional context for the extraction (e.g., iteration context from a loop). Freeform string appended to the prompt.
+<ParamField body="instructions" type="string | null" default="null">
+  Free-form instructions appended to the system prompt to steer the extraction.
 </ParamField>
 
   </Expandable>
@@ -343,9 +339,9 @@ console.log(`Processed with ${result.usage?.total_tokens} tokens`);
 ```
 </CodeGroup>
 
-## Use Case: Passing Extra Context
+## Use Case: Passing Extra Instructions
 
-Use `context` to provide a freeform note that guides the extraction — useful for iteration context from a loop, tenant-specific conventions, or any hint that isn't captured by the schema itself.
+Use `instructions` to provide a freeform note that guides the extraction — useful for iteration context from a loop, tenant-specific conventions, or any hint that isn't captured by the schema itself.
 
 <CodeGroup>
 ```python Python
@@ -368,7 +364,7 @@ result = client.extractions.create(
             'required': ['vendor_name', 'invoice_number', 'total_amount'],
             'type': 'object'
         },
-        context=(
+        instructions=(
             "This invoice is from our European supplier. "
             "Amounts should be in EUR unless explicitly stated otherwise. "
             "Extract values exactly as written; do not infer a missing currency."
@@ -397,7 +393,7 @@ const result = await client.extractions.create({
         required: ["vendor_name", "invoice_number", "total_amount"],
         type: "object"
     },
-    context: "This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise. Extract values exactly as written; do not infer a missing currency."
+    instructions: "This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise. Extract values exactly as written; do not infer a missing currency."
 });
 
 console.log(result.output);
@@ -423,7 +419,7 @@ curl -X POST https://api.retab.com/v1/extractions \
         "required": ["vendor_name", "invoice_number", "total_amount"],
         "type": "object"
     },
-    "context": "This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
+    "instructions": "This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
 }'
 ```
 </CodeGroup>
@@ -532,8 +528,8 @@ When multiple metadata keys are provided, all keys are applied together as exact
 - Set a threshold (e.g., 0.7) for automated processing.
 - For critical tasks, enable `n_consensus > 1` to average results and boost reliability.
 
-### Using Context
-- Use `context` to pass domain-specific hints or iteration context that isn't part of the schema.
+### Using Instructions
+- Use `instructions` to pass domain-specific hints that aren't part of the schema.
 - Ideal for: currency defaults, date format preferences, handling ambiguous abbreviations, or specifying regional conventions.
 - Keep the string concise to avoid diluting the extraction focus.
 
@@ -545,7 +541,7 @@ result = client.extractions.create(
         document="invoices/invoice_001.pdf",
         json_schema=my_schema,
         model="retab-small",
-        context="This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise.",
+        instructions="This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise.",
     )
 )
 ```
