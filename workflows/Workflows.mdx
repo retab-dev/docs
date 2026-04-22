@@ -142,22 +142,45 @@ print(run.final_outputs)
 
 `run.steps` contains per-block status summaries. For typed inputs and outputs on each block, use the step helpers.
 
-#### Inspect typed step outputs
+#### Inspect step outputs
+
+Start with `steps.list(run.id)` — it returns every persisted step in a single HTTP call. Avoid looping over `run.steps` and calling `steps.get()` per block; that's N+1.
 
 Step payloads are normalized into `HandlePayload` objects. For JSON-producing blocks, `extracted_data` is shorthand for the default `output-json-0` handle.
 
 ```python
+# Batch: one HTTP call for all steps in the run
+for step in client.workflows.runs.steps.list(run.id):
+    print(step.block_id, step.status, step.error, step.extracted_data)
+    if step.artifact:
+        print(step.artifact.operation, step.artifact.id)
+
+# Single step:
 step = client.workflows.runs.steps.get(run.id, "extract-block-id")
-
-print(step.status)
-print(step.extracted_data)
-
-all_step_outputs = client.workflows.runs.steps.get_all(run)
-for block_id, output in all_step_outputs.outputs.items():
-    print(block_id, output.status, output.extracted_data)
+print(step.status, step.extracted_data)
 ```
 
-Use `client.workflows.runs.steps.list(run.id)` when you want the persisted step documents for every block, or `client.workflows.runs.steps.list(run.id, block_ids=[...])` when you only need a subset of those step documents. Use `client.workflows.runs.steps.get_many(run.id, [...])` when you want normalized handle payloads for a subset of blocks.
+Use `steps.list(run.id, block_ids=[...])` when you only need a subset. Use `steps.get_many(run.id, [...])` when you want normalized handle payloads (same shape as `steps.get()`) for a subset of blocks.
+
+#### Jump from a step to its typed resource
+
+Inference blocks persist a resource; `step.artifact` is a `{operation, id}` pointer you use to fetch the full typed result:
+
+```python
+step = client.workflows.runs.steps.get(run.id, "extract-block-id")
+if step.artifact:
+    extraction = client.extractions.get(step.artifact.id)
+    print(extraction.choices)   # full consensus, likelihoods, schema
+```
+
+| operation       | block type               | fetch with                             |
+|-----------------|--------------------------|----------------------------------------|
+| `extraction`    | `extract`                | `client.extractions.get(id)`           |
+| `split`         | `split`                  | `client.splits.get(id)`                |
+| `classification`| `classifier`             | `client.classifications.get(id)`       |
+| `parse`         | `parse`                  | `client.parses.get(id)`                |
+| `edit`          | `edit`                   | `client.edits.get(id)`                 |
+| `partition`     | `for_each_sentinel_start`| `client.partitions.get(id)`            |
 
 #### Build workflows from code
 
