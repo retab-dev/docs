@@ -123,56 +123,92 @@ curl -X POST \
 
 ## Use the uploaded file in later requests
 
-The SDK returns a durable `MIMEData` reference. You can pass that object directly, or pass its Retab storage URL.
+For large documents, prefer a signed object-storage URL first. Retab fetches the file server-side, avoiding inline/base64 request bodies that can trigger `413 Request Entity Too Large`.
+
+Supported remote URL hosts include Azure Blob Storage (`*.blob.core.windows.net`), Google Cloud Storage (`storage.googleapis.com`), Amazon S3 (`amazonaws.com`), and Cloudflare R2 (`*.r2.cloudflarestorage.com` and `*.r2.dev`). Custom domains are not fetched by default; contact support if you need one allowlisted.
+
+If you do not have a signed storage URL available, upload the file to Retab first. The SDK returns a durable `MIMEData` reference. You can pass that object directly, or pass its Retab storage URL.
 
 <RequestExample>
 
 ```python python
+from retab import Retab
+
+client = Retab(api_key="YOUR_RETAB_API_KEY")
+
+schema = {
+    "type": "object",
+    "properties": {
+        "invoice_number": {"type": "string"},
+        "total_amount": {"type": "number"},
+    },
+}
+
+# Option 1: signed object-storage URL
+azure_blob_url = "https://<account>.blob.core.windows.net/<container>/large_document.pdf?<sas_token>"
+
+extraction = client.extractions.create(
+    document=azure_blob_url,
+    model="retab-small",
+    json_schema=schema,
+)
+
+# Option 2: Retab upload, then reuse the returned URL
 mime_ref = client.files.upload("large_document.pdf")
 
-classification = client.classifications.create(
+extraction = client.extractions.create(
     document=mime_ref.url,
-    model="retab-micro",
-    categories=[
-        {"name": "invoice", "description": "Invoices with billing details and totals"},
-        {"name": "other", "description": "Any other document"},
-    ],
+    model="retab-small",
+    json_schema=schema,
 )
 
 # This also works:
-classification = client.classifications.create(
+extraction = client.extractions.create(
     document=mime_ref,
-    model="retab-micro",
-    categories=[
-        {"name": "invoice", "description": "Invoices with billing details and totals"},
-        {"name": "other", "description": "Any other document"},
-    ],
+    model="retab-small",
+    json_schema=schema,
 )
 ```
 
 ```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const schema = {
+  type: "object",
+  properties: {
+    invoice_number: { type: "string" },
+    total_amount: { type: "number" },
+  },
+};
+
+// Option 1: signed object-storage URL
+const cloudflareR2Url = "https://<public-id>.r2.dev/large_document.pdf";
+
+const extractionFromR2 = await client.extractions.create({
+  document: cloudflareR2Url,
+  model: "retab-small",
+  json_schema: schema,
+});
+
+// Option 2: Retab upload, then reuse the returned URL
 const mimeRef = await client.files.upload("large_document.pdf");
 
-const classification = await client.classifications.create({
+const extraction = await client.extractions.create({
   document: mimeRef.url,
-  model: "retab-micro",
-  categories: [
-    { name: "invoice", description: "Invoices with billing details and totals" },
-    { name: "other", description: "Any other document" },
-  ],
+  model: "retab-small",
+  json_schema: schema,
 });
 
 // This also works:
-const sameClassification = await client.classifications.create({
+const sameExtraction = await client.extractions.create({
   document: mimeRef,
-  model: "retab-micro",
-  categories: [
-    { name: "invoice", description: "Invoices with billing details and totals" },
-    { name: "other", description: "Any other document" },
-  ],
+  model: "retab-small",
+  json_schema: schema,
 });
 ```
 
 </RequestExample>
 
-`https://storage.retab.com/file_...` URLs are opaque Retab references, not public download links. Retab resolves them against the authenticated caller's organization before processing.
+Signed object-storage URLs are bearer URLs controlled by you; keep them time-limited and scoped to the single document being processed. `https://storage.retab.com/file_...` URLs are opaque Retab references, not public download links. Retab resolves them against the authenticated caller's organization before processing.
