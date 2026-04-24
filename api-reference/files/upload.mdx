@@ -3,7 +3,7 @@ title: 'Upload File'
 openapi: 'POST /v1/files/upload'
 ---
 
-Upload a document to Retab. The file is stored persistently and can be referenced by `file_id` in extractions, workflows, and other operations.
+Create a direct-to-storage upload session. Upload the file bytes to the returned signed `uploadUrl`, then call `POST /v1/files/upload/{file_id}/complete`. The completed file can be referenced by `storageUrl` in extractions, workflows, and other operations.
 
 <RequestExample>
 
@@ -17,6 +17,7 @@ client = Retab()
 response = client.files.upload(Path("invoice.pdf"))
 print(f"File ID: {response.file_id}")
 print(f"Filename: {response.filename}")
+print(f"Storage URL: {response.storage_url}")
 ```
 
 ```javascript javascript
@@ -24,26 +25,36 @@ import Retab from 'retab';
 
 const client = new Retab();
 
-const response = await client.files.upload({
-    filename: "invoice.pdf",
-    url: "data:application/pdf;base64,JVBERi0xLjQK..."
-});
+const response = await client.files.upload("invoice.pdf");
 
 console.log(`File ID: ${response.fileId}`);
 console.log(`Filename: ${response.filename}`);
+console.log(`Storage URL: ${response.storageUrl}`);
 ```
 
 ```bash curl
-curl -X POST \
+SESSION=$(curl -s -X POST \
   'https://api.retab.com/v1/files/upload' \
   -H "Api-Key: $RETAB_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{
-    "mimeData": {
-      "filename": "invoice.pdf",
-      "url": "data:application/pdf;base64,JVBERi0xLjQK..."
-    }
-  }'
+    "filename": "invoice.pdf",
+    "content_type": "application/pdf",
+    "size_bytes": 12345
+  }')
+
+UPLOAD_URL=$(echo "$SESSION" | jq -r '.uploadUrl')
+FILE_ID=$(echo "$SESSION" | jq -r '.fileId')
+
+curl -X PUT "$UPLOAD_URL" \
+  -H 'Content-Type: application/pdf' \
+  --data-binary '@invoice.pdf'
+
+curl -X POST \
+  "https://api.retab.com/v1/files/upload/$FILE_ID/complete" \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{}'
 ```
 
 </RequestExample>
@@ -52,8 +63,15 @@ curl -X POST \
 
 ```json 200
 {
-  "file_id": "file_a1b2c3d4e5f6",
-  "filename": "invoice.pdf"
+  "fileId": "file_a1b2c3d4e5f6",
+  "filename": "invoice.pdf",
+  "uploadUrl": "https://storage.googleapis.com/...",
+  "uploadMethod": "PUT",
+  "uploadHeaders": {
+    "Content-Type": "application/pdf"
+  },
+  "storageUrl": "https://storage.retab.com/file_a1b2c3d4e5f6",
+  "expiresAt": "2026-04-24T12:00:00Z"
 }
 ```
 
@@ -61,24 +79,48 @@ curl -X POST \
 
 ## Request Parameters
 
-<ParamField body="mimeData" type="object" required>
-  The document to upload.
-  <Expandable title="properties">
-    <ParamField body="filename" type="string" required>
-      The filename including extension (e.g., `"invoice.pdf"`).
-    </ParamField>
-    <ParamField body="url" type="string" required>
-      A data URL with base64-encoded content (e.g., `"data:application/pdf;base64,..."`) or a public URL pointing to the file.
-    </ParamField>
-  </Expandable>
+<ParamField body="filename" type="string" required>
+  The filename including extension (e.g., `"invoice.pdf"`).
+</ParamField>
+
+<ParamField body="content_type" type="string">
+  MIME type for the object upload. If omitted, Retab guesses from `filename`.
+</ParamField>
+
+<ParamField body="size_bytes" type="integer" required>
+  Expected file size in bytes. The complete step verifies that storage received this exact size.
+</ParamField>
+
+<ParamField body="sha256" type="string">
+  Optional SHA-256 checksum. If provided, the complete step must include the same checksum.
 </ParamField>
 
 ## Response Fields
 
-<ResponseField name="file_id" type="string">
+<ResponseField name="fileId" type="string">
   Unique identifier for the uploaded file, prefixed with `file_`.
 </ResponseField>
 
 <ResponseField name="filename" type="string">
   The filename of the uploaded document.
+</ResponseField>
+
+<ResponseField name="uploadUrl" type="string">
+  Short-lived signed URL for uploading file bytes.
+</ResponseField>
+
+<ResponseField name="uploadMethod" type="string">
+  HTTP method to use for the signed upload. Currently `"PUT"`.
+</ResponseField>
+
+<ResponseField name="uploadHeaders" type="object">
+  Headers that must be sent with the signed upload.
+</ResponseField>
+
+<ResponseField name="storageUrl" type="string">
+  Durable Retab storage URL to use in later `MIMEData` requests after completion.
+</ResponseField>
+
+<ResponseField name="expiresAt" type="string">
+  Expiration timestamp for the signed upload URL.
 </ResponseField>

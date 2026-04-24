@@ -27,7 +27,7 @@ The module exposes four methods:
 
 ## Uploading files
 
-Files are uploaded as `MIMEData` objects — the same format used across the Retab API for documents:
+SDK uploads use a direct-to-storage flow. The SDK first creates an upload session, uploads the bytes to the signed storage URL, then completes the upload and returns a durable Retab storage URL.
 
 <CodeGroup>
 ```python Python
@@ -39,12 +39,7 @@ client = Retab()
 # Upload from a file path
 response = client.files.upload(Path("invoice.pdf"))
 print(f"File ID: {response.file_id}")
-
-# Upload from a URL
-response = client.files.upload({
-    "filename": "invoice.pdf",
-    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
-})
+print(f"Storage URL: {response.storage_url}")
 ```
 
 ```javascript JavaScript
@@ -52,27 +47,39 @@ import Retab from 'retab';
 
 const client = new Retab();
 
-const response = await client.files.upload({
-    filename: "invoice.pdf",
-    url: "data:application/pdf;base64,JVBERi0xLjQK..."
-});
+const response = await client.files.upload("invoice.pdf");
 
 console.log(`File ID: ${response.fileId}`);
+console.log(`Storage URL: ${response.storageUrl}`);
 ```
 
 ```bash cURL
-curl -X POST \
+SESSION=$(curl -s -X POST \
   'https://api.retab.com/v1/files/upload' \
   -H "Api-Key: $RETAB_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{
-    "mimeData": {
-      "filename": "invoice.pdf",
-      "url": "data:application/pdf;base64,JVBERi0xLjQK..."
-    }
-  }'
+    "filename": "invoice.pdf",
+    "content_type": "application/pdf",
+    "size_bytes": 12345
+  }')
+
+UPLOAD_URL=$(echo "$SESSION" | jq -r '.uploadUrl')
+FILE_ID=$(echo "$SESSION" | jq -r '.fileId')
+
+curl -X PUT "$UPLOAD_URL" \
+  -H 'Content-Type: application/pdf' \
+  --data-binary '@invoice.pdf'
+
+curl -X POST \
+  "https://api.retab.com/v1/files/upload/$FILE_ID/complete" \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{}'
 ```
 </CodeGroup>
+
+The returned `storage_url` / `storageUrl` has the form `https://storage.retab.com/file_...`. You can pass it as the `url` in `MIMEData` requests without sending the file bytes again.
 
 ## The file data structure
 
