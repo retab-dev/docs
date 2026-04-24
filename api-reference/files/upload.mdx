@@ -120,3 +120,59 @@ curl -X POST \
 <ResponseField name="expiresAt" type="string">
   Expiration timestamp for the signed upload URL.
 </ResponseField>
+
+## Use the uploaded file in later requests
+
+The SDK returns a durable `MIMEData` reference. You can pass that object directly, or pass its Retab storage URL.
+
+<RequestExample>
+
+```python python
+mime_ref = client.files.upload("large_document.pdf")
+
+classification = client.classifications.create(
+    document=mime_ref.url,
+    model="retab-micro",
+    categories=[
+        {"name": "invoice", "description": "Invoices with billing details and totals"},
+        {"name": "other", "description": "Any other document"},
+    ],
+)
+
+# This also works:
+classification = client.classifications.create(
+    document=mime_ref,
+    model="retab-micro",
+    categories=[
+        {"name": "invoice", "description": "Invoices with billing details and totals"},
+        {"name": "other", "description": "Any other document"},
+    ],
+)
+```
+
+```javascript javascript
+const mimeRef = await client.files.upload("large_document.pdf");
+
+const classification = await client.classifications.create({
+  document: mimeRef.url,
+  model: "retab-micro",
+  categories: [
+    { name: "invoice", description: "Invoices with billing details and totals" },
+    { name: "other", description: "Any other document" },
+  ],
+});
+
+// This also works:
+const sameClassification = await client.classifications.create({
+  document: mimeRef,
+  model: "retab-micro",
+  categories: [
+    { name: "invoice", description: "Invoices with billing details and totals" },
+    { name: "other", description: "Any other document" },
+  ],
+});
+```
+
+</RequestExample>
+
+`https://storage.retab.com/file_...` URLs are opaque Retab references, not public download links. Retab resolves them against the authenticated caller's organization before processing.

@@ -81,6 +81,72 @@ curl -X POST \
 
 The returned `url` has the form `https://storage.retab.com/file_...`. It is an opaque Retab URL, not a public signed URL, and can be passed to later `MIMEData` requests without sending the file bytes again.
 
+## Upload once, reuse by URL
+
+For larger documents, upload the file first and pass the returned Retab storage URL to classify, split, extract, or workflow calls. This avoids sending the document bytes inline in every API request.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+mime_ref = client.files.upload("large_document.pdf")
+
+classification = client.classifications.create(
+    document=mime_ref.url,
+    model="retab-micro",
+    categories=[
+        {"name": "invoice", "description": "Invoices with billing details and totals"},
+        {"name": "other", "description": "Any other document"},
+    ],
+)
+
+extraction = client.extractions.create(
+    document=mime_ref.url,
+    model="retab-small",
+    json_schema={
+        "type": "object",
+        "properties": {
+            "invoice_number": {"type": "string"},
+            "total_amount": {"type": "number"},
+        },
+    },
+)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const mimeRef = await client.files.upload("large_document.pdf");
+
+const classification = await client.classifications.create({
+    document: mimeRef.url,
+    model: "retab-micro",
+    categories: [
+        { name: "invoice", description: "Invoices with billing details and totals" },
+        { name: "other", description: "Any other document" },
+    ],
+});
+
+const extraction = await client.extractions.create({
+    document: mimeRef.url,
+    model: "retab-small",
+    json_schema: {
+        type: "object",
+        properties: {
+            invoice_number: { type: "string" },
+            total_amount: { type: "number" },
+        },
+    },
+});
+```
+</CodeGroup>
+
+You can also pass `document=mime_ref` directly. Passing `mime_ref.url` is equivalent for Retab storage URLs: the backend parses the file ID and resolves it against the authenticated caller's organization before processing.
+
 ## The file data structure
 
 <ResponseField name="File Object" type="object">
