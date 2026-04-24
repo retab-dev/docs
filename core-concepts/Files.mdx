@@ -4,7 +4,7 @@ title: Files
 
 ### Introduction
 
-The Files API lets you upload, manage, and retrieve documents stored in Retab. Files are the foundation of document processing — once uploaded, a file can be referenced by ID across extractions and workflows without re-uploading.
+The Files API lets you upload, manage, and retrieve documents stored in Retab. Files are the foundation of document processing: once uploaded, a file can be reused across classify, split, extract, parse, and workflow calls without sending the bytes again.
 
 ```mermaid
 flowchart LR
@@ -13,14 +13,14 @@ flowchart LR
     C --> D[client.files.list]
     C --> E[client.files.get]
     C --> F[client.files.get_download_link]
-    C --> G[Workflows / Extract / Parse]
+    C --> G[Classify / Split / Extract / Parse / Workflows]
 ```
 
 The module exposes four methods:
 
 | Method | Purpose |
 | ------ | ------- |
-| **`upload`** | Upload a document and receive a persistent `MIMEData` reference for future requests. |
+| **`upload`** | Upload a document and receive a durable `MIMEData` reference for future requests. |
 | **`list`** | List uploaded files with pagination, filename prefix search, and MIME type filtering. |
 | **`get`** | Retrieve metadata for a single file by ID. |
 | **`get_download_link`** | Get a temporary signed URL (60 min) to download the original file. |
@@ -43,7 +43,7 @@ print(f"URL: {mime_data.url}")
 ```
 
 ```javascript JavaScript
-import Retab from 'retab';
+import { Retab } from '@retab/node';
 
 const client = new Retab();
 
@@ -79,28 +79,93 @@ curl -X POST \
 ```
 </CodeGroup>
 
-The returned `url` has the form `https://storage.retab.com/file_...`. It is an opaque Retab URL, not a public signed URL, and can be passed to later `MIMEData` requests without sending the file bytes again.
+The returned `url` has the form `https://storage.retab.com/file_...`. It is an opaque Retab URL, not a public signed URL, and can be passed to later processing requests without sending the file bytes again.
 
-## Upload once, reuse by URL
+## Large documents: avoid inline uploads
 
-For larger documents, upload the file first and pass the returned Retab storage URL to classify, split, extract, or workflow calls. This avoids sending the document bytes inline in every API request.
+When you pass a local file path directly to an SDK processing call, the SDK may send the document as inline MIME/base64 data. This is convenient for small files, but large scanned PDFs can make the request body too large and trigger `413 Request Entity Too Large`.
+
+For large documents, use one of these URL-backed flows instead:
+
+1. **Preferred: use your own object-storage URL.** Retab fetches the file server-side, so the document bytes are not sent inline in the API request. Use a time-limited signed URL when the object is private.
+2. **Alternative: upload to Retab first.** The SDK uploads the file once, then you pass the returned Retab storage URL to classify, split, extract, parse, or workflow calls.
+
+### Option 1: object-storage URL
+
+Pass an HTTPS URL from object storage directly as the `document`.
+
+Supported remote URL hosts include:
+
+| Provider | Supported URL shape |
+| -------- | ------------------- |
+| Azure Blob Storage | `https://<account>.blob.core.windows.net/...` |
+| Google Cloud Storage | `https://storage.googleapis.com/...` or `https://<bucket>.storage.googleapis.com/...` |
+| Amazon S3 | `https://<bucket>.s3.<region>.amazonaws.com/...` or other `amazonaws.com` S3 URLs |
+| Cloudflare R2 | `https://<account>.r2.cloudflarestorage.com/...` and public `https://<public-id>.r2.dev/...` URLs |
+
+Custom domains are not fetched by default. Contact support if you need a custom storage hostname allowlisted. For private files, generate a signed URL with enough time for Retab to fetch the document.
 
 <CodeGroup>
 ```python Python
 from retab import Retab
 
-client = Retab()
+client = Retab(api_key="YOUR_RETAB_API_KEY")
+
+schema = {
+    "type": "object",
+    "properties": {
+        "invoice_number": {"type": "string"},
+        "total_amount": {"type": "number"},
+    },
+}
+
+azure_blob_url = "https://<account>.blob.core.windows.net/<container>/large_document.pdf?<sas_token>"
+
+extraction = client.extractions.create(
+    document=azure_blob_url,
+    model="retab-small",
+    json_schema=schema,
+)
+
+print(extraction.output)
+```
+
+```javascript JavaScript
+import { Retab } from '@retab/node';
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const schema = {
+    type: "object",
+    properties: {
+        invoice_number: { type: "string" },
+        total_amount: { type: "number" },
+    },
+};
+
+const cloudflareR2Url = "https://<public-id>.r2.dev/large_document.pdf";
+
+const extraction = await client.extractions.create({
+    document: cloudflareR2Url,
+    model: "retab-small",
+    json_schema: schema,
+});
+
+console.log(extraction.output);
+```
+</CodeGroup>
+
+### Option 2: upload to Retab, then reuse the URL
+
+If you do not have an object-storage URL available, upload the file to Retab first and use the returned `mime_ref.url`.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab(api_key="YOUR_RETAB_API_KEY")
 
 mime_ref = client.files.upload("large_document.pdf")
-
-classification = client.classifications.create(
-    document=mime_ref.url,
-    model="retab-micro",
-    categories=[
-        {"name": "invoice", "description": "Invoices with billing details and totals"},
-        {"name": "other", "description": "Any other document"},
-    ],
-)
 
 extraction = client.extractions.create(
     document=mime_ref.url,
@@ -118,18 +183,9 @@ extraction = client.extractions.create(
 ```javascript JavaScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const mimeRef = await client.files.upload("large_document.pdf");
-
-const classification = await client.classifications.create({
-    document: mimeRef.url,
-    model: "retab-micro",
-    categories: [
-        { name: "invoice", description: "Invoices with billing details and totals" },
-        { name: "other", description: "Any other document" },
-    ],
-});
 
 const extraction = await client.extractions.create({
     document: mimeRef.url,
@@ -146,6 +202,12 @@ const extraction = await client.extractions.create({
 </CodeGroup>
 
 You can also pass `document=mime_ref` directly. Passing `mime_ref.url` is equivalent for Retab storage URLs: the backend parses the file ID and resolves it against the authenticated caller's organization before processing.
+
+### Security model
+
+Signed object-storage URLs are bearer URLs controlled by you. Keep them time-limited and scoped to the single document being processed. Public object-storage URLs, such as public Cloudflare R2 `r2.dev` URLs, can also be fetched but are not access-restricted by the URL itself.
+
+Retab storage URLs such as `https://storage.retab.com/file_...` are different: they are opaque Retab file references, not public download links. Retab resolves the file ID against the authenticated caller's organization. If the file is missing, belongs to another organization, or is not fully uploaded, the request is rejected.
 
 ## The file data structure
 
