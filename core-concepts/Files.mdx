@@ -20,14 +20,14 @@ The module exposes four methods:
 
 | Method | Purpose |
 | ------ | ------- |
-| **`upload`** | Upload a document and receive a persistent `file_id` for future reference. |
+| **`upload`** | Upload a document and receive a persistent `MIMEData` reference for future requests. |
 | **`list`** | List uploaded files with pagination, filename prefix search, and MIME type filtering. |
 | **`get`** | Retrieve metadata for a single file by ID. |
 | **`get_download_link`** | Get a temporary signed URL (60 min) to download the original file. |
 
 ## Uploading files
 
-SDK uploads use a direct-to-storage flow. The SDK first creates an upload session, uploads the bytes to the signed storage URL, then completes the upload and returns a durable Retab storage URL.
+SDK uploads use a direct-to-storage flow. The SDK first creates an upload session, uploads the bytes to the signed storage URL, then completes the upload and returns `MIMEData`.
 
 <CodeGroup>
 ```python Python
@@ -37,9 +37,9 @@ from pathlib import Path
 client = Retab()
 
 # Upload from a file path
-response = client.files.upload(Path("invoice.pdf"))
-print(f"File ID: {response.file_id}")
-print(f"Storage URL: {response.storage_url}")
+mime_data = client.files.upload(Path("invoice.pdf"))
+print(f"Filename: {mime_data.filename}")
+print(f"URL: {mime_data.url}")
 ```
 
 ```javascript JavaScript
@@ -47,10 +47,10 @@ import Retab from 'retab';
 
 const client = new Retab();
 
-const response = await client.files.upload("invoice.pdf");
+const mimeData = await client.files.upload("invoice.pdf");
 
-console.log(`File ID: ${response.fileId}`);
-console.log(`Storage URL: ${response.storageUrl}`);
+console.log(`Filename: ${mimeData.filename}`);
+console.log(`URL: ${mimeData.url}`);
 ```
 
 ```bash cURL
@@ -79,7 +79,7 @@ curl -X POST \
 ```
 </CodeGroup>
 
-The returned `storage_url` / `storageUrl` has the form `https://storage.retab.com/file_...`. You can pass it as the `url` in `MIMEData` requests without sending the file bytes again.
+The returned `url` has the form `https://storage.retab.com/file_...`. It is an opaque Retab URL, not a public signed URL, and can be passed to later `MIMEData` requests without sending the file bytes again.
 
 ## The file data structure
 

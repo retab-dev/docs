@@ -3,7 +3,7 @@ title: 'Upload File'
 openapi: 'POST /v1/files/upload'
 ---
 
-Create a direct-to-storage upload session. Upload the file bytes to the returned signed `uploadUrl`, then call `POST /v1/files/upload/{file_id}/complete`. The completed file can be referenced by `storageUrl` in extractions, workflows, and other operations.
+Create a direct-to-storage upload session. Upload the file bytes to the returned signed `uploadUrl`, then call `POST /v1/files/upload/{file_id}/complete`. The completed file is returned as `MIMEData` and can be passed directly to extractions, workflows, and other operations.
 
 <RequestExample>
 
@@ -14,10 +14,9 @@ from pathlib import Path
 client = Retab()
 
 # Upload from a file path
-response = client.files.upload(Path("invoice.pdf"))
-print(f"File ID: {response.file_id}")
-print(f"Filename: {response.filename}")
-print(f"Storage URL: {response.storage_url}")
+mime_data = client.files.upload(Path("invoice.pdf"))
+print(f"Filename: {mime_data.filename}")
+print(f"URL: {mime_data.url}")
 ```
 
 ```javascript javascript
@@ -25,11 +24,10 @@ import Retab from 'retab';
 
 const client = new Retab();
 
-const response = await client.files.upload("invoice.pdf");
+const mimeData = await client.files.upload("invoice.pdf");
 
-console.log(`File ID: ${response.fileId}`);
-console.log(`Filename: ${response.filename}`);
-console.log(`Storage URL: ${response.storageUrl}`);
+console.log(`Filename: ${mimeData.filename}`);
+console.log(`URL: ${mimeData.url}`);
 ```
 
 ```bash curl
@@ -64,13 +62,15 @@ curl -X POST \
 ```json 200
 {
   "fileId": "file_a1b2c3d4e5f6",
-  "filename": "invoice.pdf",
   "uploadUrl": "https://storage.googleapis.com/...",
   "uploadMethod": "PUT",
   "uploadHeaders": {
     "Content-Type": "application/pdf"
   },
-  "storageUrl": "https://storage.retab.com/file_a1b2c3d4e5f6",
+  "mimeData": {
+    "filename": "invoice.pdf",
+    "url": "https://storage.retab.com/file_a1b2c3d4e5f6"
+  },
   "expiresAt": "2026-04-24T12:00:00Z"
 }
 ```
@@ -101,10 +101,6 @@ curl -X POST \
   Unique identifier for the uploaded file, prefixed with `file_`.
 </ResponseField>
 
-<ResponseField name="filename" type="string">
-  The filename of the uploaded document.
-</ResponseField>
-
 <ResponseField name="uploadUrl" type="string">
   Short-lived signed URL for uploading file bytes.
 </ResponseField>
@@ -117,8 +113,8 @@ curl -X POST \
   Headers that must be sent with the signed upload.
 </ResponseField>
 
-<ResponseField name="storageUrl" type="string">
-  Durable Retab storage URL to use in later `MIMEData` requests after completion.
+<ResponseField name="mimeData" type="object">
+  Durable `MIMEData` reference for the uploaded file. Its `url` is an opaque Retab storage URL and is only usable through Retab APIs.
 </ResponseField>
 
 <ResponseField name="expiresAt" type="string">
