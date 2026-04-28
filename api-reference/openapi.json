@@ -11008,7 +11008,7 @@
                     "projects.experiment_iteration.extract",
                     "projects.sandbox.extract",
                     "projects.sandbox_iteration.extract",
-                    "experiment_snapshot"
+                    "experiment_run"
                   ],
                   "type": "string"
                 },
@@ -11317,7 +11317,7 @@
                     "projects.experiment_iteration.extract",
                     "projects.sandbox.extract",
                     "projects.sandbox_iteration.extract",
-                    "experiment_snapshot"
+                    "experiment_run"
                   ],
                   "type": "string"
                 },
@@ -18490,7 +18490,7 @@
                     "projects.experiment_iteration.extract",
                     "projects.sandbox.extract",
                     "projects.sandbox_iteration.extract",
-                    "experiment_snapshot"
+                    "experiment_run"
                   ],
                   "type": "string"
                 },
@@ -18827,7 +18827,7 @@
                     "projects.experiment_iteration.extract",
                     "projects.sandbox.extract",
                     "projects.sandbox_iteration.extract",
-                    "experiment_snapshot"
+                    "experiment_run"
                   ],
                   "type": "string"
                 },
@@ -19307,7 +19307,7 @@
                     "projects.experiment_iteration.extract",
                     "projects.sandbox.extract",
                     "projects.sandbox_iteration.extract",
-                    "experiment_snapshot"
+                    "experiment_run"
                   ],
                   "type": "string"
                 },
@@ -21661,7 +21661,7 @@
                     "projects.experiment_iteration.extract",
                     "projects.sandbox.extract",
                     "projects.sandbox_iteration.extract",
-                    "experiment_snapshot"
+                    "experiment_run"
                   ],
                   "type": "string"
                 },
@@ -29871,7 +29871,7 @@
           "Workflow Experiments"
         ],
         "summary": "List Eligible Blocks",
-        "description": "List blocks in the current draft that can host experiments, with\nper-block counts of attached, drifted, and stale experiments + mean\nlatest-snapshot score.",
+        "description": "List blocks in the current draft that can host experiments, with\nper-block counts of attached, drifted, and stale experiments + mean\nlatest-run score.",
         "operationId": "list_eligible_blocks_v1_workflows__workflow_id__experiments_eligible_blocks_get",
         "security": [
           {
@@ -30655,14 +30655,14 @@
         }
       }
     },
-    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/results": {
+    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/content": {
       "get": {
         "tags": [
           "Workflows",
           "Workflow Experiments"
         ],
-        "summary": "List Results",
-        "operationId": "list_results_v1_workflows__workflow_id__experiments__experiment_id__results_get",
+        "summary": "Get Content",
+        "operationId": "get_content_v1_workflows__workflow_id__experiments__experiment_id__content_get",
         "security": [
           {
             "HTTPBearer": []
@@ -30694,7 +30694,7 @@
             }
           },
           {
-            "name": "snapshot_id",
+            "name": "run_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -30706,7 +30706,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Snapshot Id"
+              "title": "Run Id"
             }
           },
           {
@@ -30732,11 +30732,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ExperimentSnapshotRunResponse"
-                  },
-                  "title": "Response List Results V1 Workflows  Workflow Id  Experiments  Experiment Id  Results Get"
+                  "$ref": "#/components/schemas/ExperimentContentResponse"
                 }
               }
             }
@@ -30761,7 +30757,7 @@
           "Workflow Experiments"
         ],
         "summary": "Get Metrics",
-        "description": "Get experiment metrics. Delegates to the MCP tool handler and parses JSON response.",
+        "description": "Get experiment metrics for REST/frontend consumers.",
         "operationId": "get_metrics_v1_workflows__workflow_id__experiments__experiment_id__metrics_get",
         "security": [
           {
@@ -30800,10 +30796,9 @@
             "schema": {
               "enum": [
                 "summary",
-                "by_run",
-                "by_field",
-                "field_choices",
-                "heatmap"
+                "by_document",
+                "by_target",
+                "votes"
               ],
               "type": "string",
               "default": "summary",
@@ -30811,7 +30806,7 @@
             }
           },
           {
-            "name": "snapshot_id",
+            "name": "run_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -30823,11 +30818,11 @@
                   "type": "null"
                 }
               ],
-              "title": "Snapshot Id"
+              "title": "Run Id"
             }
           },
           {
-            "name": "source_run_id",
+            "name": "document_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -30839,11 +30834,11 @@
                   "type": "null"
                 }
               ],
-              "title": "Source Run Id"
+              "title": "Document Id"
             }
           },
           {
-            "name": "field_path",
+            "name": "target_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -30855,7 +30850,23 @@
                   "type": "null"
                 }
               ],
-              "title": "Field Path"
+              "title": "Target Id"
+            }
+          },
+          {
+            "name": "target_path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Path"
             }
           },
           {
@@ -30901,14 +30912,14 @@
         }
       }
     },
-    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/snapshots": {
+    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/runs": {
       "get": {
         "tags": [
           "Workflows",
           "Workflow Experiments"
         ],
-        "summary": "List Snapshots",
-        "operationId": "list_snapshots_v1_workflows__workflow_id__experiments__experiment_id__snapshots_get",
+        "summary": "List Runs",
+        "operationId": "list_runs_v1_workflows__workflow_id__experiments__experiment_id__runs_get",
         "security": [
           {
             "HTTPBearer": []
@@ -30962,7 +30973,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SnapshotListResponse"
+                  "$ref": "#/components/schemas/RunListResponse"
                 }
               }
             }
@@ -30980,14 +30991,14 @@
         }
       }
     },
-    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/snapshots/{snapshot_id}/runs/{run_id}": {
+    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/runs/{run_id}/documents/{document_id}": {
       "get": {
         "tags": [
           "Workflows",
           "Workflow Experiments"
         ],
-        "summary": "Get Snapshot Run",
-        "operationId": "get_snapshot_run_v1_workflows__workflow_id__experiments__experiment_id__snapshots__snapshot_id__runs__run_id__get",
+        "summary": "Get Job",
+        "operationId": "get_job_v1_workflows__workflow_id__experiments__experiment_id__runs__run_id__documents__document_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -31019,21 +31030,21 @@
             }
           },
           {
-            "name": "snapshot_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Snapshot Id"
-            }
-          },
-          {
             "name": "run_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Run Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
             }
           },
           {
@@ -31059,7 +31070,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExperimentSnapshotRunResponse"
+                  "$ref": "#/components/schemas/ExperimentJobResponse"
                 }
               }
             }
@@ -31650,10 +31661,9 @@
             "schema": {
               "enum": [
                 "summary",
-                "by_run",
-                "by_field",
-                "field_choices",
-                "heatmap"
+                "by_document",
+                "by_target",
+                "votes"
               ],
               "type": "string",
               "default": "summary",
@@ -31680,7 +31690,7 @@
             }
           },
           {
-            "name": "run_id",
+            "name": "document_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -31692,11 +31702,11 @@
                   "type": "null"
                 }
               ],
-              "title": "Run Id"
+              "title": "Document Id"
             }
           },
           {
-            "name": "field_path",
+            "name": "target_path",
             "in": "query",
             "required": false,
             "schema": {
@@ -31708,7 +31718,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Field Path"
+              "title": "Target Path"
             }
           },
           {
@@ -43211,10 +43221,9 @@
             "type": "string",
             "enum": [
               "summary",
-              "by_run",
-              "by_field",
-              "field_choices",
-              "heatmap"
+              "by_document",
+              "by_target",
+              "votes"
             ],
             "title": "View",
             "default": "summary"
@@ -43275,7 +43284,7 @@
             "type": "array",
             "title": "Statuses"
           },
-          "run_id": {
+          "document_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -43284,9 +43293,9 @@
                 "type": "null"
               }
             ],
-            "title": "Run Id"
+            "title": "Document Id"
           },
-          "field_path": {
+          "target_path": {
             "anyOf": [
               {
                 "type": "string"
@@ -43295,7 +43304,7 @@
                 "type": "null"
               }
             ],
-            "title": "Field Path"
+            "title": "Target Path"
           }
         },
         "type": "object",
@@ -47035,11 +47044,11 @@
             "type": "string",
             "title": "Block Id"
           },
-          "run_ids": {
+          "document_captures": {
             "anyOf": [
               {
                 "items": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/ExperimentDocumentCaptureRequest"
                 },
                 "type": "array"
               },
@@ -47047,13 +47056,13 @@
                 "type": "null"
               }
             ],
-            "title": "Run Ids"
+            "title": "Document Captures"
           },
-          "run_captures": {
+          "documents": {
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/RunCaptureRequest"
+                  "$ref": "#/components/schemas/ExplicitExperimentDocumentRequest"
                 },
                 "type": "array"
               },
@@ -47061,21 +47070,7 @@
                 "type": "null"
               }
             ],
-            "title": "Run Captures"
-          },
-          "test_cases": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ExplicitExperimentTestCaseRequest"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Test Cases"
+            "title": "Documents"
           },
           "n_consensus": {
             "type": "integer",
@@ -48944,8 +48939,8 @@
             "type": "integer",
             "title": "Stale Experiment Count"
           },
-          "latest_snapshot_at": {
-            "title": "Latest Snapshot At"
+          "latest_run_at": {
+            "title": "Latest Run At"
           },
           "mean_score": {
             "anyOf": [
@@ -49842,168 +49837,116 @@
         "type": "object",
         "title": "ExistsCondition"
       },
-      "ExperimentObjectRef": {
+      "ExperimentContent": {
         "properties": {
-          "type": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentJobResponse"
+            },
+            "type": "array",
+            "title": "Jobs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ExperimentContent"
+      },
+      "ExperimentContentResponse": {
+        "properties": {
+          "experiment_id": {
             "type": "string",
-            "enum": [
-              "extraction",
-              "classification",
-              "split",
-              "partition"
-            ],
-            "title": "Type"
+            "title": "Experiment Id"
           },
-          "id": {
+          "run_id": {
             "type": "string",
-            "title": "Id"
+            "title": "Run Id"
+          },
+          "content": {
+            "$ref": "#/components/schemas/ExperimentContent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "experiment_id",
+          "run_id",
+          "content"
+        ],
+        "title": "ExperimentContentResponse",
+        "description": "Execution content for one experiment run."
+      },
+      "ExperimentDocumentCaptureRequest": {
+        "properties": {
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id"
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflow_run_id"
+        ],
+        "title": "ExperimentDocumentCaptureRequest",
+        "description": "Capture one experiment document from workflow execution provenance."
+      },
+      "ExperimentDocumentProvenance": {
+        "properties": {
+          "workflow_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Run Id"
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id"
           }
         },
         "type": "object",
-        "required": [
-          "type",
-          "id"
-        ],
-        "title": "ExperimentObjectRef",
-        "description": "Reference to a real domain object produced by an experiment run."
+        "title": "ExperimentDocumentProvenance",
+        "description": "Workflow execution metadata attached to a captured document."
       },
-      "ExperimentResponse": {
+      "ExperimentJobResponse": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
           },
-          "workflow_id": {
+          "run_id": {
             "type": "string",
-            "title": "Workflow Id"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          },
-          "n_consensus": {
-            "type": "integer",
-            "title": "N Consensus"
-          },
-          "test_case_count": {
-            "type": "integer",
-            "title": "Test Case Count",
-            "default": 0
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "last_snapshot_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Snapshot Id"
-          },
-          "created_at": {
-            "title": "Created At"
-          },
-          "updated_at": {
-            "title": "Updated At"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status",
-            "default": "draft"
-          },
-          "block_kind": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Block Kind"
-          },
-          "overall_score": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Overall Score"
-          },
-          "job_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Job Id"
-          },
-          "is_stale": {
-            "type": "boolean",
-            "title": "Is Stale",
-            "default": false
-          },
-          "schema_drift": {
-            "type": "string",
-            "enum": [
-              "none",
-              "partial",
-              "drifted",
-              "unknown"
-            ],
-            "title": "Schema Drift",
-            "default": "unknown"
-          },
-          "schema_drift_detail": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Schema Drift Detail"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "workflow_id",
-          "block_id",
-          "n_consensus",
-          "name"
-        ],
-        "title": "ExperimentResponse"
-      },
-      "ExperimentSnapshotRunResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "snapshot_id": {
-            "type": "string",
-            "title": "Snapshot Id"
+            "title": "Run Id"
           },
           "experiment_id": {
             "type": "string",
             "title": "Experiment Id"
           },
-          "source_run_id": {
+          "document_id": {
             "type": "string",
-            "title": "Source Run Id"
+            "title": "Document Id"
           },
           "status": {
             "type": "string",
@@ -50046,10 +49989,10 @@
             "type": "object",
             "title": "Handle Inputs"
           },
-          "object_ref": {
+          "artifact": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ExperimentObjectRef"
+                "$ref": "#/components/schemas/StepArtifactRef"
               },
               {
                 "type": "null"
@@ -50100,16 +50043,136 @@
         "type": "object",
         "required": [
           "id",
-          "snapshot_id",
+          "run_id",
           "experiment_id",
-          "source_run_id",
+          "document_id",
           "status",
           "block_kind"
         ],
-        "title": "ExperimentSnapshotRunResponse",
-        "description": "Response shape for the REST API \u2014 identical content to the stored\nmodel plus an ``is_placeholder`` flag for test cases that don't yet have\na persisted run."
+        "title": "ExperimentJobResponse",
+        "description": "Execution content for one document job inside an experiment run."
       },
-      "ExplicitExperimentTestCaseRequest": {
+      "ExperimentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus"
+          },
+          "document_count": {
+            "type": "integer",
+            "title": "Document Count",
+            "default": 0
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "last_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run Id"
+          },
+          "created_at": {
+            "title": "Created At"
+          },
+          "updated_at": {
+            "title": "Updated At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "draft"
+          },
+          "block_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Kind"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          },
+          "schema_drift": {
+            "type": "string",
+            "enum": [
+              "none",
+              "partial",
+              "drifted",
+              "unknown"
+            ],
+            "title": "Schema Drift",
+            "default": "unknown"
+          },
+          "schema_drift_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Drift Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_id",
+          "block_id",
+          "n_consensus",
+          "name"
+        ],
+        "title": "ExperimentResponse"
+      },
+      "ExplicitExperimentDocumentRequest": {
         "properties": {
           "handle_inputs": {
             "additionalProperties": {
@@ -50132,27 +50195,15 @@
             "type": "object",
             "title": "Handle Inputs"
           },
-          "source_run_id": {
+          "provenance": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/ExperimentDocumentProvenance"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Source Run Id"
-          },
-          "source_step_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Step Id"
+            ]
           }
         },
         "additionalProperties": false,
@@ -50160,7 +50211,7 @@
         "required": [
           "handle_inputs"
         ],
-        "title": "ExplicitExperimentTestCaseRequest"
+        "title": "ExplicitExperimentDocumentRequest"
       },
       "ExportToCsvResponse": {
         "properties": {
@@ -52198,7 +52249,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-04-24T19:46:24.513354Z",
+              "updated_at": "2026-04-28T15:54:58.644401Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -54444,7 +54495,7 @@
             ],
             "title": "Subject Kind"
           },
-          "overall_score": {
+          "score": {
             "anyOf": [
               {
                 "type": "number"
@@ -54453,7 +54504,7 @@
                 "type": "null"
               }
             ],
-            "title": "Overall Score"
+            "title": "Score"
           },
           "scores": {
             "items": {
@@ -59136,32 +59187,6 @@
         ],
         "title": "RunBatchResponse"
       },
-      "RunCaptureRequest": {
-        "properties": {
-          "run_id": {
-            "type": "string",
-            "title": "Run Id"
-          },
-          "step_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Step Id"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "run_id"
-        ],
-        "title": "RunCaptureRequest",
-        "description": "Capture inputs from a specific run, optionally scoped to a `for_each`\niteration via ``step_id``."
-      },
       "RunCostSummary": {
         "properties": {
           "total": {
@@ -59254,9 +59279,9 @@
             "type": "string",
             "title": "Experiment Id"
           },
-          "snapshot_id": {
+          "run_id": {
             "type": "string",
-            "title": "Snapshot Id"
+            "title": "Run Id"
           },
           "job_id": {
             "type": "string",
@@ -59270,15 +59295,15 @@
             "type": "string",
             "title": "Definition Fingerprint"
           },
-          "run_count": {
+          "document_count": {
             "type": "integer",
-            "title": "Run Count"
+            "title": "Document Count"
           },
           "n_consensus": {
             "type": "integer",
             "title": "N Consensus"
           },
-          "previous_snapshot": {
+          "previous_run": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -59288,20 +59313,37 @@
                 "type": "null"
               }
             ],
-            "title": "Previous Snapshot"
+            "title": "Previous Run"
           }
         },
         "type": "object",
         "required": [
           "experiment_id",
-          "snapshot_id",
+          "run_id",
           "job_id",
           "status",
           "definition_fingerprint",
-          "run_count",
+          "document_count",
           "n_consensus"
         ],
         "title": "RunExperimentResponse"
+      },
+      "RunListResponse": {
+        "properties": {
+          "runs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Runs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runs"
+        ],
+        "title": "RunListResponse"
       },
       "RunWorkflowRequest": {
         "properties": {
@@ -59757,10 +59799,9 @@
             "type": "string",
             "enum": [
               "summary",
-              "by_run",
-              "by_field",
-              "field_choices",
-              "heatmap"
+              "by_document",
+              "by_target",
+              "votes"
             ],
             "title": "View",
             "default": "summary"
@@ -59782,7 +59823,7 @@
             "type": "array",
             "title": "Statuses"
           },
-          "run_id": {
+          "document_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -59791,9 +59832,9 @@
                 "type": "null"
               }
             ],
-            "title": "Run Id"
+            "title": "Document Id"
           },
-          "field_path": {
+          "target_path": {
             "anyOf": [
               {
                 "type": "string"
@@ -59802,7 +59843,7 @@
                 "type": "null"
               }
             ],
-            "title": "Field Path"
+            "title": "Target Path"
           }
         },
         "type": "object",
@@ -59941,23 +59982,6 @@
           "completion"
         ],
         "title": "SinariSubmitRequestWithFile"
-      },
-      "SnapshotListResponse": {
-        "properties": {
-          "snapshots": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Snapshots"
-          }
-        },
-        "type": "object",
-        "required": [
-          "snapshots"
-        ],
-        "title": "SnapshotListResponse"
       },
       "Split": {
         "properties": {
@@ -61949,11 +61973,11 @@
       },
       "UpdateExperimentRequest": {
         "properties": {
-          "run_ids": {
+          "document_captures": {
             "anyOf": [
               {
                 "items": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/ExperimentDocumentCaptureRequest"
                 },
                 "type": "array"
               },
@@ -61961,13 +61985,13 @@
                 "type": "null"
               }
             ],
-            "title": "Run Ids"
+            "title": "Document Captures"
           },
-          "run_captures": {
+          "documents": {
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/RunCaptureRequest"
+                  "$ref": "#/components/schemas/ExplicitExperimentDocumentRequest"
                 },
                 "type": "array"
               },
@@ -61975,21 +61999,7 @@
                 "type": "null"
               }
             ],
-            "title": "Run Captures"
-          },
-          "test_cases": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ExplicitExperimentTestCaseRequest"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Test Cases"
+            "title": "Documents"
           },
           "n_consensus": {
             "anyOf": [
@@ -67949,7 +67959,7 @@
               "projects.experiment_iteration.extract",
               "projects.sandbox.extract",
               "projects.sandbox_iteration.extract",
-              "experiment_snapshot"
+              "experiment_run"
             ],
             "title": "Type",
             "description": "Type of extraction"
