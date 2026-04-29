@@ -103,3 +103,97 @@ Once the MCP server is connected, you can ask your client to:
 3. Run the workflow and iterate on the extraction results
 
 For the workflow model itself, see [Workflows](/workflows/Workflows) and [Block Reference](/workflows/Blocks).
+
+## Tool Reference
+
+The MCP server exposes tools through underscore-separated namespaces. Most
+clients show these tools automatically after the server connects.
+
+### Files
+
+| Tool | Use it to |
+|------|-----------|
+| `files_list` | List recent files available to your organization, optionally filtered by workflow, filename, or cursor pagination. |
+| `files_upload` | Upload a file from a data URL or HTTP(S) URL and receive a durable `file_id`. |
+| `files_analyze` | Analyze one or more documents and produce document blueprints for workflow building. Returns a `job_id`; poll it with `jobs_get`. |
+| `files_get` | Convert a file to parsed markdown text with OCR. Use after `files_list` when you need the full text. |
+| `files_grep` | Search for a literal string or regex in one file and return matches with format-specific anchors. |
+| `files_inspect` | Inspect a specific text range, spreadsheet range, CSV range, PDF page, scan, or image region. |
+| `files_get_sources` | Return source provenance for every leaf in an extraction, including anchors that can be inspected with `files_inspect`. |
+
+### Workflows
+
+| Tool | Use it to |
+|------|-----------|
+| `workflows_create` | Create an empty workflow scaffold with a default start block. |
+| `workflows_list` | List workflows in your organization, sorted by most recently updated. |
+| `workflows_get` | Fetch a workflow's full graph, including blocks, configs, positions, handles, and edges. |
+| `workflows_diagnose` | Check a draft workflow for structural errors and warnings before running or publishing. |
+
+### Workflow Blocks
+
+| Tool | Use it to |
+|------|-----------|
+| `workflows_blocks_get` | Get a block's type, label, config, position, handles, parent container, and connected edges. |
+| `workflows_blocks_create` | Add a block to a draft workflow, optionally auto-positioned, inside a container, or connected from existing blocks. |
+| `workflows_blocks_update` | Update a block label, config, position, size, parent container, JSON schema patch, or function code patch. |
+| `workflows_blocks_delete` | Delete a block and its connected edges from a draft workflow. |
+| `workflows_blocks_simulate` | Replay one or more block steps with prior run inputs and the current draft config. Returns a `job_id`; poll it with `jobs_get`. |
+
+### Workflow Edges
+
+| Tool | Use it to |
+|------|-----------|
+| `workflows_edges_list` | List draft workflow edges, optionally filtered by source or target block. |
+| `workflows_edges_create` | Connect a source block handle to a target block handle. |
+| `workflows_edges_delete` | Delete an edge from a draft workflow. |
+
+### Workflow Runs
+
+| Tool | Use it to |
+|------|-----------|
+| `workflows_runs_create` | Run a workflow with draft config using `start` block file IDs and `start_json` block JSON objects. |
+| `workflows_runs_list` | List recent runs for a workflow, optionally filtered by status. |
+| `workflows_runs_get` | Get a run's status, final outputs, step summaries, errors, and timing. |
+| `workflows_runs_steps_list` | List every step in a run with status, timing, and errors. |
+| `workflows_runs_steps_get` | Inspect one step's full outputs, handle outputs, and handle inputs. |
+| `workflows_runs_steps_submit_hil_decision` | Submit an approval or rejection for a human-in-the-loop step waiting on human review. |
+
+### Workflow Tests
+
+| Tool | Use it to |
+|------|-----------|
+| `workflows_tests_create` | Create a block test with one input source, one output target, and one assertion. |
+| `workflows_tests_list` | List block tests for a workflow or a specific block. |
+| `workflows_tests_get` | Get a block test definition, stored inputs, assertion, validation status, and latest run summary. |
+| `workflows_tests_update` | Update a block test's source or assertion. |
+| `workflows_tests_delete` | Delete a block test and its run history. |
+| `workflows_tests_execute` | Run one test, all tests for a workflow, or all tests for a block. Returns a `job_id`; poll it with `jobs_get`. |
+
+### Experiments
+
+| Tool | Use it to |
+|------|-----------|
+| `experiments_create` | Create a consensus experiment for an Extract, Split, Classifier, or split-by-key For Each block. |
+| `experiments_list` | List experiments attached to a workflow with latest status, score, stale state, and schema drift. |
+| `experiments_update` | Update an experiment's name, document set, or consensus count. |
+| `experiments_delete` | Delete an experiment and its runs. |
+| `experiments_run` | Run or re-run an experiment against the current draft block config. Returns a `job_id`; poll it with `jobs_get`. |
+| `experiments_get_content` | Inspect the document jobs and canonical artifacts produced by an experiment run. |
+| `experiments_get_metrics` | Read consensus metrics by summary, document, target, or votes. |
+
+### Utilities
+
+| Tool | Use it to |
+|------|-----------|
+| `help` | Get Retab-specific guidance before using workflow, block, test, experiment, file, run, or human-review tools. |
+| `jobs_get` | Poll async jobs such as file analysis, block simulation, and experiment runs. |
+
+### Prompts
+
+The server also supports MCP prompts:
+
+| Prompt | Purpose |
+|--------|---------|
+| `workflow_assistant` | Complete Retab workflow assistant prompt for building, configuring, testing, and debugging workflows. |
+| `workflow_agent` | Full workflow agent system prompt for external MCP clients. |

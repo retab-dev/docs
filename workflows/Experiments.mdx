@@ -1,0 +1,156 @@
+---
+title: Experiments
+description: Measure workflow block quality with repeated consensus runs over a fixed document set
+---
+
+## What are Experiments?
+
+Experiments are controlled, block-level evaluations for workflow blocks. They
+run the same block with multiple consensus passes over the same set of
+documents and use agreement between those passes as the quality signal.
+
+Use experiments when you want to answer questions like:
+
+- Did this schema change make extraction fields more stable?
+- Which invoice documents are causing low agreement?
+- Which split category or classifier category is ambiguous?
+- Did a prompt, category, or split-definition change improve the block?
+
+Experiments do not require ground-truth labels. They are consensus evals: Retab
+asks the block to produce several independent candidate outputs, compares those
+candidate outputs, and reports where the candidates agree or disagree. A higher
+score means stronger agreement. A low score points to an unstable document,
+field, category, subdocument type, or split-by-key partition.
+
+## Experiments vs Tests
+
+Tests and experiments both help you keep workflow changes under control, but
+they answer different questions.
+
+| Tool | Best for | Signal |
+|---|---|---|
+| **Tests** | Checking a specific expected output | Pass, fail, or error against an assertion |
+| **Experiments** | Measuring output stability across documents | Consensus score and disagreement details |
+
+Use a test when you know what the output should be. Use an experiment when you
+want to find weak spots, compare block configurations, or inspect whether a
+block is internally consistent before you write stricter assertions.
+
+## Supported Blocks
+
+Experiments are currently supported for:
+
+| Block | What Retab measures |
+|---|---|
+| **Extract** | Field-level agreement for extracted JSON values |
+| **Split** | Agreement on subdocument/page assignments |
+| **Classifier** | Agreement on routing category decisions |
+| **For Each** | Key-level agreement when the block is configured as split-by-key |
+
+Other workflow blocks can still be tested with workflow tests, but they do not
+currently produce experiment metrics.
+
+## How Experiments Work
+
+An experiment is attached to one block in one workflow. It stores:
+
+1. **The block under test** - the workflow block id and block kind.
+2. **A fixed document set** - materialized block inputs captured from completed
+   workflow runs or from files uploaded while creating the experiment.
+3. **A consensus count** - 3, 5, or 7 independent passes.
+
+When you run the experiment, Retab freezes the current block configuration and
+replays the selected block for each document. Each document execution becomes an
+experiment job. The job stores the canonical artifact produced by the block:
+
+| Block | Artifact |
+|---|---|
+| **Extract** | Extraction |
+| **Split** | Split |
+| **Classifier** | Classification |
+| **For Each split-by-key** | Partition |
+
+Metrics are normalized across the same shape for every supported block:
+
+```text
+document x target x voter
+```
+
+The target depends on the block type:
+
+| Block | Target |
+|---|---|
+| **Extract** | Field |
+| **Split** | Subdocument |
+| **Classifier** | Category |
+| **For Each split-by-key** | Key |
+
+This lets the dashboard show the same core views for different block types:
+overall summary, by-document scores, by-target scores, and voter-level
+disagreement.
+
+## Creating an Experiment
+
+1. Open a workflow in the dashboard.
+2. Go to **Console** -> **Experiments**.
+3. Click **Experiment**.
+4. Name the experiment.
+5. Choose the number of consensus passes: 3, 5, or 7.
+6. Select the block to evaluate.
+7. Select files from completed runs, or upload files for the experiment.
+8. Create the experiment.
+
+When you create an experiment from the dashboard, Retab immediately starts
+computing metrics. The experiment page updates while the run is pending or
+running.
+
+## Reading Results
+
+The experiment detail page has three sections:
+
+| Section | Purpose |
+|---|---|
+| **Config** | Review or edit the block configuration being evaluated. |
+| **Data** | Inspect per-document outputs and the underlying artifacts. |
+| **Metrics** | Analyze consensus scores, weak targets, document-level failures, and voter disagreements. |
+
+The metrics views help you move from broad signal to specific evidence:
+
+- **Summary** shows the overall experiment score, target averages, document
+  averages, and previous-run delta when available.
+- **By document** shows which files are least stable.
+- **By target** shows which fields, categories, subdocuments, or keys are least
+  stable across the document set.
+- **Votes** shows the individual candidate outputs for one document-target
+  cell, including the consensus value and disagreements.
+
+Split and classifier experiments also expose specialized visualizations, such as
+confusion-style views, to make routing and page-assignment ambiguity easier to
+inspect.
+
+## Staleness and Re-runs
+
+Experiment metrics belong to a specific block configuration and document set. If
+you edit the block or change the experiment documents, Retab marks the latest
+metrics as stale. If the output schema changes, Retab can also report schema
+drift.
+
+When an experiment is stale, run it again to refresh the score against the
+current workflow draft. Retab keeps run history, so you can compare the latest
+score with earlier runs and see whether a configuration change improved or
+degraded the block.
+
+## Recommended Workflow
+
+1. Run the workflow with representative documents.
+2. Create an experiment for an Extract, Split, Classifier, or split-by-key For
+   Each block.
+3. Start with 3 consensus passes while iterating quickly.
+4. Inspect the lowest-scoring documents and targets.
+5. Adjust the schema, prompt, categories, or split definitions.
+6. Re-run the experiment and compare the score with the previous run.
+7. Add workflow tests for outputs that should now be protected with explicit
+   assertions.
+
+Experiments work best as a discovery and comparison tool. They tell you where a
+block is uncertain; tests then lock in the behaviors you decide are correct.
