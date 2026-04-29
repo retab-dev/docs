@@ -1,0 +1,150 @@
+---
+title: Tests
+description: Validate workflow block outputs with reusable input snapshots and assertions
+---
+
+## What are Tests?
+
+Tests are reusable checks for individual workflow blocks. They let you freeze a
+real or hand-written set of block inputs, run that block again against the
+current workflow draft, and verify the output with an assertion.
+
+Use tests when you want to answer questions like:
+
+- Does this Extract block still return the expected invoice total?
+- Does this Function block still compute the validation flag correctly?
+- Does this Split block still assign pages to the right subdocuments?
+- Does this Classifier block still route a file to the expected category?
+
+Tests are block-scoped, not full-workflow test suites. Running a test simulates
+the selected block with saved inputs instead of replaying the entire workflow.
+This makes tests fast to iterate on while you adjust schemas, prompts, function
+code, categories, or split definitions.
+
+## Testable Blocks
+
+Tests are supported for:
+
+| Block | What you usually assert |
+|---|---|
+| **Extract** | Extracted JSON fields, likelihoods when consensus is enabled |
+| **Function** | Returned JSON fields from the function output schema |
+| **Split** | Split manifest quality or produced subdocument file handles |
+| **Classifier** | Produced category file handles |
+
+Other block types, such as input blocks, notes, API calls, formulas,
+conditionals, human-in-the-loop blocks, loops, and end blocks are not currently
+testable through block tests.
+
+## What a Test Stores
+
+A workflow test definition stores three things:
+
+1. **The block to test** - the block id and block type.
+2. **The block inputs** - JSON and file handle inputs captured from a workflow
+   run or entered explicitly.
+3. **One assertion** - the expected condition for one declared output handle.
+
+When inputs come from a previous workflow run, Retab copies the block's
+`handle_inputs` from that run into the test. If the inputs include files, Retab
+materializes durable file references for the test so future runs do not depend
+on the original browser session.
+
+You can also provide explicit inputs manually. JSON handles store raw JSON data,
+and file handles store a document reference.
+
+## Assertions
+
+An assertion targets a declared output handle and, optionally, a path inside
+that handle's JSON payload.
+
+Common targets include:
+
+| Block | Output target examples |
+|---|---|
+| **Extract** | `output-json-0.total`, `output-json-0.vendor.name`, `output-json-likelihoods.total` |
+| **Function** | `output-json-0.is_valid`, `output-json-0.error_message` |
+| **Split** | `output-json-splits` or a subdocument file handle |
+| **Classifier** | A category file handle |
+
+Available assertion operators depend on the target value type. The product
+supports basic existence checks, equality checks, string and number comparisons,
+object and array containment, JSON Schema validation, nested array checks,
+similarity thresholds, LLM-judged rubric checks, and Split IOU checks for split
+manifests.
+
+For example:
+
+- `output-json-0.total` is equal to `1234.56`
+- `output-json-0.is_valid` is true
+- `output-json-0.vendor.name` contains `"Acme"`
+- `output-json-splits` has Split IOU greater than or equal to `0.95`
+- `output-json-0.summary` matches an LLM rubric
+
+## Running Tests
+
+You can run one test from its detail page, run tests for a block, or run all
+tests in a workflow from the Tests page.
+
+When a test runs, Retab:
+
+1. Loads the current workflow draft and the current block configuration.
+2. Rebuilds the saved handle inputs into normal workflow runtime inputs.
+3. Executes only the selected block.
+4. Collects the raw output, declared handle outputs, routing decision, warnings,
+   and duration.
+5. Resolves the assertion target from the block outputs.
+6. Evaluates the assertion and records a run result.
+
+Test runs are asynchronous. The dashboard streams live progress and stores each
+run record so you can inspect the run history later.
+
+## Results
+
+A test run ends in one of three statuses:
+
+| Status | Meaning |
+|---|---|
+| **passed** | The block ran successfully and the assertion passed. |
+| **failed** | The block ran successfully, but the assertion did not pass or could not be evaluated against the selected target. |
+| **error** | The block simulation failed or another execution error occurred. |
+
+Each run record includes the saved inputs used for that run, the block output,
+handle outputs, assertion result, warnings, duration, and execution
+fingerprints. Retab also tracks the latest passing and failing summaries on the
+test definition.
+
+If a block simulation fails before an assertion can run, the assertion is marked
+as blocked and the run is recorded as an error.
+
+## Staleness and Schema Drift
+
+Tests are tied to the block inputs and output schema that existed when the test
+was created or last updated. If the workflow draft changes, Retab compares the
+saved fingerprints and schema dependencies against the current block.
+
+In the dashboard, the staleness badge tells you whether a test is:
+
+| Badge | Meaning |
+|---|---|
+| **not run** | The test has not produced a run record yet. |
+| **up to date** | The latest run still matches the current block schema. |
+| **stale** | The block schema or relevant assertion dependency changed. Run the test again or update the assertion. |
+| **unknown** | Retab could not determine staleness for this test. |
+
+Staleness does not automatically mean the workflow is broken. It means the saved
+test definition should be rechecked against the current draft before you rely on
+its latest result.
+
+## Recommended Workflow
+
+1. Run the workflow on a representative document.
+2. Open the Tests page and create a block test from that completed run.
+3. Pick the block output field or handle you want to protect.
+4. Define one assertion for the expected behavior.
+5. Run the test after changing schemas, prompts, code, categories, or split
+   definitions.
+6. Use stale tests as a review queue before publishing workflow changes.
+
+Tests work best when each test protects one behavior. Prefer multiple small
+tests over one broad assertion so failures point directly to the changed output.
