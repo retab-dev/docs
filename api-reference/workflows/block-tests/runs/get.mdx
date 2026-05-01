@@ -1,0 +1,112 @@
+---
+title: 'Get Block Test Run'
+openapi: 'GET /v1/workflows/{workflow_id}/block-tests/{test_id}/runs/{run_id}'
+---
+
+Fetch a single immutable run record. Use this after polling
+[Execute Block Tests](../execute) to inspect the inputs the block ran with,
+the per-handle outputs, the assertion result, and any warnings or routing
+decisions.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+run = client.workflows.tests.runs.get(
+    workflow_id="wf_abc123xyz",
+    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+    run_id="wfnodetestrun_tRNzPiMpBas4kDwD74M8d",
+)
+
+print(run.status)
+print(run.outputs)              # ← per-handle outputs (renamed from `handle_outputs`)
+print(run.assertion_result)
+```
+
+```javascript javascript
+import Retab from 'retab';
+
+const client = new Retab();
+
+const run = await client.workflows.tests.runs.get({
+  workflowId: "wf_abc123xyz",
+  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  runId: "wfnodetestrun_tRNzPiMpBas4kDwD74M8d",
+});
+
+console.log(run.status);
+console.log(run.outputs);
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/block-tests/wfnodetest_hsLEQiM61ez9Piv147MWk/runs/wfnodetestrun_tRNzPiMpBas4kDwD74M8d' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "wfnodetestrun_tRNzPiMpBas4kDwD74M8d",
+  "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  "workflow_id": "wf_abc123xyz",
+  "organization_id": "org_123",
+  "target": { "type": "block", "block_id": "block_extract_invoice" },
+  "source": {
+    "type": "manual",
+    "handle_inputs": {
+      "input-document-0": { "type": "file", "file_id": "file_invoice_q1" }
+    }
+  },
+  "status": "passed",
+  "execution_fingerprint": "d03d5d7cc9f55ba2db4399bc430f5bdc",
+  "handle_inputs_fingerprint": "7ee7814256df5a34a387d0e95190b776",
+  "workflow_draft_fingerprint": "ddd95baadce6045f2410a8074574c6bc",
+  "block_config_fingerprint": "0ff93ddc7cefcb42b9375a405957a564",
+  "started_at": "2026-04-08T14:27:35Z",
+  "completed_at": "2026-04-08T14:27:52Z",
+  "duration_ms": 17228,
+  "outputs": {
+    "output-json-0": { "total": 1234.56, "vendor": { "name": "Acme Inc" } },
+    "output-file-0": { "type": "file", "file_id": "file_normalized_q1" }
+  },
+  "routing_decision": null,
+  "warnings": [],
+  "error": null,
+  "skipped": false,
+  "assertion_result": {
+    "assertion_id": "assert_xyz",
+    "condition_kind": "equals",
+    "status": "passed",
+    "actual_value": 1234.56,
+    "expected_value": 1234.56,
+    "score": null,
+    "threshold": null,
+    "metric_kind": null,
+    "assertion_label": null,
+    "failure": null
+  },
+  "verdict_summary": {
+    "result": true,
+    "assertions_passed": 1,
+    "assertions_failed": 0,
+    "blocked_assertions": 0,
+    "failed_assertion_ids": []
+  }
+}
+```
+
+```json 404
+{
+  "detail": "Block test run not found: wfnodetestrun_tRNzPiMpBas4kDwD74M8d"
+}
+```
+
+</ResponseExample>
