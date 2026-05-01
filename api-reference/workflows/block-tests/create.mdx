@@ -1,0 +1,171 @@
+---
+title: 'Create Block Test'
+openapi: 'POST /v1/workflows/{workflow_id}/block-tests'
+---
+
+Create a new block test against a single block in the workflow. A block test
+freezes a set of inputs (either captured from a previous run or provided
+manually) and asserts something about the block's output the next time it runs.
+
+The request body is two discriminated unions plus a required assertion:
+
+- **`target`** — what entity the test runs against. Today only `block` is
+  supported; the field is shaped as a discriminated union so workflow-level
+  targets can land later without breaking existing tests.
+- **`source`** — where the inputs come from. `manual` carries an explicit
+  `handle_inputs` map; `run_step` references a previous workflow run plus the
+  optional step inside it whose inputs to capture.
+- **`assertion`** — required. One assertion per test against one declared
+  output handle (see [Block Tests](/workflows/block-tests) for the assertion
+  shape and the available operators).
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Manual inputs: hand-write the handle inputs the block should run with.
+test = client.workflows.tests.create(
+    workflow_id="wf_abc123xyz",
+    target={"type": "block", "block_id": "block_extract_invoice"},
+    source={
+        "type": "manual",
+        "handle_inputs": {
+            "input-document-0": {
+                "type": "file",
+                "file_id": "file_invoice_q1",
+            },
+        },
+    },
+    assertion={
+        "target": {"output_handle_id": "output-json-0", "path": "total"},
+        "condition": {"kind": "equals", "expected": 1234.56},
+    },
+    name="Q1 invoice total",
+)
+
+# Run-step inputs: replay the inputs the block ACTUALLY received in a run.
+test = client.workflows.tests.create(
+    workflow_id="wf_abc123xyz",
+    target={"type": "block", "block_id": "block_extract_invoice"},
+    source={
+        "type": "run_step",
+        "run_id": "wfrun_def456",
+        "step_id": "block_extract_invoice",
+    },
+    assertion={
+        "target": {"output_handle_id": "output-json-0", "path": "vendor.name"},
+        "condition": {"kind": "contains", "expected": "Acme"},
+    },
+)
+
+print(f"Test created: {test.id}")
+```
+
+```javascript javascript
+import Retab from 'retab';
+
+const client = new Retab();
+
+const test = await client.workflows.tests.create({
+  workflowId: "wf_abc123xyz",
+  target: { type: "block", block_id: "block_extract_invoice" },
+  source: {
+    type: "manual",
+    handle_inputs: {
+      "input-document-0": { type: "file", file_id: "file_invoice_q1" },
+    },
+  },
+  assertion: {
+    target: { output_handle_id: "output-json-0", path: "total" },
+    condition: { kind: "equals", expected: 1234.56 },
+  },
+  name: "Q1 invoice total",
+});
+
+console.log(`Test created: ${test.id}`);
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/block-tests' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "target": { "type": "block", "block_id": "block_extract_invoice" },
+    "source": {
+      "type": "manual",
+      "handle_inputs": {
+        "input-document-0": { "type": "file", "file_id": "file_invoice_q1" }
+      }
+    },
+    "assertion": {
+      "target": { "output_handle_id": "output-json-0", "path": "total" },
+      "condition": { "kind": "equals", "expected": 1234.56 }
+    },
+    "name": "Q1 invoice total"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 201
+{
+  "id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  "workflow_id": "wf_abc123xyz",
+  "organization_id": "org_123",
+  "target": {
+    "type": "block",
+    "block_id": "block_extract_invoice"
+  },
+  "source": {
+    "type": "manual",
+    "handle_inputs": {
+      "input-document-0": {
+        "type": "file",
+        "file_id": "file_invoice_q1"
+      }
+    }
+  },
+  "name": "Q1 invoice total",
+  "assertion": {
+    "id": "assert_xyz",
+    "target": { "output_handle_id": "output-json-0", "path": "total" },
+    "condition": { "kind": "equals", "expected": 1234.56 },
+    "label": null
+  },
+  "assertion_schema_dep": {
+    "schema_path": "total",
+    "subtree_hash": "7d79dd764ab6548d",
+    "depends_on_root": false
+  },
+  "assertion_drift_status": null,
+  "schema_drift": "unknown",
+  "schema_drift_detail": null,
+  "validation_status": "valid",
+  "validation_issues": [],
+  "latest_run_summary": null,
+  "latest_passing_run_summary": null,
+  "latest_failing_run_summary": null,
+  "created_at": "2026-05-01T14:30:00Z",
+  "updated_at": "2026-05-01T14:30:00Z"
+}
+```
+
+```json 400
+{
+  "detail": "assertion is required for workflow tests."
+}
+```
+
+```json 404
+{
+  "detail": "Block test not found: <block_id>"
+}
+```
+
+</ResponseExample>
