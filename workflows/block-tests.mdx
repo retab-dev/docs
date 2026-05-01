@@ -1,0 +1,269 @@
+---
+title: Block Tests
+description: Reusable per-block checks with discriminated target/source shapes, async batch execution, and a 7-status run record
+---
+
+Block tests let you freeze the inputs to a single workflow block and assert
+something about its output the next time it runs. They are designed to catch
+regressions when you change a schema, prompt, function code, classifier
+categories, or split definition without having to replay the whole workflow.
+
+This page covers the API contract — `target`, `source`, `assertion`, the
+run-record shape, and the seven values of the run-record status enum. For
+the conceptual mental model and the dashboard workflow, see
+[Tests](/workflows/Tests).
+
+## What's in a test
+
+A `WorkflowTest` is a Pydantic model with three meaningful sections:
+
+```json
+{
+  "id": "wfnodetest_...",
+  "workflow_id": "wf_...",
+
+  "target": { "type": "block", "block_id": "block_extract_invoice" },
+
+  "source": { "type": "manual", "handle_inputs": { "...": "..." } },
+
+  "assertion": {
+    "id": "assert_xyz",
+    "target": { "output_handle_id": "output-json-0", "path": "total" },
+    "condition": { "kind": "equals", "expected": 1234.56 }
+  },
+
+  "schema_drift": "fresh",
+  "validation_status": "valid",
+  "latest_run_summary": null,
+  "latest_passing_run_summary": null,
+  "latest_failing_run_summary": null
+}
+```
+
+### `target` — what the test runs against
+
+A discriminated union by `type`:
+
+| `type` | Fields | Meaning |
+|---|---|---|
+| `block` | `block_id` | Run the test against a single block in the workflow. |
+
+`block` is the only variant today. The shape is a discriminated union so
+workflow-level targets (e.g. `{ type: "workflow" }` running every block end-to-end)
+can be added later without renaming the field at every callsite.
+
+### `source` — where the inputs come from
+
+Also a discriminated union by `type`:
+
+| `type` | Fields | Meaning |
+|---|---|---|
+| `manual` | `handle_inputs: { [handle_id]: HandleInput }` | Hand-written inputs. Use for synthetic test cases. |
+| `run_step` | `run_id: str`, `step_id?: str` | Replay the inputs the block actually received during a previous workflow run. `step_id` is required for blocks executed inside a `for_each` (each iteration is its own step). |
+
+When you create a test from `run_step`, Retab snapshots the inputs at create
+time — subsequent edits to the source workflow run don't affect the test.
+File handles in the snapshot are materialized as durable Retab file refs so
+the test still runs months later even if the original upload session is gone.
+
+### `assertion` — required, one per test
+
+```json
+{
+  "target": { "output_handle_id": "output-json-0", "path": "total" },
+  "condition": { "kind": "equals", "expected": 1234.56 },
+  "label": null
+}
+```
+
+Block tests intentionally normalize to **one assertion per test**. Multiple
+small tests beat one broad assertion: when an assertion fails, the failure
+points at exactly which output behavior changed.
+
+`assertion.target` always names a declared output handle (`output_handle_id`)
+and an optional dotted path inside that handle's payload. See the operator
+catalog below.
+
+#### Available `condition.kind` values
+
+| Kind | Use | Notes |
+|---|---|---|
+| `exists` / `not_exists` | Path is/isn't present | Treats missing keys, out-of-bounds indices, and traversals through `null` as "not there" — does NOT block. |
+| `equals` | Strict deep equality | Does NOT conflate `True == 1` or `False == 0`. Strips `reasoning___*` keys before comparing (LLM extractor sidecars). |
+| `compare` | `<`, `<=`, `>`, `>=` for numbers | |
+| `contains` | Substring on strings; element on lists | If `expected` is a dict, use `array_contains` instead. |
+| `array_contains` | Subset matching for list-of-dicts | |
+| `object_contains` | Subset matching for dicts | Same `reasoning___*` strip as `equals`. |
+| `length_compare` | Length operator on strings / lists / dicts | |
+| `matches_regex` | `re.fullmatch` | Use `.*foo.*` for substring search. |
+| `validates_json_schema` | Validate a subtree against a JSON Schema | |
+| `all_items_match` | Every list item matches the inner condition | Passes vacuously on empty arrays. |
+| `any_item_matches` | Some list item matches | Fails on empty arrays. |
+| `similarity_gte` | Embedding-similarity threshold | Async; can produce `error` status. |
+| `llm_judged_as` / `llm_not_judged_as` | LLM rubric check | Async; can produce `error` status. |
+| `split_iou_gte` | IOU threshold for split manifests | |
+
+The full assertion-targeting reference, including which path syntaxes work
+inside each handle type, lives at [Tests](/workflows/Tests).
+
+## Two distinct status enums — don't confuse them
+
+A test surfaces TWO status fields. Most surprises with the API trace back to
+mixing them up.
+
+### `assertion_result.status` (4 values)
+
+The outcome of evaluating ONE assertion against the block's output.
+
+| Status | Meaning |
+|---|---|
+| `passed` | The operator was evaluated and matched. |
+| `failed` | The operator was evaluated and did not match. The result includes `actual_value` and a `failure.code` / `failure.message`. |
+| `blocked` | The assertion couldn't be evaluated. The simulation failed, the output handle isn't declared, or the path hit a type error / bad selector. The failure includes `details.partial_path` / `details.partial_value` pointing at the deepest valid prefix. |
+| `error` | An async operator (`similarity_gte`, `llm_judged_as`) couldn't run for environmental reasons (e.g. embedding service unreachable). |
+
+### Run-record status (7 values)
+
+The status of a TEST RUN — aggregates the assertion result with execution-side
+state. This is what appears on `WorkflowTestRunRecord.status`,
+`latest_run_summary.status`, and `BlockTestBatchExecutionItem.status`.
+
+| Status | Meaning |
+|---|---|
+| `queued` | The run has been scheduled (job dispatched) but the worker hasn't picked it up yet. |
+| `running` | The worker is mid-execution. |
+| `passed` | Execution finished and the assertion passed. |
+| `failed` | Execution finished and the assertion failed. |
+| `blocked` | Execution finished but the assertion was blocked (see above). Counted distinctly from `failed` because the user typically needs to fix the test definition or the block's outputs, not the assertion expectation. |
+| `error` | Execution itself failed (block raised, simulation timed out, etc.) before any assertion could be evaluated. |
+| `cancelled` | The user or a downstream system cancelled the run. |
+
+When polling [`jobs.retrieve(job_id)`](/api-reference/jobs/retrieve) after
+[Execute Block Tests](/api-reference/workflows/block-tests/execute), expect to
+see the transient `queued` / `running` states. The terminal states (everything
+else) are what land in `latest_run_summary` and the per-batch
+`BlockTestBatchExecutionCounts`.
+
+## Run records
+
+A `WorkflowTestRunRecord` is the immutable snapshot of one execution. The
+fields most consumers care about:
+
+```json
+{
+  "id": "wfnodetestrun_...",
+  "test_id": "wfnodetest_...",
+  "status": "passed",
+
+  "started_at": "2026-04-08T14:27:35Z",
+  "completed_at": "2026-04-08T14:27:52Z",
+  "duration_ms": 17228,
+
+  "outputs": {
+    "output-json-0": { "total": 1234.56, "vendor": { "name": "Acme Inc" } },
+    "output-file-0": { "type": "file", "file_id": "file_normalized_q1" }
+  },
+
+  "assertion_result": {
+    "assertion_id": "assert_xyz",
+    "condition_kind": "equals",
+    "status": "passed",
+    "actual_value": 1234.56,
+    "expected_value": 1234.56,
+    "failure": null
+  },
+
+  "verdict_summary": {
+    "result": true,
+    "assertions_passed": 1,
+    "assertions_failed": 0,
+    "blocked_assertions": 0,
+    "failed_assertion_ids": []
+  }
+}
+```
+
+### `outputs` (renamed from `handle_outputs`)
+
+Run records before the May 2026 API rewrite stored `output: Any` (the raw block
+return blob) and `handle_outputs: { [handle_id]: any }` (per-handle outputs).
+The new shape collapses these into a single field:
+
+```ts
+outputs: { [handle_id]: any } | null
+```
+
+A backfill migration (`001_block_test_runs_outputs_field`) copies legacy
+`handle_outputs` → `outputs` on first server startup, so reads through this
+field always work. The legacy `output` and `handle_outputs` fields are
+intentionally kept on legacy docs for forensic debugging — drop them via a
+later cleanup migration once nothing reads them.
+
+### Fingerprints
+
+Three deterministic hashes pinned per run record:
+
+| Fingerprint | Computed from | Used for |
+|---|---|---|
+| `handle_inputs_fingerprint` | The captured handle inputs | Detecting "we already ran this exact input" — drives the cache hit at runner start. |
+| `workflow_draft_fingerprint` | The full workflow draft DAG | Telling you whether the run was against the current draft or a stale one. |
+| `block_config_fingerprint` | The single block's resolved config | Same as above, scoped to just the tested block — gives finer-grained staleness signals. |
+| `execution_fingerprint` | A combined hash | Cache key for "this exact (inputs, draft, block) combination" — re-runs that match all three return the cached record. |
+
+## Schema drift and staleness
+
+When the workflow draft changes (schema edited, block config tweaked), tests
+captured against the old draft get a non-fresh `schema_drift` status:
+
+| `schema_drift` | Meaning |
+|---|---|
+| `fresh` | The captured assertion target still resolves to the same subtree shape in the current draft. |
+| `partial` | Some assertion paths still resolve, others don't. The test will likely produce a `blocked` result. |
+| `drifted` | The output handle or its schema is no longer compatible. Re-capture before running. |
+| `unknown` | Drift couldn't be determined (e.g. block missing, fingerprint absent on a legacy doc). |
+
+Drift status is **recomputed at read time** — it's not persisted on the storage
+doc. So the value you see in a `GET` response always reflects the current
+draft, not the draft at create time.
+
+## Async execution
+
+Test execution is asynchronous. The flow:
+
+1. `POST /v1/workflows/{wf}/block-tests/execute` → returns `{batch_id, job_id, status: "queued"}` immediately.
+2. Either:
+    - Use the typed SDK helper — `client.workflows.tests.wait_for_completion(job_id)` (Python) or `client.workflows.tests.waitForCompletion(jobId)` (Node) blocks until terminal and returns the parsed `BlockTestBatchExecutionResult`. Throws on `failed` / `cancelled` / `expired` and on timeout.
+    - Or poll [`GET /v1/jobs/{job_id}`](/api-reference/jobs/retrieve) yourself until `status: "completed"` and read the result from `response.body`.
+3. `BlockTestBatchExecutionResult` shape:
+    - `counts` — one bucket per run-record status (7 fields)
+    - `results[]` — one `BlockTestBatchExecutionItem` per test, with `run_record_id` you can pass to [Get Block Test Run](/api-reference/workflows/block-tests/runs/get) for the full snapshot.
+
+For a single test, also subscribe to the dashboard's Socket.IO stream — the
+`block-test-batch-test-completed` event fires per-test as runs land, so the UI
+shows live progress instead of waiting for the whole batch.
+
+## Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/v1/workflows/{wf}/block-tests` | [Create](/api-reference/workflows/block-tests/create) |
+| `GET` | `/v1/workflows/{wf}/block-tests` | [List](/api-reference/workflows/block-tests/list) |
+| `GET` | `/v1/workflows/{wf}/block-tests/{id}` | [Get](/api-reference/workflows/block-tests/get) |
+| `PATCH` | `/v1/workflows/{wf}/block-tests/{id}` | [Update](/api-reference/workflows/block-tests/update) |
+| `DELETE` | `/v1/workflows/{wf}/block-tests/{id}` | [Delete](/api-reference/workflows/block-tests/delete) |
+| `POST` | `/v1/workflows/{wf}/block-tests/execute` | [Execute](/api-reference/workflows/block-tests/execute) |
+| `GET` | `/v1/workflows/{wf}/block-tests/{id}/runs` | [List Runs](/api-reference/workflows/block-tests/runs/list) |
+| `GET` | `/v1/workflows/{wf}/block-tests/{id}/runs/{run_id}` | [Get Run](/api-reference/workflows/block-tests/runs/get) |
+
+## MCP
+
+Every endpoint above is also exposed as an MCP tool (`workflows_tests_create`,
+`workflows_tests_list`, `workflows_tests_get`, `workflows_tests_update`,
+`workflows_tests_delete`, `workflows_tests_execute`). The tool input schemas
+match the request bodies documented above. The MCP layer additionally rejects
+the pre-rewrite top-level `block_id` / `run_id` / `step_id` / `handle_inputs`
+fields with a per-field migration hint pointing at the new shape (e.g.
+`block_id → use 'target.block_id'`).
+
+See the [MCP server](/workflows/MCP) page for how to register the tools with a
+Claude / OpenAI agent.
