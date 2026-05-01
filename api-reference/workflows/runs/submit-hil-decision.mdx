@@ -17,3 +17,113 @@ Common outcomes:
 - `submission_status="already_received"`: the same logical decision had already been received
 
 If the block already has the opposite decision or is no longer eligible to accept a decision, the endpoint returns `409`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Approve a HIL block, optionally with edited data
+result = client.workflows.runs.submit_hil_decision(
+    run_id="run_abc123",
+    block_id="hil-1",
+    approved=True,
+    modified_data={"amount": 1234.56},
+    command_id="cmd_idempotent_abc",  # optional dedup key
+)
+
+print(result.submission_status)  # "accepted" / "already_received"
+
+# Reject a HIL block
+result = client.workflows.runs.submit_hil_decision(
+    run_id="run_abc123",
+    block_id="hil-1",
+    approved=False,
+)
+```
+
+```javascript javascript
+import Retab from 'retab';
+
+const client = new Retab();
+
+// Approve a HIL block, optionally with edited data
+const result = await client.workflows.runs.submitHilDecision("run_abc123", {
+  blockId: "hil-1",
+  approved: true,
+  modifiedData: { amount: 1234.56 },
+  commandId: "cmd_idempotent_abc",  // optional dedup key
+});
+
+console.log(result.submission_status);
+
+// Reject a HIL block
+await client.workflows.runs.submitHilDecision("run_abc123", {
+  blockId: "hil-1",
+  approved: false,
+});
+```
+
+```bash curl
+# Approve with edited data
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/runs/run_abc123/hil-decisions' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "block_id": "hil-1",
+    "approved": true,
+    "modified_data": { "amount": 1234.56 },
+    "command_id": "cmd_idempotent_abc"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "submission_status": "accepted",
+  "decision": {
+    "run_id": "run_abc123",
+    "block_id": "hil-1",
+    "block_status": "waiting_for_hil",
+    "decision_received": true,
+    "decision_applied": false,
+    "approved": true,
+    "modified_data": { "amount": 1234.56 },
+    "payload_hash": "sha256-abc",
+    "received_at": "2026-05-01T14:30:00Z",
+    "applied_at": null
+  }
+}
+```
+
+```json 200
+{
+  "submission_status": "already_received",
+  "decision": {
+    "run_id": "run_abc123",
+    "block_id": "hil-1",
+    "block_status": "completed",
+    "decision_received": true,
+    "decision_applied": true,
+    "approved": true,
+    "modified_data": { "amount": 1234.56 },
+    "payload_hash": "sha256-abc",
+    "received_at": "2026-05-01T14:30:00Z",
+    "applied_at": "2026-05-01T14:30:02Z"
+  }
+}
+```
+
+```json 409
+{
+  "detail": "HIL block already has an opposing decision"
+}
+```
+
+</ResponseExample>

@@ -1,0 +1,205 @@
+---
+title: 'Execute Block Tests'
+openapi: 'POST /v1/workflows/{workflow_id}/block-tests/execute'
+---
+
+Run one block test, all tests for a single block, or every test in a workflow.
+Execution is asynchronous: the response returns immediately with a
+`batch_id` + `job_id`. Use the typed
+`workflows.tests.wait_for_completion(job_id)` helper to block until the
+batch lands (recommended), or poll
+[`jobs.retrieve(job_id)`](/api-reference/jobs/retrieve) yourself.
+
+The request body provides EXACTLY ONE of:
+
+- **`test_id`** — run a single test by id.
+- **`target`** — run all tests for a single block (`{ type: "block", block_id: ... }`).
+- *neither* — run every test in the workflow.
+
+`n_consensus` is optional and only meaningful for extract / split / classifier
+blocks. Allowed values are `3`, `5`, or `7`. Provide it to override the
+block's configured consensus count for this batch only.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Single test
+batch = client.workflows.tests.execute(
+    workflow_id="wf_abc123xyz",
+    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+)
+
+# All tests for a single block
+batch = client.workflows.tests.execute(
+    workflow_id="wf_abc123xyz",
+    target={"type": "block", "block_id": "block_extract_invoice"},
+    n_consensus=5,
+)
+
+# Every test in the workflow
+batch = client.workflows.tests.execute(
+    workflow_id="wf_abc123xyz",
+)
+
+print(f"Batch {batch.batch_id} queued — poll job {batch.job_id}")
+```
+
+```javascript javascript
+import Retab from 'retab';
+
+const client = new Retab();
+
+// Single test
+const batch = await client.workflows.tests.execute({
+  workflowId: "wf_abc123xyz",
+  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+});
+
+// All tests for a single block, with consensus override
+const blockBatch = await client.workflows.tests.execute({
+  workflowId: "wf_abc123xyz",
+  target: { type: "block", block_id: "block_extract_invoice" },
+  nConsensus: 5,
+});
+
+// Every test in the workflow
+const allBatch = await client.workflows.tests.execute({
+  workflowId: "wf_abc123xyz",
+});
+
+console.log(`Batch ${batch.batch_id} queued — poll job ${batch.job_id}`);
+```
+
+```bash curl
+# Single test
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/block-tests/execute' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{ "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk" }'
+
+# All tests for a single block, with consensus override
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/block-tests/execute' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "target": { "type": "block", "block_id": "block_extract_invoice" },
+    "n_consensus": 5
+  }'
+
+# Every test in the workflow
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/block-tests/execute' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "batch_id": "btbatch_q1z2",
+  "job_id": "job_abc",
+  "status": "queued",
+  "workflow_id": "wf_abc123xyz",
+  "target": { "type": "block", "block_id": "block_extract_invoice" },
+  "test_id": null,
+  "total_tests": 4
+}
+```
+
+```json 400
+{
+  "detail": "Provide at most one of test_id or block_id."
+}
+```
+
+```json 404
+{
+  "detail": "No block tests found for block: block_extract_invoice"
+}
+```
+
+</ResponseExample>
+
+## Waiting for the batch
+
+Use `wait_for_completion(job_id)` for the typed convenience — it polls
+`jobs.retrieve(job_id)` until terminal and returns the parsed
+`BlockTestBatchExecutionResult`.
+
+```python python
+batch = client.workflows.tests.execute(workflow_id="wf_abc123xyz")
+result = client.workflows.tests.wait_for_completion(
+    batch.job_id,
+    poll_interval_seconds=2.0,
+    timeout_seconds=600.0,
+)
+print(f"{result.counts.passed}/{result.counts.passed + result.counts.failed} passed")
+for item in result.results:
+    print(item.test_id, item.status, item.duration_ms)
+```
+
+```javascript javascript
+const batch = await client.workflows.tests.execute({
+  workflowId: "wf_abc123xyz",
+});
+const result = await client.workflows.tests.waitForCompletion(batch.job_id, {
+  pollIntervalMs: 2000,
+  timeoutMs: 600_000,
+});
+console.log(`${result.counts.passed}/${result.results.length} passed`);
+for (const item of result.results) {
+  console.log(item.test_id, item.status, item.duration_ms);
+}
+```
+
+The helper raises (Python) / throws (JS) if the job ends in
+`failed`/`cancelled`/`expired`, or if `timeout_seconds` /
+`timeoutMs` elapses before completion.
+
+## What the job's `response.body` contains
+
+If you'd rather poll [`jobs.retrieve(job_id)`](/api-reference/jobs/retrieve)
+yourself, the completed job's `response.body` is the
+`BlockTestBatchExecutionResult`:
+
+```json
+{
+  "workflow_id": "wf_abc123xyz",
+  "target": { "type": "block", "block_id": "block_extract_invoice" },
+  "counts": {
+    "queued": 0,
+    "running": 0,
+    "passed": 3,
+    "failed": 1,
+    "blocked": 0,
+    "error": 0,
+    "cancelled": 0
+  },
+  "results": [
+    {
+      "test_id": "wfnodetest_a",
+      "run_record_id": "wfnodetestrun_a",
+      "status": "passed",
+      "workflow_id": "wf_abc123xyz",
+      "target": { "type": "block", "block_id": "block_extract_invoice" },
+      "duration_ms": 18221
+    }
+  ]
+}
+```
+
+Each `BlockTestBatchExecutionItem` carries the `run_record_id` you can pass to
+[Get Block Test Run](./runs/get) to fetch the full execution snapshot
+(inputs, `outputs`, `assertion_result`, `verdict_summary`, etc.).
+
+The `counts` object has one bucket per [run-record status value](/workflows/block-tests#run-record-status).
