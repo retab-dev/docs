@@ -25248,9 +25248,9 @@
           "Workflows",
           "Workflow Runs"
         ],
-        "summary": "Get Step Outputs Batch",
-        "description": "Fetch multiple step outputs for a workflow run in a single request.",
-        "operationId": "get_step_outputs_batch_v1_workflows_runs__run_id__steps_batch_post",
+        "summary": "Get Step Executions Batch",
+        "description": "Fetch multiple step execution records for a workflow run in a single request.",
+        "operationId": "get_step_executions_batch_v1_workflows_runs__run_id__steps_batch_post",
         "security": [
           {
             "HTTPBearer": []
@@ -25294,7 +25294,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StepOutputsBatchRequest"
+                "$ref": "#/components/schemas/StepDetailsBatchRequest"
               }
             }
           }
@@ -51093,7 +51093,7 @@
       },
       "FunctionTestResponse": {
         "properties": {
-          "output": {
+          "artifact_data": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -51103,8 +51103,38 @@
                 "type": "null"
               }
             ],
-            "title": "Output",
-            "description": "Transform output data"
+            "title": "Artifact Data",
+            "description": "Transform artifact data"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical function test artifact reference"
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/StepArtifactRef"
+            },
+            "type": "array",
+            "title": "Artifacts",
+            "description": "All artifacts produced by the function test"
+          },
+          "artifact_view": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepArtifactView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Function test artifact view"
           },
           "stdout": {
             "anyOf": [
@@ -60179,14 +60209,6 @@
         "properties": {
           "operation": {
             "type": "string",
-            "enum": [
-              "extraction",
-              "split",
-              "classification",
-              "parse",
-              "edit",
-              "partition"
-            ],
             "title": "Operation",
             "description": "Persisted resource operation to use for lookup"
           },
@@ -60206,20 +60228,20 @@
       },
       "StepBatchResponse": {
         "properties": {
-          "outputs": {
+          "executions": {
             "additionalProperties": {
               "$ref": "#/components/schemas/StepResponse"
             },
             "type": "object",
-            "title": "Outputs",
-            "description": "Step responses keyed by block ID (missing steps are omitted)"
+            "title": "Executions",
+            "description": "Step execution responses keyed by block ID (missing steps are omitted)"
           }
         },
         "type": "object",
         "title": "StepBatchResponse",
         "description": "Public batch response keyed by step block ID."
       },
-      "StepOutputsBatchRequest": {
+      "StepDetailsBatchRequest": {
         "properties": {
           "block_ids": {
             "items": {
@@ -60231,8 +60253,8 @@
           }
         },
         "type": "object",
-        "title": "StepOutputsBatchRequest",
-        "description": "Request payload for fetching multiple step outputs for a run."
+        "title": "StepDetailsBatchRequest",
+        "description": "Request payload for fetching multiple step execution records for a run."
       },
       "StepResponse": {
         "properties": {
@@ -60304,6 +60326,31 @@
             ],
             "title": "Handle Inputs",
             "description": "Handle inputs keyed by handle ID (what this block received)"
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/StepArtifactRef"
+            },
+            "type": "array",
+            "title": "Artifacts",
+            "description": "All artifacts produced by this step, primary first"
+          },
+          "artifact_view": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepArtifactView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Block-specific artifact view for client rendering"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Execution metadata for routing, review, container state, consensus, and diagnostics"
           }
         },
         "type": "object",
@@ -60314,7 +60361,7 @@
           "status"
         ],
         "title": "StepResponse",
-        "description": "Public response containing step status and handle data."
+        "description": "Public response containing step status, handles, and artifact data."
       },
       "StepStatusSummary": {
         "properties": {
@@ -69641,6 +69688,56 @@
           "name"
         ],
         "title": "Subdocument"
+      },
+      "StepArtifactView": {
+        "properties": {
+          "block_type": {
+            "type": "string",
+            "title": "Block Type",
+            "description": "Workflow block type that produced the artifact view"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primary artifact reference for this view"
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/StepArtifactRef"
+            },
+            "type": "array",
+            "title": "Artifacts",
+            "description": "All artifact references used by this view"
+          },
+          "data": {
+            "title": "Data",
+            "description": "Block-specific artifact data for rendering"
+          },
+          "source_handle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Handle Id",
+            "description": "Output handle that supplied this view data, when applicable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "block_type"
+        ],
+        "title": "StepArtifactView",
+        "description": "Block-specific artifact view for clients."
       }
     },
     "securitySchemes": {
