@@ -16,3 +16,77 @@ If the block exists but no decision has been submitted yet, the response still r
 - `approved=null`
 
 Use [Submit HIL Decision](/api-reference/workflows/runs/submit-hil-decision) to submit the decision, and [Get Run](/api-reference/workflows/runs/get) to inspect the projected run state.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+decision = client.workflows.runs.get_hil_decision(
+    run_id="run_abc123",
+    block_id="hil-1",
+)
+
+print(decision.decision_received, decision.decision_applied, decision.approved)
+```
+
+```javascript javascript
+import Retab from 'retab';
+
+const client = new Retab();
+
+const decision = await client.workflows.runs.getHilDecision("run_abc123", "hil-1");
+
+console.log(decision.decision_received, decision.decision_applied, decision.approved);
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/runs/run_abc123/hil-decisions/hil-1' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "run_id": "run_abc123",
+  "block_id": "hil-1",
+  "block_status": "waiting_for_hil",
+  "decision_received": true,
+  "decision_applied": false,
+  "approved": true,
+  "modified_data": { "amount": 1234.56 },
+  "payload_hash": "sha256-abc",
+  "received_at": "2026-05-01T14:30:00Z",
+  "applied_at": null
+}
+```
+
+```json 200
+{
+  "run_id": "run_abc123",
+  "block_id": "hil-1",
+  "block_status": "waiting_for_hil",
+  "decision_received": false,
+  "decision_applied": false,
+  "approved": null,
+  "modified_data": null,
+  "payload_hash": null,
+  "received_at": null,
+  "applied_at": null
+}
+```
+
+```json 404
+{
+  "detail": "HIL block not found in run"
+}
+```
+
+</ResponseExample>
