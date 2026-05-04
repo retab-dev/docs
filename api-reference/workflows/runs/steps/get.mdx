@@ -15,16 +15,21 @@ client = Retab()
 step = client.workflows.runs.steps.get("run_abc123xyz", "extract-block-1")
 
 print(step.status)
-print(step.extracted_data)
+payload = step.execution.outputs.get("output-json-0")
+print(payload.data if payload and payload.type == "json" else None)
 
 # Jump to the underlying typed resource produced by this step:
-if step.artifact:
-    extraction = client.extractions.get(step.artifact.id)
+extraction_ref = next(
+    (artifact for artifact in step.execution.artifacts if artifact.operation == "extraction"),
+    None,
+)
+if extraction_ref:
+    extraction = client.extractions.get(extraction_ref.id)
     print(extraction.choices)
 
 # Or inspect raw handle payloads:
-if step.handle_outputs:
-    payload = step.handle_outputs["output-json-0"]
+if step.execution.outputs:
+    payload = step.execution.outputs["output-json-0"]
     print(payload.type)
     print(payload.data)
 ```
@@ -37,8 +42,9 @@ const client = new Retab();
 const step = await client.workflows.runs.steps.get("run_abc123xyz", "extract-block-1");
 
 console.log(`Step status: ${step.status}`);
-if (step.artifact) {
-    const extraction = await client.extractions.get(step.artifact.id);
+const extractionRef = step.execution.artifacts.find((artifact) => artifact.operation === "extraction");
+if (extractionRef) {
+    const extraction = await client.extractions.get(extractionRef.id);
     console.log(extraction);
 }
 ```
@@ -61,29 +67,34 @@ curl -X 'GET' \
   "block_label": "Extract Data",
   "status": "completed",
   "error": null,
-  "artifact": {
-    "operation": "extraction",
-    "id": "ext_abc123"
-  },
-  "handle_outputs": {
-    "output-json-0": {
-      "type": "json",
-      "data": {
-        "invoice_number": "INV-2024-001",
-        "total_amount": 1234.56,
-        "vendor_name": "Acme Corp"
+  "execution": {
+    "artifacts": [
+      {
+        "operation": "extraction",
+        "id": "ext_abc123"
       }
-    }
-  },
-  "handle_inputs": {
-    "input-file-0": {
-      "type": "file",
-      "document": {
-        "id": "file_123",
-        "filename": "invoice.pdf",
-        "mime_type": "application/pdf"
+    ],
+    "outputs": {
+      "output-json-0": {
+        "type": "json",
+        "data": {
+          "invoice_number": "INV-2024-001",
+          "total_amount": 1234.56,
+          "vendor_name": "Acme Corp"
+        }
       }
-    }
+    },
+    "inputs": {
+      "input-file-0": {
+        "type": "file",
+        "document": {
+          "id": "file_123",
+          "filename": "invoice.pdf",
+          "mime_type": "application/pdf"
+        }
+      }
+    },
+    "metadata": {}
   }
 }
 ```
@@ -95,9 +106,12 @@ curl -X 'GET' \
   "block_label": "Extract Data",
   "status": "error",
   "error": "LLM returned malformed JSON",
-  "artifact": null,
-  "handle_outputs": null,
-  "handle_inputs": null
+  "execution": {
+    "inputs": {},
+    "outputs": {},
+    "artifacts": [],
+    "metadata": {}
+  }
 }
 ```
 
