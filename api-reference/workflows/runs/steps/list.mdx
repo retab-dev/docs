@@ -3,7 +3,7 @@ title: 'List Steps'
 openapi: 'GET /v1/workflows/runs/{run_id}/steps'
 ---
 
-Retrieve the persisted step list for a workflow run. Use this when you want the complete set of step documents for a run, including statuses, handle inputs/outputs, and loop metadata.
+Retrieve the persisted step list for a workflow run. Use this when you want the complete set of step documents for a run, including statuses, canonical execution inputs/outputs/artifacts, and loop metadata.
 
 <RequestExample>
 
@@ -52,29 +52,32 @@ curl -X 'GET' \
     "block_label": "Extract Invoice",
     "status": "completed",
     "error": null,
-    "artifact": { "operation": "extraction", "id": "ext_abc123" },
+    "execution": {
+      "inputs": {
+        "input-file-0": {
+          "type": "file",
+          "document": {
+            "id": "file_123",
+            "filename": "invoice.pdf",
+            "mime_type": "application/pdf"
+          }
+        }
+      },
+      "outputs": {
+        "output-json-0": {
+          "type": "json",
+          "data": {
+            "invoice_number": "INV-2024-001",
+            "total_amount": 1234.56
+          }
+        }
+      },
+      "artifacts": [{ "operation": "extraction", "id": "ext_abc123" }],
+      "metadata": {}
+    },
     "started_at": "2026-03-12T09:00:00Z",
     "completed_at": "2026-03-12T09:00:03Z",
     "duration_ms": 3000,
-    "handle_outputs": {
-      "output-json-0": {
-        "type": "json",
-        "data": {
-          "invoice_number": "INV-2024-001",
-          "total_amount": 1234.56
-        }
-      }
-    },
-    "handle_inputs": {
-      "input-file-0": {
-        "type": "file",
-        "document": {
-          "id": "file_123",
-          "filename": "invoice.pdf",
-          "mime_type": "application/pdf"
-        }
-      }
-    },
     "created_at": "2026-03-12T09:00:00Z",
     "updated_at": "2026-03-12T09:00:03Z"
   },
@@ -87,30 +90,33 @@ curl -X 'GET' \
     "block_label": "Split Documents",
     "status": "completed",
     "error": null,
-    "artifact": { "operation": "split", "id": "spl_def456" },
+    "execution": {
+      "inputs": {
+        "input-file-0": {
+          "type": "file",
+          "document": {
+            "id": "file_123",
+            "filename": "invoice.pdf",
+            "mime_type": "application/pdf"
+          }
+        }
+      },
+      "outputs": {
+        "output-file-Invoice": {
+          "type": "file",
+          "document": {
+            "id": "file_456",
+            "filename": "invoice_page_1.pdf",
+            "mime_type": "application/pdf"
+          }
+        }
+      },
+      "artifacts": [{ "operation": "split", "id": "spl_def456" }],
+      "metadata": {}
+    },
     "started_at": "2026-03-12T09:00:03Z",
     "completed_at": "2026-03-12T09:00:04Z",
     "duration_ms": 1000,
-    "handle_outputs": {
-      "output-file-Invoice": {
-        "type": "file",
-        "document": {
-          "id": "file_456",
-          "filename": "invoice_page_1.pdf",
-          "mime_type": "application/pdf"
-        }
-      }
-    },
-    "handle_inputs": {
-      "input-file-0": {
-        "type": "file",
-        "document": {
-          "id": "file_123",
-          "filename": "invoice.pdf",
-          "mime_type": "application/pdf"
-        }
-      }
-    },
     "created_at": "2026-03-12T09:00:03Z",
     "updated_at": "2026-03-12T09:00:04Z"
   }

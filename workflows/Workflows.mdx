@@ -163,30 +163,39 @@ print(run.final_outputs)
 
 Start with `steps.list(run.id)` — it returns every persisted step in a single HTTP call. Avoid looping over `run.steps` and calling `steps.get()` per block; that's N+1.
 
-Step payloads are normalized into `HandlePayload` objects. For JSON-producing blocks, `extracted_data` is shorthand for the default `output-json-0` handle.
+Step payloads are normalized into `HandlePayload` objects. For JSON-producing blocks, read the default `output-json-0` handle.
 
 ```python
 # Batch: one HTTP call for all steps in the run
 for step in client.workflows.runs.steps.list(run.id):
-    print(step.block_id, step.status, step.error, step.extracted_data)
-    if step.artifact:
-        print(step.artifact.operation, step.artifact.id)
+    json_output = None
+    if step.execution.outputs:
+        payload = step.execution.outputs.get("output-json-0")
+        json_output = payload.data if payload and payload.type == "json" else None
+    print(step.block_id, step.status, step.error, json_output)
+    for artifact in step.execution.artifacts:
+        print(artifact.operation, artifact.id)
 
 # Single step:
 step = client.workflows.runs.steps.get(run.id, "extract-block-id")
-print(step.status, step.extracted_data)
+payload = step.execution.outputs.get("output-json-0")
+print(step.status, payload.data if payload and payload.type == "json" else None)
 ```
 
 Use `steps.list(run.id, block_ids=[...])` when you only need a subset. Use `steps.get_many(run.id, [...])` when you want normalized handle payloads (same shape as `steps.get()`) for a subset of blocks.
 
 #### Jump from a step to its typed resource
 
-Inference blocks persist a resource; `step.artifact` is a `{operation, id}` pointer you use to fetch the full typed result:
+Inference blocks persist resources; `step.execution.artifacts` contains `{operation, id}` pointers you use to fetch the full typed results:
 
 ```python
 step = client.workflows.runs.steps.get(run.id, "extract-block-id")
-if step.artifact:
-    extraction = client.extractions.get(step.artifact.id)
+extraction_ref = next(
+    (artifact for artifact in step.execution.artifacts if artifact.operation == "extraction"),
+    None,
+)
+if extraction_ref:
+    extraction = client.extractions.get(extraction_ref.id)
     print(extraction.choices)   # full consensus, likelihoods, schema
 ```
 
