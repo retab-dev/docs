@@ -57,6 +57,72 @@ Blocks communicate through **handles** that define the type of data they accept 
 - Each input handle accepts only **one connection**
 - Connections validate automatically to prevent incompatible links
 
+## Declarative Workflow Specs
+
+You can also define and manage workflows from YAML. Declarative specs use
+`apiVersion: workflows.retab.com/v1alpha2` and keep topology in `spec.edges`.
+Every edge endpoint is explicit: it names the block and the raw runtime handle.
+
+```yaml
+apiVersion: workflows.retab.com/v1alpha2
+kind: Workflow
+metadata:
+  id: wf_abc123
+  name: Invoice Workflow
+
+spec:
+  blocks:
+    start-node:
+      type: start
+      label: Input Document
+
+    extract-node:
+      type: extract
+      label: Extract Fields
+      config:
+        inputs:
+          - name: source_doc
+            type: file
+            is_primary: true
+        json_schema:
+          type: object
+          properties: {}
+
+  edges:
+    - from:
+        block: start-node
+        handle: output-file-0
+      to:
+        block: extract-node
+        handle: input-file-source_doc
+```
+
+The SDK exposes the spec lifecycle under `client.workflows.specs`:
+
+```python
+validation = client.workflows.specs.validate(yaml_definition)
+plan = client.workflows.specs.plan(yaml_definition)
+result = client.workflows.specs.apply(yaml_definition, publish=False)
+exported = client.workflows.specs.export(result.workflow_id)
+```
+
+```javascript
+const validation = await client.workflows.specs.validate(yamlDefinition);
+const plan = await client.workflows.specs.plan(yamlDefinition);
+const result = await client.workflows.specs.apply(yamlDefinition, { publish: false });
+const exported = await client.workflows.specs.export(result.workflow_id);
+```
+
+Use `validate()` for parse and handle checks, `plan()` to preview draft
+changes, `apply()` to reconcile the draft workflow, and `export()` to get
+canonical YAML from an existing workflow.
+
+For endpoint details, see:
+- [Validate Workflow Spec](/api-reference/workflows/specs/validate)
+- [Plan Workflow Spec](/api-reference/workflows/specs/plan)
+- [Apply Workflow Spec](/api-reference/workflows/specs/apply)
+- [Export Workflow Spec](/api-reference/workflows/specs/export)
+
 ## Edit Mode vs Run Mode
 
 Workflows have two operational modes:
@@ -97,7 +163,7 @@ For the SDK and HTTP endpoint details, see the workflow API reference:
 
 ### Using the SDK
 
-The Python and Go SDKs expose workflow metadata, graph authoring, run execution, and typed step inspection:
+The Python, Node, and Go SDKs expose workflow metadata, graph authoring, run execution, and typed step inspection:
 
 - `client.workflows.*` / `client.Workflows.*` for `list()`, `get()`, `create()`, `publish()`, `duplicate()`, and `get_entities()`
 - `client.workflows.blocks.*` / `client.Workflows.Blocks.*` and `client.workflows.edges.*` / `client.Workflows.Edges.*` for programmatic graph changes
@@ -330,39 +396,70 @@ if extractedData := step.ExtractedData(); extractedData != nil {
 
 Use `steps.list(run.id, block_ids=[...])` when you only need a subset of step summaries. Use `steps.get(run.id, block_id)` when you need the normalized execution record for a single block.
 
-#### Jump from a step to its typed resource
+#### Fetch the artifact record
 
-Inference blocks persist a resource; `step.artifact` is a `{operation, id}` pointer you use to fetch the full typed result:
+Some blocks persist a durable artifact record. `step.artifact` is only the stable
+pointer:
+
+```json
+{ "operation": "hil_evaluation", "id": "heval_abc123" }
+```
+
+Use `client.workflows.artifacts.get(step.artifact)` to dereference that pointer.
+The response is the backing record flattened with `operation` at the top level,
+so consumers can dispatch on one object without juggling an extra `record`
+wrapper.
 
 ```python
-step = client.workflows.runs.steps.get(run.id, "extract-block-id")
+step = client.workflows.runs.steps.get(run.id, "hil-block-id")
 if step.artifact:
-    extraction = client.extractions.get(step.artifact.id)
-    print(extraction.choices)   # full consensus, likelihoods, schema
+    artifact = client.workflows.artifacts.get(step.artifact)
+    print(artifact.operation)
+    print(artifact.requires_human_review)
+    print(artifact.matched_condition_ids)
+    print(artifact.evaluations)
 ```
 
-```go
-step, err := client.Workflows.Runs.Steps.Get(ctx, run.ID, "extract-block-id")
-if err != nil {
-	log.Fatal(err)
-}
-if step.Artifact != nil {
-	extraction, err := client.Extractions.Get(ctx, step.Artifact.ID)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println((*extraction)["choices"]) // full consensus, likelihoods, schema
+```javascript
+const step = await client.workflows.runs.steps.get(run.id, "function-block-id");
+if (step.artifact) {
+  const artifact = await client.workflows.artifacts.get(step.artifact);
+  console.log(artifact.operation);
+  console.log(artifact.output);
+  console.log(artifact.error);
 }
 ```
 
-| operation       | block type               | fetch with                             |
-|-----------------|--------------------------|----------------------------------------|
-| `extraction`    | `extract`                | `client.extractions.get(id)`           |
-| `split`         | `split`                  | `client.splits.get(id)`                |
-| `classification`| `classifier`             | `client.classifications.get(id)`       |
-| `parse`         | `parse`                  | `client.parses.get(id)`                |
-| `edit`          | `edit`                   | `client.edits.get(id)`                 |
-| `partition`     | `for_each_sentinel_start`| `client.partitions.get(id)`            |
+`workflows.artifacts.list(run.id)` dereferences every artifact produced by a
+run. Pass `operation=` or `block_id=` when you only need a subset.
+
+```python
+hil_records = client.workflows.artifacts.list(
+    run.id,
+    operation="hil_evaluation",
+)
+```
+
+```javascript
+const hilRecords = await client.workflows.artifacts.list({
+  runId: run.id,
+  operation: "hil_evaluation",
+});
+```
+
+| operation | produced by | record includes |
+|---|---|---|
+| `extraction` | `extract` | extraction result, choices, likelihoods, schema details |
+| `split` | `split` | split result and output document grouping |
+| `classification` | `classifier` | selected class and consensus details |
+| `parse` | `parse` | parsed document content |
+| `edit` | `edit` | edited document result |
+| `partition` | `for_each_sentinel_start` | partitioned items for the loop |
+| `conditional_evaluation` | `conditional` | `evaluations`, `selected_handles`, `matched_condition_ids` |
+| `hil_evaluation` | `hil` | condition evaluations plus review state such as `requires_human_review`, `review_decision`, `review_notes` |
+| `while_loop_termination` | `while_loop` | termination reason and final condition evaluations |
+| `api_call_invocation` | `api_call` | request/response attempts, retry trace, and final error |
+| `function_invocation` | `function` | function inputs, output, duration, and final error |
 
 #### Build workflows from code
 

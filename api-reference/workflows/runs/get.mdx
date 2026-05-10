@@ -5,7 +5,10 @@ openapi: 'GET /v1/workflows/runs/{run_id}'
 
 Get a single workflow run by ID. Use this endpoint to check the status of a running workflow or retrieve the results of a completed workflow.
 
-`run.steps` contains execution status for each block. For typed handle inputs and outputs, use [Get Step](/api-reference/workflows/runs/steps/get).
+`run.steps` contains execution status for each block. For typed handle inputs
+and outputs, use [Get Step](/api-reference/workflows/runs/steps/get). For
+persisted step records such as HIL evaluations, function invocations, or API
+call traces, use [List Artifacts](/api-reference/workflows/artifacts/list).
 
 <RequestExample>
 
@@ -23,6 +26,9 @@ if run.lifecycle.kind == "completed":
         step = client.workflows.runs.steps.get(run.id, step_summary.block_id)
         if step.handle_outputs:
             print(f"{step.block_id}: {step.handle_outputs}")
+        if step.artifact:
+            artifact = client.workflows.artifacts.get(step.artifact)
+            print(f"{step.block_id} artifact: {artifact.operation}")
 ```
 
 ```javascript javascript
@@ -40,6 +46,10 @@ if (run.lifecycle.kind === "completed") {
         const step = await client.workflows.runs.steps.get(run.id, stepSummary.block_id);
         if (Object.keys(step.handle_outputs).length > 0) {
             console.log(`${step.block_id}:`, step.handle_outputs);
+        }
+        if (step.artifact) {
+            const artifact = await client.workflows.artifacts.get(step.artifact);
+            console.log(`${step.block_id} artifact:`, artifact.operation);
         }
     }
 }

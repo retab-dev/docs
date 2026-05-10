@@ -1,0 +1,71 @@
+---
+title: 'Plan Workflow Spec'
+openapi: 'POST /v1/workflows/yaml/plan'
+---
+
+Compute the reconcile plan for a declarative workflow YAML spec against the current draft workflow. This does not mutate workflow state.
+
+Use this before `apply()` to see whether the spec will create a workflow, update blocks and edges, or no-op.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+plan = client.workflows.specs.plan(yaml_definition)
+
+print(plan.action)
+for operation in plan.operations:
+    print(operation.action, operation.target, operation.target_id)
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+const plan = await client.workflows.specs.plan(yamlDefinition);
+
+console.log(plan.action);
+for (const operation of plan.operations) {
+  console.log(operation.action, operation.target, operation.target_id);
+}
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/yaml/plan' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "yaml_definition": "<workflow-yaml>"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "workflow_id": "wf_abc123",
+  "action": "update",
+  "block_count": 2,
+  "edge_count": 1,
+  "diagnostics": {
+    "issues": []
+  },
+  "operations": [
+    {
+      "action": "update_workflow",
+      "target": "workflow",
+      "target_id": "wf_abc123",
+      "summary": "Update workflow metadata"
+    }
+  ]
+}
+```
+
+</ResponseExample>
