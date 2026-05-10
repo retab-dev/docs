@@ -32649,7 +32649,7 @@
           "Workflows"
         ],
         "summary": "Get Workflow",
-        "description": "Get a single workflow by ID.\n\nReturns workflow metadata only.\nUse GET /{workflow_id}/entities for the live draft graph stored in\nseparate block, edge, and subflow collections.",
+        "description": "Get a single workflow by ID.\n\nReturns workflow metadata only.\nUse GET /{workflow_id}/entities for the live draft graph stored in\nseparate block and edge collections.",
         "operationId": "get_workflow_v1_workflows__workflow_id__get",
         "security": [
           {
@@ -32795,7 +32795,7 @@
           "Workflows"
         ],
         "summary": "Delete Workflow",
-        "description": "Delete a workflow and all its associated entities.\n\nThis deletes:\n- The workflow document\n- All blocks, edges, and subflows (live collections)\n- All block, edge, and subflow snapshots\n- All workflow snapshots",
+        "description": "Delete a workflow and all its associated entities.\n\nThis deletes:\n- The workflow document\n- All blocks and edges (live collections)\n- All block and edge snapshots\n- All workflow snapshots",
         "operationId": "delete_workflow_v1_workflows__workflow_id__delete",
         "security": [
           {
@@ -32858,7 +32858,7 @@
           "Workflows"
         ],
         "summary": "Get Workflow With Entities",
-        "description": "Get a workflow with all its entities from separate collections.\n\nThis assembles the workflow with blocks, edges, and subflows from their\nrespective collections. Use this for the workflow builder to display\nthe current draft state.",
+        "description": "Get a workflow with all its entities from separate collections.\n\nThis assembles the workflow with blocks and edges from their\nrespective collections. Use this for the workflow builder to display\nthe current draft state.",
         "operationId": "get_workflow_with_entities_v1_workflows__workflow_id__entities_get",
         "security": [
           {
@@ -33096,7 +33096,7 @@
           "Workflows"
         ],
         "summary": "Get Workflow Snapshot Config",
-        "description": "Get the workflow configuration for a specific snapshot.\n\nThis loads all block, edge, and subflow snapshots and converts them\nto the assembled runtime workflow graph format for display purposes.",
+        "description": "Get the workflow configuration for a specific snapshot.\n\nThis loads all block and edge snapshots and converts them\nto the assembled runtime workflow graph format for display purposes.",
         "operationId": "get_workflow_snapshot_config_v1_workflows__workflow_id__snapshots__snapshot_id__config_get",
         "security": [
           {
@@ -34000,7 +34000,7 @@
           "Workflows"
         ],
         "summary": "Discard Draft",
-        "description": "Discard all draft changes and restore the workflow to its published state.\n\nThis operation:\n1. Recreates blocks, edges, and subflows from the published snapshot\n2. Updates the workflow's updated_at timestamp and draft_version\n\nRequires the workflow to be published (have a published_snapshot_id).",
+        "description": "Discard all draft changes and restore the workflow to its published state.\n\nThis operation:\n1. Recreates blocks and edges from the published snapshot\n2. Updates the workflow's updated_at timestamp and draft_version\n\nRequires the workflow to be published (have a published_snapshot_id).",
         "operationId": "discard_draft_v1_workflows__workflow_id__discard_draft_post",
         "security": [
           {
@@ -34070,7 +34070,7 @@
           "Workflows"
         ],
         "summary": "Restore Snapshot",
-        "description": "Restore the workflow draft to a specific snapshot version.\n\nThis operation:\n1. Recreates blocks, edges, and subflows from the specified snapshot\n2. Updates the workflow's updated_at timestamp and draft_version\n\nUse this to restore to any historical version, not just the current published one.",
+        "description": "Restore the workflow draft to a specific snapshot version.\n\nThis operation:\n1. Recreates blocks and edges from the specified snapshot\n2. Updates the workflow's updated_at timestamp and draft_version\n\nUse this to restore to any historical version, not just the current published one.",
         "operationId": "restore_snapshot_v1_workflows__workflow_id__restore_snapshot__snapshot_id__post",
         "security": [
           {
@@ -67772,12 +67772,6 @@
             "description": "Number of edges in this snapshot",
             "default": 0
           },
-          "subflow_count": {
-            "type": "integer",
-            "title": "Subflow Count",
-            "description": "Number of subflows in this snapshot",
-            "default": 0
-          },
           "published_by": {
             "anyOf": [
               {
@@ -67828,9 +67822,9 @@
           "version"
         ],
         "title": "WorkflowSnapshot",
-        "description": "Metadata for a complete workflow snapshot.\n\nThis document is the entry point for loading a published workflow.\nIt references the snapshot_id used to query block, edge, and subflow snapshots."
+        "description": "Metadata for a complete workflow snapshot.\n\nThis document is the entry point for loading a published workflow.\nIt references the snapshot_id used to query block and edge snapshots."
       },
-      "WorkflowSubflow": {
+      "WorkflowSnapshotRef": {
         "properties": {
           "id": {
             "type": "string",
@@ -67839,81 +67833,12 @@
           "workflow_id": {
             "type": "string",
             "title": "Workflow Id",
-            "description": "Foreign key to workflow"
-          },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id",
-            "description": "Organization ID for data isolation"
-          },
-          "draft_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Draft Version",
-            "description": "Draft version for live entities"
-          },
-          "type": {
-            "type": "string",
-            "const": "parallel",
-            "title": "Type",
-            "description": "Subflow type: 'parallel'"
+            "description": "ID of the workflow that was run"
           },
           "label": {
             "type": "string",
-            "title": "Label",
-            "description": "Display label for the subflow",
-            "default": ""
-          },
-          "position_x": {
-            "type": "number",
-            "title": "Position X",
-            "description": "X position on canvas",
-            "default": 0
-          },
-          "position_y": {
-            "type": "number",
-            "title": "Position Y",
-            "description": "Y position on canvas",
-            "default": 0
-          },
-          "width": {
-            "type": "number",
-            "title": "Width",
-            "description": "Container width",
-            "default": 400
-          },
-          "height": {
-            "type": "number",
-            "title": "Height",
-            "description": "Container height",
-            "default": 300
-          },
-          "config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config",
-            "description": "Subflow-specific configuration for parallel block containers"
-          },
-          "child_block_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Child Block Ids",
-            "description": "IDs of blocks contained in this subflow"
+            "title": "Snapshot Id",
+            "description": "Reference to config snapshot (workflow_config_snapshots or workflow_snapshots collection). REQUIRED \u2014 every run is bound to a snapshot at creation time."
           },
           "updated_at": {
             "type": "string",
@@ -67927,8 +67852,8 @@
           "organization_id",
           "type"
         ],
-        "title": "WorkflowSubflow",
-        "description": "Subflow container for parallel execution.\n\nStored in workflow_subflows collection. Subflows define a visual\ncontainer that groups child blocks for parallel execution."
+        "title": "WorkflowSnapshotRef",
+        "description": "Reference to the workflow + the immutable snapshot that drove the run.\n\nReplaces flat ``workflow_id`` + ``workflow_name`` + ``config_snapshot_id``."
       },
       "WorkflowTable": {
         "properties": {
@@ -68575,13 +68500,6 @@
             },
             "type": "array",
             "title": "Edges"
-          },
-          "subflows": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowSubflow"
-            },
-            "type": "array",
-            "title": "Subflows"
           }
         },
         "type": "object",
