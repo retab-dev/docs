@@ -19,7 +19,9 @@ run = client.workflows.runs.get("run_abc123xyz")
 print(f"Status: {run.status}")
 if run.status == "completed":
     print(f"Duration: {run.duration_ms}ms")
-    print(f"Outputs: {run.final_outputs}")
+    for step in client.workflows.runs.steps.list(run.id):
+        if step.handle_outputs:
+            print(f"{step.block_id}: {step.handle_outputs}")
 ```
 
 ```javascript javascript
@@ -32,7 +34,12 @@ const run = await client.workflows.runs.get("run_abc123xyz");
 console.log(`Status: ${run.status}`);
 if (run.status === "completed") {
     console.log(`Duration: ${run.durationMs}ms`);
-    console.log("Outputs:", run.finalOutputs);
+    const steps = await client.workflows.runs.steps.list(run.id);
+    for (const step of steps) {
+        if (Object.keys(step.handle_outputs).length > 0) {
+            console.log(`${step.block_id}:`, step.handle_outputs);
+        }
+    }
 }
 ```
 
@@ -78,13 +85,23 @@ curl -X 'GET' \
       "duration_ms": 9000
     },
     {
-      "block_id": "end-block-1",
-      "block_type": "end",
-      "block_label": "Output",
+      "block_id": "function-block-1",
+      "block_type": "function",
+      "block_label": "Normalize Data",
       "status": "completed",
       "started_at": "2024-01-15T10:30:10Z",
       "completed_at": "2024-01-15T10:30:15Z",
-      "duration_ms": 5000
+      "duration_ms": 5000,
+      "handle_outputs": {
+        "output-json-0": {
+          "type": "json",
+          "data": {
+            "invoice_number": "INV-2024-001",
+            "total_amount": 1234.56,
+            "vendor_name": "Acme Corp"
+          }
+        }
+      }
     }
   ],
   "input_documents": {
@@ -92,16 +109,6 @@ curl -X 'GET' \
       "id": "file_123",
       "filename": "invoice.pdf",
       "mime_type": "application/pdf"
-    }
-  },
-  "final_outputs": {
-    "end-block-1": {
-      "document": null,
-      "data": {
-        "invoice_number": "INV-2024-001",
-        "total_amount": 1234.56,
-        "vendor_name": "Acme Corp"
-      }
     }
   },
   "error": null,
