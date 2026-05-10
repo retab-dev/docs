@@ -17,10 +17,11 @@ step = client.workflows.runs.steps.get("run_abc123xyz", "extract-block-1")
 print(step.status)
 print(step.extracted_data)
 
-# Jump to the underlying typed resource produced by this step:
+# Dereference the artifact record produced by this step:
 if step.artifact:
-    extraction = client.extractions.get(step.artifact.id)
-    print(extraction.choices)
+    artifact = client.workflows.artifacts.get(step.artifact)
+    print(artifact.operation)
+    print(artifact.id)
 
 # Or inspect raw handle payloads:
 if step.handle_outputs:
@@ -42,8 +43,8 @@ if (payload?.type === "json") {
     console.log(payload.data);
 }
 if (step.artifact) {
-    const extraction = await client.extractions.get(step.artifact.id);
-    console.log(extraction);
+    const artifact = await client.workflows.artifacts.get(step.artifact);
+    console.log(artifact);
 }
 ```
 
@@ -73,11 +74,7 @@ func main() {
 
 	fmt.Printf("Step status: %s\n", step.Status)
 	if step.Artifact != nil {
-		extraction, err := client.Extractions.Get(ctx, step.Artifact.ID)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(extraction)
+		fmt.Println(step.Artifact.Operation, step.Artifact.ID)
 	}
 
 	// Or inspect raw handle payloads:
@@ -95,6 +92,11 @@ curl -X 'GET' \
 ```
 
 </RequestExample>
+
+`artifact` is a pointer, not the artifact payload. Use
+[Get Artifact](/api-reference/workflows/artifacts/get) when you need the full
+record for a persisted step result, such as HIL condition evaluations,
+function output, or API call retry attempts.
 
 
 <ResponseExample>

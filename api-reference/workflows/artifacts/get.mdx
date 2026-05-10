@@ -1,0 +1,113 @@
+---
+title: 'Get Artifact'
+openapi: 'GET /v1/workflows/artifacts/{operation}/{artifact_id}'
+---
+
+Dereference a workflow step artifact ref into its persisted record.
+
+Workflow steps return `artifact` as a small `{ operation, id }` pointer. This
+endpoint follows that pointer and returns the backing record flattened with
+`operation` and `id` at the top level.
+
+Use this when you need details that do not belong in the generic step payload:
+HIL condition evaluations, conditional branch matches, function output,
+API-call attempts, while-loop termination data, or the full primitive result
+for extract/split/classify/parse/edit/partition blocks.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+step = client.workflows.runs.steps.get("run_abc123xyz", "hil-block-1")
+
+if step.artifact:
+    artifact = client.workflows.artifacts.get(step.artifact)
+    print(artifact.operation)
+    print(artifact.requires_human_review)
+    print(artifact.matched_condition_ids)
+    print(artifact.evaluations)
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+const step = await client.workflows.runs.steps.get(
+  "run_abc123xyz",
+  "function-block-1"
+);
+
+if (step.artifact) {
+  const artifact = await client.workflows.artifacts.get(step.artifact);
+  console.log(artifact.operation);
+  console.log(artifact.output);
+  console.log(artifact.error);
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/artifacts/hil_evaluation/heval_abc123' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "operation": "hil_evaluation",
+  "id": "heval_abc123",
+  "organization_id": "org_123",
+  "workflow_run_id": "run_abc123xyz",
+  "step_id": "hil-block-1",
+  "requires_human_review": true,
+  "selected_handles": ["wrong"],
+  "matched_branch_id": "branch_wrong",
+  "matched_condition_ids": ["condition_wrong_total"],
+  "evaluations": [
+    {
+      "condition_id": "condition_wrong_total",
+      "matched": true,
+      "output_handle_id": "wrong",
+      "left_value": 1200,
+      "operator": "greater_than",
+      "right_value": 1000
+    }
+  ],
+  "reviewer_id": null,
+  "review_decision": null,
+  "review_notes": null,
+  "reviewed_at": null,
+  "created_at": "2026-03-12T09:00:04Z"
+}
+```
+
+```json 404
+{
+  "detail": "artifact not found"
+}
+```
+
+</ResponseExample>
+
+Artifact operations currently include:
+
+| operation | typical producer | useful fields |
+|---|---|---|
+| `extraction` | `extract` | extracted output, consensus choices, likelihoods |
+| `split` | `split` | split groups and output documents |
+| `classification` | `classifier` | selected class and consensus details |
+| `parse` | `parse` | parsed pages/content |
+| `edit` | `edit` | edited document result |
+| `partition` | `for_each_sentinel_start` | partitioned loop inputs |
+| `conditional_evaluation` | `conditional` | `evaluations`, `selected_handles`, `matched_condition_ids` |
+| `hil_evaluation` | `hil` | evaluation details plus human-review state |
+| `while_loop_termination` | `while_loop` | `termination_reason` and final evaluations |
+| `api_call_invocation` | `api_call` | retry `attempts`, response data, final `error` |
+| `function_invocation` | `function` | function `inputs`, `output`, `duration_ms`, final `error` |
