@@ -188,6 +188,83 @@ console.log(`Created ${allChunks.length} chunks from ${parse.usage.page_count} p
 console.log(parse.output.text);
 ```
 
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"strings"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	parse, err := client.Parses.Create(ctx, retab.ParseCreateRequest{
+		Document:           "technical-manual.pdf",
+		Model:              "retab-small",
+		TableParsingFormat: "markdown",
+		ImageResolutionDPI: 192,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	output, _ := (*parse)["output"].(map[string]any)
+	pages, _ := output["pages"].([]any)
+	file, _ := (*parse)["file"].(map[string]any)
+	filename, _ := file["filename"].(string)
+	usage, _ := (*parse)["usage"].(map[string]any)
+	pageCount, _ := usage["page_count"].(float64)
+
+	type chunkData struct {
+		Page     int    `json:"page"`
+		ChunkID  string `json:"chunk_id"`
+		Text     string `json:"text"`
+		Document string `json:"document"`
+	}
+
+	var allChunks []chunkData
+	for index, raw := range pages {
+		pageText, _ := raw.(string)
+		pageNum := index + 1
+		sentences := strings.FieldsFunc(pageText, func(r rune) bool {
+			return r == '.' || r == '!' || r == '?'
+		})
+		var trimmed []string
+		for _, s := range sentences {
+			s = strings.TrimSpace(s)
+			if s != "" {
+				trimmed = append(trimmed, s)
+			}
+		}
+		for i := 0; i < len(trimmed); i += 3 {
+			end := i + 3
+			if end > len(trimmed) {
+				end = len(trimmed)
+			}
+			allChunks = append(allChunks, chunkData{
+				Page:     pageNum,
+				ChunkID:  fmt.Sprintf("page_%d_chunk_%d", pageNum, i/3),
+				Text:     strings.Join(trimmed[i:end], ". "),
+				Document: filename,
+			})
+		}
+	}
+
+	fmt.Printf("Created %d chunks from %d pages\n", len(allChunks), int(pageCount))
+	fmt.Println(output["text"])
+}
+```
+
 ```typescript TypeScript
 import { Retab, type ParseRequest, type Parse } from '@retab/node';
 

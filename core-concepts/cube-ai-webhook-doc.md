@@ -125,6 +125,63 @@ async def webhook(request: Request):
     return {"status": "success"}
 ```
 
+### 🐹 Go (net/http)
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"io"
+	"log"
+	"net/http"
+)
+
+type webhookBody struct {
+	Completion struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	} `json:"completion"`
+	User        string `json:"user"`
+	FilePayload struct {
+		Filename string `json:"filename"`
+	} `json:"file_payload"`
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	raw, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	var body webhookBody
+	if err := json.Unmarshal(raw, &body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	var parsed map[string]any
+	content := "{}"
+	if len(body.Completion.Choices) > 0 {
+		content = body.Completion.Choices[0].Message.Content
+	}
+	_ = json.Unmarshal([]byte(content), &parsed)
+
+	log.Printf("Webhook received: %+v user=%s file=%s",
+		parsed, body.User, body.FilePayload.Filename)
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"status":"success"}`))
+}
+
+func main() {
+	http.HandleFunc("/webhook", handler)
+	log.Fatal(http.ListenAndServe(":8000", nil))
+}
+```
+
 ---
 
 ## Next Steps

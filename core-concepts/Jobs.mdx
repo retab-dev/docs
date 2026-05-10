@@ -46,6 +46,33 @@ const document = {
     url: `data:application/pdf;base64,${content}`,
 };
 ```
+
+```go Go
+package main
+
+import (
+	"encoding/base64"
+	"fmt"
+	"log"
+	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	// Load and encode your document
+	content, err := os.ReadFile("invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	encoded := base64.StdEncoding.EncodeToString(content)
+	document := retab.MIMEData{
+		Filename: "invoice.pdf",
+		URL:      fmt.Sprintf("data:application/pdf;base64,%s", encoded),
+	}
+	_ = document
+}
+```
 </CodeGroup>
 
 ### 2. Create the Job
@@ -87,6 +114,42 @@ const job = await client.jobs.create({
 
 console.log(`Job created: ${job.id}`);
 console.log(`Status: ${job.status}`);  // "queued"
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	job, err := client.Jobs.Create(ctx, retab.JobCreateRequest{
+		Endpoint: "/v1/extractions",
+		Request: retab.Resource{
+			"document":    document,
+			"json_schema": schema,
+			"model":       "retab-small",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Job created: %s\n", (*job)["id"])
+	fmt.Printf("Status: %s\n", (*job)["status"]) // "queued"
+}
 ```
 
 ```bash cURL
@@ -131,6 +194,29 @@ while (!terminalStatuses.includes(job.status)) {
 }
 ```
 
+```go Go
+terminalStatuses := map[string]bool{
+    "completed": true,
+    "failed":    true,
+    "cancelled": true,
+    "expired":   true,
+}
+
+for {
+    status, _ := (*job)["status"].(string)
+    if terminalStatuses[status] {
+        break
+    }
+    time.Sleep(2 * time.Second)
+    jobID, _ := (*job)["id"].(string)
+    job, err = client.Jobs.Retrieve(ctx, jobID, nil)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Status: %s\n", (*job)["status"])
+}
+```
+
 ```bash cURL
 curl https://api.retab.com/v1/jobs/{job_id} \
   -H "Api-Key: $RETAB_API_KEY"
@@ -155,6 +241,17 @@ const completedJob = await client.jobs.waitForCompletion(job.id, {
     poll_interval_ms: 2000,
     timeout_ms: 300_000,
 });
+```
+
+```go Go
+completedJob, err := client.Jobs.WaitForCompletion(ctx, jobID, &retab.JobWaitForCompletionParams{
+    PollInterval: 2 * time.Second,
+    Timeout:      5 * time.Minute,
+})
+if err != nil {
+    log.Fatal(err)
+}
+_ = completedJob
 ```
 </CodeGroup>
 
@@ -181,6 +278,23 @@ if (job.status === "completed") {
     console.log(`Error: ${job.error.message}`);
 }
 ```
+
+```go Go
+status, _ := (*job)["status"].(string)
+if status == "completed" {
+    job, err = client.Jobs.RetrieveFull(ctx, jobID)
+    if err != nil {
+        log.Fatal(err)
+    }
+    response, _ := (*job)["response"].(map[string]any)
+    result := response["body"]
+    fmt.Println(result)
+} else if status == "failed" {
+    if errInfo, ok := (*job)["error"].(map[string]any); ok {
+        fmt.Printf("Error: %v\n", errInfo["message"])
+    }
+}
+```
 </CodeGroup>
 
 ### 5. Cancel a Job (Optional)
@@ -196,6 +310,14 @@ print(f"Status: {cancelled_job.status}")  # "cancelled"
 ```javascript JavaScript
 const cancelledJob = await client.jobs.cancel(job.id);
 console.log(`Status: ${cancelledJob.status}`);  // "cancelled"
+```
+
+```go Go
+cancelledJob, err := client.Jobs.Cancel(ctx, jobID)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Status: %s\n", (*cancelledJob)["status"]) // "cancelled"
 ```
 
 ```bash cURL
@@ -243,6 +365,33 @@ const queuedJobs = await client.jobs.list({ status: "queued" });
 // Paginate through results
 if (jobsResponse.has_more) {
     const nextPage = await client.jobs.list({ after: jobsResponse.last_id });
+}
+```
+
+```go Go
+// List all jobs
+jobsResponse, err := client.Jobs.List(ctx, &retab.ListJobsParams{Limit: 20})
+if err != nil {
+    log.Fatal(err)
+}
+for _, job := range jobsResponse.Data {
+    fmt.Printf("%s: %s\n", job["id"], job["status"])
+}
+
+// Filter by status
+queuedJobs, err := client.Jobs.List(ctx, &retab.ListJobsParams{Status: "queued"})
+if err != nil {
+    log.Fatal(err)
+}
+_ = queuedJobs
+
+// Paginate through results
+if jobsResponse.HasMore {
+    nextPage, err := client.Jobs.List(ctx, &retab.ListJobsParams{After: jobsResponse.NextCursor})
+    if err != nil {
+        log.Fatal(err)
+    }
+    _ = nextPage
 }
 ```
 
@@ -373,6 +522,100 @@ if (job.status === "completed") {
     console.log(`Job failed: ${job.error.message}`);
 }
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/base64"
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Load document
+	content, err := os.ReadFile("invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	encoded := base64.StdEncoding.EncodeToString(content)
+	document := retab.MIMEData{
+		Filename: "invoice.pdf",
+		URL:      fmt.Sprintf("data:application/pdf;base64,%s", encoded),
+	}
+
+	// Define extraction schema
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"invoice_number": map[string]any{"type": "string"},
+			"date":           map[string]any{"type": "string"},
+			"total_amount":   map[string]any{"type": "number"},
+			"vendor_name":    map[string]any{"type": "string"},
+		},
+		"required": []string{"invoice_number", "total_amount"},
+	}
+
+	// Create extraction job
+	job, err := client.Jobs.Create(ctx, retab.JobCreateRequest{
+		Endpoint: "/v1/extractions",
+		Request: retab.Resource{
+			"document":    document,
+			"json_schema": schema,
+			"model":       "retab-small",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	jobID, _ := (*job)["id"].(string)
+	fmt.Printf("Job created: %s\n", jobID)
+
+	// Poll until complete
+	terminalStatuses := map[string]bool{"completed": true, "failed": true, "cancelled": true, "expired": true}
+	for {
+		status, _ := (*job)["status"].(string)
+		if terminalStatuses[status] {
+			break
+		}
+		time.Sleep(2 * time.Second)
+		job, err = client.Jobs.Retrieve(ctx, jobID, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Status: %s\n", (*job)["status"])
+	}
+
+	// Get extracted data
+	status, _ := (*job)["status"].(string)
+	if status == "completed" {
+		job, err = client.Jobs.RetrieveFull(ctx, jobID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		response, _ := (*job)["response"].(map[string]any)
+		body, _ := response["body"].(map[string]any)
+		extracted, _ := body["output"].(map[string]any)
+		fmt.Printf("Invoice: %v\n", extracted["invoice_number"])
+		fmt.Printf("Total: $%v\n", extracted["total_amount"])
+	} else {
+		errInfo, _ := (*job)["error"].(map[string]any)
+		fmt.Printf("Job failed: %v\n", errInfo["message"])
+	}
+}
+```
 </CodeGroup>
 
 ### Parse Document to Text
@@ -458,6 +701,87 @@ if (job.status === "completed") {
     console.log(`Total pages: ${result.output.pages.length}`);
 } else {
     console.log(`Job failed: ${job.error.message}`);
+}
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/base64"
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Load document
+	content, err := os.ReadFile("document.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	encoded := base64.StdEncoding.EncodeToString(content)
+	document := retab.MIMEData{
+		Filename: "document.pdf",
+		URL:      fmt.Sprintf("data:application/pdf;base64,%s", encoded),
+	}
+
+	// Create parse job
+	job, err := client.Jobs.Create(ctx, retab.JobCreateRequest{
+		Endpoint: "/v1/parses",
+		Request: retab.Resource{
+			"document": document,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	jobID, _ := (*job)["id"].(string)
+	fmt.Printf("Job created: %s\n", jobID)
+
+	// Poll until complete
+	terminalStatuses := map[string]bool{"completed": true, "failed": true, "cancelled": true, "expired": true}
+	for {
+		status, _ := (*job)["status"].(string)
+		if terminalStatuses[status] {
+			break
+		}
+		time.Sleep(2 * time.Second)
+		job, err = client.Jobs.Retrieve(ctx, jobID, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Status: %s\n", (*job)["status"])
+	}
+
+	// Get parsed content
+	status, _ := (*job)["status"].(string)
+	if status == "completed" {
+		job, err = client.Jobs.RetrieveFull(ctx, jobID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		response, _ := (*job)["response"].(map[string]any)
+		result, _ := response["body"].(map[string]any)
+		output, _ := result["output"].(map[string]any)
+		fmt.Printf("Parsed text:\n%v\n", output["text"])
+		pages, _ := output["pages"].([]any)
+		fmt.Printf("Total pages: %d\n", len(pages))
+	} else {
+		errInfo, _ := (*job)["error"].(map[string]any)
+		fmt.Printf("Job failed: %v\n", errInfo["message"])
+	}
 }
 ```
 </CodeGroup>
@@ -569,6 +893,98 @@ if (job.status === "completed") {
     console.log(`Reasoning: ${result.reasoning}`);
 } else {
     console.log(`Job failed: ${job.error.message}`);
+}
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/base64"
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Load document
+	content, err := os.ReadFile("document.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	encoded := base64.StdEncoding.EncodeToString(content)
+	document := retab.MIMEData{
+		Filename: "document.pdf",
+		URL:      fmt.Sprintf("data:application/pdf;base64,%s", encoded),
+	}
+
+	// Define categories
+	categories := []map[string]string{
+		{"name": "Invoice", "description": "Invoice or bill documents"},
+		{"name": "Bank Statement", "description": "Bank account statements"},
+		{"name": "Receipt", "description": "Payment receipts"},
+		{"name": "Contract", "description": "Legal contracts or agreements"},
+		{"name": "ID Document", "description": "Identity documents"},
+		{"name": "Other", "description": "Other document types"},
+	}
+
+	// Create classification job
+	job, err := client.Jobs.Create(ctx, retab.JobCreateRequest{
+		Endpoint: "/v1/classifications",
+		Request: retab.Resource{
+			"document":   document,
+			"model":      "retab-small",
+			"categories": categories,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	jobID, _ := (*job)["id"].(string)
+	fmt.Printf("Job created: %s\n", jobID)
+
+	// Poll until complete
+	terminalStatuses := map[string]bool{"completed": true, "failed": true, "cancelled": true, "expired": true}
+	for {
+		status, _ := (*job)["status"].(string)
+		if terminalStatuses[status] {
+			break
+		}
+		time.Sleep(2 * time.Second)
+		job, err = client.Jobs.Retrieve(ctx, jobID, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Status: %s\n", (*job)["status"])
+	}
+
+	// Get classification result
+	status, _ := (*job)["status"].(string)
+	if status == "completed" {
+		job, err = client.Jobs.RetrieveFull(ctx, jobID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		response, _ := (*job)["response"].(map[string]any)
+		body, _ := response["body"].(map[string]any)
+		result, _ := body["output"].(map[string]any)
+		fmt.Printf("Classification: %v\n", result["category"])
+		fmt.Printf("Reasoning: %v\n", result["reasoning"])
+	} else {
+		errInfo, _ := (*job)["error"].(map[string]any)
+		fmt.Printf("Job failed: %v\n", errInfo["message"])
+	}
 }
 ```
 </CodeGroup>
@@ -710,6 +1126,23 @@ if (job.status === "failed") {
     console.log(`Error message: ${job.error.message}`);
     if (job.error.details) {
         console.log("Details:", job.error.details);
+    }
+}
+```
+
+```go Go
+job, err := client.Jobs.WaitForCompletion(ctx, jobID, nil)
+if err != nil {
+    log.Fatal(err)
+}
+
+if status, _ := (*job)["status"].(string); status == "failed" {
+    if errInfo, ok := (*job)["error"].(map[string]any); ok {
+        fmt.Printf("Error code: %v\n", errInfo["code"])
+        fmt.Printf("Error message: %v\n", errInfo["message"])
+        if details, ok := errInfo["details"]; ok && details != nil {
+            fmt.Println("Details:", details)
+        }
     }
 }
 ```

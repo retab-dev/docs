@@ -26,7 +26,7 @@ Categorize documents based on content and type.
 
 ## Quickstart
 
-The most basic workflow is extracting structured data from a document. The easiest way to access the API is through the Python or Node SDK.
+The most basic workflow is extracting structured data from a document. The easiest way to access the API is through the Python, Node, or Go SDK.
 
 <Tip>
   Find your API key in the [dashboard settings](https://retab.com/dashboard/settings).
@@ -41,6 +41,10 @@ The most basic workflow is extracting structured data from a document. The easie
 
       ```javascript JavaScript
       npm install @retab/node
+      ```
+
+      ```go Go
+      go get github.com/retab-dev/retab/clients/go
       ```
     </CodeGroup>
   </Step>
@@ -67,6 +71,36 @@ The most basic workflow is extracting structured data from a document. The easie
           documents: ["Invoice.pdf"],
           model: "retab-small",
       });
+      ```
+
+      ```go Go
+      package main
+
+      import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+      )
+
+      func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	schemaResponse, err := client.Schemas.Generate(ctx, retab.GenerateSchemaRequest{
+		Documents: []any{"Invoice.pdf"},
+		Model:     "retab-small",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(schemaResponse)
+      }
       ```
 
       ```curl cURL
@@ -118,6 +152,40 @@ The most basic workflow is extracting structured data from a document. The easie
       console.log(extraction.id);
       console.log(extraction.output);
       console.log(extraction.consensus.likelihoods);
+      ```
+
+      ```go Go
+      package main
+
+      import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+      )
+
+      func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		JSONSchema: schemaResponse["json_schema"],
+		Document:   "Invoice.pdf",
+		Model:      "retab-micro",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println((*extraction)["id"])
+	fmt.Println((*extraction)["output"])
+	fmt.Println((*extraction)["consensus"])
+      }
       ```
 
       ```curl cURL

@@ -55,6 +55,57 @@ if (filteredJobs.has_more) {
 }
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// List all jobs
+	jobsResponse, err := client.Jobs.List(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, job := range jobsResponse.Data {
+		fmt.Printf("%s: %s - %s\n", job["id"], job["status"], job["endpoint"])
+	}
+
+	// List with filters and pagination
+	filtered, err := client.Jobs.List(ctx, &retab.ListJobsParams{
+		Status: "completed",
+		Limit:  10,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Paginate through results
+	if filtered.HasMore {
+		nextPage, err := client.Jobs.List(ctx, &retab.ListJobsParams{
+			After: filtered.NextCursor,
+			Limit: 10,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		_ = nextPage
+	}
+}
+```
+
 ```bash curl
 # List all jobs
 curl -X GET \
@@ -329,6 +380,48 @@ while (true) {
 
 console.log(`Total jobs: ${allJobs.length}`);
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	allJobs := []retab.Job{}
+	after := ""
+
+	for {
+		response, err := client.Jobs.List(ctx, &retab.ListJobsParams{
+			After: after,
+			Limit: 100,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		allJobs = append(allJobs, response.Data...)
+
+		if !response.HasMore {
+			break
+		}
+		after = response.NextCursor
+	}
+
+	fmt.Printf("Total jobs: %d\n", len(allJobs))
+}
+```
 </CodeGroup>
 
 ## Filtering Examples
@@ -353,6 +446,24 @@ const queued = await client.jobs.list({ status: "queued" });
 console.log(`In progress: ${inProgress.data.length}`);
 console.log(`Queued: ${queued.data.length}`);
 ```
+
+```go Go
+ctx := context.Background()
+client, _ := retab.NewClient("")
+
+// Get all jobs currently processing
+inProgress, err := client.Jobs.List(ctx, &retab.ListJobsParams{Status: "in_progress"})
+if err != nil {
+	log.Fatal(err)
+}
+queued, err := client.Jobs.List(ctx, &retab.ListJobsParams{Status: "queued"})
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("In progress: %d\n", len(inProgress.Data))
+fmt.Printf("Queued: %d\n", len(queued.Data))
+```
 </CodeGroup>
 
 ### Find Failed Jobs
@@ -372,6 +483,26 @@ const failedJobs = await client.jobs.list({ status: "failed", limit: 50 });
 
 for (const job of failedJobs.data) {
     console.log(`${job.id}: ${job.error.code} - ${job.error.message}`);
+}
+```
+
+```go Go
+ctx := context.Background()
+client, _ := retab.NewClient("")
+
+// List failed jobs to investigate errors
+failedJobs, err := client.Jobs.List(ctx, &retab.ListJobsParams{
+	Status: "failed",
+	Limit:  50,
+})
+if err != nil {
+	log.Fatal(err)
+}
+
+for _, job := range failedJobs.Data {
+	if jobErr, ok := job["error"].(map[string]any); ok {
+		fmt.Printf("%s: %s - %s\n", job["id"], jobErr["code"], jobErr["message"])
+	}
 }
 ```
 </CodeGroup>
@@ -407,5 +538,30 @@ for (const job of response.data) {
 }
 
 console.log(`Jobs in ${batchId}: ${batchJobs.length}`);
+```
+
+```go Go
+ctx := context.Background()
+client, _ := retab.NewClient("")
+
+// Find jobs from a specific batch
+batchID := "batch_001"
+batchJobs := []retab.Job{}
+
+response, err := client.Jobs.List(ctx, &retab.ListJobsParams{Limit: 100})
+if err != nil {
+	log.Fatal(err)
+}
+for _, job := range response.Data {
+	metadata, ok := job["metadata"].(map[string]any)
+	if !ok {
+		continue
+	}
+	if metadata["batch_id"] == batchID {
+		batchJobs = append(batchJobs, job)
+	}
+}
+
+fmt.Printf("Jobs in %s: %d\n", batchID, len(batchJobs))
 ```
 </CodeGroup>

@@ -44,6 +44,51 @@ for (const chunk of response.output) {
 }
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("invoice_batch.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	response, err := client.Partitions.Create(ctx, retab.PartitionCreateRequest{
+		Document:     document,
+		Key:          "invoice_number",
+		Instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
+		Model:        "retab-small",
+		NConsensus:   3,
+		BustCache:    false,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if output, ok := (*response)["output"].([]any); ok {
+		for _, chunk := range output {
+			c, _ := chunk.(map[string]any)
+			fmt.Println(c["key"], c["pages"])
+		}
+	}
+}
+```
+
 ```bash curl
 curl -X POST \
   'https://api.retab.com/v1/partitions' \

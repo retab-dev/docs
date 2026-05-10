@@ -81,6 +81,24 @@ const CalendarEvent = z.object({
 });
 ```
 
+```go Go
+calendarEventSchema := map[string]any{
+	"type": "object",
+	"properties": map[string]any{
+		"name": map[string]any{
+			"type": "string",
+		},
+		"date": map[string]any{
+			"type": "string",
+		},
+		"address": map[string]any{
+			"type": "string",
+		},
+	},
+	"required": []string{"name", "date", "address"},
+}
+```
+
 </CodeGroup>
 
 ---
@@ -120,6 +138,57 @@ const result = await client.extractions.create({
 });
 
 console.log(JSON.stringify(result.consensus?.likelihoods, null, 2));
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	calendarEventSchema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"name": map[string]any{"type": "string"},
+			"date": map[string]any{"type": "string"},
+			"address": map[string]any{"type": "string"},
+		},
+		"required": []string{"name", "date", "address"},
+	}
+
+	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document:   "event_flyer.pdf",
+		Model:      "retab-small",
+		JSONSchema: calendarEventSchema,
+		NConsensus: 4,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	consensus, _ := (*result)["consensus"].(map[string]any)
+	likelihoods, _ := consensus["likelihoods"].(map[string]any)
+	pretty, err := json.MarshalIndent(likelihoods, "", "  ")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(pretty))
+}
 ```
 </CodeGroup>
 
@@ -237,6 +306,40 @@ const CalendarEvent = z.object({
     date: z.string().date(), // ISO date string (YYYY-MM-DD)
     address: Address
 });
+```
+
+```go Go
+calendarEventSchema := map[string]any{
+	"type": "object",
+	"properties": map[string]any{
+		"name": map[string]any{
+			"type": "string",
+		},
+		"date": map[string]any{
+			"type":   "string",
+			"format": "date",
+		},
+		"address": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"street": map[string]any{
+					"type": "string",
+				},
+				"city": map[string]any{
+					"type": "string",
+				},
+				"zip_code": map[string]any{
+					"type": "string",
+				},
+				"country": map[string]any{
+					"type": "string",
+				},
+			},
+			"required": []string{"street", "city", "zip_code", "country"},
+		},
+	},
+	"required": []string{"name", "date", "address"},
+}
 ```
 </CodeGroup>
 

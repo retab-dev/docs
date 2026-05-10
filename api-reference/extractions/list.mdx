@@ -54,6 +54,61 @@ const extractions = await client.extractions.list({
 });
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// List recent extractions
+	extractions, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{Limit: 10, Order: "desc"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(extractions)
+
+	// Filter by date range
+	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
+	extractions, err = client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{
+			Limit:    50,
+			FromDate: &from,
+			ToDate:   &to,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(extractions)
+
+	// Filter by metadata
+	extractions, err = client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		Metadata: map[string]string{"organization_id": "org_acme_corp"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(extractions)
+}
+```
+
 ```bash curl
 curl -X 'GET' \
   'https://api.retab.com/v1/extractions?limit=10&order=desc' \

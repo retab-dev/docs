@@ -1,0 +1,124 @@
+---
+title: 'Get Block'
+openapi: 'GET /v1/workflows/{workflow_id}/blocks/{block_id}'
+---
+
+Get a single block from the workflow's current draft, including its `config` and `resolved_schemas`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+block = client.workflows.blocks.get(
+    workflow_id="wf_abc123xyz",
+    block_id="extract-1",
+)
+
+print(block.type, block.label)
+print(block.config)
+print(block.resolved_schemas.output_schemas)
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+const block = await client.workflows.blocks.get("wf_abc123xyz", "extract-1");
+
+console.log(block.type, block.label);
+console.log(block.config);
+console.log(block.resolved_schemas?.output_schemas);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	block, err := client.Workflows.Blocks.Get(ctx, "wf_abc123xyz", "extract-1")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(block.Type, block.Label)
+	fmt.Println(block.Config)
+	if block.ResolvedSchemas != nil {
+		fmt.Println(block.ResolvedSchemas.OutputSchemas)
+	}
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/blocks/extract-1' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "extract-1",
+  "workflow_id": "wf_abc123xyz",
+  "organization_id": "org_123",
+  "draft_version": "draft_v3",
+  "type": "extract",
+  "label": "Extract Invoice Fields",
+  "position_x": 320,
+  "position_y": 0,
+  "width": 240,
+  "height": 120,
+  "config": {
+    "model": "gpt-5",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "total": {"type": "number"}
+      }
+    }
+  },
+  "parent_id": null,
+  "resolved_schemas": {
+    "input_schemas": {},
+    "output_schemas": {
+      "output-json-0": {
+        "type": "object",
+        "properties": {
+          "invoice_number": {"type": "string"},
+          "total": {"type": "number"}
+        }
+      }
+    }
+  },
+  "updated_at": "2026-05-01T14:30:00Z"
+}
+```
+
+```json 404
+{
+  "detail": "Block not found"
+}
+```
+
+</ResponseExample>

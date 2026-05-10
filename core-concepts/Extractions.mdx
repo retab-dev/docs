@@ -61,6 +61,59 @@ const extractions = await client.extractions.list({
 });
 ```
 
+```go Go
+package main
+
+import (
+	"context"
+	"log"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extractions, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{
+			Limit: 10,
+			Order: "desc",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extractions, err = client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{Limit: 50},
+		Metadata:   map[string]string{"organization_id": "org_acme_corp"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fromDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	toDate := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
+	extractions, err = client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{
+			FromDate: &fromDate,
+			ToDate:   &toDate,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_ = extractions
+}
+```
+
 </CodeGroup>
 
 ### Parameters
@@ -117,6 +170,34 @@ const extraction = await client.extractions.get("extr_01G34H8J2K");
 console.log(extraction);
 ```
 
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extraction, err := client.Extractions.Get(ctx, "extr_01G34H8J2K")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(*extraction)
+}
+```
+
 </CodeGroup>
 
 ## Filtering by Metadata
@@ -149,6 +230,36 @@ const orgExtractions = await client.extractions.list({
     limit: 100
 });
 
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	orgExtractions, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{Limit: 100},
+		Metadata:   map[string]string{"organization_id": "org_acme_corp"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_ = orgExtractions
+}
 ```
 
 </CodeGroup>

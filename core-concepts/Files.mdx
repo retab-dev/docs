@@ -53,6 +53,35 @@ console.log(`Filename: ${mimeData.filename}`);
 console.log(`URL: ${mimeData.url}`);
 ```
 
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mimeData, err := client.Files.Upload(ctx, "invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Filename: %s\n", mimeData.Filename)
+	fmt.Printf("URL: %s\n", mimeData.URL)
+}
+```
+
 ```bash cURL
 SESSION=$(curl -s -X POST \
   'https://api.retab.com/v1/files/upload' \
@@ -155,6 +184,48 @@ const extraction = await client.extractions.create({
 
 console.log(extraction.output);
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("YOUR_RETAB_API_KEY")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"invoice_number": map[string]any{"type": "string"},
+			"total_amount":   map[string]any{"type": "number"},
+		},
+	}
+
+	cloudflareR2URL := "https://<public-id>.r2.dev/large_document.pdf"
+
+	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document:   cloudflareR2URL,
+		Model:      "retab-small",
+		JSONSchema: schema,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println((*extraction)["output"])
+}
+```
 </CodeGroup>
 
 ### Option 2: upload to Retab, then reuse the URL
@@ -200,6 +271,46 @@ const extraction = await client.extractions.create({
         },
     },
 });
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("YOUR_RETAB_API_KEY")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mimeRef, err := client.Files.Upload(ctx, "large_document.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document: mimeRef.URL,
+		Model:    "retab-small",
+		JSONSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"invoice_number": map[string]any{"type": "string"},
+				"total_amount":   map[string]any{"type": "number"},
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 ```
 </CodeGroup>
 
@@ -274,6 +385,18 @@ for (const f of files) {
     console.log(`${f.id}: ${f.filename}`);
 }
 ```
+
+```go Go
+files, err := client.Files.List(ctx, &retab.ListFilesParams{
+    ListParams: retab.ListParams{Limit: 20},
+})
+if err != nil {
+    log.Fatal(err)
+}
+for _, f := range files.Data {
+    fmt.Printf("%s: %s\n", f["id"], f["filename"])
+}
+```
 </CodeGroup>
 
 ## Downloading files
@@ -291,5 +414,14 @@ print(f"Expires in: {link.expires_in}")
 const link = await client.files.getDownloadLink("file_a1b2c3d4e5f6");
 console.log(`Download URL: ${link.downloadUrl}`);
 console.log(`Expires in: ${link.expiresIn}`);
+```
+
+```go Go
+link, err := client.Files.GetDownloadLink(ctx, "file_a1b2c3d4e5f6")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Download URL: %s\n", link.DownloadURL)
+fmt.Printf("Expires in: %s\n", link.ExpiresIn)
 ```
 </CodeGroup>

@@ -44,6 +44,48 @@ const filtered = await client.files.list({
 });
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// List recent files
+	files, err := client.Files.List(ctx, &retab.ListFilesParams{
+		ListParams: retab.ListParams{Limit: 20},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, f := range files.Data {
+		fmt.Printf("%s: %s\n", f["id"], f["filename"])
+	}
+
+	// Filter by filename prefix and MIME type
+	filtered, err := client.Files.List(ctx, &retab.ListFilesParams{
+		ListParams: retab.ListParams{Filename: "invoice", Limit: 50},
+		MIMEType:   "application/pdf",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = filtered
+}
+```
+
 ```bash curl
 # List all files
 curl -X GET \

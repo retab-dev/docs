@@ -23734,7 +23734,7 @@
           "Workflow Runs"
         ],
         "summary": "List Workflow Runs",
-        "description": "List workflow runs with pagination and optional filtering.\n\nFilters:\n- workflow_id: Filter runs for a specific workflow\n- status: Filter by run status (pending, running, completed, error, waiting_for_human)\n- exclude_status: Exclude runs with this status\n- trigger_type: Filter by how the run was triggered (manual, api, schedule, webhook)\n- from_date: Filter runs created on or after this date (YYYY-MM-DD)\n- to_date: Filter runs created on or before this date (YYYY-MM-DD)\n- min_cost: Filter runs with cost >= this value\n- max_cost: Filter runs with cost <= this value\n- min_duration: Filter runs with duration >= this value (milliseconds)\n- max_duration: Filter runs with duration <= this value (milliseconds)\n- search: Search by run ID (partial match)",
+        "description": "List workflow runs with pagination and optional filtering.\n\nFilters:\n- workflow_id: Filter runs for a specific workflow\n- status: Filter by run status (pending, running, completed, error, waiting_for_human)\n- exclude_status: Exclude runs with this status\n- trigger_type: Filter by how the run was triggered (manual, api, schedule, webhook)\n- from_date: Filter runs created on or after this date (YYYY-MM-DD)\n- to_date: Filter runs created on or before this date (YYYY-MM-DD)\n- min_duration: Filter runs with duration >= this value (milliseconds)\n- max_duration: Filter runs with duration <= this value (milliseconds)\n- search: Search by run ID (partial match)",
         "operationId": "list_workflow_runs_v1_workflows_runs_get",
         "security": [
           {
@@ -23917,42 +23917,6 @@
             "description": "Filter runs created on or before this date (YYYY-MM-DD)"
           },
           {
-            "name": "min_cost",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter runs with cost >= this value",
-              "title": "Min Cost"
-            },
-            "description": "Filter runs with cost >= this value"
-          },
-          {
-            "name": "max_cost",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter runs with cost <= this value",
-              "title": "Max Cost"
-            },
-            "description": "Filter runs with cost <= this value"
-          },
-          {
             "name": "min_duration",
             "in": "query",
             "required": false,
@@ -24019,10 +23983,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Comma-separated list of fields to return (e.g., 'id,status,started_at'). If not specified, returns all fields.",
+              "description": "Comma-separated list of persisted fields to return (e.g., 'id,lifecycle.kind,timing.started_at'). If not specified, returns all fields.",
               "title": "Fields"
             },
-            "description": "Comma-separated list of fields to return (e.g., 'id,status,started_at'). If not specified, returns all fields."
+            "description": "Comma-separated list of persisted fields to return (e.g., 'id,lifecycle.kind,timing.started_at'). If not specified, returns all fields."
           },
           {
             "name": "before",
@@ -24090,7 +24054,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "default": "created_at",
+              "default": "timing.created_at",
               "title": "Sort By"
             }
           },
@@ -24309,42 +24273,6 @@
               "title": "To Date"
             },
             "description": "Filter runs created on or before this date (YYYY-MM-DD)"
-          },
-          {
-            "name": "min_cost",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter runs with cost >= this value",
-              "title": "Min Cost"
-            },
-            "description": "Filter runs with cost >= this value"
-          },
-          {
-            "name": "max_cost",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter runs with cost <= this value",
-              "title": "Max Cost"
-            },
-            "description": "Filter runs with cost <= this value"
           },
           {
             "name": "min_duration",
@@ -25244,7 +25172,7 @@
           "Workflow Runs"
         ],
         "summary": "List Workflow Run Steps",
-        "description": "List all step documents for a workflow run.",
+        "description": "List all step documents for a workflow run.\n\nReturns the per-step records for this run with handle payloads\nprojected away (server-side bandwidth optimization). Fetch via the\n``GET /{run_id}/steps/{block_id}`` endpoint (or\n:meth:`StepsView.get_full`) to see ``handle_inputs`` /\n``handle_outputs``.",
         "operationId": "list_workflow_run_steps_v1_workflows_runs__run_id__steps_get",
         "security": [
           {
@@ -25292,7 +25220,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/WorkflowRunStepListItem"
+                    "$ref": "#/components/schemas/StepStatus"
                   },
                   "title": "Response List Workflow Run Steps V1 Workflows Runs  Run Id  Steps Get"
                 }
@@ -25318,9 +25246,9 @@
           "Workflows",
           "Workflow Runs"
         ],
-        "summary": "Get Step Outputs Batch",
-        "description": "Fetch multiple step outputs for a workflow run in a single request.",
-        "operationId": "get_step_outputs_batch_v1_workflows_runs__run_id__steps_batch_post",
+        "summary": "Get Step Executions Batch",
+        "description": "Fetch multiple step execution records for a workflow run in a single request.\n\nDetail-mode batch: ``json_ref`` handles are resolved to inline JSON so\nconsumers see the real bodies.",
+        "operationId": "get_step_executions_batch_v1_workflows_runs__run_id__steps_batch_post",
         "security": [
           {
             "HTTPBearer": []
@@ -25364,7 +25292,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StepOutputsBatchRequest"
+                "$ref": "#/components/schemas/StepDetailsBatchRequest"
               }
             }
           }
@@ -25400,7 +25328,7 @@
           "Workflow Runs"
         ],
         "summary": "Get Step Response",
-        "description": "Get step status and handle data for a specific step in a workflow run.",
+        "description": "Get step status and handle data for a specific step in a workflow run.\n\nDetail-mode read: ``json_ref`` handles are resolved to inline JSON so the\nconsumer sees the real body.",
         "operationId": "get_step_response_v1_workflows_runs__run_id__steps__block_id__get",
         "security": [
           {
@@ -25456,6 +25384,86 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/StepResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{run_id}/steps/{step_id}/artifact-record": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Get Step Artifact Record",
+        "description": "Dereference a step's :class:`StepArtifactRef` ref into its typed backing record.\n\nThe artifact is uniformly a ``(operation, id)`` ref. For the six\nworkflow-owned operations (``conditional_evaluation``, ``hil_evaluation``,\n``while_loop_termination``, ``api_call_invocation``, ``function_invocation``)\nthe record is fetched from the corresponding\nbacking collection and returned inline.\n\nFor the six pre-existing operations (``extraction`` / ``split`` /\n``classification`` / ``parse`` / ``edit`` / ``partition``) records live in\nother services; this route returns ``record: None`` plus the operation tag\nso the consumer knows which existing ``/v1/<op>/{id}`` route to call.",
+        "operationId": "get_step_artifact_record_v1_workflows_runs__run_id__steps__step_id__artifact_record_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "step_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Step Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepArtifactRecordResponse"
                 }
               }
             }
@@ -25588,77 +25596,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DocumentSignedUrlResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/runs/{run_id}/rerun-webhook": {
-      "post": {
-        "tags": [
-          "Workflows",
-          "Workflow Runs"
-        ],
-        "summary": "Rerun Webhook",
-        "description": "Rerun the webhook for a completed workflow run.\n\nThis endpoint allows you to resend the webhook payload that was sent when the\nworkflow completed. Useful for testing or when the original webhook failed.\n\nArgs:\n    run_id: The ID of the workflow run to rerun the webhook for\n    \nReturns:\n    RerunWebhookResponse with the webhook status and response",
-        "operationId": "rerun_webhook_v1_workflows_runs__run_id__rerun_webhook_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RerunWebhookResponse"
                 }
               }
             }
@@ -26709,348 +26646,6 @@
             "content": {
               "application/json": {
                 "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/request-samples/{block_id}/document": {
-      "get": {
-        "tags": [
-          "Workflows",
-          "Workflow Request Samples"
-        ],
-        "summary": "Get Workflow Request Sample Document",
-        "operationId": "get_workflow_request_sample_document_v1_workflows__workflow_id__request_samples__block_id__document_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "block_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Block Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowRequestSampleDocumentResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Workflows",
-          "Workflow Request Samples"
-        ],
-        "summary": "Upsert Workflow Request Sample Document",
-        "operationId": "upsert_workflow_request_sample_document_v1_workflows__workflow_id__request_samples__block_id__document_put",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "block_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Block Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          },
-          {
-            "name": "operation_name",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "get_ready_gcp_settings",
-              "title": "Operation Name"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpsertWorkflowRequestSampleDocumentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowRequestSampleDocumentResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Workflows",
-          "Workflow Request Samples"
-        ],
-        "summary": "Clear Workflow Request Sample Document",
-        "operationId": "clear_workflow_request_sample_document_v1_workflows__workflow_id__request_samples__block_id__document_delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "block_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Block Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowRequestSampleDocumentResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/request-samples/{block_id}/test-webhook": {
-      "post": {
-        "tags": [
-          "Workflows",
-          "Workflow Request Samples"
-        ],
-        "summary": "Execute Workflow Test Webhook",
-        "operationId": "execute_workflow_test_webhook_v1_workflows__workflow_id__request_samples__block_id__test_webhook_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "block_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Block Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ExecuteWorkflowTestWebhookRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExecuteWorkflowTestWebhookResponse"
-                }
               }
             }
           },
@@ -42416,6 +42011,202 @@
         ],
         "title": "AnyItemMatchesCondition"
       },
+      "ApiCallAttempt": {
+        "properties": {
+          "attempt_number": {
+            "type": "integer",
+            "title": "Attempt Number",
+            "description": "0-based attempt index"
+          },
+          "request_method": {
+            "type": "string",
+            "title": "Request Method"
+          },
+          "request_url": {
+            "type": "string",
+            "title": "Request Url"
+          },
+          "request_headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Request Headers"
+          },
+          "request_body": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Body"
+          },
+          "response_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Status"
+          },
+          "response_headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Response Headers"
+          },
+          "response_body": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Body"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt_number",
+          "request_method",
+          "request_url"
+        ],
+        "title": "ApiCallAttempt",
+        "description": "One attempt of an api_call (initial + retries)."
+      },
+      "ApiCallInvocation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Owning organization"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id",
+            "description": "Parent workflow run ID"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id",
+            "description": "Producing step ID"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/ApiCallAttempt"
+            },
+            "type": "array",
+            "title": "Attempts",
+            "description": "Full retry trace; final attempt holds the canonical request/response"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Final error after exhausted retries, if any"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "workflow_run_id",
+          "step_id"
+        ],
+        "title": "ApiCallInvocation",
+        "description": "Persisted record of an api_call block's invocation (with retry trace).\n\nLives in the ``api_call_invocations`` collection."
+      },
+      "ApiTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "api",
+            "title": "Type",
+            "default": "api"
+          },
+          "api_key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key Id",
+            "description": "API key id used to start the run, when known"
+          }
+        },
+        "type": "object",
+        "title": "ApiTrigger",
+        "description": "Run started programmatically via the public API."
+      },
       "ApplyComputationsRequest": {
         "properties": {
           "data": {
@@ -44041,18 +43832,16 @@
             "title": "Handle Inputs",
             "description": "Input payloads keyed by handle ID (file metadata for files, data for json)"
           },
-          "output": {
+          "artifact": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/StepArtifactRef"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Output",
-            "description": "Raw output data from the block executor"
+            "description": "Canonical persisted-ref artifact for this simulation (operation + id), if any"
           },
           "handle_outputs": {
             "anyOf": [
@@ -45355,6 +45144,31 @@
         "title": "CancelWorkflowResponse",
         "description": "Response for cancel workflow endpoint."
       },
+      "CancelledTerminal": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Kind",
+            "default": "cancelled"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Human-readable reason, when known"
+          }
+        },
+        "type": "object",
+        "title": "CancelledTerminal",
+        "description": "The run was cancelled before reaching a natural terminal state."
+      },
       "Category": {
         "properties": {
           "name": {
@@ -46622,6 +46436,19 @@
         "type": "object",
         "title": "CompleteUploadRequest"
       },
+      "CompletedTerminal": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "completed",
+            "title": "Kind",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CompletedTerminal",
+        "description": "The run finished successfully."
+      },
       "CompletionTokensDetails": {
         "properties": {
           "accepted_prediction_tokens": {
@@ -46871,6 +46698,339 @@
         ],
         "title": "ComputeMetricsRequest"
       },
+      "ConditionEvaluationDetails": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path",
+            "description": "JSON path that was evaluated",
+            "default": ""
+          },
+          "operator": {
+            "type": "string",
+            "title": "Operator",
+            "description": "Comparison operator used",
+            "default": ""
+          },
+          "expected": {
+            "title": "Expected",
+            "description": "Expected value"
+          },
+          "actual": {
+            "title": "Actual",
+            "description": "Actual value found"
+          },
+          "matched": {
+            "type": "boolean",
+            "title": "Matched",
+            "description": "Whether the condition matched",
+            "default": false
+          },
+          "per_item": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConditionEvaluationPerItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Per Item",
+            "description": "Per-item breakdown for wildcard array conditions"
+          },
+          "sub_conditions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConditionEvaluationSubCondition"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Conditions",
+            "description": "Sub-condition evaluations for compound conditions"
+          },
+          "logical_operator": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "and",
+                  "or"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logical Operator",
+            "description": "Logical operator combining sub-conditions"
+          }
+        },
+        "type": "object",
+        "title": "ConditionEvaluationDetails",
+        "description": "Detailed evaluation information for frontend display.\n\nThe frontend reads evaluation data from this nested 'details' object\nfor compatibility with the ConditionalEvaluationsTable component."
+      },
+      "ConditionEvaluationPerItem": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Index of this item in the array"
+          },
+          "indices": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Indices",
+            "description": "Hierarchical indices for nested arrays (e.g., [0, 2, 1] for items[0].subitems[2].field[1])"
+          },
+          "actual": {
+            "title": "Actual",
+            "description": "Actual value at this index"
+          },
+          "matched": {
+            "type": "boolean",
+            "title": "Matched",
+            "description": "Whether this item matched the condition",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "index"
+        ],
+        "title": "ConditionEvaluationPerItem",
+        "description": "Per-item evaluation result for wildcard array conditions.\n\nWhen a condition path contains .*, each array element is evaluated\nindividually with implicit AND logic (all must match)."
+      },
+      "ConditionEvaluationResult": {
+        "properties": {
+          "condition_id": {
+            "type": "string",
+            "title": "Condition Id",
+            "description": "Unique identifier for this condition"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path",
+            "description": "JSON path that was evaluated",
+            "default": ""
+          },
+          "operator": {
+            "type": "string",
+            "title": "Operator",
+            "description": "Comparison operator used",
+            "default": ""
+          },
+          "expected": {
+            "title": "Expected",
+            "description": "Expected value"
+          },
+          "actual": {
+            "title": "Actual",
+            "description": "Actual value found"
+          },
+          "matched": {
+            "type": "boolean",
+            "title": "Matched",
+            "description": "Whether the condition matched",
+            "default": false
+          },
+          "branch_name": {
+            "type": "string",
+            "title": "Branch Name",
+            "description": "Branch name (always 'exit' for while-loop termination)",
+            "default": "exit"
+          },
+          "logical_operator": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "and",
+                  "or"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logical Operator",
+            "description": "Logical operator for compound conditions"
+          },
+          "per_item": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConditionEvaluationPerItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Per Item",
+            "description": "Per-item breakdown for wildcard array conditions"
+          },
+          "sub_evaluations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConditionEvaluationSubCondition"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Evaluations",
+            "description": "Sub-condition evaluations for compound conditions"
+          },
+          "details": {
+            "$ref": "#/components/schemas/ConditionEvaluationDetails",
+            "description": "Nested details object for frontend compatibility"
+          }
+        },
+        "type": "object",
+        "required": [
+          "condition_id",
+          "details"
+        ],
+        "title": "ConditionEvaluationResult",
+        "description": "Complete evaluation result for a termination condition.\n\nThis model represents the full evaluation data sent to the frontend\nfor displaying in the Exit Trigger Evaluation dialog.\n\nThe frontend expects data at both top-level and nested in 'details'\nfor compatibility with the ConditionalEvaluationsTable component."
+      },
+      "ConditionEvaluationSubCondition": {
+        "properties": {
+          "sub_condition_id": {
+            "type": "string",
+            "title": "Sub Condition Id",
+            "description": "Identifier for this sub-condition",
+            "default": ""
+          },
+          "path": {
+            "type": "string",
+            "title": "Path",
+            "description": "JSON path that was evaluated",
+            "default": ""
+          },
+          "operator": {
+            "type": "string",
+            "title": "Operator",
+            "description": "Comparison operator used",
+            "default": ""
+          },
+          "expected": {
+            "title": "Expected",
+            "description": "Expected value"
+          },
+          "actual": {
+            "title": "Actual",
+            "description": "Actual value found"
+          },
+          "matched": {
+            "type": "boolean",
+            "title": "Matched",
+            "description": "Whether this sub-condition matched",
+            "default": false
+          },
+          "per_item": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConditionEvaluationPerItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Per Item",
+            "description": "Per-item breakdown if this sub-condition used a wildcard path"
+          }
+        },
+        "type": "object",
+        "title": "ConditionEvaluationSubCondition",
+        "description": "Evaluation result for a sub-condition in a compound condition.\n\nUsed when multiple conditions are combined with AND/OR operators."
+      },
+      "ConditionalEvaluation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Owning organization"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id",
+            "description": "Parent workflow run ID"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id",
+            "description": "Producing step ID"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionEvaluationResult"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          },
+          "selected_handles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Selected Handles"
+          },
+          "matched_branch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Branch Id"
+          },
+          "matched_condition_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Condition Ids"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "workflow_run_id",
+          "step_id"
+        ],
+        "title": "ConditionalEvaluation",
+        "description": "Persisted record of a conditional block's branch evaluation.\n\nLives in the ``conditional_evaluations`` collection; referenced from\n``StepStatus.artifact`` with operation ``conditional_evaluation``."
+      },
       "ConsensusField": {
         "properties": {
           "path": {
@@ -47081,7 +47241,6 @@
             "enum": [
               "start",
               "start_json",
-              "end",
               "note",
               "parse",
               "edit",
@@ -47091,11 +47250,9 @@
               "conditional",
               "hil",
               "api_call",
-              "formula",
               "function",
               "while_loop",
               "for_each",
-              "merge_pdf",
               "merge_dicts",
               "while_loop_sentinel_start",
               "while_loop_sentinel_end",
@@ -49776,6 +49933,39 @@
         ],
         "title": "EmailData"
       },
+      "EmailTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "email",
+            "title": "Type",
+            "default": "email"
+          },
+          "sender": {
+            "type": "string",
+            "title": "Sender",
+            "description": "Sender email address"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject",
+            "description": "Email subject line"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sender"
+        ],
+        "title": "EmailTrigger",
+        "description": "Run started by an inbound email message."
+      },
       "Endpoint": {
         "properties": {
           "id": {
@@ -49979,6 +50169,88 @@
         "type": "object",
         "title": "ErrorDetails",
         "description": "Detailed error information for debugging.\n\nCaptures stack traces and context about where and why an error occurred."
+      },
+      "ErrorTerminal": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "error",
+            "title": "Kind",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "input_collection",
+                  "registry_lookup",
+                  "document_fetch",
+                  "execution",
+                  "output_storage",
+                  "routing",
+                  "history_payload"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage",
+            "description": "Which execution stage failed"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "transient",
+                  "permanent",
+                  "quota"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category",
+            "description": "Error category for retry decisions"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Detailed error context including stack trace"
+          },
+          "failing_step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failing Step Id",
+            "description": "Step ID of the failing step, when the failure was attributable to a specific step"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ErrorTerminal",
+        "description": "The run failed. All loose error fields are bundled here."
       },
       "EvalListItem": {
         "properties": {
@@ -50213,69 +50485,6 @@
           "total_tests"
         ],
         "title": "ExecuteBlockTestsResponse"
-      },
-      "ExecuteWorkflowTestWebhookRequest": {
-        "properties": {
-          "webhook_url": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Webhook Url"
-          },
-          "webhook_headers": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Webhook Headers"
-          },
-          "timeout_seconds": {
-            "type": "integer",
-            "maximum": 300.0,
-            "minimum": 1.0,
-            "title": "Timeout Seconds",
-            "default": 30
-          },
-          "data": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Data"
-          }
-        },
-        "type": "object",
-        "required": [
-          "webhook_url"
-        ],
-        "title": "ExecuteWorkflowTestWebhookRequest"
-      },
-      "ExecuteWorkflowTestWebhookResponse": {
-        "properties": {
-          "status_code": {
-            "type": "integer",
-            "title": "Status Code"
-          },
-          "status_text": {
-            "type": "string",
-            "title": "Status Text"
-          },
-          "output": {
-            "type": "string",
-            "title": "Output"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status_code",
-          "status_text",
-          "output"
-        ],
-        "title": "ExecuteWorkflowTestWebhookResponse"
       },
       "ExistsCondition": {
         "properties": {
@@ -50794,6 +51003,35 @@
               }
             ],
             "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt",
+            "default": 0
           },
           "is_placeholder": {
             "type": "boolean",
@@ -52351,6 +52589,79 @@
         "title": "FunctionGenerateRequest",
         "description": "Request body for AI-powered function code generation."
       },
+      "FunctionInvocation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Owning organization"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id",
+            "description": "Parent workflow run ID"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id",
+            "description": "Producing step ID"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Inputs"
+          },
+          "output": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "workflow_run_id",
+          "step_id"
+        ],
+        "title": "FunctionInvocation",
+        "description": "Persisted record of a function block's invocation.\n\nLives in the ``function_invocations`` collection."
+      },
       "FunctionTestRequest": {
         "properties": {
           "code": {
@@ -52387,51 +52698,17 @@
       },
       "FunctionTestResponse": {
         "properties": {
-          "output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output",
-            "description": "Transform output data"
+          "handle_outputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/HandlePayload"
+            },
+            "type": "object",
+            "title": "Handle Outputs",
+            "description": "Handle output payloads \u2014 function blocks produce 'output-json-0'"
           },
-          "stdout": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Stdout"
-          },
-          "stderr": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Stderr"
-          },
-          "execution_time_ms": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Execution Time Ms"
+          "sandbox": {
+            "$ref": "#/components/schemas/FunctionTestSandboxResult",
+            "description": "Function sandbox sidecar (stdout/stderr/timing/error)"
           },
           "error": {
             "anyOf": [
@@ -52442,12 +52719,68 @@
                 "type": "null"
               }
             ],
-            "title": "Error"
+            "title": "Error",
+            "description": "Top-level error for hard config/runtime failures (matches StepStatus.error)"
           }
         },
         "type": "object",
         "title": "FunctionTestResponse",
-        "description": "Response from testing a function block."
+        "description": "Response from testing a function block.\n\nThe parsed transform return value rides on\n``handle_outputs[\"output-json-0\"].data``. The function runtime sidecar\n(stdout/stderr/execution_time_ms/error from the sandbox) is exposed inline\non ``sandbox``. ``error`` at the top level is reserved for hard\nconfig/runtime failures (mirrors ``StepStatus.error``)."
+      },
+      "FunctionTestSandboxResult": {
+        "properties": {
+          "stdout": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stdout",
+            "description": "Captured stdout from the sandbox run"
+          },
+          "stderr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stderr",
+            "description": "Captured stderr from the sandbox run"
+          },
+          "execution_time_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Time Ms",
+            "description": "Wall-clock execution time reported by the sandbox"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Sandbox-reported error, if any"
+          }
+        },
+        "type": "object",
+        "title": "FunctionTestSandboxResult",
+        "description": "Sandbox sidecar (stdout/stderr/timing/error) emitted by the function runtime.\n\nThe persisted equivalent for an actual workflow step is the\n``FunctionInvocation`` record referenced via ``StepStatus.artifact``. This\ntest endpoint is ephemeral, so the sidecar is inlined here."
       },
       "GenerateNameRequest": {
         "properties": {
@@ -52749,7 +53082,8 @@
             "type": "string",
             "enum": [
               "file",
-              "json"
+              "json",
+              "json_ref"
             ],
             "title": "Type",
             "description": "Type of payload"
@@ -52766,6 +53100,10 @@
             "description": "For file handles: document reference"
           },
           "data": {
+            "title": "Data",
+            "description": "For JSON handles: structured data"
+          },
+          "artifact_ref": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -52775,8 +53113,21 @@
                 "type": "null"
               }
             ],
-            "title": "Data",
-            "description": "For JSON handles: structured data"
+            "title": "Artifact Ref",
+            "description": "For json_ref handles: pointer to artifact-storage JSON body"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview",
+            "description": "For json_ref handles: lightweight preview of the body"
           }
         },
         "type": "object",
@@ -52784,7 +53135,131 @@
           "type"
         ],
         "title": "HandlePayload",
-        "description": "Payload for a single block output handle.\n\nEach output handle on a block produces a typed payload that can be:\n- file: A document reference (PDF, image, etc.)\n- json: Structured JSON data (extracted data, etc.)\n\nHandle IDs follow the convention: \"output-{type}-{index_or_name}\"\nExamples: \"output-file-0\", \"output-json-0\", \"output-file-SubdocumentName\""
+        "description": "Payload for a single block output handle.\n\nEach output handle on a block produces a typed payload that can be:\n- file: a document reference (PDF, image, etc.)\n- json: structured JSON data (extracted data, etc.) \u2014 used for the\n  ephemeral, in-process executor boundary only\n- json_ref: a pointer to JSON data stored outside Temporal (in GCS).\n  After the artifact-store cutover, every JSON handle that crosses the\n  Temporal boundary or lands in Mongo is a ``json_ref``: the body lives\n  in the artifact store and only a ref + small preview travel through\n  workflow history.\n\nHandle IDs follow the convention: ``output-{type}-{index_or_name}``.\nExamples: ``output-file-0``, ``output-json-0``,\n``output-file-SubdocumentName``."
+      },
+      "HilEvaluation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Owning organization"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id",
+            "description": "Parent workflow run ID"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id",
+            "description": "Producing step ID"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionEvaluationResult"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          },
+          "selected_handles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Selected Handles"
+          },
+          "matched_branch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Branch Id"
+          },
+          "matched_condition_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Condition Ids"
+          },
+          "requires_human_review": {
+            "type": "boolean",
+            "title": "Requires Human Review",
+            "default": false
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          },
+          "review_decision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "approved",
+                  "rejected",
+                  "needs_changes"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Decision"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "workflow_run_id",
+          "step_id"
+        ],
+        "title": "HilEvaluation",
+        "description": "Persisted record of a HIL block's branch evaluation.\n\nSame evaluation core as :class:`ConditionalEvaluation`, plus human-review\nstate (which is the side that grows over time). Lives in the\n``hil_evaluations`` collection."
       },
       "HistoryPreviewResponse": {
         "properties": {
@@ -53543,7 +54018,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-05-07T14:20:17.229064Z",
+              "updated_at": "2026-05-10T15:22:24.433518Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -53603,21 +54078,6 @@
           "dataset_id"
         ],
         "title": "Iteration"
-      },
-      "IterationContextData": {
-        "properties": {
-          "containers": {
-            "items": {
-              "$ref": "#/components/schemas/ContainerContextData"
-            },
-            "type": "array",
-            "title": "Containers",
-            "description": "Container hierarchy from outermost to innermost"
-          }
-        },
-        "type": "object",
-        "title": "IterationContextData",
-        "description": "Structured container hierarchy for a step."
       },
       "IterationDocument": {
         "properties": {
@@ -55494,6 +55954,31 @@
         ],
         "title": "Mailbox"
       },
+      "ManualTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "manual",
+            "title": "Type",
+            "default": "manual"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "User who started the run, when known"
+          }
+        },
+        "type": "object",
+        "title": "ManualTrigger",
+        "description": "Manual run started by a user from the dashboard."
+      },
       "ManualWorkflowTestSource": {
         "properties": {
           "type": {
@@ -55831,6 +56316,12 @@
           },
           "block_kind": {
             "type": "string",
+            "enum": [
+              "extract",
+              "split",
+              "classifier",
+              "for_each"
+            ],
             "title": "Block Kind"
           },
           "subject_kind": {
@@ -57921,6 +58412,19 @@
           "rows"
         ],
         "title": "PatternMetricsResponse"
+      },
+      "PendingRun": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "pending",
+            "title": "Kind",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "title": "PendingRun",
+        "description": "The run has been created but execution has not started."
       },
       "Point": {
         "properties": {
@@ -60088,96 +60592,26 @@
         "title": "RerunApiCallResponse",
         "description": "Response from rerunning an API call block"
       },
-      "RerunWebhookResponse": {
+      "RestartTrigger": {
         "properties": {
-          "webhook_sent": {
-            "type": "boolean",
-            "title": "Webhook Sent",
-            "description": "Whether the webhook was sent successfully"
+          "type": {
+            "type": "string",
+            "const": "restart",
+            "title": "Type",
+            "default": "restart"
           },
-          "webhook_status_code": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Webhook Status Code",
-            "description": "HTTP status code from the webhook response"
-          },
-          "webhook_response_text": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Webhook Response Text",
-            "description": "Response text from the webhook (truncated)"
-          },
-          "webhook_response_headers": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "string"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Webhook Response Headers",
-            "description": "Response headers from the webhook"
-          },
-          "webhook_request_body": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Webhook Request Body",
-            "description": "Request body sent to the webhook"
-          },
-          "webhook_duration_ms": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Webhook Duration Ms",
-            "description": "Duration of the webhook request in milliseconds"
-          },
-          "webhook_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Webhook Error",
-            "description": "Error message if webhook failed"
+          "parent_run_id": {
+            "type": "string",
+            "title": "Parent Run Id",
+            "description": "ID of the parent run that was restarted"
           }
         },
         "type": "object",
         "required": [
-          "webhook_sent"
+          "parent_run_id"
         ],
-        "title": "RerunWebhookResponse",
-        "description": "Response from rerunning a webhook"
+        "title": "RestartTrigger",
+        "description": "Run created by restarting a parent run."
       },
       "RestartWorkflowRequest": {
         "properties": {
@@ -60872,6 +61306,27 @@
         ],
         "title": "RunExperimentResponse"
       },
+      "RunInputs": {
+        "properties": {
+          "documents": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FileRef"
+            },
+            "type": "object",
+            "title": "Documents",
+            "description": "Start block ID -> input document reference"
+          },
+          "json_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Data",
+            "description": "Start_json block ID -> input JSON data"
+          }
+        },
+        "type": "object",
+        "title": "RunInputs",
+        "description": "Input payloads supplied at run creation time.\n\n``documents`` and ``json_data`` default to ``{}`` (not ``None``) so callers\nnever have to handle the empty-vs-missing distinction."
+      },
       "RunListResponse": {
         "properties": {
           "runs": {
@@ -60919,6 +61374,95 @@
         ],
         "title": "RunStepWorkflowTestSource"
       },
+      "RunTiming": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the run record was created"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At",
+            "description": "When the run started executing"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At",
+            "description": "When the run finished executing"
+          },
+          "human_waiting_started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Waiting Started At",
+            "description": "When the current waiting_for_human period started"
+          },
+          "accumulated_human_waiting_ms": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Accumulated Human Waiting Ms",
+            "description": "Accumulated time spent waiting for human review across the run",
+            "default": 0
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "Wall-clock duration from started_at to completed_at.",
+            "readOnly": true
+          },
+          "active_duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Duration Ms",
+            "description": "Wall-clock duration minus time spent waiting for humans.",
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "duration_ms",
+          "active_duration_ms"
+        ],
+        "title": "RunTiming",
+        "description": "All timing information for a run.\n\n``duration_ms`` and ``active_duration_ms`` are computed properties \u2014 never\nwrite them to the database; the migration drops them and post-cutover\ncode reads them off the model."
+      },
       "RunWorkflowRequest": {
         "properties": {
           "documents": {
@@ -60930,10 +61474,7 @@
             "description": "Mapping of start block IDs to their input documents"
           },
           "json_inputs": {
-            "additionalProperties": {
-              "additionalProperties": true,
-              "type": "object"
-            },
+            "additionalProperties": true,
             "type": "object",
             "title": "Json Inputs",
             "description": "Mapping of start_json block IDs to their input JSON data"
@@ -60942,6 +61483,40 @@
         "type": "object",
         "title": "RunWorkflowRequest",
         "description": "Request to run a workflow with input documents and/or JSON.\n\nDocuments are provided as a dict mapping start block IDs to document inputs.\nJSON inputs are provided as a dict mapping start_json block IDs to JSON data.\n\nExample:\n    {\n        \"documents\": {\n            \"start-block-1\": {\n                \"filename\": \"invoice.pdf\",\n                \"mime_type\": \"application/pdf\",\n                \"content\": \"base64_encoded_content...\"\n            }\n        },\n        \"json_inputs\": {\n            \"start-json-block-1\": {\n                \"customer_name\": \"John Doe\",\n                \"invoice_number\": \"INV-001\"\n            }\n        },\n    }"
+      },
+      "RunningRun": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "running",
+            "title": "Kind",
+            "default": "running"
+          }
+        },
+        "type": "object",
+        "title": "RunningRun",
+        "description": "The run is currently executing."
+      },
+      "ScheduleTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "schedule",
+            "title": "Type",
+            "default": "schedule"
+          },
+          "schedule_id": {
+            "type": "string",
+            "title": "Schedule Id",
+            "description": "ID of the schedule that fired this run"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schedule_id"
+        ],
+        "title": "ScheduleTrigger",
+        "description": "Run started by a workflow schedule."
       },
       "SchemaChange": {
         "properties": {
@@ -61749,6 +62324,58 @@
         ],
         "title": "StartsWithCondition"
       },
+      "StepArtifactRecordResponse": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "extraction",
+              "split",
+              "classification",
+              "parse",
+              "edit",
+              "partition",
+              "conditional_evaluation",
+              "hil_evaluation",
+              "while_loop_termination",
+              "api_call_invocation",
+              "function_invocation"
+            ],
+            "title": "Operation",
+            "description": "Operation tag of the step's artifact ref"
+          },
+          "record": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConditionalEvaluation"
+              },
+              {
+                "$ref": "#/components/schemas/HilEvaluation"
+              },
+              {
+                "$ref": "#/components/schemas/WhileLoopTermination"
+              },
+              {
+                "$ref": "#/components/schemas/ApiCallInvocation"
+              },
+              {
+                "$ref": "#/components/schemas/FunctionInvocation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record",
+            "description": "Typed backing record for workflow-owned operations; ``None`` for operations whose records live in other services."
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation"
+        ],
+        "title": "StepArtifactRecordResponse",
+        "description": "Envelope returned by the artifact-record route.\n\n``operation`` lets the consumer discriminate between the twelve persisted-ref\noperations. ``record`` carries the typed backing record for the six\nworkflow-owned operations; for the six pre-existing operations\n(``extraction``/``split``/``classification``/``parse``/``edit``/``partition``)\n``record`` is ``None`` and the consumer is expected to fetch the typed\nresource from its own service route (``/v1/extractions/{id}`` etc.)."
+      },
       "StepArtifactRef": {
         "properties": {
           "operation": {
@@ -61759,10 +62386,15 @@
               "classification",
               "parse",
               "edit",
-              "partition"
+              "partition",
+              "conditional_evaluation",
+              "hil_evaluation",
+              "while_loop_termination",
+              "api_call_invocation",
+              "function_invocation"
             ],
             "title": "Operation",
-            "description": "Persisted resource operation to use for lookup"
+            "description": "Persisted resource operation; identifies the backing collection"
           },
           "id": {
             "type": "string",
@@ -61776,16 +62408,16 @@
           "id"
         ],
         "title": "StepArtifactRef",
-        "description": "Canonical persisted resource produced by a workflow step."
+        "description": "Canonical persisted resource produced by a workflow step.\n\nUniformly a `(operation, id)` ref into a backing collection. The artifact\nitself carries no payload \u2014 consumers dispatch on ``operation`` and fetch\nthe backing record by ``id``."
       },
       "StepBatchResponse": {
         "properties": {
-          "outputs": {
+          "executions": {
             "additionalProperties": {
               "$ref": "#/components/schemas/StepResponse"
             },
             "type": "object",
-            "title": "Outputs",
+            "title": "Executions",
             "description": "Step responses keyed by block ID (missing steps are omitted)"
           }
         },
@@ -61793,7 +62425,7 @@
         "title": "StepBatchResponse",
         "description": "Public batch response keyed by step block ID."
       },
-      "StepOutputsBatchRequest": {
+      "StepDetailsBatchRequest": {
         "properties": {
           "block_ids": {
             "items": {
@@ -61805,8 +62437,8 @@
           }
         },
         "type": "object",
-        "title": "StepOutputsBatchRequest",
-        "description": "Request payload for fetching multiple step outputs for a run."
+        "title": "StepDetailsBatchRequest",
+        "description": "Request payload for fetching multiple step execution records for a run."
       },
       "StepResponse": {
         "properties": {
@@ -61814,6 +62446,11 @@
             "type": "string",
             "title": "Block Id",
             "description": "ID of the block"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id",
+            "description": "Stored step ID (canonical step identifier in workflow_run_steps)"
           },
           "block_type": {
             "type": "string",
@@ -61830,17 +62467,35 @@
             "title": "Status",
             "description": "Step status"
           },
-          "error": {
+          "terminal": {
             "anyOf": [
               {
-                "type": "string"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/TerminalError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TerminalSkipped"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TerminalCancelled"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "cancelled": "#/components/schemas/TerminalCancelled",
+                    "error": "#/components/schemas/TerminalError",
+                    "skipped": "#/components/schemas/TerminalSkipped"
+                  }
+                }
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Error",
-            "description": "Error message if the step failed"
+            "title": "Terminal",
+            "description": "Structured terminal payload for error, skipped, or cancelled steps"
           },
           "artifact": {
             "anyOf": [
@@ -61851,31 +62506,17 @@
                 "type": "null"
               }
             ],
-            "description": "Canonical persisted resource produced by this step, if any"
+            "description": "Canonical persisted resource produced by this step (operation + id). Consumers dereference via the corresponding artifact-record route."
           },
           "handle_outputs": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "additionalProperties": true,
+            "type": "object",
             "title": "Handle Outputs",
             "description": "Handle outputs keyed by handle ID"
           },
           "handle_inputs": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "additionalProperties": true,
+            "type": "object",
             "title": "Handle Inputs",
             "description": "Handle inputs keyed by handle ID (what this block received)"
           }
@@ -61883,6 +62524,7 @@
         "type": "object",
         "required": [
           "block_id",
+          "step_id",
           "block_type",
           "block_label",
           "status"
@@ -61890,65 +62532,48 @@
         "title": "StepResponse",
         "description": "Public response containing step status and handle data."
       },
-      "StepStatusSummary": {
+      "StepStatus": {
         "properties": {
           "block_id": {
             "type": "string",
             "title": "Block Id",
-            "description": "Logical ID of the block (e.g., 'extract-123')"
+            "description": "Logical ID of the block"
           },
           "step_id": {
             "type": "string",
             "title": "Step Id",
-            "description": "Full step ID with iteration context (e.g., 'mr1_iter_0_extract-123'). Assigned once at creation, never recomputed."
+            "description": "Full step ID with iteration context. Assigned ONCE at creation, never recomputed."
           },
           "block_type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "start",
-                  "start_json",
-                  "end",
-                  "note",
-                  "parse",
-                  "edit",
-                  "extract",
-                  "split",
-                  "classifier",
-                  "conditional",
-                  "hil",
-                  "api_call",
-                  "formula",
-                  "function",
-                  "while_loop",
-                  "for_each",
-                  "merge_pdf",
-                  "merge_dicts",
-                  "while_loop_sentinel_start",
-                  "while_loop_sentinel_end",
-                  "for_each_sentinel_start",
-                  "for_each_sentinel_end"
-                ]
-              },
-              {
-                "type": "null"
-              }
+            "type": "string",
+            "enum": [
+              "start",
+              "start_json",
+              "note",
+              "parse",
+              "edit",
+              "extract",
+              "split",
+              "classifier",
+              "conditional",
+              "hil",
+              "api_call",
+              "function",
+              "while_loop",
+              "for_each",
+              "merge_dicts",
+              "while_loop_sentinel_start",
+              "while_loop_sentinel_end",
+              "for_each_sentinel_start",
+              "for_each_sentinel_end"
             ],
             "title": "Block Type",
-            "description": "Type of the block (optional for dynamically created body block steps)"
+            "description": "Type of the block"
           },
           "block_label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Block Label",
-            "description": "Label of the block (optional for dynamically created body block steps)"
+            "description": "Label of the block"
           },
           "status": {
             "type": "string",
@@ -61976,7 +62601,7 @@
               }
             ],
             "title": "Started At",
-            "description": "When the step started"
+            "description": "When the step started executing"
           },
           "completed_at": {
             "anyOf": [
@@ -61989,7 +62614,113 @@
               }
             ],
             "title": "Completed At",
-            "description": "When the step completed"
+            "description": "When the step finished executing"
+          },
+          "terminal": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/TerminalError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TerminalSkipped"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TerminalCancelled"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "cancelled": "#/components/schemas/TerminalCancelled",
+                    "error": "#/components/schemas/TerminalError",
+                    "skipped": "#/components/schemas/TerminalSkipped"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal",
+            "description": "Structured terminal payload \u2014 present iff status is error/skipped/cancelled"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "LLM model used by this step, when applicable"
+          },
+          "loop_containers": {
+            "items": {
+              "$ref": "#/components/schemas/ContainerContextData"
+            },
+            "type": "array",
+            "title": "Loop Containers",
+            "description": "Container hierarchy from outermost to innermost. Empty when not inside any container."
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "Parent workflow run ID"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organization that owns this step"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "When the step doc was first persisted"
+          },
+          "handle_inputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/HandlePayload"
+            },
+            "type": "object",
+            "title": "Handle Inputs",
+            "description": "Handle input payloads consumed by this step"
+          },
+          "handle_outputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/HandlePayload"
+            },
+            "type": "object",
+            "title": "Handle Outputs",
+            "description": "Handle output payloads produced by this step"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical persisted result of this step: (operation, id) ref into the backing collection. None for steps that produce no canonical result."
+          },
+          "retry_count": {
+            "type": "integer",
+            "title": "Retry Count",
+            "description": "Number of retry attempts for this step execution",
+            "default": 0
           },
           "duration_ms": {
             "anyOf": [
@@ -62001,80 +62732,8 @@
               }
             ],
             "title": "Duration Ms",
-            "description": "Duration in milliseconds"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error",
-            "description": "Error message if failed"
-          },
-          "error_stage": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "input_collection",
-                  "registry_lookup",
-                  "document_fetch",
-                  "execution",
-                  "output_storage",
-                  "routing",
-                  "history_payload"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error Stage",
-            "description": "Which execution stage failed"
-          },
-          "error_category": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "transient",
-                  "permanent",
-                  "quota"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error Category",
-            "description": "Category of error for retry decisions"
-          },
-          "artifact": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/StepArtifactRef"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Canonical persisted resource produced by this step, if any"
-          },
-          "requires_human_review": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Requires Human Review",
-            "description": "Whether this step requires human review"
+            "description": "Derived from completed_at - started_at.",
+            "readOnly": true
           },
           "loop_id": {
             "anyOf": [
@@ -62086,7 +62745,8 @@
               }
             ],
             "title": "Loop Id",
-            "description": "ID of the containing while_loop (if inside a loop)"
+            "description": "Innermost container's ID. Derived from loop_containers[-1].",
+            "readOnly": true
           },
           "iteration": {
             "anyOf": [
@@ -62098,28 +62758,25 @@
               }
             ],
             "title": "Iteration",
-            "description": "Iteration number (0-based) if inside a loop"
-          },
-          "iteration_context": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/IterationContextData"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Structured container hierarchy for this step"
+            "description": "Innermost container's iteration. Derived from loop_containers[-1].",
+            "readOnly": true
           }
         },
         "type": "object",
         "required": [
           "block_id",
           "step_id",
-          "status"
+          "block_type",
+          "block_label",
+          "status",
+          "run_id",
+          "organization_id",
+          "duration_ms",
+          "loop_id",
+          "iteration"
         ],
-        "title": "StepStatusSummary",
-        "description": "Lightweight step status stored in WorkflowRun.\n\nContains only essential information for listing/displaying runs.\nFull step details are stored in workflow_run_steps collection."
+        "title": "StepStatus",
+        "description": "Full step doc, persisted in ``workflow_run_steps`` keyed by ``(run_id, step_id)``.\n\nIMPORTANT: ``step_id`` is assigned ONCE at creation time and never recomputed."
       },
       "StoredFileRecord": {
         "properties": {
@@ -62803,6 +63460,115 @@
         "title": "TemplateSchema",
         "description": "A full Schema object with validation."
       },
+      "TerminalCancelled": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Kind",
+            "default": "cancelled"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason the step was cancelled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "TerminalCancelled",
+        "description": "Terminal payload for ``status=\"cancelled\"``."
+      },
+      "TerminalError": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "error",
+            "title": "Kind",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "input_collection",
+                  "registry_lookup",
+                  "document_fetch",
+                  "execution",
+                  "output_storage",
+                  "routing",
+                  "history_payload"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "transient",
+                  "permanent",
+                  "quota"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "TerminalError",
+        "description": "Terminal payload for ``status=\"error\"``."
+      },
+      "TerminalSkipped": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "skipped",
+            "title": "Kind",
+            "default": "skipped"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason the step was skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "TerminalSkipped",
+        "description": "Terminal payload for ``status=\"skipped\"``."
+      },
       "TextBox": {
         "properties": {
           "width": {
@@ -62862,6 +63628,28 @@
           "three_months"
         ],
         "title": "TimeRange"
+      },
+      "ToolCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "function"
+          },
+          "function": {
+            "$ref": "#/components/schemas/ToolCallFunction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "function"
+        ],
+        "title": "ToolCall"
       },
       "ToolCallFunction": {
         "properties": {
@@ -62962,7 +63750,7 @@
       "ToolInvocation": {
         "properties": {
           "call": {
-            "$ref": "#/components/schemas/main_server__services__v1__workflows__agent__models__ToolCall"
+            "$ref": "#/components/schemas/ToolCall"
           },
           "result": {
             "anyOf": [
@@ -64186,18 +64974,6 @@
         ],
         "title": "UploadFileRequest"
       },
-      "UpsertWorkflowRequestSampleDocumentRequest": {
-        "properties": {
-          "mimeData": {
-            "$ref": "#/components/schemas/MIMEData"
-          }
-        },
-        "type": "object",
-        "required": [
-          "mimeData"
-        ],
-        "title": "UpsertWorkflowRequestSampleDocumentRequest"
-      },
       "UsageOverviewMode": {
         "type": "string",
         "enum": [
@@ -64411,6 +65187,27 @@
         ],
         "title": "VerdictSummary"
       },
+      "WaitingForHumanRun": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "waiting_for_human",
+            "title": "Kind",
+            "default": "waiting_for_human"
+          },
+          "waiting_for_block_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Waiting For Block Ids",
+            "description": "Block IDs that are waiting for human review"
+          }
+        },
+        "type": "object",
+        "title": "WaitingForHumanRun",
+        "description": "The run is paused on at least one HIL block."
+      },
       "WebhookListResponse": {
         "properties": {
           "test_id": {
@@ -64534,6 +65331,87 @@
           "signature"
         ],
         "title": "WebhookSignature"
+      },
+      "WebhookTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "webhook",
+            "title": "Type",
+            "default": "webhook"
+          },
+          "webhook_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Id",
+            "description": "ID of the webhook configuration, when known"
+          }
+        },
+        "type": "object",
+        "title": "WebhookTrigger",
+        "description": "Run started by an inbound webhook."
+      },
+      "WhileLoopTermination": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Owning organization"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id",
+            "description": "Parent workflow run ID"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id",
+            "description": "Producing step ID"
+          },
+          "termination_reason": {
+            "type": "string",
+            "enum": [
+              "max_iterations_reached",
+              "condition_matched",
+              "error"
+            ],
+            "title": "Termination Reason",
+            "description": "Why the while-loop terminated"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionEvaluationResult"
+            },
+            "type": "array",
+            "title": "Evaluations",
+            "description": "Per-condition evaluation results for the terminating iteration"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "workflow_run_id",
+          "step_id",
+          "termination_reason"
+        ],
+        "title": "WhileLoopTermination",
+        "description": "Persisted record of why a while-loop terminated.\n\nLives in the ``while_loop_terminations`` collection; emitted by the\nwhile-loop sentinel_end step."
       },
       "WorkflowAgentRequest": {
         "properties": {
@@ -64774,7 +65652,6 @@
             "enum": [
               "start",
               "start_json",
-              "end",
               "note",
               "parse",
               "edit",
@@ -64784,11 +65661,9 @@
               "conditional",
               "hil",
               "api_call",
-              "formula",
               "function",
               "while_loop",
               "for_each",
-              "merge_pdf",
               "merge_dicts",
               "while_loop_sentinel_start",
               "while_loop_sentinel_end",
@@ -65517,7 +66392,6 @@
             "enum": [
               "start",
               "start_json",
-              "end",
               "note",
               "parse",
               "edit",
@@ -65527,11 +66401,9 @@
               "conditional",
               "hil",
               "api_call",
-              "formula",
               "function",
               "while_loop",
               "for_each",
-              "merge_pdf",
               "merge_dicts",
               "while_loop_sentinel_start",
               "while_loop_sentinel_end",
@@ -65787,12 +66659,6 @@
             "type": "integer",
             "title": "Start Blocks",
             "description": "Number of start blocks",
-            "default": 0
-          },
-          "terminal_blocks": {
-            "type": "integer",
-            "title": "Terminal Blocks",
-            "description": "Number of terminal blocks",
             "default": 0
           }
         },
@@ -66889,22 +67755,6 @@
         "type": "object",
         "title": "WorkflowPublished"
       },
-      "WorkflowRequestSampleDocumentResponse": {
-        "properties": {
-          "sample_document": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FileRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "title": "WorkflowRequestSampleDocumentResponse"
-      },
       "WorkflowResponse": {
         "properties": {
           "id": {
@@ -66992,365 +67842,102 @@
             "title": "Id",
             "description": "Unique ID for this run"
           },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id",
-            "description": "ID of the workflow that was run"
-          },
-          "workflow_name": {
-            "type": "string",
-            "title": "Workflow Name",
-            "description": "Name of the workflow at time of execution"
-          },
           "organization_id": {
             "type": "string",
             "title": "Organization Id",
             "description": "Organization that owns this run"
           },
-          "dataset_id": {
-            "anyOf": [
+          "workflow": {
+            "$ref": "#/components/schemas/WorkflowSnapshotRef",
+            "description": "Workflow + snapshot reference"
+          },
+          "trigger": {
+            "oneOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/ManualTrigger"
               },
               {
-                "type": "null"
+                "$ref": "#/components/schemas/ApiTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/ScheduleTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/WebhookTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/EmailTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/RestartTrigger"
               }
             ],
-            "title": "Dataset Id",
-            "description": "Optional dataset this run belongs to (for manual runs)"
+            "title": "Trigger",
+            "description": "What started this run",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "api": "#/components/schemas/ApiTrigger",
+                "email": "#/components/schemas/EmailTrigger",
+                "manual": "#/components/schemas/ManualTrigger",
+                "restart": "#/components/schemas/RestartTrigger",
+                "schedule": "#/components/schemas/ScheduleTrigger",
+                "webhook": "#/components/schemas/WebhookTrigger"
+              }
+            }
           },
-          "config_snapshot_id": {
-            "type": "string",
-            "title": "Config Snapshot Id",
-            "description": "Reference to config snapshot (workflow_config_snapshots or workflow_snapshots collection)"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "queued",
-              "running",
-              "completed",
-              "error",
-              "waiting_for_human",
-              "cancelled"
-            ],
-            "title": "Status",
-            "description": "Overall status",
-            "default": "pending"
-          },
-          "execution_phase": {
-            "anyOf": [
+          "lifecycle": {
+            "oneOf": [
               {
-                "type": "string",
-                "enum": [
-                  "created",
-                  "dispatching",
-                  "started",
-                  "running"
-                ]
+                "$ref": "#/components/schemas/PendingRun"
               },
               {
-                "type": "null"
+                "$ref": "#/components/schemas/RunningRun"
+              },
+              {
+                "$ref": "#/components/schemas/WaitingForHumanRun"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedTerminal"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorTerminal"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledTerminal"
               }
             ],
-            "title": "Execution Phase",
-            "description": "Dispatch/execution phase: created -> dispatching -> started -> running"
-          },
-          "trigger_type": {
-            "type": "string",
-            "enum": [
-              "manual",
-              "api",
-              "schedule",
-              "webhook",
-              "email",
-              "restart"
-            ],
-            "title": "Trigger Type",
-            "description": "How this run was triggered",
-            "default": "manual"
-          },
-          "trigger_email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
+            "title": "Lifecycle",
+            "description": "Discriminated lifecycle state \u2014 the terminal payload (success/error/cancelled) lives here.",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "cancelled": "#/components/schemas/CancelledTerminal",
+                "completed": "#/components/schemas/CompletedTerminal",
+                "error": "#/components/schemas/ErrorTerminal",
+                "pending": "#/components/schemas/PendingRun",
+                "running": "#/components/schemas/RunningRun",
+                "waiting_for_human": "#/components/schemas/WaitingForHumanRun"
               }
-            ],
-            "title": "Trigger Email",
-            "description": "Sender email address when trigger_type is 'email'"
+            }
           },
-          "started_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Started At"
+          "timing": {
+            "$ref": "#/components/schemas/RunTiming",
+            "description": "All timing information"
           },
-          "completed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Completed At",
-            "description": "When the workflow completed"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms",
-            "description": "Total duration in milliseconds"
-          },
-          "human_waiting_started_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Human Waiting Started At",
-            "description": "When the current waiting_for_human period started"
-          },
-          "human_waiting_duration_ms": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Human Waiting Duration Ms",
-            "description": "Accumulated time spent waiting for human review across the run",
-            "default": 0
-          },
-          "steps": {
-            "items": {
-              "$ref": "#/components/schemas/StepStatusSummary"
-            },
-            "type": "array",
-            "title": "Steps",
-            "description": "Summary status of each step"
-          },
-          "input_documents": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "$ref": "#/components/schemas/FileRef"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Input Documents",
-            "description": "Start block ID -> input document reference"
-          },
-          "input_json_data": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Input Json Data",
-            "description": "Start_json block ID -> input JSON data"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error",
-            "description": "Error message if workflow failed"
-          },
-          "error_stage": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "input_collection",
-                  "registry_lookup",
-                  "document_fetch",
-                  "execution",
-                  "output_storage",
-                  "routing",
-                  "history_payload"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error Stage",
-            "description": "Which execution stage failed at workflow level"
-          },
-          "error_details": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ErrorDetails"
-              },
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error Details",
-            "description": "Detailed error context including stack trace"
-          },
-          "cancel_signal_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cancel Signal Error",
-            "description": "Latest cancellation signaling error"
-          },
-          "cancel_signal_failed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cancel Signal Failed At",
-            "description": "When cancellation signaling most recently failed"
-          },
-          "cancel_native_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cancel Native Error",
-            "description": "Best-effort native Temporal cancellation error (if any)"
-          },
-          "cancel_confirmation_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cancel Confirmation Error",
-            "description": "Error encountered while confirming cancellation delivery"
-          },
-          "cancel_confirmation_pending": {
-            "type": "boolean",
-            "title": "Cancel Confirmation Pending",
-            "description": "Whether cancellation was requested but not yet confirmed by Temporal status",
-            "default": false
-          },
-          "cancel_requested_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cancel Requested At",
-            "description": "When cancellation was last requested for this run"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          },
-          "waiting_for_block_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Waiting For Block Ids",
-            "description": "Block IDs that are waiting for human review"
-          },
-          "pending_block_outputs": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pending Block Outputs",
-            "description": "Serialized block outputs to resume from"
-          },
-          "dag_snapshot": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dag Snapshot",
-            "description": "Serialized DAGSnapshot for execution state restoration"
-          },
-          "executed_block_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Executed Block Ids",
-            "description": "Block IDs that have completed execution (uses $addToSet for atomic deduplication)"
+          "inputs": {
+            "$ref": "#/components/schemas/RunInputs",
+            "description": "Input payloads supplied at run creation time"
           }
         },
         "type": "object",
         "required": [
-          "workflow_id",
-          "workflow_name",
           "organization_id",
-          "config_snapshot_id"
+          "workflow",
+          "trigger"
         ],
         "title": "WorkflowRun",
-        "description": "A stored workflow run record.\n\nLightweight document storing:\n- Run metadata and status\n- Step summaries (full step data in workflow_run_steps collection)\n- Reference to config snapshot (stored in separate collection)"
+        "description": "A stored workflow run record.\n\nSlim, typed, discriminated. Engine-only state is segregated into\n``engine`` and excluded from API serialization (``Field(exclude=True)``).\nThe terminal state (success/error/cancelled) is encoded in\n``lifecycle``, not spread across loose ``error`` / ``error_details``\n/ etc. fields.\n\nSteps are NOT embedded \u2014 fetch via ``StepsView(run_id, ...)`` or the\n``GET /v1/workflows/runs/{run_id}/steps`` endpoint."
       },
       "WorkflowRunExecutionOrderResponse": {
         "properties": {
@@ -67374,359 +67961,6 @@
         ],
         "title": "WorkflowRunExecutionOrderResponse",
         "description": "Response containing canonical execution ordering for a run's steps."
-      },
-      "WorkflowRunStepListItem": {
-        "properties": {
-          "run_id": {
-            "type": "string",
-            "title": "Run Id",
-            "description": "Parent workflow run ID",
-            "default": ""
-          },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id",
-            "description": "Organization that owns this",
-            "default": ""
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id",
-            "description": "Logical ID of the block (e.g., 'extract-123')"
-          },
-          "step_id": {
-            "type": "string",
-            "title": "Step Id",
-            "description": "Full step ID with iteration context (e.g., 'mr1_iter_0_extract-123'). Assigned once at creation, never recomputed."
-          },
-          "block_type": {
-            "type": "string",
-            "enum": [
-              "start",
-              "start_json",
-              "end",
-              "note",
-              "parse",
-              "edit",
-              "extract",
-              "split",
-              "classifier",
-              "conditional",
-              "hil",
-              "api_call",
-              "formula",
-              "function",
-              "while_loop",
-              "for_each",
-              "merge_pdf",
-              "merge_dicts",
-              "while_loop_sentinel_start",
-              "while_loop_sentinel_end",
-              "for_each_sentinel_start",
-              "for_each_sentinel_end"
-            ],
-            "title": "Block Type",
-            "description": "Type of the block"
-          },
-          "block_label": {
-            "type": "string",
-            "title": "Block Label",
-            "description": "Label of the block"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "queued",
-              "running",
-              "completed",
-              "skipped",
-              "error",
-              "waiting_for_human",
-              "cancelled"
-            ],
-            "title": "Status",
-            "description": "Current status"
-          },
-          "started_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Started At",
-            "description": "When the step started"
-          },
-          "completed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Completed At",
-            "description": "When the step completed"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms",
-            "description": "Duration in milliseconds"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error",
-            "description": "Error message if failed"
-          },
-          "error_stage": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "input_collection",
-                  "registry_lookup",
-                  "document_fetch",
-                  "execution",
-                  "output_storage",
-                  "routing",
-                  "history_payload"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error Stage",
-            "description": "Which execution stage failed"
-          },
-          "error_category": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "transient",
-                  "permanent",
-                  "quota"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error Category",
-            "description": "Category of error for retry decisions"
-          },
-          "error_details": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ErrorDetails"
-              },
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error Details",
-            "description": "Detailed error context including stack trace"
-          },
-          "output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output",
-            "description": "Output data from the step"
-          },
-          "handle_outputs": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "$ref": "#/components/schemas/HandlePayload"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Handle Outputs",
-            "description": "Output payloads keyed by handle ID (e.g., 'output-file-0', 'output-json-0', 'output-file-SubdocumentName')"
-          },
-          "handle_inputs": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "$ref": "#/components/schemas/HandlePayload"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Handle Inputs",
-            "description": "Input payloads keyed by handle ID (e.g., 'input-file-0', 'input-json-0'). Captures what this block received."
-          },
-          "artifact": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/StepArtifactRef"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Canonical persisted resource produced by this step, if any"
-          },
-          "requires_human_review": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Requires Human Review",
-            "description": "Whether this step requires human review"
-          },
-          "human_reviewed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Human Reviewed At",
-            "description": "When human review was completed"
-          },
-          "human_review_approved": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Human Review Approved",
-            "description": "Whether human approved or rejected"
-          },
-          "retry_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Retry Count",
-            "description": "Number of retry attempts for this step execution"
-          },
-          "loop_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Loop Id",
-            "description": "ID of the containing while_loop (if inside a loop)"
-          },
-          "iteration": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Iteration",
-            "description": "Iteration number (0-based) if inside a loop"
-          },
-          "iteration_context": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/IterationContextData"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Structured container hierarchy for this step"
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At",
-            "description": "When the step document was created"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At",
-            "description": "When the step document was last updated"
-          }
-        },
-        "type": "object",
-        "required": [
-          "block_id",
-          "step_id",
-          "block_type",
-          "block_label",
-          "status"
-        ],
-        "title": "WorkflowRunStepListItem",
-        "description": "Workflow run step document with storage timestamps preserved for listing."
       },
       "WorkflowSnapshot": {
         "properties": {
@@ -67826,31 +68060,27 @@
       },
       "WorkflowSnapshotRef": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
           "workflow_id": {
             "type": "string",
             "title": "Workflow Id",
             "description": "ID of the workflow that was run"
           },
-          "label": {
+          "snapshot_id": {
             "type": "string",
             "title": "Snapshot Id",
             "description": "Reference to config snapshot (workflow_config_snapshots or workflow_snapshots collection). REQUIRED \u2014 every run is bound to a snapshot at creation time."
           },
-          "updated_at": {
+          "name_at_run_time": {
             "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
+            "title": "Name At Run Time",
+            "description": "Workflow name as it was at run-creation time (denormalized for display)."
           }
         },
         "type": "object",
         "required": [
           "workflow_id",
-          "organization_id",
-          "type"
+          "snapshot_id",
+          "name_at_run_time"
         ],
         "title": "WorkflowSnapshotRef",
         "description": "Reference to the workflow + the immutable snapshot that drove the run.\n\nReplaces flat ``workflow_id`` + ``workflow_name`` + ``config_snapshot_id``."
@@ -69733,121 +69963,6 @@
         ],
         "title": "CreateTemplateRequest",
         "description": "Represents the expected structure for template creation.\nNote: This is a documentation model - the actual endpoint uses form data with Files.\n\nIn practice, this endpoint accepts:\n- name: as a query parameter\n- json_schema: as a file upload containing a JSON string\n- python_code: as an optional file upload containing code\n- sample_document: as an optional file upload"
-      },
-      "main_server__services__v1__workflows__agent__models__ToolCall": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "type": {
-            "type": "string",
-            "title": "Type",
-            "default": "function"
-          },
-          "function": {
-            "$ref": "#/components/schemas/ToolCallFunction"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "function"
-        ],
-        "title": "ToolCall"
-      },
-      "main_server__services__v1__workflows__models__ToolCall": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Name of the tool called"
-          },
-          "duration": {
-            "type": "integer",
-            "title": "Duration",
-            "description": "Duration in milliseconds",
-            "default": 0
-          },
-          "start_time": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Start Time",
-            "description": "ISO timestamp when call started"
-          },
-          "end_time": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "End Time",
-            "description": "ISO timestamp when call ended"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "success",
-              "error"
-            ],
-            "title": "Status",
-            "description": "Whether the tool call succeeded",
-            "default": "success"
-          },
-          "input": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Input",
-            "description": "Input parameters to the tool"
-          },
-          "output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output",
-            "description": "Output from the tool"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error",
-            "description": "Error message if tool call failed"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "ToolCall",
-        "description": "A tool/function call made during execution.\n\nTracks tool invocations within agent or model spans for debugging."
       },
       "main_server__services__v1__workflows__split_models__SplitConsensus": {
         "properties": {

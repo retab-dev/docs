@@ -157,7 +157,7 @@ async def webhook_handler(request: Request):
 
 ```javascript Node.js (Express)
 import express from 'express';
-import Retab from 'retab';
+import { Retab } from '/node';
 
 const client = new Retab();
 const app = express();

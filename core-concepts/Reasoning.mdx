@@ -89,6 +89,42 @@ const document = generator.generateDocument({
 // Print the schema in the console
 console.log(JSON.stringify(document.components?.schemas?.TemperatureReport, null, 2));
 ```
+```go Go {21}
+// Build the JSON schema as map[string]any. The X-ReasoningPrompt key is
+// preserved verbatim when the schema is sent to the Retab API.
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+)
+
+func main() {
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"date":     map[string]any{"type": "string", "format": "date"},
+			"location": map[string]any{"type": "string"},
+			"temperature": map[string]any{
+				"type":               "number",
+				"description":        "temperature in Fahrenheit",
+				"X-ReasoningPrompt":  "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.",
+			},
+			"humidity":   map[string]any{"type": "number"},
+			"conditions": map[string]any{"type": "string"},
+		},
+		"required": []string{"date", "location", "temperature", "humidity", "conditions"},
+		"title":    "TemperatureReport",
+	}
+
+	encoded, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(encoded))
+}
+```
 ```json json_schema.json {13}
 {
   "properties": {

@@ -1,0 +1,226 @@
+---
+title: 'Create Blocks (batch)'
+openapi: 'POST /v1/workflows/{workflow_id}/blocks/batch'
+---
+
+Create multiple blocks in a single request. Useful when scaffolding a workflow programmatically — pair it with [Create Edges (batch)](/api-reference/workflows/edges/create-batch) to build the whole graph in two calls.
+
+Each entry has the same shape as the body of [Create Block](/api-reference/workflows/blocks/create). The whole batch is rejected if any entry is invalid (duplicate ID, input block inside a container, unknown `parent_id`, …).
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+blocks = client.workflows.blocks.create_batch(
+    workflow_id="wf_abc123xyz",
+    blocks=[
+        {
+            "id": "start-1",
+            "type": "start",
+            "label": "Invoice Input",
+            "position_x": 0,
+            "position_y": 0,
+        },
+        {
+            "id": "extract-1",
+            "type": "extract",
+            "label": "Extract Invoice Fields",
+            "position_x": 320,
+            "position_y": 0,
+            "config": {
+                "model": "gpt-5",
+                "json_schema": {
+                    "type": "object",
+                    "properties": {"total": {"type": "number"}},
+                },
+            },
+        },
+        {
+            "id": "hil-1",
+            "type": "hil",
+            "label": "Human Review",
+            "position_x": 640,
+            "position_y": 0,
+        },
+    ],
+)
+
+for block in blocks:
+    print(block.id, block.type)
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+const blocks = await client.workflows.blocks.createBatch({
+  workflowId: "wf_abc123xyz",
+  blocks: [
+    { id: "start-1", type: "start", label: "Invoice Input", position_x: 0, position_y: 0 },
+    {
+      id: "extract-1",
+      type: "extract",
+      label: "Extract Invoice Fields",
+      position_x: 320,
+      position_y: 0,
+      config: {
+        model: "gpt-5",
+        json_schema: { type: "object", properties: { total: { type: "number" } } },
+      },
+    },
+    { id: "hil-1", type: "hil", label: "Human Review", position_x: 640, position_y: 0 },
+  ],
+});
+
+for (const block of blocks) {
+  console.log(block.id, block.type);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	blocks, err := client.Workflows.Blocks.CreateBatch(ctx, "wf_abc123xyz", []retab.WorkflowBlockCreateRequest{
+		{ID: "start-1", Type: "start", Label: "Invoice Input", PositionX: 0, PositionY: 0},
+		{
+			ID:        "extract-1",
+			Type:      "extract",
+			Label:     "Extract Invoice Fields",
+			PositionX: 320,
+			PositionY: 0,
+			Config: map[string]any{
+				"model": "gpt-5",
+				"json_schema": map[string]any{
+					"type":       "object",
+					"properties": map[string]any{"total": map[string]any{"type": "number"}},
+				},
+			},
+		},
+		{ID: "hil-1", Type: "hil", Label: "Human Review", PositionX: 640, PositionY: 0},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, block := range blocks {
+		fmt.Println(block.ID, block.Type)
+	}
+}
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/blocks/batch' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '[
+    {"id": "start-1", "type": "start", "label": "Invoice Input", "position_x": 0, "position_y": 0},
+    {"id": "extract-1", "type": "extract", "label": "Extract Invoice Fields", "position_x": 320, "position_y": 0, "config": {"model": "gpt-5", "json_schema": {"type": "object", "properties": {"total": {"type": "number"}}}}},
+    {"id": "hil-1", "type": "hil", "label": "Human Review", "position_x": 640, "position_y": 0}
+  ]'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 201
+[
+  {
+    "id": "start-1",
+    "workflow_id": "wf_abc123xyz",
+    "organization_id": "org_123",
+    "draft_version": "draft_v3",
+    "type": "start",
+    "label": "Invoice Input",
+    "position_x": 0,
+    "position_y": 0,
+    "width": null,
+    "height": null,
+    "config": null,
+    "parent_id": null,
+    "resolved_schemas": {"input_schemas": {}, "output_schemas": {}},
+    "updated_at": "2026-05-01T14:30:00Z"
+  },
+  {
+    "id": "extract-1",
+    "workflow_id": "wf_abc123xyz",
+    "organization_id": "org_123",
+    "draft_version": "draft_v3",
+    "type": "extract",
+    "label": "Extract Invoice Fields",
+    "position_x": 320,
+    "position_y": 0,
+    "width": null,
+    "height": null,
+    "config": {
+      "model": "gpt-5",
+      "json_schema": {
+        "type": "object",
+        "properties": {"total": {"type": "number"}}
+      }
+    },
+    "parent_id": null,
+    "resolved_schemas": {
+      "input_schemas": {},
+      "output_schemas": {
+        "output-json-0": {
+          "type": "object",
+          "properties": {"total": {"type": "number"}}
+        }
+      }
+    },
+    "updated_at": "2026-05-01T14:30:00Z"
+  },
+  {
+    "id": "hil-1",
+    "workflow_id": "wf_abc123xyz",
+    "organization_id": "org_123",
+    "draft_version": "draft_v3",
+    "type": "hil",
+    "label": "Human Review",
+    "position_x": 640,
+    "position_y": 0,
+    "width": null,
+    "height": null,
+    "config": null,
+    "parent_id": null,
+    "resolved_schemas": {"input_schemas": {}, "output_schemas": {}},
+    "updated_at": "2026-05-01T14:30:00Z"
+  }
+]
+```
+
+```json 400
+{
+  "detail": "Duplicate block id in batch: extract-1"
+}
+```
+
+```json 404
+{
+  "detail": "Workflow not found"
+}
+```
+
+</ResponseExample>

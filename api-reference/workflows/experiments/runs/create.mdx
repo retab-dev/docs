@@ -1,0 +1,147 @@
+---
+title: 'Run Experiment'
+openapi: 'POST /v1/workflows/{workflow_id}/experiments/{experiment_id}/run'
+---
+
+Trigger an experiment run with the current draft block configuration.
+
+This is the call that produces metrics: it re-processes every experiment
+document through the block with `n_consensus` parallel passes per document.
+Use it after creating an experiment, after editing the block, or after
+changing the document set.
+
+The endpoint is async — it returns a `job_id` immediately. Poll the job
+with [Get Job](/api-reference/jobs/retrieve) until it reaches a terminal
+status, then read the new metrics with
+[Get Experiment Metrics](/api-reference/workflows/experiments/get-metrics).
+
+Optional fields:
+
+- **`n_consensus`** — override the experiment's stored consensus count for
+  this run only (`3`, `5`, or `7`).
+- **`retry_failed_only`** — re-run only the documents that failed in the
+  latest run instead of starting a fresh run. Returns `409` if the latest
+  run has nothing to retry.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+run = client.workflows.experiments.runs.create(
+    workflow_id="wf_abc123",
+    experiment_id="exp_abc",
+)
+print(run.job_id)
+
+# Wait for the metrics to be ready, then read them.
+client.workflows.experiments.runs.wait_for_completion(run.job_id)
+metrics = client.workflows.experiments.get_metrics(
+    workflow_id="wf_abc123",
+    experiment_id="exp_abc",
+    view="summary",
+)
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+const run = await client.workflows.experiments.runs.create({
+  workflowId: "wf_abc123",
+  experimentId: "exp_abc",
+});
+console.log(run.job_id);
+
+// Wait for the metrics to be ready, then read them.
+await client.workflows.experiments.runs.waitForCompletion(run.job_id);
+const metrics = await client.workflows.experiments.getMetrics({
+  workflowId: "wf_abc123",
+  experimentId: "exp_abc",
+  view: "summary",
+});
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	run, err := client.Workflows.Experiments.Runs.Create(ctx, "wf_abc123", "exp_abc", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(run.JobID)
+
+	// Wait for the metrics to be ready, then read them.
+	if _, err := client.Workflows.Experiments.Runs.WaitForCompletion(ctx, run.JobID, nil); err != nil {
+		log.Fatal(err)
+	}
+	metrics, err := client.Workflows.Experiments.GetMetrics(ctx, "wf_abc123", "exp_abc",
+		&retab.GetExperimentMetricsParams{View: "summary"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = metrics
+}
+```
+
+```bash curl
+# Default — use the experiment's stored n_consensus and document set.
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc/run' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{}'
+
+# Override n_consensus for this run only.
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc/run' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{"n_consensus": 7}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "experiment_id": "exp_abc",
+  "run_id": "exprun_2",
+  "job_id": "job_99",
+  "status": "pending",
+  "definition_fingerprint": "0ff93ddc7cefcb42",
+  "document_count": 12,
+  "n_consensus": 5,
+  "previous_run": {
+    "run_id": "exprun_1",
+    "definition_fingerprint": "ddd95baadce6045f",
+    "score": 0.81
+  }
+}
+```
+
+```json 409
+{ "detail": "Latest run has no failed documents to retry" }
+```
+
+</ResponseExample>

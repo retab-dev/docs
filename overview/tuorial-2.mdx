@@ -70,6 +70,76 @@ extraction_link = reclient.processors.automations.links.create(
 )
 ```
 
+```go
+// The Go SDK does not yet model the processors / automations APIs.
+// Call /v1/processors and /v1/processors/automations/links directly.
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+)
+
+func post(url string, body any) ([]byte, error) {
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(raw))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+
+func main() {
+	invoiceSchema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"amount":         map[string]any{"type": "integer"},
+			"currency":       map[string]any{"type": "string"},
+			"customer_email": map[string]any{"type": "string", "format": "email"},
+		},
+		"required": []string{"amount", "currency", "customer_email"},
+	}
+
+	// Step 1: Create a processor
+	processor, err := post("https://api.retab.com/v1/processors", map[string]any{
+		"name":        "Invoice Processor",
+		"model":       "gpt-5.4",
+		"json_schema": invoiceSchema,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(processor))
+
+	// Step 2: Create an automation and attach it to the processor.
+	// Use the processor_id returned by step 1 in place of "proc_01G34H8J2K".
+	link, err := post("https://api.retab.com/v1/processors/automations/links", map[string]any{
+		"name":         "Invoices",
+		"processor_id": "proc_01G34H8J2K",
+		"webhook_url":  "https://your_server.com/invoices/webhook",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(link))
+}
+```
+
 ### Test your webhook endpoint handler locally using the Retab SDK
 
 Before you go-live with your webhook endpoint function, we recommend that you test your application integration.
@@ -84,6 +154,54 @@ link_log = reclient.processors.automations.links.test_document_upload(
     link_id=extraction_link.id,
     document = "invoice.pdf"
 )
+```
+
+```go
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	mime, err := retab.InferMIMEData("invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	body, err := json.Marshal(map[string]any{"document": mime})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"https://api.retab.com/v1/processors/automations/links/link_abc/tests/upload",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	payload, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(payload))
+}
 ```
 
 ### Secure your webhook endpoint
@@ -147,6 +265,77 @@ async def webhook_handler(request: Request):
     return {"status": "success", "data": invoice_object}
 
 
+```
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+type Invoice struct {
+	Amount        int    `json:"amount"`
+	Currency      string `json:"currency"`
+	CustomerEmail string `json:"customer_email"`
+}
+
+type WebhookRequest struct {
+	Completion struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	} `json:"completion"`
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	signature := r.Header.Get("Retab-Signature")
+	if signature == "" {
+		http.Error(w, "Missing Retab-Signature header", http.StatusBadRequest)
+		return
+	}
+
+	// SIGNATURE VERIFICATION
+	event, err := retab.VerifyEvent[WebhookRequest](
+		body,
+		signature,
+		os.Getenv("WEBHOOKS_SECRET"),
+	)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Webhook error: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Continue with your webhook handler logic
+	var invoice Invoice
+	if len(event.Completion.Choices) > 0 {
+		_ = json.Unmarshal([]byte(event.Completion.Choices[0].Message.Content), &invoice)
+	}
+	log.Printf("Webhook received: %+v", invoice)
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"status":"success"}`))
+}
+
+func main() {
+	http.HandleFunc("/webhook", handler)
+	log.Fatal(http.ListenAndServe(":8000", nil))
+}
 ```
 
 #### Vulnerability
@@ -248,5 +437,49 @@ def webhook_handler():
     )
 
     return Response(status=200)
+```
+```go Go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func webhookHandler(w http.ResponseWriter, r *http.Request) {
+	payload, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	signature := r.Header.Get("Retab-Signature")
+	if signature == "" {
+		http.Error(w, "Missing Retab-Signature header", http.StatusBadRequest)
+		return
+	}
+
+	// Verify the signature and process the event
+	if _, err := retab.VerifyEvent[json.RawMessage](
+		payload,
+		signature,
+		os.Getenv("WEBHOOKS_SECRET"),
+	); err != nil {
+		http.Error(w, fmt.Sprintf("Webhook error: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func main() {
+	http.HandleFunc("/webhook", webhookHandler)
+	log.Fatal(http.ListenAndServe(":8000", nil))
+}
 ```
 </CodeGroup>

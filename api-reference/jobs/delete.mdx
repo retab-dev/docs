@@ -27,6 +27,35 @@ const cancelledJob = await client.jobs.cancel("job_V1StGXR8_Z5jdHi6B-myT");
 console.log(`Status: ${cancelledJob.status}`);  // cancelled
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Cancel a queued or in-progress job
+	cancelledJob, err := client.Jobs.Cancel(ctx, "job_V1StGXR8_Z5jdHi6B-myT")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Status: %s\n", (*cancelledJob)["status"]) // cancelled
+}
+```
+
 ```bash curl
 curl -X POST \
   'https://api.retab.com/v1/jobs/job_V1StGXR8_Z5jdHi6B-myT/cancel' \
@@ -195,6 +224,29 @@ for (const job of jobs.data) {
     }
 }
 ```
+
+```go Go
+ctx := context.Background()
+client, _ := retab.NewClient("")
+
+// Cancel all queued jobs from a specific batch
+jobs, err := client.Jobs.List(ctx, &retab.ListJobsParams{Status: "queued"})
+if err != nil {
+	log.Fatal(err)
+}
+for _, job := range jobs.Data {
+	metadata, ok := job["metadata"].(map[string]any)
+	if !ok || metadata["batch_id"] != "batch_001" {
+		continue
+	}
+	jobID, _ := job["id"].(string)
+	if _, err := client.Jobs.Cancel(ctx, jobID); err != nil {
+		fmt.Printf("Failed to cancel %s: %v\n", jobID, err)
+		continue
+	}
+	fmt.Printf("Cancelled %s\n", jobID)
+}
+```
 </CodeGroup>
 
 ### Timeout-based Cancellation
@@ -230,6 +282,43 @@ while (!terminalStatuses.includes(job.status)) {
     }
     await new Promise(r => setTimeout(r, 2000));
     job = await client.jobs.retrieve(job.id);
+}
+```
+
+```go Go
+ctx := context.Background()
+client, _ := retab.NewClient("")
+
+job, err := client.Jobs.Create(ctx, retab.JobCreateRequest{
+	Endpoint: "/v1/extractions",
+	Request:  retab.Resource{},
+})
+if err != nil {
+	log.Fatal(err)
+}
+jobID, _ := (*job)["id"].(string)
+
+start := time.Now()
+timeout := 60 * time.Second
+terminal := map[string]bool{"completed": true, "failed": true, "cancelled": true, "expired": true}
+
+for {
+	status, _ := (*job)["status"].(string)
+	if terminal[status] {
+		break
+	}
+	if time.Since(start) > timeout {
+		if _, err := client.Jobs.Cancel(ctx, jobID); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("Job cancelled due to timeout")
+		break
+	}
+	time.Sleep(2 * time.Second)
+	job, err = client.Jobs.Retrieve(ctx, jobID, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 ```
 </CodeGroup>

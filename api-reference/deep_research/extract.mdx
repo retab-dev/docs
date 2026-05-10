@@ -73,6 +73,71 @@ const result = await response.json();
 console.log(result);
 ```
 
+```go go
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	body, err := json.Marshal(map[string]any{
+		"model": "claude-opus-4-7",
+		"json_schema": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"summary":      map[string]any{"type": "string"},
+				"key_findings": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			},
+		},
+		"document": map[string]any{
+			"filename": "report.pdf",
+			"url":      "data:application/pdf;base64,<BASE64>",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	request, err := http.NewRequest(
+		http.MethodPost,
+		"https://api.retab.com/v1/beta/deepresearch/extract",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	request.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	request.Header.Set("Content-Type", "application/json")
+
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer response.Body.Close()
+
+	responseBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if response.StatusCode >= 400 {
+		log.Fatalf("request failed: %s", responseBody)
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal(responseBody, &result); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(result)
+}
+```
+
 ```bash curl
 curl -X 'POST' \
   'https://api.retab.com/v1/beta/deepresearch/extract' \

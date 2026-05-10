@@ -1,0 +1,107 @@
+---
+title: 'List Experiment Runs'
+openapi: 'GET /v1/workflows/{workflow_id}/experiments/{experiment_id}/runs'
+---
+
+List historical runs for one experiment, newest first. Each row is a slim
+projection of an `ExperimentRun` (status, score, fingerprints, timing) — the
+fields needed for a runs table. For the underlying per-document execution data,
+use [Get Experiment Content](/api-reference/workflows/experiments/get-content);
+for consensus scores, use
+[Get Experiment Metrics](/api-reference/workflows/experiments/get-metrics).
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+result = client.workflows.experiments.runs.list(
+    workflow_id="wf_abc123",
+    experiment_id="exp_abc",
+)
+for run in result.runs:
+    print(run.id, run.status, run.score, run.created_at)
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+const result = await client.workflows.experiments.runs.list({
+  workflowId: "wf_abc123",
+  experimentId: "exp_abc",
+});
+
+for (const run of result.runs) {
+  console.log(run.id, run.status, run.score, run.created_at);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Workflows.Experiments.Runs.List(ctx, "wf_abc123", "exp_abc")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, run := range result.Runs {
+		fmt.Println(run.ID, run.Status, run.Score, run.CreatedAt)
+	}
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc/runs' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "runs": [
+    {
+      "id": "exprun_2",
+      "parent_run_id": "exprun_1",
+      "block_config": { "model": "gpt-5", "json_schema": { "type": "object" } },
+      "definition_fingerprint": "0ff93ddc7cefcb42",
+      "documents_fingerprint": "ddd95baadce6045f",
+      "status": "completed",
+      "block_kind": "extract",
+      "score": 0.87,
+      "document_count": 12,
+      "error_count": 0,
+      "n_consensus": 5,
+      "created_at": "2026-05-02T11:00:00Z",
+      "completed_at": "2026-05-02T11:04:18Z",
+      "duration_ms": 258221,
+      "job_id": "job_99"
+    }
+  ]
+}
+```
+
+</ResponseExample>

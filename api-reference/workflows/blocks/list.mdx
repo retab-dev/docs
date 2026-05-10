@@ -1,0 +1,143 @@
+---
+title: 'List Blocks'
+openapi: 'GET /v1/workflows/{workflow_id}/blocks'
+---
+
+List every block in a workflow's current draft.
+
+The response carries `resolved_schemas` on each block — the graph-derived input/output JSON schemas the engine will use at runtime. This is the source of truth for handle shapes; raw block configs may not include them directly.
+
+For the full graph (blocks + edges in a single call), use [Get Workflow Entities](/api-reference/workflows/get-entities) instead.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+blocks = client.workflows.blocks.list("wf_abc123xyz")
+
+for block in blocks:
+    print(f"{block.id} ({block.type}): {block.label}")
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+const blocks = await client.workflows.blocks.list("wf_abc123xyz");
+
+for (const block of blocks) {
+  console.log(`${block.id} (${block.type}): ${block.label}`);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	blocks, err := client.Workflows.Blocks.List(ctx, "wf_abc123xyz")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, block := range blocks {
+		fmt.Printf("%s (%s): %s\n", block.ID, block.Type, block.Label)
+	}
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/blocks' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+[
+  {
+    "id": "start-1",
+    "workflow_id": "wf_abc123xyz",
+    "organization_id": "org_123",
+    "draft_version": "draft_v3",
+    "type": "start",
+    "label": "Invoice Input",
+    "position_x": 0,
+    "position_y": 0,
+    "width": 240,
+    "height": 120,
+    "config": null,
+    "parent_id": null,
+    "resolved_schemas": {
+      "input_schemas": {},
+      "output_schemas": {}
+    },
+    "updated_at": "2026-04-30T17:00:00Z"
+  },
+  {
+    "id": "extract-1",
+    "workflow_id": "wf_abc123xyz",
+    "organization_id": "org_123",
+    "draft_version": "draft_v3",
+    "type": "extract",
+    "label": "Extract Invoice Fields",
+    "position_x": 320,
+    "position_y": 0,
+    "width": 240,
+    "height": 120,
+    "config": {
+      "model": "gpt-5",
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "invoice_number": {"type": "string"},
+          "total": {"type": "number"}
+        }
+      }
+    },
+    "parent_id": null,
+    "resolved_schemas": {
+      "input_schemas": {},
+      "output_schemas": {
+        "output-json-0": {
+          "type": "object",
+          "properties": {
+            "invoice_number": {"type": "string"},
+            "total": {"type": "number"}
+          }
+        }
+      }
+    },
+    "updated_at": "2026-05-01T14:30:00Z"
+  }
+]
+```
+
+```json 404
+{
+  "detail": "Workflow not found"
+}
+```
+
+</ResponseExample>

@@ -163,6 +163,48 @@ for (const chunk of response.output) {
 
 console.log(response.consensus.likelihoods);
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	response, err := client.Partitions.Create(ctx, retab.PartitionCreateRequest{
+		Document:     "invoice_batch.pdf",
+		Key:          "invoice_number",
+		Instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
+		Model:        "retab-small",
+		NConsensus:   3,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	output, _ := (*response)["output"].([]any)
+	for _, raw := range output {
+		chunk, _ := raw.(map[string]any)
+		fmt.Println(chunk["key"], chunk["pages"])
+	}
+
+	if consensus, ok := (*response)["consensus"].(map[string]any); ok {
+		fmt.Println(consensus["likelihoods"])
+	}
+}
+```
 </CodeGroup>
 
 ## When to Use Partition vs Split

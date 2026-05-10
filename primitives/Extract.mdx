@@ -178,6 +178,59 @@ console.log(extraction.output);
 console.log(extraction.consensus?.likelihoods);
 console.log(extraction.id);
 ```
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document: "freight/booking_confirmation.jpg",
+		Model:    "retab-micro",
+		JSONSchema: map[string]any{
+			"X-SystemPrompt": "You are a useful assistant.",
+			"properties": map[string]any{
+				"name": map[string]any{
+					"description": "The name of the calendar event.",
+					"title":       "Name",
+					"type":        "string",
+				},
+				"date": map[string]any{
+					"description": "The date of the calendar event in ISO 8601 format.",
+					"title":       "Date",
+					"type":        "string",
+				},
+			},
+			"required": []string{"name", "date"},
+			"title":    "CalendarEvent",
+			"type":     "object",
+		},
+		NConsensus: 1, // 1 means disabled (default); if > 1 the extraction runs in consensus mode
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println((*extraction)["output"])
+	if consensus, ok := (*extraction)["consensus"].(map[string]any); ok {
+		fmt.Println(consensus["likelihoods"])
+	}
+	fmt.Println((*extraction)["id"])
+}
+```
 ```curl cURL
 curl -X POST https://api.retab.com/v1/extractions \
 -H "Api-Key: $RETAB_API_KEY" \
@@ -332,6 +385,53 @@ const result = await client.extractions.create({
 console.log(result.output);
 console.log(result.consensus?.likelihoods);
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	initialSchema := map[string]any{
+		"title": "CalendarEvent",
+		"type":  "object",
+		"properties": map[string]any{
+			"name":    map[string]any{"type": "string"},
+			"date":    map[string]any{"type": "string"},
+			"address": map[string]any{"type": "string"},
+		},
+		"required": []string{"name", "date", "address"},
+	}
+
+	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document:   "event_flyer.pdf",
+		Model:      "retab-small",
+		JSONSchema: initialSchema,
+		NConsensus: 4,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println((*result)["output"])
+	if consensus, ok := (*result)["consensus"].(map[string]any); ok {
+		fmt.Println(consensus["likelihoods"])
+	}
+}
+```
 </CodeGroup>
 
 Example interpretation:
@@ -389,6 +489,38 @@ const TemperatureReportSchema = z.object({
   } as any),
 });
 ```
+
+```go Go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+)
+
+func main() {
+	temperatureReportSchema := map[string]any{
+		"title": "TemperatureReport",
+		"type":  "object",
+		"properties": map[string]any{
+			"temperature": map[string]any{
+				"type":        "number",
+				"description": "temperature in Fahrenheit",
+				"X-ReasoningPrompt": "If the temperature is given in Celsius, explicitly convert it " +
+					"to Fahrenheit. If it is already in Fahrenheit, leave it unchanged.",
+			},
+		},
+		"required": []string{"temperature"},
+	}
+
+	encoded, err := json.MarshalIndent(temperatureReportSchema, "", "  ")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(encoded))
+}
+```
 </CodeGroup>
 
 Without reasoning, a model may copy `22.5` directly. With reasoning enabled, it is more likely to compute `72.5` and explain the conversion in `reasoning___temperature`.
@@ -432,6 +564,35 @@ const sources = await client.extractions.sources("extr_01G34H8J2K");
 
 console.log(sources.extraction);
 console.log(sources.sources);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sources, err := client.Extractions.Sources(ctx, "extr_01G34H8J2K")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println((*sources)["extraction"])
+	fmt.Println((*sources)["sources"])
+}
 ```
 </CodeGroup>
 
@@ -518,6 +679,55 @@ const dateFiltered = await client.extractions.list({
   to_date: new Date("2024-12-31"),
 });
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	recent, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{Limit: 10, Order: "desc"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(recent.Data)
+
+	orgSpecific, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{Limit: 50},
+		Metadata:   map[string]string{"organization_id": "org_acme_corp"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(orgSpecific.Data)
+
+	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
+	dateFiltered, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{FromDate: &from, ToDate: &to},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(dateFiltered.Data)
+}
+```
 </CodeGroup>
 
 Useful list filters:
@@ -548,6 +758,33 @@ const client = new Retab();
 const extraction = await client.extractions.get("extr_01G34H8J2K");
 console.log(extraction);
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extraction, err := client.Extractions.Get(ctx, "extr_01G34H8J2K")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(*extraction)
+}
+```
 </CodeGroup>
 
 ### Filtering by metadata
@@ -575,6 +812,36 @@ const orgExtractions = await client.extractions.list({
   metadata: { organization_id: "org_acme_corp" },
   limit: 100,
 });
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	orgExtractions, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{Limit: 100},
+		Metadata:   map[string]string{"organization_id": "org_acme_corp"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(orgExtractions.Data)
+}
 ```
 </CodeGroup>
 
@@ -677,6 +944,82 @@ if (validation.success) {
 
 console.log(`Processed with ${result.usage?.total_tokens} tokens`);
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document: "freight/booking_confirmation.jpg",
+		Model:    "retab-micro",
+		JSONSchema: map[string]any{
+			"X-SystemPrompt": "You are a useful assistant.",
+			"properties": map[string]any{
+				"name": map[string]any{
+					"description": "The name of the calendar event.",
+					"title":       "Name",
+					"type":        "string",
+				},
+				"date": map[string]any{
+					"description": "The date of the calendar event in ISO 8601 format.",
+					"title":       "Date",
+					"type":        "string",
+				},
+			},
+			"required": []string{"name", "date"},
+			"title":    "CalendarEvent",
+			"type":     "object",
+		},
+		NConsensus: 1,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extractedData, _ := (*result)["output"].(map[string]any)
+	likelihoods := map[string]any{}
+	if consensus, ok := (*result)["consensus"].(map[string]any); ok {
+		if l, ok := consensus["likelihoods"].(map[string]any); ok {
+			likelihoods = l
+		}
+	}
+
+	fmt.Printf("Extracted Event: %v on %v\n", extractedData["name"], extractedData["date"])
+
+	allHigh := len(likelihoods) > 0
+	for _, raw := range likelihoods {
+		score, _ := raw.(float64)
+		if score <= 0.7 {
+			allHigh = false
+			break
+		}
+	}
+	if allHigh {
+		fmt.Println("High likelihood extraction - Saving to DB...")
+	} else {
+		fmt.Println("Low likelihood - Review manually")
+	}
+
+	if usage, ok := (*result)["usage"].(map[string]any); ok {
+		fmt.Printf("Processed with %v tokens\n", usage["total_tokens"])
+	}
+}
+```
 </CodeGroup>
 
 ## Use Case: Passing Extra Instructions
@@ -737,6 +1080,50 @@ const result = await client.extractions.create({
 });
 
 console.log(result.output);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document: "invoices/invoice_001.pdf",
+		Model:    "retab-micro",
+		JSONSchema: map[string]any{
+			"properties": map[string]any{
+				"vendor_name":    map[string]any{"type": "string", "description": "Name of the vendor"},
+				"invoice_number": map[string]any{"type": "string", "description": "Invoice number"},
+				"total_amount":   map[string]any{"type": "number", "description": "Total amount due"},
+				"currency":       map[string]any{"type": "string", "description": "Currency code (e.g., USD, EUR)"},
+			},
+			"required": []string{"vendor_name", "invoice_number", "total_amount"},
+			"type":     "object",
+		},
+		Instructions: "This invoice is from our European supplier. " +
+			"Amounts should be in EUR unless explicitly stated otherwise. " +
+			"Extract values exactly as written; do not infer a missing currency.",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println((*result)["output"])
+}
 ```
 
 ```curl cURL
@@ -809,6 +1196,45 @@ const result = await client.extractions.create({
   },
 });
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mySchema := map[string]any{"type": "object"}
+
+	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document:   "freight/booking_confirmation.jpg",
+		Model:      "retab-small",
+		JSONSchema: mySchema,
+		Metadata: map[string]string{
+			"organization_id": "org_123",
+			"source":          "sinari_jobs",
+			"project_id":      "project_abc",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(*result)
+}
+```
 </CodeGroup>
 
 ### 2. Filter extractions by metadata
@@ -840,6 +1266,39 @@ const tenantExtractions = await client.extractions.list({
     source: "sinari_jobs",
   },
 });
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tenantExtractions, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
+		ListParams: retab.ListParams{Limit: 50},
+		Metadata: map[string]string{
+			"organization_id": "org_123",
+			"source":          "sinari_jobs",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(tenantExtractions.Data)
+}
 ```
 
 ```curl cURL

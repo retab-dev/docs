@@ -43,11 +43,11 @@ run = client.workflows.runs.create(
 )
 
 print(f"Run started: {run.id}")
-print(f"Status: {run.status}")
+print(f"Status: {run.lifecycle.kind}")
 ```
 
 ```javascript javascript
-import Retab from 'retab';
+import { Retab } from '/node';
 
 const client = new Retab();
 
@@ -71,7 +71,60 @@ const run2 = await client.workflows.runs.create({
 });
 
 console.log(`Run started: ${run.id}`);
-console.log(`Status: ${run.status}`);
+console.log(`Status: ${run.lifecycle.kind}`);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Run with documents only
+	run, err := client.Workflows.Runs.Create(ctx, retab.CreateWorkflowRunRequest{
+		WorkflowID: "wf_abc123xyz",
+		Documents: map[string]any{
+			"start-block-1": "invoice.pdf",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Run with documents and JSON inputs
+	run2, err := client.Workflows.Runs.Create(ctx, retab.CreateWorkflowRunRequest{
+		WorkflowID: "wf_abc123xyz",
+		Documents: map[string]any{
+			"start-block-1": "invoice.pdf",
+		},
+		JSONInputs: map[string]any{
+			"start-json-block-1": map[string]any{
+				"customer_id": "cust_123",
+				"priority":    "high",
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Run started: %s\n", run.ID)
+	fmt.Printf("Status: %s\n", run.Lifecycle.Kind)
+	_ = run2
+}
 ```
 
 ```bash curl
@@ -120,42 +173,33 @@ curl -X 'POST' \
 ```json 200
 {
   "id": "run_abc123xyz",
-  "workflow_id": "wf_abc123xyz",
-  "workflow_name": "Invoice Processing",
   "organization_id": "org_123",
-  "status": "running",
-  "started_at": "2024-01-15T10:30:00Z",
-  "completed_at": null,
-  "duration_ms": null,
-  "steps": [
-    {
-      "block_id": "start-block-1",
-      "block_type": "start",
-      "block_label": "Invoice Input",
-      "status": "completed",
-      "started_at": "2024-01-15T10:30:00Z",
-      "completed_at": "2024-01-15T10:30:01Z",
-      "duration_ms": 1000
-    },
-    {
-      "block_id": "extract-block-1",
-      "block_type": "extract",
-      "block_label": "Extract Data",
-      "status": "running",
-      "started_at": "2024-01-15T10:30:01Z"
-    }
-  ],
-  "input_documents": {
-    "start-block-1": {
-      "id": "file_123",
-      "filename": "invoice.pdf",
-      "mime_type": "application/pdf"
-    }
+  "workflow": {
+    "workflow_id": "wf_abc123xyz",
+    "snapshot_id": "snap_abc123",
+    "name_at_run_time": "Invoice Processing"
   },
-  "error": null,
-  "created_at": "2024-01-15T10:30:00Z",
-  "updated_at": "2024-01-15T10:30:01Z",
-  "waiting_for_block_ids": []
+  "trigger": { "type": "api" },
+  "lifecycle": { "kind": "running" },
+  "timing": {
+    "created_at": "2024-01-15T10:30:00Z",
+    "started_at": "2024-01-15T10:30:00Z",
+    "completed_at": null,
+    "human_waiting_started_at": null,
+    "accumulated_human_waiting_ms": 0,
+    "duration_ms": null,
+    "active_duration_ms": null
+  },
+  "inputs": {
+    "documents": {
+      "start-block-1": {
+        "id": "file_123",
+        "filename": "invoice.pdf",
+        "mime_type": "application/pdf"
+      }
+    },
+    "json_data": {}
+  }
 }
 ```
 

@@ -55,6 +55,60 @@ const template = await client.edits.templates.create({
 console.log(`Template ID: ${template.id}`);
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("w9_empty.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	template, err := client.Edits.Templates.Create(ctx, retab.EditTemplateCreateRequest{
+		Name:     "W-9 Form",
+		Document: document,
+		FormFields: []retab.FormField{
+			{
+				"key":         "full_name",
+				"description": "Full legal name of the taxpayer",
+				"type":        "text",
+				"bbox": map[string]any{
+					"left": 0.15, "top": 0.20, "width": 0.35, "height": 0.03, "page": 1,
+				},
+			},
+			{
+				"key":         "tax_id",
+				"description": "Taxpayer Identification Number",
+				"type":        "text",
+				"bbox": map[string]any{
+					"left": 0.15, "top": 0.28, "width": 0.25, "height": 0.03, "page": 1,
+				},
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Template ID: %v\n", (*template)["id"])
+}
+```
+
 ```bash curl
 curl -X POST \
   'https://api.retab.com/v1/edits/templates' \
