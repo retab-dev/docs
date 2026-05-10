@@ -158,6 +158,57 @@ for (const split of result.output) {
 
 console.log(result.consensus?.likelihoods);
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Splits.Create(ctx, retab.SplitCreateRequest{
+		Document: "property_portfolio.pdf",
+		Model:    "retab-small",
+		Subdocuments: []retab.SplitSubdocument{
+			{
+				Name:                   "property_listing",
+				Description:            "Property listing pages with photos, pricing, and listing details",
+				AllowMultipleInstances: true,
+			},
+			{
+				Name:        "legal_notice",
+				Description: "Legal notices, disclaimers, or policy pages",
+			},
+		},
+		NConsensus: 3,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	output, _ := (*result)["output"].([]any)
+	for _, raw := range output {
+		split, _ := raw.(map[string]any)
+		fmt.Println(split["name"], split["pages"])
+	}
+
+	if consensus, ok := (*result)["consensus"].(map[string]any); ok {
+		fmt.Println(consensus["likelihoods"])
+	}
+}
+```
 </CodeGroup>
 
 ## Use Case: Processing Mixed Document Batches
@@ -206,6 +257,49 @@ const result = await client.splits.create({
 result.output.forEach((split) => {
   console.log(`${split.name}: pages ${split.pages}`);
 });
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	subdocuments := []retab.SplitSubdocument{
+		{Name: "invoice", Description: "Invoice documents with billing details, line items, totals, and payment terms"},
+		{Name: "receipt", Description: "Payment receipts showing transaction confirmation and amounts paid"},
+		{Name: "contract", Description: "Legal contracts with terms, conditions, and signature blocks"},
+		{Name: "cover_letter", Description: "Cover letters or transmittal documents"},
+	}
+
+	result, err := client.Splits.Create(ctx, retab.SplitCreateRequest{
+		Document:     "scanned_batch.pdf",
+		Model:        "retab-small",
+		Subdocuments: subdocuments,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	output, _ := (*result)["output"].([]any)
+	for _, raw := range output {
+		split, _ := raw.(map[string]any)
+		fmt.Printf("%v: pages %v\n", split["name"], split["pages"])
+	}
+}
 ```
 </CodeGroup>
 

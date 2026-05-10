@@ -46,6 +46,35 @@ console.log(result.extraction);
 console.log(result.sources);
 ```
 
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Extractions.Sources(ctx, "extr_01G34H8J2K")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println((*result)["extraction"])
+	fmt.Println((*result)["sources"])
+}
+```
+
 ```bash cURL
 curl -X 'GET' \
   'https://api.retab.com/v1/extractions/extr_01G34H8J2K/sources' \
@@ -376,6 +405,67 @@ for (const [field, leaf] of Object.entries(sources.sources)) {
         const { page, left, top, width, height } = leaf.source.anchor;
         console.log(`${field}: page ${page}, bbox (${left}, ${top}, ${width}, ${height})`);
     }
+}
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("invoices/invoice_001.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document: document,
+		Model:    "retab-small",
+		JSONSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"invoice_number": map[string]any{"type": "string"},
+				"total":          map[string]any{"type": "number"},
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sources, err := client.Extractions.Sources(ctx, (*result)["id"].(string))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for field, leaf := range (*sources)["sources"].(map[string]any) {
+		leafMap, ok := leaf.(map[string]any)
+		if !ok || leafMap["source"] == nil {
+			continue
+		}
+		source, ok := leafMap["source"].(map[string]any)
+		if !ok {
+			continue
+		}
+		anchor, ok := source["anchor"].(map[string]any)
+		if ok && anchor["kind"] == "pdf_bbox" {
+			fmt.Println(field, anchor)
+		}
+	}
 }
 ```
 

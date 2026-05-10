@@ -49,7 +49,7 @@ print(f"Batch {batch.batch_id} queued — poll job {batch.job_id}")
 ```
 
 ```javascript javascript
-import Retab from 'retab';
+import { Retab } from '/node';
 
 const client = new Retab();
 
@@ -72,6 +72,61 @@ const allBatch = await client.workflows.tests.execute({
 });
 
 console.log(`Batch ${batch.batch_id} queued — poll job ${batch.job_id}`);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Single test
+	batch, err := client.Workflows.Tests.Execute(ctx, retab.ExecuteBlockTestsRequest{
+		WorkflowID: "wf_abc123xyz",
+		TestID:     "wfnodetest_hsLEQiM61ez9Piv147MWk",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// All tests for a single block, with consensus override
+	blockBatch, err := client.Workflows.Tests.Execute(ctx, retab.ExecuteBlockTestsRequest{
+		WorkflowID: "wf_abc123xyz",
+		Target: retab.Resource{
+			"type":     "block",
+			"block_id": "block_extract_invoice",
+		},
+		NConsensus: 5,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Every test in the workflow
+	allBatch, err := client.Workflows.Tests.Execute(ctx, retab.ExecuteBlockTestsRequest{
+		WorkflowID: "wf_abc123xyz",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Batch %s queued — poll job %s\n", batch.BatchID, batch.JobID)
+	_ = blockBatch
+	_ = allBatch
+}
 ```
 
 ```bash curl
@@ -159,6 +214,51 @@ const result = await client.workflows.tests.waitForCompletion(batch.job_id, {
 console.log(`${result.counts.passed}/${result.results.length} passed`);
 for (const item of result.results) {
   console.log(item.test_id, item.status, item.duration_ms);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	batch, err := client.Workflows.Tests.Execute(ctx, retab.ExecuteBlockTestsRequest{
+		WorkflowID: "wf_abc123xyz",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Workflows.Tests.WaitForCompletion(ctx, batch.JobID, &retab.WaitForBlockTestsParams{
+		PollInterval: 2 * time.Second,
+		Timeout:      10 * time.Minute,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	counts, _ := (*result)["counts"].(map[string]any)
+	results, _ := (*result)["results"].([]any)
+	fmt.Printf("%v/%d passed\n", counts["passed"], len(results))
+	for _, item := range results {
+		entry, _ := item.(map[string]any)
+		fmt.Println(entry["test_id"], entry["status"], entry["duration_ms"])
+	}
 }
 ```
 

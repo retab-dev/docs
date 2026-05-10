@@ -52,6 +52,53 @@ console.log(`Classification ID: ${classification.id}`);
 console.log(`Category: ${classification.output.category}`);
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	classification, err := client.Classifications.Create(ctx, retab.ClassificationCreateRequest{
+		Document: document,
+		Model:    "retab-small",
+		Categories: []retab.ClassificationCategory{
+			{Name: "invoice", Description: "Invoice documents with billing information"},
+			{Name: "receipt", Description: "Receipt documents for payments"},
+			{Name: "contract", Description: "Legal contract documents"},
+		},
+		FirstNPages:  3,
+		Instructions: "Processing batch from Q4 2024 vendor submissions",
+		NConsensus:   1,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Classification ID: %v\n", (*classification)["id"])
+	if output, ok := (*classification)["output"].(map[string]any); ok {
+		fmt.Printf("Category: %v\n", output["category"])
+	}
+}
+```
+
 ```bash curl
 curl -X POST \
   'https://api.retab.com/v1/classifications' \

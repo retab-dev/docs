@@ -106,6 +106,63 @@ processor = reclient.processors.create(
 )
 ```
 
+```go Request
+// The Go SDK does not yet model the processors API. Call /v1/processors directly.
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"invoice_number": map[string]any{"type": "string"},
+			"total_amount":   map[string]any{"type": "number"},
+		},
+	}
+
+	body, err := json.Marshal(map[string]any{
+		"name":                 "Invoice Processor",
+		"json_schema":          schema,
+		"model":                "gpt-5.4",
+		"modality":             "native",
+		"n_consensus":          3,
+		"image_resolution_dpi": 150,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"https://api.retab.com/v1/processors",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	payload, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(payload))
+}
+```
+
 ```json Response
 {
   "object": "processor",
@@ -165,6 +222,56 @@ completion = reclient.processors.submit(
     processor_id="proc_01G34H8J2K",
     document=mime
 )
+```
+
+```go Request
+// The Go SDK does not yet model the processors API. Use retab.InferMIMEData
+// to build the document payload, then POST to /v1/processors/{id}/submit.
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	mime, err := retab.InferMIMEData("invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	body, err := json.Marshal(map[string]any{"document": mime})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"https://api.retab.com/v1/processors/proc_01G34H8J2K/submit",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	payload, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(payload))
+}
 ```
 
 

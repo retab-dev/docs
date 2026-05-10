@@ -46,6 +46,51 @@ parse.output.pages.forEach((page, index) => {
 });
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("document.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	parse, err := client.Parses.Create(ctx, retab.ParseCreateRequest{
+		Document:           document,
+		Model:              "retab-small",
+		TableParsingFormat: "markdown",
+		ImageResolutionDPI: 192,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Parse ID: %v\n", (*parse)["id"])
+	output, _ := (*parse)["output"].(map[string]any)
+	fmt.Printf("Full text: %v\n", output["text"])
+	if pages, ok := output["pages"].([]any); ok {
+		for i, page := range pages {
+			fmt.Printf("Page %d: %v\n", i+1, page)
+		}
+	}
+}
+```
+
 ```bash curl
 curl -X POST \
   'https://api.retab.com/v1/parses' \

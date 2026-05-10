@@ -56,6 +56,71 @@ reconciled_data = consensus_result["data"]
 likelihoods = consensus_result["likelihoods"]
 ```
 
+```go go
+// The Go SDK does not yet model the consensus API. Call /v1/consensus/reconcile directly.
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	results := []map[string]any{
+		{"name": "Science Fair", "date": "2023-06-15", "participants": []string{"Alice", "Bob"}},
+		{"name": "Science Fair", "date": "2023-06-15", "participants": []string{"Alice", "Bob", "Charlie"}},
+		{"name": "Science Exhibition", "date": "2023-06-15", "participants": []string{"Alice", "Bob"}},
+	}
+
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"name": map[string]any{"type": "string"},
+			"date": map[string]any{"type": "string"},
+			"participants": map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "string"},
+			},
+		},
+		"required": []string{"name", "date", "participants"},
+	}
+
+	body, err := json.Marshal(map[string]any{
+		"list_dicts":       results,
+		"reference_schema": schema,
+		"mode":             "direct",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"https://api.retab.com/v1/consensus/reconcile",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	payload, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(payload))
+}
+```
+
 ```bash curl
 curl https://api.retab.com/v1/consensus/reconcile \
   -H "Api-Key: $RETAB_API_KEY" \

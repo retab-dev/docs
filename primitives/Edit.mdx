@@ -246,6 +246,82 @@ result.data.form_data.forEach(field => {
 });
 ```
 
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/base64"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Fill the form with natural language instructions.
+	// InferMIMEData reads the local file and produces a MIMEData payload.
+	document, err := retab.InferMIMEData("application-form.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
+		Document: document,
+		Instructions: `
+        Full Name: Jane Smith
+        Date of Birth: March 15, 1985
+        Email: jane.smith@example.com
+        Phone: (555) 123-4567
+        Address: 456 Oak Avenue, Suite 200
+        City: San Francisco
+        State: California
+        ZIP Code: 94102
+        I agree to the terms and conditions: checked
+        `,
+		Model: "retab-small",
+		Color: "#000080", // Dark blue text (default)
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data, _ := (*result)["data"].(map[string]any)
+	filled, _ := data["filled_document"].(map[string]any)
+	if url, ok := filled["url"].(string); ok && url != "" {
+		parts := strings.SplitN(url, ",", 2)
+		if len(parts) == 2 {
+			filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
+			if err != nil {
+				log.Fatal(err)
+			}
+			if err := os.WriteFile("filled-application.pdf", filledBytes, 0o644); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println("Filled form saved!")
+		}
+	}
+
+	formData, _ := data["form_data"].([]any)
+	fmt.Printf("Filled %d form fields:\n", len(formData))
+	for _, raw := range formData {
+		field, _ := raw.(map[string]any)
+		if value, ok := field["value"]; ok && value != nil && value != "" {
+			fmt.Printf("  - %v: %v\n", field["key"], value)
+		}
+	}
+}
+```
+
 ```typescript TypeScript
 import { Retab, type EditRequest, type Edit } from '@retab/node';
 import { readFileSync, writeFileSync } from 'fs';
@@ -355,6 +431,51 @@ const template = await client.edits.templates.create({
 
 console.log(`Template ${template.id} with ${template.field_count} fields ready for fill calls`);
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	template, err := client.Edits.Templates.Create(ctx, retab.EditTemplateCreateRequest{
+		Name:     "Application Form",
+		Document: "blank-form.pdf",
+		FormFields: []retab.FormField{
+			{
+				"key":         "full_name",
+				"description": "Applicant's full legal name",
+				"type":        "text",
+				"bbox":        map[string]any{"left": 0.15, "top": 0.12, "width": 0.35, "height": 0.03, "page": 1},
+			},
+			{
+				"key":         "date_of_birth",
+				"description": "Date of birth, ISO 8601",
+				"type":        "text",
+				"bbox":        map[string]any{"left": 0.15, "top": 0.18, "width": 0.25, "height": 0.03, "page": 1},
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Template %v with %v fields ready for fill calls\n", (*template)["id"], (*template)["field_count"])
+}
+```
 </CodeGroup>
 
 <Note>
@@ -415,6 +536,60 @@ if (result.data.filled_document) {
     const base64Content = result.data.filled_document.url.split(",")[1];
     writeFileSync("filled-from-template.pdf", Buffer.from(base64Content, 'base64'));
     console.log("Template-based form filled and saved!");
+}
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/base64"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Edits.Templates.Fill(ctx, retab.EditTemplateFillRequest{
+		TemplateID: "edittplt_abc123",
+		Instructions: `
+        Full Name: Jane Smith
+        Date of Birth: March 15, 1985
+        Email: jane.smith@example.com
+        `,
+		Model: "retab-small",
+		Color: "#000080", // Dark blue text (default)
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data, _ := (*result)["data"].(map[string]any)
+	filled, _ := data["filled_document"].(map[string]any)
+	if url, ok := filled["url"].(string); ok && url != "" {
+		parts := strings.SplitN(url, ",", 2)
+		if len(parts) == 2 {
+			filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
+			if err != nil {
+				log.Fatal(err)
+			}
+			if err := os.WriteFile("filled-from-template.pdf", filledBytes, 0o644); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println("Template-based form filled and saved!")
+		}
+	}
 }
 ```
 </CodeGroup>
@@ -541,6 +716,82 @@ for (let i = 0; i < applicants.length; i++) {
 
 console.log(`Processed ${applicants.length} forms successfully!`);
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/base64"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	type applicant struct {
+		Name  string
+		DOB   string
+		Email string
+		Phone string
+	}
+
+	applicants := []applicant{
+		{Name: "John Doe", DOB: "January 10, 1990", Email: "john.doe@example.com", Phone: "(555) 111-2222"},
+		{Name: "Alice Johnson", DOB: "July 22, 1988", Email: "alice.j@example.com", Phone: "(555) 333-4444"},
+		{Name: "Bob Williams", DOB: "December 5, 1995", Email: "bob.w@example.com", Phone: "(555) 555-6666"},
+	}
+
+	// For batch processing, use Edits.Templates.Fill with a pre-created template.
+	// This skips field detection for each document, making it much faster.
+	for i, person := range applicants {
+		instructions := fmt.Sprintf(`
+        Full Name: %s
+        Date of Birth: %s
+        Email Address: %s
+        Phone Number: %s
+        `, person.Name, person.DOB, person.Email, person.Phone)
+
+		result, err := client.Edits.Templates.Fill(ctx, retab.EditTemplateFillRequest{
+			TemplateID:   "edittplt_your_template_id",
+			Instructions: instructions,
+			Model:        "retab-small",
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		data, _ := (*result)["data"].(map[string]any)
+		filled, _ := data["filled_document"].(map[string]any)
+		if url, ok := filled["url"].(string); ok && url != "" {
+			parts := strings.SplitN(url, ",", 2)
+			if len(parts) == 2 {
+				filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
+				if err != nil {
+					log.Fatal(err)
+				}
+				outputFilename := fmt.Sprintf("filled-form-%d-%s.pdf", i+1, strings.ReplaceAll(person.Name, " ", "-"))
+				if err := os.WriteFile(outputFilename, filledBytes, 0o644); err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("Created: %s\n", outputFilename)
+			}
+		}
+	}
+
+	fmt.Printf("Processed %d forms successfully!\n", len(applicants))
+}
+```
 </CodeGroup>
 
 ## Use Case: Word Document Filling
@@ -606,6 +857,72 @@ if (result.data.filled_document) {
     const base64Content = result.data.filled_document.url.split(",")[1];
     writeFileSync("filled-contract.docx", Buffer.from(base64Content, 'base64'));
     console.log("Filled Word document saved!");
+}
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("contract-template.docx")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	instructions, err := json.Marshal(map[string]any{
+		"client_name":         "Acme Corporation",
+		"contract_date":       "January 15, 2025",
+		"project_description": "Website redesign and development",
+		"total_amount":        "$25,000",
+		"payment_terms":       "Net 30",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
+		Document:     document,
+		Instructions: string(instructions),
+		Model:        "retab-small",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data, _ := (*result)["data"].(map[string]any)
+	filled, _ := data["filled_document"].(map[string]any)
+	if url, ok := filled["url"].(string); ok && url != "" {
+		parts := strings.SplitN(url, ",", 2)
+		if len(parts) == 2 {
+			filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
+			if err != nil {
+				log.Fatal(err)
+			}
+			if err := os.WriteFile("filled-contract.docx", filledBytes, 0o644); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println("Filled Word document saved!")
+		}
+	}
 }
 ```
 </CodeGroup>
@@ -679,6 +996,75 @@ if (result.data.filled_document) {
     console.log("Filled Excel spreadsheet saved!");
 }
 ```
+
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("invoice-template.xlsx")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	instructions, err := json.Marshal(map[string]any{
+		"invoice_number": "INV-2025-001",
+		"customer_name":  "Tech Solutions Inc.",
+		"invoice_date":   "2025-01-15",
+		"items": []map[string]any{
+			{"description": "Consulting Services", "quantity": 10, "rate": 150},
+			{"description": "Software License", "quantity": 1, "rate": 500},
+		},
+		"total": "$2,000",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
+		Document:     document,
+		Instructions: string(instructions),
+		Model:        "retab-small",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data, _ := (*result)["data"].(map[string]any)
+	filled, _ := data["filled_document"].(map[string]any)
+	if url, ok := filled["url"].(string); ok && url != "" {
+		parts := strings.SplitN(url, ",", 2)
+		if len(parts) == 2 {
+			filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
+			if err != nil {
+				log.Fatal(err)
+			}
+			if err := os.WriteFile("filled-invoice.xlsx", filledBytes, 0o644); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println("Filled Excel spreadsheet saved!")
+		}
+	}
+}
+```
 </CodeGroup>
 
 ## Use Case: PowerPoint Presentation Filling
@@ -744,6 +1130,77 @@ if (result.data.filled_document) {
     const base64Content = result.data.filled_document.url.split(",")[1];
     writeFileSync("filled-sales-deck.pptx", Buffer.from(base64Content, 'base64'));
     console.log("Filled PowerPoint presentation saved!");
+}
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("sales-deck-template.pptx")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	instructions, err := json.Marshal(map[string]any{
+		"company_name":      "Acme Corp",
+		"presenter_name":    "Jane Smith",
+		"presentation_date": "Q1 2025",
+		"revenue_figure":    "$1.2M",
+		"growth_percentage": "25%",
+		"key_highlights": []string{
+			"Expanded to 3 new markets",
+			"Launched 2 new products",
+			"Increased team by 40%",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
+		Document:     document,
+		Instructions: string(instructions),
+		Model:        "retab-small",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data, _ := (*result)["data"].(map[string]any)
+	filled, _ := data["filled_document"].(map[string]any)
+	if url, ok := filled["url"].(string); ok && url != "" {
+		parts := strings.SplitN(url, ",", 2)
+		if len(parts) == 2 {
+			filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
+			if err != nil {
+				log.Fatal(err)
+			}
+			if err := os.WriteFile("filled-sales-deck.pptx", filledBytes, 0o644); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println("Filled PowerPoint presentation saved!")
+		}
+	}
 }
 ```
 </CodeGroup>

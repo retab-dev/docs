@@ -54,6 +54,43 @@ console.log(mime.url);  // https://storage.retab.com/...
 // through the transport for the actual call.
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Recommended — SDK runs the full upload + complete flow.
+	mime, err := client.Files.Upload(ctx, "invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(mime.URL) // https://storage.retab.com/...
+
+	// Lower-level — only when you've handled the PUT yourself.
+	// CompleteUpload finalizes a direct-to-storage upload after the
+	// bytes have already been written to the signed uploadUrl.
+	completed, err := client.Files.CompleteUpload(ctx, "file_a1b2c3d4e5f6", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(completed.URL)
+}
+```
+
 ```bash curl
 curl -X POST \
   'https://api.retab.com/v1/files/upload/file_a1b2c3d4e5f6/complete' \

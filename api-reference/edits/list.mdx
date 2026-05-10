@@ -31,6 +31,47 @@ for (const edit of edits.data) {
 }
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	edits, err := client.Edits.List(ctx, &retab.ListEditsParams{
+		ListParams: retab.ListParams{Limit: 20, Order: "desc"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, edit := range edits.Data {
+		fmt.Printf("%v: %v\n", edit["id"], edit["file"])
+	}
+
+	// Filter by template
+	filtered, err := client.Edits.List(ctx, &retab.ListEditsParams{
+		ListParams: retab.ListParams{Limit: 50},
+		TemplateID: "edittplt_abc123",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(filtered)
+}
+```
+
 ```bash curl
 curl -X GET \
   'https://api.retab.com/v1/edits?limit=20&order=desc' \

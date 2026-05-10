@@ -185,6 +185,74 @@ schema_obj = Schema(
     pydantic_model=Deck
 )
 ```
+
+```go main.go
+// Build the JSON schema directly as map[string]any in Go. The Retab API
+// accepts the schema verbatim, including X-SystemPrompt and X-ReasoningPrompt
+// annotations.
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+)
+
+func main() {
+	schema := map[string]any{
+		"type":           "object",
+		"title":          "Deck",
+		"X-SystemPrompt": "Your task is to extract structured information from pitch decks based on the provided schema...",
+		"properties": map[string]any{
+			"name":    map[string]any{"type": "string", "description": "Name of the company"},
+			"website": map[string]any{"type": "string", "description": "URL of the company website"},
+			"country": map[string]any{"type": "string", "description": "2 letter Country code of the company"},
+			"investors": map[string]any{
+				"type":              "object",
+				"description":       "Existing investors in the startup",
+				"X-ReasoningPrompt": "Think about the investors. Detail your thought process step by step.",
+			},
+			"competitors": map[string]any{
+				"type":              "object",
+				"description":       "Competitors identified by the startup in the deck",
+				"X-ReasoningPrompt": "Walk through your analysis of the competitive landscape step by step.",
+			},
+			"clients": map[string]any{
+				"type":              "object",
+				"description":       "Clients (B2B) in pipe or signed by the startup in the deck",
+				"X-ReasoningPrompt": "Break down your client analysis systematically.",
+			},
+			"team": map[string]any{
+				"type":              "array",
+				"description":       "Company Team",
+				"X-ReasoningPrompt": "Analyze the team composition methodically.",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"firstName":       map[string]any{"type": "string"},
+						"lastName":        map[string]any{"type": "string"},
+						"title":           map[string]any{"type": "string"},
+						"pastExperiences": map[string]any{"type": "string"},
+					},
+				},
+			},
+			"businessModel": map[string]any{
+				"type":              "string",
+				"enum":              []string{"B2B", "B2C", "C2C"},
+				"description":       "Business model of the startup",
+				"X-ReasoningPrompt": "Explain your business model classification process step by step.",
+			},
+		},
+		"required": []string{"name", "website", "country", "investors", "competitors", "clients", "team", "businessModel"},
+	}
+
+	encoded, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(encoded))
+}
+```
 ```python json_schema.json
 {
   "$defs": {

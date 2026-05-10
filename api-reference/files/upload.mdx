@@ -30,6 +30,35 @@ console.log(`Filename: ${mimeData.filename}`);
 console.log(`URL: ${mimeData.url}`);
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mimeData, err := client.Files.Upload(ctx, "invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Filename: %s\n", mimeData.Filename)
+	fmt.Printf("URL: %s\n", mimeData.URL)
+}
+```
+
 ```bash curl
 SESSION=$(curl -s -X POST \
   'https://api.retab.com/v1/files/upload' \
@@ -207,6 +236,75 @@ const sameExtraction = await client.extractions.create({
   model: "retab-small",
   json_schema: schema,
 });
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("YOUR_RETAB_API_KEY")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"invoice_number": map[string]any{"type": "string"},
+			"total_amount":   map[string]any{"type": "number"},
+		},
+	}
+
+	// Option 1: object-storage URL
+	cloudflareR2URL := "https://<public-id>.r2.dev/large_document.pdf"
+
+	extractionFromR2, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document:   cloudflareR2URL,
+		Model:      "retab-small",
+		JSONSchema: schema,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = extractionFromR2
+
+	// Option 2: Retab upload, then reuse the returned URL
+	mimeRef, err := client.Files.Upload(ctx, "large_document.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document:   mimeRef.URL,
+		Model:      "retab-small",
+		JSONSchema: schema,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// This also works:
+	sameExtraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document:   *mimeRef,
+		Model:      "retab-small",
+		JSONSchema: schema,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println((*extraction)["id"], (*sameExtraction)["id"])
+}
 ```
 
 </RequestExample>

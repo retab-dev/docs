@@ -37,6 +37,46 @@ const edit = await client.edits.templates.fill({
 console.log(`Edit ID: ${edit.id}`);
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	edit, err := client.Edits.Templates.Fill(ctx, retab.EditTemplateFillRequest{
+		TemplateID:   "edittplt_abc123",
+		Instructions: "Name: John Doe, Date of Birth: 1990-01-15, Tax ID: 123-45-6789",
+		Model:        "retab-small",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Edit ID: %v\n", (*edit)["id"])
+	if data, ok := (*edit)["data"].(map[string]any); ok {
+		if formData, ok := data["form_data"].([]any); ok {
+			for _, field := range formData {
+				f, _ := field.(map[string]any)
+				fmt.Printf("%v = %v\n", f["key"], f["value"])
+			}
+		}
+	}
+}
+```
+
 ```bash curl
 curl -X POST \
   'https://api.retab.com/v1/edits/templates/fill' \

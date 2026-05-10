@@ -29,7 +29,7 @@ print(filtered.data[0]["name"])
 ```
 
 ```javascript javascript
-import Retab from 'retab';
+import { Retab } from '/node';
 
 const client = new Retab();
 
@@ -47,6 +47,48 @@ const filtered = await client.workflows.list({
 
 console.log(workflows.list_metadata.after);
 console.log(filtered.data[0].name);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	workflows, err := client.Workflows.List(ctx, &retab.ListWorkflowsParams{
+		Limit:  10,
+		Order:  "desc",
+		SortBy: "updated_at",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	filtered, err := client.Workflows.List(ctx, &retab.ListWorkflowsParams{
+		After:  "workflow_abc123xyz",
+		Limit:  5,
+		Fields: "id,name,updated_at",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(workflows.ListMetadata.After)
+	fmt.Println(filtered.Data[0].Name)
+}
 ```
 
 ```bash curl

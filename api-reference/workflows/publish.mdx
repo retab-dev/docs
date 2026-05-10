@@ -1,0 +1,117 @@
+---
+title: 'Publish Workflow'
+openapi: 'POST /v1/workflows/{workflow_id}/publish'
+---
+
+Publish the workflow's current draft as a new immutable snapshot. New runs created via [Run Workflow](/api-reference/workflows/runs/create), email triggers, schedules, or webhooks always execute against the latest published snapshot — edits to the draft after publish do not affect in-flight or future runs until you publish again.
+
+Pass an optional `description` to record what changed in this version.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+workflow = client.workflows.publish(
+    "wf_abc123xyz",
+    description="Add vendor-name normalization step",
+)
+
+print(workflow.published.snapshot_id)
+print(workflow.published.published_at)
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+const workflow = await client.workflows.publish("wf_abc123xyz", {
+  description: "Add vendor-name normalization step",
+});
+
+console.log(workflow.published.snapshot_id);
+console.log(workflow.published.published_at);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	workflow, err := client.Workflows.Publish(ctx, "wf_abc123xyz", retab.PublishWorkflowRequest{
+		Description: "Add vendor-name normalization step",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if workflow.Published != nil {
+		fmt.Println(workflow.Published.SnapshotID)
+		fmt.Println(workflow.Published.PublishedAt)
+	}
+}
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/publish' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "description": "Add vendor-name normalization step"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "wf_abc123xyz",
+  "name": "Invoice Processing",
+  "description": "Extract invoice fields and route for review",
+  "organization_id": "org_123",
+  "published": {
+    "snapshot_id": "snap_v3_def456",
+    "published_at": "2026-05-01T14:30:00Z"
+  },
+  "email_trigger": {
+    "allowed_senders": [],
+    "allowed_domains": ["acme.com"]
+  },
+  "created_at": "2026-04-30T17:00:00Z",
+  "updated_at": "2026-05-01T14:30:00Z"
+}
+```
+
+```json 400
+{
+  "detail": "Workflow has structural errors and cannot be published"
+}
+```
+
+```json 404
+{
+  "detail": "Workflow not found"
+}
+```
+
+</ResponseExample>

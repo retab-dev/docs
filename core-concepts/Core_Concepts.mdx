@@ -38,7 +38,7 @@ print(models)
 
 ```javascript Node.js
 // Async client (default)
-import Retab from 'retab';
+import { Retab } from '/node';
 
 async function fetchModels() {
     const client = new Retab();
@@ -51,6 +51,33 @@ const client = new Retab();
 
 client.models.list()
     .then(models => console.log(models));
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	models, err := client.Models.List(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(models)
+}
 ```
 </CodeGroup>
 
@@ -139,6 +166,49 @@ const response = await client.extractions.create({
     json_schema: jsonSchema,
     n_consensus: 10  // This will run and combine the results of 10 calls to the same LLM
 });
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	schemaBytes, err := os.ReadFile("booking_confirmation_json_schema.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	var jsonSchema map[string]any
+	if err := json.Unmarshal(schemaBytes, &jsonSchema); err != nil {
+		log.Fatal(err)
+	}
+
+	response, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document:   "booking_confirmation.jpg",
+		Model:      "retab-micro",
+		JSONSchema: jsonSchema,
+		NConsensus: 10, // This will run and combine the results of 10 calls to the same LLM
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(response)
+}
 ```
 
 ```JSON Extracted JSON

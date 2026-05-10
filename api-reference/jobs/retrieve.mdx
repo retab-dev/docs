@@ -38,6 +38,47 @@ if (job.status === "completed") {
 }
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Retrieve a job by ID
+	job, err := client.Jobs.RetrieveFull(ctx, "job_V1StGXR8_Z5jdHi6B-myT")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	status, _ := (*job)["status"].(string)
+	fmt.Printf("Status: %s\n", status)
+
+	switch status {
+	case "completed":
+		if response, ok := (*job)["response"].(map[string]any); ok {
+			fmt.Println("Result:", response["body"])
+		}
+	case "failed":
+		if jobErr, ok := (*job)["error"].(map[string]any); ok {
+			fmt.Println("Error:", jobErr["message"])
+		}
+	}
+}
+```
+
 ```bash curl
 curl -X GET \
   'https://api.retab.com/v1/jobs/job_V1StGXR8_Z5jdHi6B-myT?include_request=true&include_response=true' \
@@ -316,6 +357,66 @@ job = await client.jobs.waitForCompletion(jobId, {
     poll_interval_ms: 2000,
     timeout_ms: 300_000,
 });
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	jobID := "job_V1StGXR8_Z5jdHi6B-myT"
+
+	// Manual polling
+	terminal := map[string]bool{"completed": true, "failed": true, "cancelled": true, "expired": true}
+	job, err := client.Jobs.Retrieve(ctx, jobID, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for {
+		status, _ := (*job)["status"].(string)
+		if terminal[status] {
+			break
+		}
+		time.Sleep(2 * time.Second)
+		job, err = client.Jobs.Retrieve(ctx, jobID, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if status, _ := (*job)["status"].(string); status == "completed" {
+		job, err = client.Jobs.RetrieveFull(ctx, jobID)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// Or use the helper method
+	job, err = client.Jobs.WaitForCompletion(ctx, jobID, &retab.JobWaitForCompletionParams{
+		PollInterval:    2 * time.Second,
+		Timeout:         5 * time.Minute,
+		IncludeResponse: true,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println((*job)["status"])
+}
 ```
 </CodeGroup>
 

@@ -188,6 +188,73 @@ if (classification.output.category === "invoice") {
 }
 ```
 
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	categories := []retab.ClassificationCategory{
+		{Name: "invoice", Description: "Invoice documents with billing details, line items, totals, and payment terms"},
+		{Name: "receipt", Description: "Payment receipts showing transaction confirmation and amounts paid"},
+		{Name: "contract", Description: "Legal contracts with terms, conditions, and signature blocks"},
+		{Name: "purchase_order", Description: "Purchase order documents with order details and shipping information"},
+	}
+
+	classification, err := client.Classifications.Create(ctx, retab.ClassificationCreateRequest{
+		Document:   "incoming_document.pdf",
+		Model:      "retab-small",
+		Categories: categories,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	output, _ := (*classification)["output"].(map[string]any)
+	category, _ := output["category"].(string)
+	fmt.Printf("Document classified as: %s\n", category)
+	fmt.Printf("Reasoning: %v\n", output["reasoning"])
+
+	switch category {
+	case "invoice":
+		invoiceSchema := map[string]any{"type": "object"}
+		extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+			Document:   "incoming_document.pdf",
+			Model:      "retab-small",
+			JSONSchema: invoiceSchema,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		_ = extraction
+	case "contract":
+		contractSchema := map[string]any{"type": "object"}
+		extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+			Document:   "incoming_document.pdf",
+			Model:      "retab-small",
+			JSONSchema: contractSchema,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		_ = extraction
+	}
+}
+```
+
 ```typescript TypeScript
 import { Retab } from '@retab/node';
 
@@ -289,6 +356,76 @@ for (const attachment of emailAttachments) {
 
     console.log(`${attachment.name}: ${classification.output.category}`);
     console.log(`  Reason: ${classification.output.reasoning.slice(0, 100)}...`);
+}
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+type emailAttachment struct {
+	Name string
+	Path string
+}
+
+func processInvoice(_ emailAttachment)   {}
+func queueForReview(_ emailAttachment)   {}
+func archiveDocument(_ emailAttachment)  {}
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	categories := []retab.ClassificationCategory{
+		{Name: "invoice", Description: "Invoice or billing documents requiring payment"},
+		{Name: "quote", Description: "Price quotes or proposals from vendors"},
+		{Name: "marketing", Description: "Marketing materials, brochures, or promotional content"},
+		{Name: "other", Description: "Miscellaneous documents not fitting other categories"},
+	}
+
+	emailAttachments := []emailAttachment{}
+
+	for _, attachment := range emailAttachments {
+		classification, err := client.Classifications.Create(ctx, retab.ClassificationCreateRequest{
+			Document:   attachment.Path,
+			Model:      "retab-small",
+			Categories: categories,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		output, _ := (*classification)["output"].(map[string]any)
+		category, _ := output["category"].(string)
+		reasoning, _ := output["reasoning"].(string)
+
+		switch category {
+		case "invoice":
+			processInvoice(attachment)
+		case "quote":
+			queueForReview(attachment)
+		case "marketing":
+			archiveDocument(attachment)
+		}
+
+		fmt.Printf("%s: %s\n", attachment.Name, category)
+		preview := reasoning
+		if len(preview) > 100 {
+			preview = preview[:100]
+		}
+		fmt.Printf("  Reason: %s...\n", preview)
+	}
 }
 ```
 </CodeGroup>

@@ -45,6 +45,50 @@ const ranged = await client.parses.list({
 });
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// List recent parses
+	parses, err := client.Parses.List(ctx, &retab.ListParams{Limit: 20, Order: "desc"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, parse := range parses.Data {
+		fmt.Printf("%v: %v\n", parse["id"], parse["file"])
+	}
+
+	// Filter by date range
+	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
+	ranged, err := client.Parses.List(ctx, &retab.ListParams{
+		FromDate: &from,
+		ToDate:   &to,
+		Limit:    50,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(ranged)
+}
+```
+
 ```bash curl
 # List recent parses
 curl -X GET \

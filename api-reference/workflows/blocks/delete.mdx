@@ -1,0 +1,75 @@
+---
+title: 'Delete Block'
+openapi: 'DELETE /v1/workflows/{workflow_id}/blocks/{block_id}'
+---
+
+Delete a block from a workflow's draft. Every edge connected to the block (incoming or outgoing) is deleted with it — you don't need to clean those up first.
+
+If the block is a container (`while_loop`, `for_each`), its child blocks become orphaned (their `parent_id` is reset to `null`) but are otherwise preserved.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+client.workflows.blocks.delete(
+    workflow_id="wf_abc123xyz",
+    block_id="extract-1",
+)
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+await client.workflows.blocks.delete("wf_abc123xyz", "extract-1");
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := client.Workflows.Blocks.Delete(ctx, "wf_abc123xyz", "extract-1"); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+```bash curl
+curl -X 'DELETE' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/blocks/extract-1' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```text 204
+(empty body)
+```
+
+```json 404
+{
+  "detail": "Block not found"
+}
+```
+
+</ResponseExample>

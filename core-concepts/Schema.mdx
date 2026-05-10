@@ -27,6 +27,45 @@ schema_obj = reclient.schemas.generate(
     ]
 )
 ```
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	firstDocument, err := retab.InferMIMEData("freight/booking_confirmation_1.jpg")
+	if err != nil {
+		log.Fatal(err)
+	}
+	secondDocument, err := retab.InferMIMEData("freight/booking_confirmation_2.jpg")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	schemaObj, err := client.Schemas.Generate(ctx, retab.GenerateSchemaRequest{
+		Model:     "gpt-5.4",
+		Documents: []any{firstDocument, secondDocument},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println((*schemaObj)["json_schema"])
+}
+```
 ```json Response
 {
     "id_": "sch_id_c547dbfaa0cbcb8d646ca7c53af54d8870f2740e",

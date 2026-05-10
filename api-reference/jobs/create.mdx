@@ -65,6 +65,54 @@ console.log(`Job ID: ${job.id}`);
 console.log(`Status: ${job.status}`);
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create an async extraction job
+	job, err := client.Jobs.Create(ctx, retab.JobCreateRequest{
+		Endpoint: "/v1/extractions",
+		Request: retab.Resource{
+			"document": map[string]any{
+				"filename": "invoice.pdf",
+				"url":      "data:application/pdf;base64,JVBERi0xLjQK...",
+			},
+			"json_schema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"invoice_number": map[string]any{"type": "string"},
+					"total":          map[string]any{"type": "number"},
+				},
+				"required": []string{"invoice_number", "total"},
+			},
+			"model": "retab-small",
+		},
+		Metadata: map[string]string{"batch_id": "batch_001", "source": "api"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Job ID: %s\n", (*job)["id"])
+	fmt.Printf("Status: %s\n", (*job)["status"])
+}
+```
+
 ```bash curl
 curl -X POST \
   'https://api.retab.com/v1/jobs' \

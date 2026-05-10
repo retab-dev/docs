@@ -42,6 +42,53 @@ console.log(`Extraction ID: ${extraction.id}`);
 console.log(extraction.output);
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("Invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document: document,
+		JSONSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"invoice_number": map[string]any{"type": "string"},
+				"total":          map[string]any{"type": "number"},
+			},
+			"required": []string{"invoice_number", "total"},
+		},
+		Model:      "retab-small",
+		NConsensus: 1,
+		Metadata:   map[string]string{"source": "docs"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Extraction ID: %v\n", (*extraction)["id"])
+	fmt.Println((*extraction)["output"])
+}
+```
+
 ```bash curl
 curl -X POST \
   'https://api.retab.com/v1/extractions' \

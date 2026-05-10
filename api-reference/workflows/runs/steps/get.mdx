@@ -30,16 +30,61 @@ if step.handle_outputs:
 ```
 
 ```javascript javascript
-import Retab from 'retab';
+import { Retab } from '/node';
 
 const client = new Retab();
 
 const step = await client.workflows.runs.steps.get("run_abc123xyz", "extract-block-1");
 
 console.log(`Step status: ${step.status}`);
+const payload = step.handle_outputs["output-json-0"];
+if (payload?.type === "json") {
+    console.log(payload.data);
+}
 if (step.artifact) {
     const extraction = await client.extractions.get(step.artifact.id);
     console.log(extraction);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	step, err := client.Workflows.Runs.Steps.Get(ctx, "run_abc123xyz", "extract-block-1")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Step status: %s\n", step.Status)
+	if step.Artifact != nil {
+		extraction, err := client.Extractions.Get(ctx, step.Artifact.ID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(extraction)
+	}
+
+	// Or inspect raw handle payloads:
+	if payload, ok := step.HandleOutputs["output-json-0"]; ok {
+		fmt.Println(payload.Type)
+		fmt.Println(payload.Data)
+	}
 }
 ```
 
@@ -60,7 +105,7 @@ curl -X 'GET' \
   "block_type": "extract",
   "block_label": "Extract Data",
   "status": "completed",
-  "error": null,
+  "terminal": null,
   "artifact": {
     "operation": "extraction",
     "id": "ext_abc123"
@@ -94,10 +139,16 @@ curl -X 'GET' \
   "block_type": "extract",
   "block_label": "Extract Data",
   "status": "error",
-  "error": "LLM returned malformed JSON",
+  "terminal": {
+    "kind": "error",
+    "message": "LLM returned malformed JSON",
+    "stage": "execution",
+    "category": null,
+    "details": null
+  },
   "artifact": null,
-  "handle_outputs": null,
-  "handle_inputs": null
+  "handle_outputs": {},
+  "handle_inputs": {}
 }
 ```
 

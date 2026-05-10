@@ -45,7 +45,7 @@ result = client.workflows.runs.submit_hil_decision(
 ```
 
 ```javascript javascript
-import Retab from 'retab';
+import { Retab } from '/node';
 
 const client = new Retab();
 
@@ -64,6 +64,48 @@ await client.workflows.runs.submitHilDecision("run_abc123", {
   blockId: "hil-1",
   approved: false,
 });
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Approve a HIL block, optionally with edited data
+	result, err := client.Workflows.Runs.SubmitHILDecision(ctx, "run_abc123", retab.SubmitHILDecisionRequest{
+		BlockID:      "hil-1",
+		Approved:     true,
+		ModifiedData: map[string]any{"amount": 1234.56},
+		CommandID:    "cmd_idempotent_abc", // optional dedup key
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(result.Decision.DecisionReceived, result.Decision.DecisionApplied)
+
+	// Reject a HIL block
+	if _, err := client.Workflows.Runs.SubmitHILDecision(ctx, "run_abc123", retab.SubmitHILDecisionRequest{
+		BlockID:  "hil-1",
+		Approved: false,
+	}); err != nil {
+		log.Fatal(err)
+	}
+}
 ```
 
 ```bash curl

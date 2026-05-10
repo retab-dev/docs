@@ -1,0 +1,141 @@
+---
+title: 'Get Experiment Content'
+openapi: 'GET /v1/workflows/{workflow_id}/experiments/{experiment_id}/content'
+---
+
+Get the per-document execution content of a specific run — the document jobs
+the run executed and the canonical artifact each job produced.
+
+This is execution data only. For consensus scores and disagreement matrices,
+see [Get Experiment Metrics](/api-reference/workflows/experiments/get-metrics).
+
+`run_id` defaults to the latest run. When the experiment hasn't been run
+yet, the response carries placeholder jobs (one per document) so the
+dashboard can render a stable shape before metrics exist.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Latest run.
+content = client.workflows.experiments.get_content(
+    workflow_id="wf_abc123",
+    experiment_id="exp_abc",
+)
+for job in content.content.jobs:
+    print(job.document_id, job.status, job.artifact)
+
+# Or pin to a specific run.
+older = client.workflows.experiments.get_content(
+    workflow_id="wf_abc123",
+    experiment_id="exp_abc",
+    run_id="exprun_v1",
+)
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+// Latest run.
+const content = await client.workflows.experiments.getContent({
+  workflowId: "wf_abc123",
+  experimentId: "exp_abc",
+});
+
+for (const job of content.content.jobs) {
+  console.log(job.document_id, job.status, job.artifact);
+}
+
+// Or pin to a specific run.
+const older = await client.workflows.experiments.getContent({
+  workflowId: "wf_abc123",
+  experimentId: "exp_abc",
+  runId: "exprun_v1",
+});
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Latest run — pass empty runID for "latest".
+	content, err := client.Workflows.Experiments.GetContent(ctx, "wf_abc123", "exp_abc", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, job := range content.Content.Jobs {
+		fmt.Println(job.DocumentID, job.Status, job.Artifact)
+	}
+
+	// Or pin to a specific run.
+	older, err := client.Workflows.Experiments.GetContent(ctx, "wf_abc123", "exp_abc", "exprun_v1")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = older
+}
+```
+
+```bash curl
+# Latest run
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc/content' \
+  -H 'Api-Key: <your-api-key>'
+
+# Specific run
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc/content?run_id=exprun_v1' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "experiment_id": "exp_abc",
+  "run_id": "exprun_1",
+  "content": {
+    "jobs": [
+      {
+        "id": "expjob_1",
+        "run_id": "exprun_1",
+        "experiment_id": "exp_abc",
+        "document_id": "expdoc_1",
+        "status": "completed",
+        "block_kind": "extract",
+        "handle_inputs": {
+          "input-document-0": { "type": "file", "filename": "invoice_q1.pdf" }
+        },
+        "artifact": { "operation": "extraction", "id": "ext_xyz" },
+        "duration_ms": 4120,
+        "attempt": 0,
+        "is_placeholder": false
+      }
+    ]
+  }
+}
+```
+
+</ResponseExample>

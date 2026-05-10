@@ -53,7 +53,7 @@ test = client.workflows.tests.update(
 ```
 
 ```javascript javascript
-import Retab from 'retab';
+import { Retab } from '/node';
 
 const client = new Retab();
 
@@ -71,6 +71,57 @@ const reAsserted = await client.workflows.tests.update({
     condition: { kind: "matches_regex", expected: "^Acme.*" },
   },
 });
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	workflowID := "wf_abc123xyz"
+	testID := "wfnodetest_hsLEQiM61ez9Piv147MWk"
+
+	// Rename only.
+	if _, err := client.Workflows.Tests.Update(ctx, workflowID, testID, retab.WorkflowTestUpdateRequest{
+		Name: "Q1 invoice — vendor name check",
+	}); err != nil {
+		log.Fatal(err)
+	}
+
+	// Replace the assertion.
+	if _, err := client.Workflows.Tests.Update(ctx, workflowID, testID, retab.WorkflowTestUpdateRequest{
+		Assertion: retab.Resource{
+			"target":    map[string]any{"output_handle_id": "output-json-0", "path": "vendor.name"},
+			"condition": map[string]any{"kind": "matches_regex", "expected": "^Acme.*"},
+		},
+	}); err != nil {
+		log.Fatal(err)
+	}
+
+	// Re-capture inputs from a different run.
+	if _, err := client.Workflows.Tests.Update(ctx, workflowID, testID, retab.WorkflowTestUpdateRequest{
+		Source: retab.Resource{
+			"type":    "run_step",
+			"run_id":  "wfrun_new789",
+			"step_id": "block_extract_invoice",
+		},
+	}); err != nil {
+		log.Fatal(err)
+	}
+}
 ```
 
 ```bash curl

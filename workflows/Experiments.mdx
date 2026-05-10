@@ -154,3 +154,376 @@ degraded the block.
 
 Experiments work best as a discovery and comparison tool. They tell you where a
 block is uncertain; tests then lock in the behaviors you decide are correct.
+
+## Using the SDK
+
+The dashboard flow above maps onto a small set of SDK calls. The same calls back
+the [MCP tool surface](/workflows/MCP), so anything you can do interactively or
+through an agent you can do programmatically.
+
+### Create an experiment
+
+Pick a supported block, give the experiment a name and a document set, and
+choose how many consensus passes per document (3, 5, or 7). Documents come from
+prior workflow runs (via `document_captures`) or as explicit handle inputs.
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+experiment = client.workflows.experiments.create(
+    workflow_id="wf_abc123",
+    block_id="extract-invoice",
+    name="Q1 invoices",
+    document_captures=[
+        {"workflow_run_id": "wfrun_1"},
+        {"workflow_run_id": "wfrun_2", "step_id": "for_each-0"},
+    ],
+    n_consensus=5,
+)
+```
+
+```go go
+// The Go SDK does not yet model the workflow experiments API. Call the
+// /v1/workflows/{workflow_id}/experiments endpoints directly.
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	body, err := json.Marshal(map[string]any{
+		"block_id": "extract-invoice",
+		"name":     "Q1 invoices",
+		"document_captures": []map[string]any{
+			{"workflow_run_id": "wfrun_1"},
+			{"workflow_run_id": "wfrun_2", "step_id": "for_each-0"},
+		},
+		"n_consensus": 5,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"https://api.retab.com/v1/workflows/wf_abc123/experiments",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	payload, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(payload))
+}
+```
+
+Creating an experiment does NOT trigger a run — the document set is registered
+but no metrics exist yet.
+
+### Run the experiment
+
+Trigger consensus runs against the current draft block config. This is async —
+the SDK returns a `job_id` and you poll for completion.
+
+```python python
+run = client.workflows.experiments.runs.create(
+    workflow_id="wf_abc123",
+    experiment_id=experiment.id,
+)
+
+# Block until the run finishes (or raises on failure / timeout).
+client.workflows.experiments.runs.wait_for_completion(run.job_id)
+```
+
+```go go
+// Trigger an experiment run. Polling for the resulting job is left to the caller.
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc123/run",
+		bytes.NewReader([]byte("{}")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	payload, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(payload))
+}
+```
+
+Pass `n_consensus=...` to override per-run, or `retry_failed_only=True` to
+re-run only the documents that errored in the previous run.
+
+### Read metrics
+
+Metrics live behind one endpoint with four views — start at `summary`, drill
+into `by_target` on low-scoring fields, then into `votes` to see voter
+disagreement on a specific cell.
+
+```python python
+summary = client.workflows.experiments.get_metrics(
+    workflow_id="wf_abc123",
+    experiment_id=experiment.id,
+    view="summary",
+)
+
+# A weak field surfaces in summary.aggregate.likelihoods → drill in
+target_view = client.workflows.experiments.get_metrics(
+    workflow_id="wf_abc123",
+    experiment_id=experiment.id,
+    view="by_target",
+    target_path="line_items.*.unit_price",
+)
+
+# To see what each voter said for one document/target cell
+votes = client.workflows.experiments.get_metrics(
+    workflow_id="wf_abc123",
+    experiment_id=experiment.id,
+    view="votes",
+    document_id="expdoc_xyz",
+    target_path="line_items.*.unit_price",
+)
+```
+
+```go go
+package main
+
+import (
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+)
+
+func fetchMetrics(query url.Values) ([]byte, error) {
+	endpoint := "https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc123/metrics?" + query.Encode()
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+
+func main() {
+	summary, err := fetchMetrics(url.Values{"view": {"summary"}})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(summary))
+
+	// A weak field surfaces in summary.aggregate.likelihoods - drill in
+	target, err := fetchMetrics(url.Values{
+		"view":        {"by_target"},
+		"target_path": {"line_items.*.unit_price"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(target))
+
+	// To see what each voter said for one document/target cell
+	votes, err := fetchMetrics(url.Values{
+		"view":        {"votes"},
+		"document_id": {"expdoc_xyz"},
+		"target_path": {"line_items.*.unit_price"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(votes))
+}
+```
+
+If the latest run is stale relative to the current block config or document
+set, `get_metrics` returns a `stale_metrics` error envelope — call
+`runs.create(...)` to recompute.
+
+### Update / delete / duplicate
+
+```python python
+# Change the document set or n_consensus — invalidates existing metrics
+client.workflows.experiments.update(
+    workflow_id="wf_abc123",
+    experiment_id=experiment.id,
+    n_consensus=7,
+)
+
+# Snapshot an experiment for a quick A/B against a config change
+copy = client.workflows.experiments.duplicate(
+    workflow_id="wf_abc123",
+    experiment_id=experiment.id,
+)
+
+client.workflows.experiments.delete(
+    workflow_id="wf_abc123",
+    experiment_id=experiment.id,
+)
+```
+
+```go go
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+)
+
+const base = "https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc123"
+
+func send(method, url string, body any) ([]byte, error) {
+	var reader *bytes.Reader
+	if body != nil {
+		raw, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		reader = bytes.NewReader(raw)
+	} else {
+		reader = bytes.NewReader(nil)
+	}
+	req, err := http.NewRequest(method, url, reader)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+
+func main() {
+	// Change n_consensus - invalidates existing metrics
+	updated, err := send(http.MethodPatch, base, map[string]any{"n_consensus": 7})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(updated))
+
+	// Snapshot an experiment for a quick A/B against a config change
+	copy, err := send(http.MethodPost, base+"/duplicate", map[string]any{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(copy))
+
+	// Delete the experiment
+	if _, err := send(http.MethodDelete, base, nil); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+### Run every experiment on a block at once
+
+Useful when you've changed a block config and want to refresh every experiment
+attached to it in one call.
+
+```python python
+result = client.workflows.experiments.run_batch(
+    workflow_id="wf_abc123",
+    block_id="extract-invoice",
+)
+print(f"Triggered {result.experiment_count} experiments")
+```
+
+```go go
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	body, err := json.Marshal(map[string]any{"block_id": "extract-invoice"})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"https://api.retab.com/v1/workflows/wf_abc123/experiments/run-batch",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	payload, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(payload))
+}
+```
+
+For the full method reference (including async variants under
+`AsyncRetab.workflows.experiments`), see the
+[API reference](/api-reference/workflows/experiments/list).
