@@ -21,36 +21,35 @@ Here's how you can use both:
 # Async client
 from retab import AsyncRetab
 
-async def fetch_models():
+async def parse_document(document):
     client = AsyncRetab()
-    models = await client.models.list()
-    print(models)
+    result = await client.parses.create(document=document)
+    print(result.output.text)
 
 # Sync client
 from retab import Retab
 
 client = Retab()
 
-models = client.models.list()
-
-print(models)
+result = client.parses.create(document="invoice.pdf")
+print(result.output.text)
 ```
 
 ```javascript Node.js
 // Async client (default)
 import { Retab } from '/node';
 
-async function fetchModels() {
+async function parseDocument(document) {
     const client = new Retab();
-    const models = await client.models.list();
-    console.log(models);
+    const result = await client.parses.create({ document });
+    console.log(result.output.text);
 }
 
 // Using promises
 const client = new Retab();
 
-client.models.list()
-    .then(models => console.log(models));
+client.parses.create({ document: "invoice.pdf" })
+    .then(result => console.log(result.output.text));
 ```
 
 ```go Go
@@ -72,16 +71,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	models, err := client.Models.List(ctx, nil)
+	result, err := client.Parses.Create(ctx, retab.ParseCreateRequest{
+		Document: "invoice.pdf",
+		Model:    "retab-small",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(models)
+	fmt.Println((*result)["output"])
 }
 ```
 </CodeGroup>
 
-Both clients provide the same core functionality, enabling you to list models, create messages, extract data from documents, and more, with the flexibility to match your application's concurrency model.
+Both clients provide the same core functionality for processing documents, running workflows, and managing resources, with the flexibility to match your application's concurrency model.
 
 ## Pagination
 
@@ -420,5 +422,4 @@ func main() {
 ```
 
 </CodeGroup>
-
 

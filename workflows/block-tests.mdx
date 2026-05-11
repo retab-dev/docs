@@ -231,9 +231,10 @@ draft, not the draft at create time.
 Test execution is asynchronous. The flow:
 
 1. `POST /v1/workflows/{wf}/block-tests/execute` → returns `{batch_id, job_id, status: "queued"}` immediately.
-2. Either:
-    - Use the typed SDK helper — `client.workflows.tests.wait_for_completion(job_id)` (Python) or `client.workflows.tests.waitForCompletion(jobId)` (Node) blocks until terminal and returns the parsed `BlockTestBatchExecutionResult`. Throws on `failed` / `cancelled` / `expired` and on timeout.
-    - Or poll [`GET /v1/jobs/{job_id}`](/api-reference/jobs/retrieve) yourself until `status: "completed"` and read the result from `response.body`.
+2. Poll [`GET /v1/jobs/{job_id}`](/api-reference/jobs/retrieve) or
+   `client.jobs.retrieve(job_id)` until `status: "completed"`, then read the
+   batch result from `response.body`. If the job ends in `failed`,
+   `cancelled`, or `expired`, inspect the job's `error` field.
 3. `BlockTestBatchExecutionResult` shape:
     - `counts` — one bucket per run-record status (7 fields)
     - `results[]` — one `BlockTestBatchExecutionItem` per test, with `run_record_id` you can pass to [Get Block Test Run](/api-reference/workflows/block-tests/runs/get) for the full snapshot.

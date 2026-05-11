@@ -5,10 +5,9 @@ openapi: 'POST /v1/workflows/{workflow_id}/block-tests/execute'
 
 Run one block test, all tests for a single block, or every test in a workflow.
 Execution is asynchronous: the response returns immediately with a
-`batch_id` + `job_id`. Use the typed
-`workflows.tests.wait_for_completion(job_id)` helper to block until the
-batch lands (recommended), or poll
-[`jobs.retrieve(job_id)`](/api-reference/jobs/retrieve) yourself.
+`batch_id` + `job_id`. Poll
+[`jobs.retrieve(job_id)`](/api-reference/jobs/retrieve) until the job
+completes, then read the parsed batch result from `job.response.body`.
 
 The request body provides EXACTLY ONE of:
 
@@ -185,19 +184,31 @@ curl -X 'POST' \
 
 </ResponseExample>
 
-## Waiting for the batch
+## Polling for the batch
 
-Use `wait_for_completion(job_id)` for the typed convenience — it polls
-`jobs.retrieve(job_id)` until terminal and returns the parsed
-`BlockTestBatchExecutionResult`.
+Poll `jobs.retrieve(job_id)` until terminal. When the job completes,
+`job.response.body` is the `BlockTestBatchExecutionResult`.
 
 ```python python
+import time
+
+from retab.types.workflows import BlockTestBatchExecutionResult
+
 batch = client.workflows.tests.execute(workflow_id="wf_abc123xyz")
-result = client.workflows.tests.wait_for_completion(
-    batch.job_id,
-    poll_interval_seconds=2.0,
-    timeout_seconds=600.0,
-)
+deadline = time.monotonic() + 600
+while True:
+    job = client.jobs.retrieve(batch.job_id)
+    if job.status in ("completed", "failed", "cancelled", "expired"):
+        break
+    if time.monotonic() >= deadline:
+        raise TimeoutError(f"Timed out waiting for block-test job {batch.job_id}")
+    time.sleep(2)
+
+if job.status != "completed":
+    raise RuntimeError(f"Block-test job failed: {job.error}")
+
+payload = job.response.body if job.response is not None else {}
+result = BlockTestBatchExecutionResult.model_validate(payload)
 print(f"{result.counts.passed}/{result.counts.passed + result.counts.failed} passed")
 for item in result.results:
     print(item.test_id, item.status, item.duration_ms)
@@ -207,10 +218,25 @@ for item in result.results:
 const batch = await client.workflows.tests.execute({
   workflowId: "wf_abc123xyz",
 });
-const result = await client.workflows.tests.waitForCompletion(batch.job_id, {
-  pollIntervalMs: 2000,
-  timeoutMs: 600_000,
-});
+
+const deadlineMs = Date.now() + 600_000;
+let job;
+while (true) {
+  job = await client.jobs.retrieve(batch.job_id);
+  if (["completed", "failed", "cancelled", "expired"].includes(job.status)) {
+    break;
+  }
+  if (Date.now() >= deadlineMs) {
+    throw new Error(`Timed out waiting for block-test job ${batch.job_id}`);
+  }
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+}
+
+if (job.status !== "completed") {
+  throw new Error(`Block-test job failed: ${JSON.stringify(job.error)}`);
+}
+
+const result = job.response?.body;
 console.log(`${result.counts.passed}/${result.results.length} passed`);
 for (const item of result.results) {
   console.log(item.test_id, item.status, item.duration_ms);
@@ -244,16 +270,30 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Workflows.Tests.WaitForCompletion(ctx, batch.JobID, &retab.WaitForBlockTestsParams{
-		PollInterval: 2 * time.Second,
-		Timeout:      10 * time.Minute,
-	})
-	if err != nil {
-		log.Fatal(err)
+	deadline := time.Now().Add(10 * time.Minute)
+	var job *retab.Job
+	for {
+		job, err = client.Jobs.Retrieve(ctx, batch.JobID, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		status, _ := (*job)["status"].(string)
+		if status == "completed" || status == "failed" || status == "cancelled" || status == "expired" {
+			break
+		}
+		if time.Now().After(deadline) {
+			log.Fatalf("timed out waiting for block-test job %s", batch.JobID)
+		}
+		time.Sleep(2 * time.Second)
+	}
+	if status, _ := (*job)["status"].(string); status != "completed" {
+		log.Fatalf("block-test job failed: %v", (*job)["error"])
 	}
 
-	counts, _ := (*result)["counts"].(map[string]any)
-	results, _ := (*result)["results"].([]any)
+	response, _ := (*job)["response"].(map[string]any)
+	result, _ := response["body"].(map[string]any)
+	counts, _ := result["counts"].(map[string]any)
+	results, _ := result["results"].([]any)
 	fmt.Printf("%v/%d passed\n", counts["passed"], len(results))
 	for _, item := range results {
 		entry, _ := item.(map[string]any)
@@ -262,15 +302,14 @@ func main() {
 }
 ```
 
-The helper raises (Python) / throws (JS) if the job ends in
-`failed`/`cancelled`/`expired`, or if `timeout_seconds` /
-`timeoutMs` elapses before completion.
+Treat `failed`, `cancelled`, and `expired` as terminal failures. If the polling
+deadline elapses before a terminal status, raise or return a timeout from your
+application code.
 
 ## What the job's `response.body` contains
 
-If you'd rather poll [`jobs.retrieve(job_id)`](/api-reference/jobs/retrieve)
-yourself, the completed job's `response.body` is the
-`BlockTestBatchExecutionResult`:
+After [`jobs.retrieve(job_id)`](/api-reference/jobs/retrieve) returns a
+completed job, `response.body` is the `BlockTestBatchExecutionResult`:
 
 ```json
 {

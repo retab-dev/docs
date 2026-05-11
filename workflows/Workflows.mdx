@@ -102,20 +102,22 @@ The SDK exposes the spec lifecycle under `client.workflows.specs`:
 ```python
 validation = client.workflows.specs.validate(yaml_definition)
 plan = client.workflows.specs.plan(yaml_definition)
-result = client.workflows.specs.apply(yaml_definition, publish=False)
+result = client.workflows.specs.apply(yaml_definition)
 exported = client.workflows.specs.export(result.workflow_id)
 ```
 
 ```javascript
 const validation = await client.workflows.specs.validate(yamlDefinition);
 const plan = await client.workflows.specs.plan(yamlDefinition);
-const result = await client.workflows.specs.apply(yamlDefinition, { publish: false });
+const result = await client.workflows.specs.apply(yamlDefinition);
 const exported = await client.workflows.specs.export(result.workflow_id);
 ```
 
 Use `validate()` for parse and handle checks, `plan()` to preview draft
 changes, `apply()` to reconcile the draft workflow, and `export()` to get
 canonical YAML from an existing workflow.
+Call `client.workflows.publish(workflow_id)` separately when the draft should
+become the live published workflow.
 
 For endpoint details, see:
 - [Validate Workflow Spec](/api-reference/workflows/specs/validate)
@@ -232,6 +234,7 @@ Workflows support two input maps:
 - `json_inputs` for JSON Input (`start_json`) blocks
 
 ```python
+import time
 from pathlib import Path
 
 from retab import Retab
@@ -252,19 +255,19 @@ run = client.workflows.runs.create(
     },
 )
 
-run = client.workflows.runs.wait_for_completion(
-    run.id,
-    poll_interval_seconds=1.0,
-)
-run.raise_for_status()
+while not run.is_terminal and run.lifecycle.kind != "waiting_for_human":
+    time.sleep(1)
+    run = client.workflows.runs.get(run.id)
 
 print(run.lifecycle.kind)
 if run.lifecycle.kind == "waiting_for_human":
     print(run.lifecycle.waiting_for_block_ids)
-for step_summary in client.workflows.runs.steps.list(run.id):
-    step = client.workflows.runs.steps.get(run.id, step_summary.block_id)
-    if step.handle_outputs:
-        print(step.block_id, step.handle_outputs)
+else:
+    run.raise_for_status()
+    for step_summary in client.workflows.runs.steps.list(run.id):
+        step = client.workflows.runs.steps.get(run.id, step_summary.block_id)
+        if step.handle_outputs:
+            print(step.block_id, step.handle_outputs)
 ```
 
 ```go
@@ -319,18 +322,26 @@ func main() {
 		log.Fatal(err)
 	}
 
-	run, err = client.Workflows.Runs.WaitForCompletion(ctx, run.ID, &retab.WaitForCompletionParams{
-		PollInterval: time.Second,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	if !run.Completed() {
-		log.Fatalf("workflow finished with status %s", run.Lifecycle.Kind)
+	deadline := time.Now().Add(10 * time.Minute)
+	for !run.Terminal() && run.Lifecycle.Kind != "waiting_for_human" {
+		if time.Now().After(deadline) {
+			log.Fatalf("timed out waiting for workflow run %s", run.ID)
+		}
+		time.Sleep(time.Second)
+		run, err = client.Workflows.Runs.Get(ctx, run.ID)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	fmt.Println(run.Lifecycle.Kind)
-	fmt.Println(run.Lifecycle.WaitingForBlockIDs)
+	if run.Lifecycle.Kind == "waiting_for_human" {
+		fmt.Println(run.Lifecycle.WaitingForBlockIDs)
+		return
+	}
+	if !run.Completed() {
+		log.Fatalf("workflow finished with lifecycle %s", run.Lifecycle.Kind)
+	}
 
 	steps, err := client.Workflows.Runs.Steps.List(ctx, run.ID)
 	if err != nil {
@@ -565,11 +576,12 @@ Use `client.workflows.list()` or `client.workflows.get(workflow_id)` when you ne
 ### Reading Workflow Results
 
 The standard production pattern is to run the workflow, keep the returned `run.id`,
-and poll the run until it reaches a terminal status such as `completed` or `error`.
+and poll the run until `lifecycle.kind` reaches `completed`, `error`, `cancelled`,
+or `waiting_for_human`.
 
 1. Start the workflow from the SDK or API
-2. Receive a `run.id` and an initial status immediately
-3. Poll the workflow run until it finishes
+2. Receive a `run.id` and an initial lifecycle immediately
+3. Poll the workflow run until it finishes or waits for human review
 4. Read the step results from the completed run
 
 The workflow run is the source of truth for execution state and outputs. This is
