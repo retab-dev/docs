@@ -1,0 +1,93 @@
+---
+title: 'Get Workflow Resolved Schemas'
+openapi: 'GET /v1/workflows/{workflow_id}/resolved-schemas'
+---
+
+Get graph-derived input/output schemas for every block in the workflow's current draft.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+schemas = client.workflows.get_resolved_schemas("wf_abc123xyz")
+print(schemas.schemas["extract-1"].output_schemas)
+```
+
+```javascript javascript
+import { Retab } from '/node';
+
+const client = new Retab();
+
+const schemas = await client.workflows.getResolvedSchemas("wf_abc123xyz");
+console.log(schemas.schemas["extract-1"].output_schemas);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	schemas, err := client.Workflows.GetResolvedSchemas(ctx, "wf_abc123xyz")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(schemas.Schemas["extract-1"].OutputSchemas)
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/resolved-schemas' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "workflow_id": "wf_abc123xyz",
+  "schemas": {
+    "extract-1": {
+      "input_schemas": {},
+      "output_schemas": {
+        "output-json-0": {
+          "type": "object",
+          "properties": {
+            "invoice_number": {"type": "string"},
+            "total": {"type": "number"}
+          }
+        }
+      },
+      "field_ref_drift": null
+    }
+  }
+}
+```
+
+```json 404
+{
+  "detail": "Workflow not found"
+}
+```
+
+</ResponseExample>

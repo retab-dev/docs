@@ -147,6 +147,34 @@ def _scrub_public_organization_id_text(node: object) -> None:
             _scrub_public_organization_id_text(item)
 
 
+def _strip_public_workflow_internal_fields(spec: dict[str, object]) -> None:
+    """Hide workflow graph implementation fields from the published API docs."""
+    schemas = spec.get("components", {}).get("schemas") if isinstance(spec.get("components"), dict) else None
+    if not isinstance(schemas, dict):
+        return
+
+    internal_fields_by_schema = {
+        "WorkflowBlockObject": {"draft_version", "field_ref_snapshot"},
+        "WorkflowEdgeObject": {"draft_version"},
+        "WorkflowConfigBlock": {"field_ref_snapshot"},
+    }
+    for schema_name, internal_fields in internal_fields_by_schema.items():
+        schema = schemas.get(schema_name)
+        if not isinstance(schema, dict):
+            continue
+        properties = schema.get("properties")
+        if isinstance(properties, dict):
+            for field_name in internal_fields:
+                properties.pop(field_name, None)
+        required = schema.get("required")
+        if isinstance(required, list):
+            schema["required"] = [
+                field_name
+                for field_name in required
+                if field_name not in internal_fields
+            ]
+
+
 def generate_openapi() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     backend_main_server = repo_root / "backend" / "main_server"
@@ -177,6 +205,7 @@ def generate_openapi() -> None:
 
     _strip_public_organization_id(spec)
     _scrub_public_organization_id_text(spec)
+    _strip_public_workflow_internal_fields(spec)
 
     # Strip unused legacy request/response schemas that only belonged to the
     # document-scoped classification API.
