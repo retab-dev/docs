@@ -4,6 +4,10 @@ from pathlib import Path
 
 
 LEGACY_DOCUMENT_PATH_PREFIX = "/v1/documents/"
+PRIVATE_PATH_PREFIXES: tuple[str, ...] = (
+    "/internal/",
+    "/custom/",
+)
 
 LEGACY_EDIT_PATHS: set[str] = {
     "/v1/edit/agent/fill",
@@ -102,6 +106,47 @@ def _strip_legacy_from_enums(node: object) -> None:
             _strip_legacy_from_enums(item)
 
 
+def _strip_public_organization_id(node: object) -> None:
+    """Remove tenant-scoping internals from the public API reference."""
+    if isinstance(node, dict):
+        properties = node.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("organization_id", None)
+
+        required = node.get("required")
+        if isinstance(required, list):
+            node["required"] = [item for item in required if item != "organization_id"]
+
+        for key, value in list(node.items()):
+            if key == "parameters" and isinstance(value, list):
+                node[key] = [
+                    parameter
+                    for parameter in value
+                    if not (
+                        isinstance(parameter, dict)
+                        and parameter.get("name") == "organization_id"
+                    )
+                ]
+            else:
+                _strip_public_organization_id(value)
+    elif isinstance(node, list):
+        for item in node:
+            _strip_public_organization_id(item)
+
+
+def _scrub_public_organization_id_text(node: object) -> None:
+    """Remove tenant-scoping implementation terms from public descriptions."""
+    if isinstance(node, dict):
+        for key, value in list(node.items()):
+            if isinstance(value, str):
+                node[key] = value.replace("organization_id", "tenant scope")
+            else:
+                _scrub_public_organization_id_text(value)
+    elif isinstance(node, list):
+        for item in node:
+            _scrub_public_organization_id_text(item)
+
+
 def generate_openapi() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     backend_main_server = repo_root / "backend" / "main_server"
@@ -118,13 +163,20 @@ def generate_openapi() -> None:
     # Update servers
     spec["servers"] = [{"url": "https://api.retab.com"}]
 
-    # Strip every legacy path from the paths map
+    # Strip every legacy/private path from the paths map
     for path in list(spec["paths"].keys()):
-        if path.startswith(LEGACY_DOCUMENT_PATH_PREFIX) or path in LEGACY_EDIT_PATHS:
+        if (
+            path.startswith(LEGACY_DOCUMENT_PATH_PREFIX)
+            or path.startswith(PRIVATE_PATH_PREFIXES)
+            or path in LEGACY_EDIT_PATHS
+        ):
             spec["paths"].pop(path, None)
 
     # Strip legacy URLs from any enum lists (e.g. Jobs endpoint enum)
     _strip_legacy_from_enums(spec)
+
+    _strip_public_organization_id(spec)
+    _scrub_public_organization_id_text(spec)
 
     # Strip unused legacy request/response schemas that only belonged to the
     # document-scoped classification API.
