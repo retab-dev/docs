@@ -5,10 +5,10 @@ openapi: 'PATCH /v1/workflows/{workflow_id}'
 
 Update workflow metadata. Only the fields you supply are touched — omit a field to leave it unchanged.
 
-The email trigger allowlist is split into two arrays:
+The email trigger allowlist is configured under `email_trigger`:
 
-- `email_senders_whitelist` — full email addresses (e.g. `"ap@acme.com"`)
-- `email_domains_whitelist` — bare domains (e.g. `"acme.com"`)
+- `allowed_senders` — full email addresses (e.g. `"ap@acme.com"`)
+- `allowed_domains` — bare domains (e.g. `"acme.com"`)
 
 If a workflow has neither list configured, inbound email triggers are accepted from any sender.
 
@@ -29,8 +29,10 @@ workflow = client.workflows.update(
 # Configure email-trigger allowlist
 workflow = client.workflows.update(
     "wf_abc123xyz",
-    email_senders_whitelist=["ap@acme.com"],
-    email_domains_whitelist=["acme.com", "acme-subsidiary.com"],
+    email_trigger={
+        "allowed_senders": ["ap@acme.com"],
+        "allowed_domains": ["acme.com", "acme-subsidiary.com"],
+    },
 )
 ```
 
@@ -45,8 +47,10 @@ const workflow = await client.workflows.update("wf_abc123xyz", {
 });
 
 await client.workflows.update("wf_abc123xyz", {
-  emailSendersWhitelist: ["ap@acme.com"],
-  emailDomainsWhitelist: ["acme.com", "acme-subsidiary.com"],
+  emailTrigger: {
+    allowedSenders: ["ap@acme.com"],
+    allowedDomains: ["acme.com", "acme-subsidiary.com"],
+  },
 });
 ```
 
@@ -80,8 +84,10 @@ func main() {
 	}
 
 	workflow, err = client.Workflows.Update(ctx, "wf_abc123xyz", retab.UpdateWorkflowRequest{
-		EmailSendersWhitelist: []string{"ap@acme.com"},
-		EmailDomainsWhitelist: []string{"acme.com", "acme-subsidiary.com"},
+		EmailTrigger: &retab.WorkflowEmailTrigger{
+			AllowedSenders: []string{"ap@acme.com"},
+			AllowedDomains: []string{"acme.com", "acme-subsidiary.com"},
+		},
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -115,7 +121,6 @@ curl -X 'PATCH' \
   "id": "wf_abc123xyz",
   "name": "Invoice Processing v2",
   "description": "Extract invoice fields, validate, and route for review",
-  "organization_id": "org_123",
   "published": {
     "snapshot_id": "snapshot_123",
     "published_at": "2026-04-30T18:00:00Z"
