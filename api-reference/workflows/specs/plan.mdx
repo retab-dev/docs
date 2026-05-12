@@ -17,8 +17,9 @@ client = Retab()
 plan = client.workflows.specs.plan(yaml_definition)
 
 print(plan.action)
-for operation in plan.operations:
-    print(operation.action, operation.target, operation.target_id)
+print(plan.rendered_plan)
+for change in plan.resource_changes:
+    print(change.actions, change.target, change.target_id)
 ```
 
 ```javascript javascript
@@ -29,8 +30,9 @@ const client = new Retab();
 const plan = await client.workflows.specs.plan(yamlDefinition);
 
 console.log(plan.action);
-for (const operation of plan.operations) {
-  console.log(operation.action, operation.target, operation.target_id);
+console.log(plan.rendered_plan);
+for (const change of plan.resource_changes) {
+  console.log(change.actions, change.target, change.target_id);
 }
 ```
 
@@ -57,14 +59,57 @@ curl -X 'POST' \
   "diagnostics": {
     "issues": []
   },
-  "operations": [
+  "format_version": "workflows-plan/v1",
+  "summary": {
+    "add": 0,
+    "change": 1,
+    "destroy": 0,
+    "replace": 0,
+    "noop": 0,
+    "total": 1,
+    "has_changes": true
+  },
+  "resource_changes": [
     {
-      "action": "update_workflow",
-      "target": "workflow",
-      "target_id": "wf_abc123",
-      "summary": "Update workflow metadata"
+      "address": "workflow.wf_abc123.block.block_extract",
+      "target": "block",
+      "target_id": "block_extract",
+      "name": "Extract Fields",
+      "type": "extract",
+      "actions": ["update"],
+      "summary": "Update block 'Extract Fields'",
+      "change": {
+        "before": {
+          "label": "Extract Fields",
+          "config": {
+            "model": "gpt-4.1"
+          }
+        },
+        "after": {
+          "label": "Extract Fields",
+          "config": {
+            "model": "gpt-5.1"
+          }
+        },
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "field_changes": [
+          {
+            "path": ["config", "model"],
+            "path_display": "config.model",
+            "action": "update",
+            "before": "gpt-4.1",
+            "after": "gpt-5.1",
+            "before_sensitive": false,
+            "after_sensitive": false,
+            "unified_diff": null
+          }
+        ]
+      },
+      "path": "extract-node"
     }
-  ]
+  ],
+  "rendered_plan": "Workflow: wf_abc123\nPlan: 0 to add, 1 to change, 0 to destroy.\n\n~ workflow.wf_abc123.block.block_extract\n  block \"Extract Fields\" will be updated\n  ~ config.model\n    - 'gpt-4.1'\n    + 'gpt-5.1'"
 }
 ```
 
