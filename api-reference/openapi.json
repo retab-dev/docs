@@ -23159,6 +23159,70 @@
         }
       }
     },
+    "/v1/workflows/{workflow_id}/blocks/{block_id}/resolved-schemas": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Blocks"
+        ],
+        "summary": "Get Block Resolved Schemas",
+        "description": "Get graph-derived input/output schemas for one block in the current draft.",
+        "operationId": "get_block_resolved_schemas_v1_workflows__workflow_id__blocks__block_id__resolved_schemas_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockResolvedSchemasResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workflows/{workflow_id}/blocks/{block_id}/config-history": {
       "get": {
         "tags": [
@@ -27004,6 +27068,60 @@
         }
       }
     },
+    "/v1/workflows/{workflow_id}/resolved-schemas": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Get Workflow Resolved Schemas",
+        "description": "Get graph-derived input/output schemas for all blocks in the current draft.",
+        "operationId": "get_workflow_resolved_schemas_v1_workflows__workflow_id__resolved_schemas_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowResolvedSchemasResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workflows/{workflow_id}/entities": {
       "get": {
         "tags": [
@@ -27902,7 +28020,7 @@
           "Workflows"
         ],
         "summary": "Discard Draft",
-        "description": "Discard all draft changes and restore the workflow to its published state.\n\nThis operation:\n1. Recreates blocks and edges from the published version\n2. Updates the workflow's updated_at timestamp and draft_version\n\nRequires the workflow to be published (have a published_version_id).",
+        "description": "Discard all draft changes and restore the workflow to its published state.\n\nThis operation:\n1. Recreates blocks and edges from the published version\n2. Updates the workflow's updated_at timestamp and current draft graph\n\nRequires the workflow to be published (have a published_version_id).",
         "operationId": "discard_draft_v1_workflows__workflow_id__discard_draft_post",
         "security": [
           {
@@ -27956,7 +28074,7 @@
           "Workflows"
         ],
         "summary": "Restore Snapshot",
-        "description": "Restore the workflow draft to a specific snapshot version.\n\nThis operation:\n1. Recreates blocks and edges from the specified snapshot\n2. Updates the workflow's updated_at timestamp and draft_version\n\nUse this to restore to any historical version, not just the current published one.",
+        "description": "Restore the workflow draft to a specific snapshot version.\n\nThis operation:\n1. Recreates blocks and edges from the specified snapshot\n2. Updates the workflow's updated_at timestamp and current draft graph\n\nUse this to restore to any historical version, not just the current published one.",
         "operationId": "restore_snapshot_v1_workflows__workflow_id__restore_snapshot__snapshot_id__post",
         "security": [
           {
@@ -32777,6 +32895,27 @@
         ],
         "title": "BlockPositionResult",
         "description": "A single block's computed position from the layout algorithm."
+      },
+      "BlockResolvedSchemasResponse": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/ResolvedSchemas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "block_id"
+        ],
+        "title": "BlockResolvedSchemasResponse"
       },
       "BlockRunAggregateRequest": {
         "properties": {
@@ -42588,7 +42727,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-05-12T19:01:24.244515Z",
+              "updated_at": "2026-05-12T20:09:06.133307Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -48577,6 +48716,35 @@
         "title": "RerunApiCallResponse",
         "description": "Response from rerunning an API call block"
       },
+      "ResolvedSchemas": {
+        "properties": {
+          "input_schemas": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input Schemas"
+          },
+          "output_schemas": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Output Schemas"
+          },
+          "field_ref_drift": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Ref Drift"
+          }
+        },
+        "type": "object",
+        "title": "ResolvedSchemas",
+        "description": "Graph-derived input/output schemas for a workflow block."
+      },
       "RestartTrigger": {
         "properties": {
           "type": {
@@ -52910,18 +53078,6 @@
             "title": "Workflow Id",
             "description": "Foreign key to workflow"
           },
-          "draft_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Draft Version",
-            "description": "Draft version for live entities"
-          },
           "type": {
             "type": "string",
             "enum": [
@@ -53002,34 +53158,6 @@
             ],
             "title": "Config",
             "description": "Block-specific configuration"
-          },
-          "field_ref_snapshot": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "string"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Field Ref Snapshot",
-            "description": "Merkle subtree hashes for authored field references; refreshed by schema propagation. Block metadata, not authored config."
-          },
-          "resolved_schemas": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Resolved Schemas",
-            "description": "Transient sidecar of graph-derived schemas (input_schemas, output_schemas, field_ref_drift). Attached on transport responses; never persisted. Exclude from all DB writes via .model_dump(exclude={'resolved_schemas'})."
           },
           "parent_id": {
             "anyOf": [
@@ -53696,21 +53824,6 @@
             "title": "Config",
             "description": "Block-specific configuration"
           },
-          "field_ref_snapshot": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "string"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Field Ref Snapshot",
-            "description": "Merkle subtree hashes for authored field references. Block metadata, not authored config."
-          },
           "resolved_schemas": {
             "anyOf": [
               {
@@ -53939,18 +54052,6 @@
             "type": "string",
             "title": "Workflow Id",
             "description": "Foreign key to workflow"
-          },
-          "draft_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Draft Version",
-            "description": "Draft version for live entities"
           },
           "source_block": {
             "type": "string",
@@ -55006,6 +55107,26 @@
         },
         "type": "object",
         "title": "WorkflowPublished"
+      },
+      "WorkflowResolvedSchemasResponse": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "schemas": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ResolvedSchemas"
+            },
+            "type": "object",
+            "title": "Schemas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "title": "WorkflowResolvedSchemasResponse"
       },
       "WorkflowResponse": {
         "properties": {
