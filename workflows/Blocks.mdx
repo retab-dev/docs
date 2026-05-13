@@ -386,6 +386,52 @@ Pause workflow execution for human review and approval.
 The HIL block automatically inherits the JSON schema from the connected upstream block. It also preserves any computed fields from Function blocks.
 </Note>
 
+#### AI Agent reviewer (optional)
+
+An Anthropic managed agent can sit alongside the human flow, ground each flagged field against the source document, and emit a structured proposal (approve / approve‑with‑modifications / reject / escalate). The human always owns the final decision — the agent either pre‑fills it (so a verifier can accept in one click) or, in the higher‑trust modes, applies it directly when its confidence and evidence clear the bar.
+
+**Configuration keys** (on the HIL block):
+
+| Key | Type | Default | Purpose |
+|---|---|---|---|
+| `agent_in_the_loop` | `"disabled"` \| `"pre_review"` \| `"review"` \| `"auto"` | `"disabled"` | Dispatch mode for the agent's proposal. |
+| `agent_auto_confidence_threshold` | float, 0.0–1.0 | `0.85` | Used only in `auto` mode — minimum confidence for the agent's decision to auto‑submit. |
+| `agent_review_timeout_seconds` | int, 30–3600 | `900` | Hard ceiling per review attempt. A review is also abandoned earlier if the agent's event stream goes silent ≥ ~4 min. |
+
+**Dispatch behaviour:**
+
+| Mode | If agent approves (high confidence) | If agent approves with corrections | If agent escalates |
+|---|---|---|---|
+| `pre_review` | Parked for human (`status=proposed`) — verifier sees pre‑filled proposal | Parked, with `modified_data` shown as a diff | Parked, with rationale |
+| `review` | Auto‑submitted (`status=submitted`), workflow resumes | Auto‑submitted with the corrected payload | Parked for human |
+| `auto` | Auto‑submitted if `confidence ≥ threshold`, else `escalated` (parked) | Same threshold gate | Always parked (`status=escalated`) |
+
+The agent inspects the document only — it cannot call arbitrary tools or external services. It uses Retab's MCP server to read provenance (`files_get_sources`), grep the document (`files_grep`), and inspect pages as images (`files_inspect`) when text is missing.
+
+**What the agent reviews** depends on `review_mode`:
+- `review_mode: "conditional"` → only the fields that triggered the conditions (fast, focused).
+- `review_mode: "always"` → every field in the data (thorough, slower).
+
+Example HIL block config with the agent in `auto` mode:
+
+```json
+{
+  "review_mode": "conditional",
+  "conditions": [ /* sub-conditions as above */ ],
+  "agent_in_the_loop": "auto",
+  "agent_auto_confidence_threshold": 0.9,
+  "agent_review_timeout_seconds": 900
+}
+```
+
+The UI's review panel surfaces the agent's proposal alongside the document: evidence with literal quotes + page anchors, a confidence chip, a diff for any modified fields, and one‑click **Accept & continue** / **Apply to form** actions for proposals that are actionable.
+
+<Note>
+The agent flow is dormant when `agent_in_the_loop="disabled"` (the default). You can enable it block‑by‑block — there is no global switch.
+</Note>
+
+The agent's review state for a given run/block is queryable via [Get Agent HIL Review](/api-reference/workflows/runs/get-agent-hil-review).
+
 ---
 
 ### Function
