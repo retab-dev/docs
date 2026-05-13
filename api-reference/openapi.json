@@ -9050,7 +9050,7 @@
           "Extractions"
         ],
         "summary": "List Extractions",
-        "description": "List and paginate extractions with optional filtering.\n\nReturns a paginated list of extraction documents matching the filter criteria.\n\nThe `metadata` parameter accepts a JSON string of key-value pairs to filter by.\nExample: metadata='{\"collection_id\": \"coll_123\", \"source\": \"upload\"}'",
+        "description": "List and paginate extractions with optional filtering.\n\nReturns a paginated list of extraction documents matching the filter criteria.\n\nThe `metadata` parameter accepts a JSON string of key-value pairs to filter by.",
         "operationId": "list_extractions_v1_extractions_get",
         "security": [
           {
@@ -9381,7 +9381,7 @@
           "Extractions"
         ],
         "summary": "Count Extractions",
-        "description": "Return the count of extractions matching filters.\n\nThe `metadata` parameter accepts a JSON string of key-value pairs to filter by.\nExample: metadata='{\"collection_id\": \"coll_123\"}'",
+        "description": "Return the count of extractions matching filters.\n\nThe `metadata` parameter accepts a JSON string of key-value pairs to filter by.",
         "operationId": "count_extractions_v1_extractions_count_get",
         "security": [
           {
@@ -9503,7 +9503,7 @@
           "Extractions"
         ],
         "summary": "Download Extractions",
-        "description": "Generate a downloadable file (JSONL, CSV, or Excel) with all extractions matching the filter criteria.\n\nReturns a signed URL to download the generated file.\n\nThe `metadata` parameter accepts a JSON string of key-value pairs to filter by.\nExample: metadata='{\"collection_id\": \"coll_123\"}'",
+        "description": "Generate a downloadable file (JSONL, CSV, or Excel) with all extractions matching the filter criteria.\n\nReturns a signed URL to download the generated file.\n\nThe `metadata` parameter accepts a JSON string of key-value pairs to filter by.",
         "operationId": "download_extractions_v1_extractions_download_get",
         "security": [
           {
@@ -36988,7 +36988,7 @@
           "subdocuments"
         ],
         "title": "CreateSplitRequest",
-        "description": "Canonical split request \u2014 subdocuments must be CreateSplitSubdocument (extra='forbid').\n\nThe subdocuments field below intentionally narrows the parent's `list[Subdocument]`\nto `list[CreateSplitSubdocument]` so that legacy-only fields (e.g. partition_key)\nare rejected. The override is annotated with the parent type to keep pyright happy\nwhile a `field_validator` enforces the stricter shape at runtime."
+        "description": "Canonical split request."
       },
       "CreateSplitTestRequest": {
         "properties": {
@@ -41637,7 +41637,7 @@
         },
         "type": "object",
         "title": "FunctionTestResponse",
-        "description": "Response from testing a function block.\n\nThe parsed transform return value rides on\n``handle_outputs[\"output-json-0\"].data``. The function runtime sidecar\n(stdout/stderr/execution_time_ms/error from the sandbox) is exposed inline\non ``sandbox``. ``error`` at the top level is reserved for hard\nconfig/runtime failures (mirrors ``StepStatus.error``)."
+        "description": "Response from testing a function block."
       },
       "FunctionTestSandboxResult": {
         "properties": {
@@ -42047,7 +42047,7 @@
           "type"
         ],
         "title": "HandlePayload",
-        "description": "Payload for a single block output handle.\n\nEach output handle on a block produces a typed payload that can be:\n- file: a document reference (PDF, image, etc.)\n- json: structured JSON data (extracted data, etc.) \u2014 used for the\n  ephemeral, in-process executor boundary only\n- json_ref: a pointer to JSON data stored outside Temporal (in GCS).\n  After the artifact-store cutover, every JSON handle that crosses the\n  Temporal boundary or lands in Mongo is a ``json_ref``: the body lives\n  in the artifact store and only a ref + small preview travel through\n  workflow history.\n\nHandle IDs follow the convention: ``output-{type}-{index_or_name}``.\nExamples: ``output-file-0``, ``output-json-0``,\n``output-file-SubdocumentName``."
+        "description": "Payload for a single block output handle."
       },
       "HistoryPreviewResponse": {
         "properties": {
@@ -45457,7 +45457,7 @@
           "output_handle_id"
         ],
         "title": "OutputTarget",
-        "description": "Structured block-test assertion target.\n\n``output_handle_id`` is the declared output handle on the block. ``path``\nis a dot-path relative to that handle's assertable payload root:\n\n- JSON handles: relative to ``.data``\n- File handles: the file payload root itself; curated metadata fields\n  live under ``document.*`` (e.g. ``document.filename``).\n\n``path = None`` targets the whole handle payload root."
+        "description": "Structured block-test assertion target."
       },
       "OverviewUsageSeriesPoint": {
         "properties": {
@@ -49462,7 +49462,7 @@
         },
         "type": "object",
         "title": "RunInputs",
-        "description": "Input payloads supplied at run creation time.\n\n``documents`` and ``json_data`` default to ``{}`` (not ``None``) so callers\nnever have to handle the empty-vs-missing distinction."
+        "description": "Input payloads supplied at run creation time."
       },
       "RunListResponse": {
         "properties": {
@@ -49564,41 +49564,11 @@
             "title": "Accumulated Human Waiting Ms",
             "description": "Accumulated time spent waiting for human review across the run",
             "default": 0
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms",
-            "description": "Wall-clock duration from started_at to completed_at.",
-            "readOnly": true
-          },
-          "active_duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Active Duration Ms",
-            "description": "Wall-clock duration minus time spent waiting for humans.",
-            "readOnly": true
           }
         },
         "type": "object",
-        "required": [
-          "duration_ms",
-          "active_duration_ms"
-        ],
         "title": "RunTiming",
-        "description": "All timing information for a run.\n\n``duration_ms`` and ``active_duration_ms`` are computed properties \u2014 never\nwrite them to the database; the migration drops them and post-cutover\ncode reads them off the model."
+        "description": "All timing information for a run.\n\nDerive duration from ``completed_at - started_at`` when both timestamps are present."
       },
       "RunWorkflowRequest": {
         "properties": {
@@ -49630,7 +49600,7 @@
         },
         "type": "object",
         "title": "RunWorkflowRequest",
-        "description": "Request to run a workflow with input documents and/or JSON.\n\nDocuments are provided as a dict mapping start block IDs to document inputs.\nJSON inputs are provided as a dict mapping start_json block IDs to JSON data.\n\nExample:\n    {\n        \"documents\": {\n            \"start-block-1\": {\n                \"filename\": \"invoice.pdf\",\n                \"mime_type\": \"application/pdf\",\n                \"content\": \"base64_encoded_content...\"\n            }\n        },\n        \"json_inputs\": {\n            \"start-json-block-1\": {\n                \"customer_name\": \"John Doe\",\n                \"invoice_number\": \"INV-001\"\n            }\n        },\n    }"
+        "description": "Request to run a workflow with input documents and/or JSON.\n\nDocuments are provided as a dict mapping start block IDs to document inputs.\nJSON inputs are provided as a dict mapping start_json block IDs to JSON data."
       },
       "RunningRun": {
         "properties": {
@@ -50740,45 +50710,6 @@
             "title": "Retry Count",
             "description": "Number of retry attempts",
             "default": 0
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms",
-            "description": "Derived from completed_at - started_at.",
-            "readOnly": true
-          },
-          "loop_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Loop Id",
-            "description": "Innermost container's ID. Derived from loop_containers[-1].",
-            "readOnly": true
-          },
-          "iteration": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Iteration",
-            "description": "Innermost container's iteration. Derived from loop_containers[-1].",
-            "readOnly": true
           }
         },
         "type": "object",
@@ -50788,10 +50719,7 @@
           "block_type",
           "block_label",
           "status",
-          "run_id",
-          "duration_ms",
-          "loop_id",
-          "iteration"
+          "run_id"
         ],
         "title": "StepStatusObject",
         "description": "Public step status object without tenant isolation fields."
