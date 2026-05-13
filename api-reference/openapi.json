@@ -31396,6 +31396,86 @@
           }
         }
       }
+    },
+    "/v1/workflows/runs/{run_id}/agent-hil-reviews/{block_id}": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Runs"
+        ],
+        "summary": "Get the managed-agent review state for a HIL block.",
+        "description": "Returns the agent-in-the-loop review row tracking a managed-agent session for the given HIL block. 404 when no agent review has been spawned (block has agent_in_the_loop='disabled' or the workflow hasn't reached the block yet).",
+        "operationId": "getAgentHilReview",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentHilReview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -58208,6 +58288,376 @@
           "reason"
         ],
         "title": "CancelledStepLifecycle"
+      },
+      "AgentHilReview": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Internal id (nanoid)."
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organization that owns the workflow run."
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "Workflow run id the block belongs to."
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id",
+            "description": "HIL block id being reviewed."
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "Workflow id the run belongs to (denormalized for query convenience)."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "pre_review",
+              "review",
+              "auto"
+            ],
+            "title": "Mode",
+            "description": "Configured agent_in_the_loop mode at spawn time."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "proposed",
+              "submitted",
+              "escalated",
+              "failed",
+              "superseded_by_human"
+            ],
+            "title": "Status",
+            "description": "Lifecycle status of this review attempt.",
+            "default": "queued"
+          },
+          "managed_agent_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed Agent Session Id",
+            "description": "Anthropic Managed Agents session id once spawned."
+          },
+          "managed_agent_vault_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed Agent Vault Id",
+            "description": "Anthropic vault id minted at spawn time for this session. Holds the per-org master_key impersonation token. Archived alongside the session at end-of-life."
+          },
+          "proposed_decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposedDecision"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last proposal received from the agent. Updated on each custom-tool callback."
+          },
+          "submitted_hil_command_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted Hil Command Id",
+            "description": "HIL command id used when the proposal was submitted via submit_hil_decision_service."
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason",
+            "description": "Free-text reason when status='failed'. Populated by timeout, schema rejection, or session error."
+          },
+          "auto_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Auto Threshold",
+            "description": "Snapshot of agent_auto_confidence_threshold at spawn time. Frozen so config edits during the run don't change the gate."
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "maximum": 3600.0,
+            "minimum": 30.0,
+            "title": "Timeout Seconds",
+            "description": "Snapshot of agent_review_timeout_seconds at spawn time."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "organization_id",
+          "run_id",
+          "block_id",
+          "workflow_id",
+          "mode",
+          "auto_threshold",
+          "timeout_seconds",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AgentHilReview",
+        "description": "Sidecar persistence row tracking a managed-agent review attempt for one HIL block.\n\nIdentity is ``(organization_id, run_id, block_id)`` and is enforced by a unique\nMongo index \u2014 that is the load-bearing primitive that keeps managed-agent\nspawning idempotent across Temporal activity retries and double-trigger races."
+      },
+      "ProposedDecision": {
+        "properties": {
+          "approved": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved",
+            "description": "True if the agent approves the data, False if it rejects, None when escalating. Defaulted to None (not required) so a stored proposal that was serialized with exclude_none \u2014 which drops `approved: null` on an escalation \u2014 still round-trips through model_validate. The real constraint (None iff escalate=True) is enforced by the _consistency validator below, not by requiredness."
+          },
+          "modified_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified Data",
+            "description": "Replacement payload for the HIL block. Only allowed when approved=True."
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "Self-reported confidence in the decision, in [0, 1]."
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceItem"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Evidence",
+            "description": "One or more cited justifications. At least one item is required."
+          },
+          "changed_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed Paths",
+            "description": "Field paths the agent modified. Must match modified_data structure."
+          },
+          "escalate": {
+            "type": "boolean",
+            "title": "Escalate",
+            "description": "If True, the agent declines to commit and asks for a human verification pass.",
+            "default": false
+          },
+          "escalation_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation Reason",
+            "description": "Required when escalate=True. Short explanation surfaced to the human reviewer."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "confidence",
+          "evidence"
+        ],
+        "title": "ProposedDecision",
+        "description": "Structured proposal an agent submits via the ``retab_hil_review_proposal`` custom tool.\n\nThe proposal MUST be self-justifying: every changed path needs an evidence item,\nand approving without changes still requires evidence covering the triggered\nhighlights so a human can audit why the agent let the data through."
+      },
+      "EvidenceItem": {
+        "properties": {
+          "field_path": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Field Path",
+            "description": "Dotted path of the field this evidence justifies, e.g. 'invoice.total'."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "approved_unchanged",
+              "modified",
+              "rejected"
+            ],
+            "title": "Action",
+            "description": "What the agent did with this field."
+          },
+          "quote": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Quote",
+            "description": "Exact quote from the source document supporting the action."
+          },
+          "source": {
+            "$ref": "#/components/schemas/EvidenceSource",
+            "description": "Pointer into the source document for the quote."
+          },
+          "from_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Value",
+            "description": "Previous value (only when action='modified')."
+          },
+          "to_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Value",
+            "description": "New value (only when action='modified')."
+          },
+          "reasoning_brief": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Brief",
+            "description": "Short rationale (one or two sentences). Optional supplement to the cited quote. max_length is deliberately loose: Anthropic does not strictly enforce JSON-Schema maxLength on tool inputs, so a tight cap here means a single verbose evidence item rejects the WHOLE proposal at validation time (lost work, status=failed). 1500 chars comfortably absorbs an over-explained sentence; the prompt still asks for brevity."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field_path",
+          "action",
+          "quote",
+          "source"
+        ],
+        "title": "EvidenceItem",
+        "description": "One field-level justification cited from a source document."
+      },
+      "EvidenceSource": {
+        "properties": {
+          "document_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Document Index",
+            "description": "Zero-indexed position of the source document in the agent's reading list."
+          },
+          "document_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Title",
+            "description": "Human-readable title of the source document."
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number",
+            "description": "One-indexed page number for PDF or image sources."
+          },
+          "char_range": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Char Range",
+            "description": "Zero-indexed half-open [start, end) character span in the source text."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "document_index"
+        ],
+        "title": "EvidenceSource",
+        "description": "Pointer into a source document for a single piece of evidence.\n\nShape mirrors the Anthropic Citations API output: ``page_number`` for PDFs,\n``char_range`` for plain text. Both may be set when the source is a PDF\nrendered as text."
       }
     },
     "securitySchemes": {
