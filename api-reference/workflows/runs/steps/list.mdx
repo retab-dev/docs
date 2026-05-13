@@ -3,7 +3,7 @@ title: 'List Steps'
 openapi: 'GET /v1/workflows/runs/{run_id}/steps'
 ---
 
-Retrieve the persisted step list for a workflow run. Use this when you want the complete set of step documents for a run, including statuses, handle inputs/outputs, and loop metadata.
+Retrieve the persisted step list for a workflow run. Use this when you want the complete set of step documents for a run, including lifecycle states, handle inputs/outputs, and loop metadata.
 
 Steps include an `artifact` ref when the block produced a persisted record.
 Use [Get Artifact](/api-reference/workflows/artifacts/get) to dereference one
@@ -20,7 +20,7 @@ client = Retab()
 steps = client.workflows.runs.steps.list("run_abc123xyz")
 
 for step in steps:
-    print(step.block_id, step.status, step.artifact)
+    print(step.block_id, step.lifecycle.kind, step.artifact)
 ```
 
 ```javascript javascript
@@ -31,7 +31,7 @@ const client = new Retab();
 const steps = await client.workflows.runs.steps.list("run_abc123xyz");
 
 for (const step of steps) {
-    console.log(step.block_id, step.status, step.artifact);
+    console.log(step.block_id, step.lifecycle.kind, step.artifact);
 }
 ```
 
@@ -60,7 +60,7 @@ func main() {
 	}
 
 	for _, step := range steps {
-		fmt.Println(step.BlockID, step.Status)
+		fmt.Println(step.BlockID, step.Lifecycle["kind"])
 	}
 }
 ```
@@ -84,8 +84,7 @@ curl -X 'GET' \
     "step_id": "extract-block-1",
     "block_type": "extract",
     "block_label": "Extract Invoice",
-    "status": "completed",
-    "terminal": null,
+    "lifecycle": { "kind": "completed" },
     "artifact": { "operation": "extraction", "id": "ext_abc123" },
     "started_at": "2026-03-12T09:00:00Z",
     "completed_at": "2026-03-12T09:00:03Z",
@@ -116,8 +115,7 @@ curl -X 'GET' \
     "step_id": "split-block-1",
     "block_type": "split",
     "block_label": "Split Documents",
-    "status": "completed",
-    "terminal": null,
+    "lifecycle": { "kind": "completed" },
     "artifact": { "operation": "split", "id": "spl_def456" },
     "started_at": "2026-03-12T09:00:03Z",
     "completed_at": "2026-03-12T09:00:04Z",

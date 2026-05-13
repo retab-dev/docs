@@ -20962,7 +20962,7 @@
           "Workflow Runs"
         ],
         "summary": "Get Step Response",
-        "description": "Get step status and handle data for a specific step in a workflow run.\n\nDetail-mode read: ``json_ref`` handles are resolved to inline JSON so the\nconsumer sees the real body.",
+        "description": "Get step lifecycle and handle data for a specific step in a workflow run.\n\nDetail-mode read: ``json_ref`` handles are resolved to inline JSON so the\nconsumer sees the real body.",
         "operationId": "get_step_response_v1_workflows_runs__run_id__steps__block_id__get",
         "security": [
           {
@@ -42727,7 +42727,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-05-12T20:09:06.133307Z",
+              "updated_at": "2026-05-13T10:26:35.858197Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -49294,7 +49294,6 @@
             "description": "Mapping of consensus keys to original model keys"
           }
         },
-        "additionalProperties": true,
         "type": "object",
         "required": [
           "index",
@@ -50456,40 +50455,48 @@
             "title": "Block Label",
             "description": "Label of the block"
           },
-          "status": {
-            "type": "string",
-            "title": "Status",
-            "description": "Step status"
-          },
-          "terminal": {
-            "anyOf": [
+          "lifecycle": {
+            "oneOf": [
               {
-                "oneOf": [
-                  {
-                    "$ref": "#/components/schemas/TerminalError"
-                  },
-                  {
-                    "$ref": "#/components/schemas/TerminalSkipped"
-                  },
-                  {
-                    "$ref": "#/components/schemas/TerminalCancelled"
-                  }
-                ],
-                "discriminator": {
-                  "propertyName": "kind",
-                  "mapping": {
-                    "cancelled": "#/components/schemas/TerminalCancelled",
-                    "error": "#/components/schemas/TerminalError",
-                    "skipped": "#/components/schemas/TerminalSkipped"
-                  }
-                }
+                "$ref": "#/components/schemas/PendingStepLifecycle"
               },
               {
-                "type": "null"
+                "$ref": "#/components/schemas/QueuedStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/RunningStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/WaitingForHumanStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/SkippedStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledStepLifecycle"
               }
             ],
-            "title": "Terminal",
-            "description": "Structured terminal payload for error, skipped, or cancelled steps"
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "pending": "#/components/schemas/PendingStepLifecycle",
+                "queued": "#/components/schemas/QueuedStepLifecycle",
+                "running": "#/components/schemas/RunningStepLifecycle",
+                "completed": "#/components/schemas/CompletedStepLifecycle",
+                "waiting_for_human": "#/components/schemas/WaitingForHumanStepLifecycle",
+                "error": "#/components/schemas/ErrorStepLifecycle",
+                "skipped": "#/components/schemas/SkippedStepLifecycle",
+                "cancelled": "#/components/schemas/CancelledStepLifecycle"
+              }
+            },
+            "title": "Lifecycle",
+            "description": "Current lifecycle state"
           },
           "artifact": {
             "anyOf": [
@@ -50521,10 +50528,10 @@
           "step_id",
           "block_type",
           "block_label",
-          "status"
+          "lifecycle"
         ],
         "title": "StepResponse",
-        "description": "Public response containing step status and handle data."
+        "description": "Public response containing step lifecycle and handle data."
       },
       "StepStatusObject": {
         "properties": {
@@ -50569,20 +50576,48 @@
             "title": "Block Label",
             "description": "Label of the block"
           },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "queued",
-              "running",
-              "completed",
-              "skipped",
-              "error",
-              "waiting_for_human",
-              "cancelled"
+          "lifecycle": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PendingStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/QueuedStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/RunningStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/WaitingForHumanStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/SkippedStepLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledStepLifecycle"
+              }
             ],
-            "title": "Status",
-            "description": "Current status"
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "pending": "#/components/schemas/PendingStepLifecycle",
+                "queued": "#/components/schemas/QueuedStepLifecycle",
+                "running": "#/components/schemas/RunningStepLifecycle",
+                "completed": "#/components/schemas/CompletedStepLifecycle",
+                "waiting_for_human": "#/components/schemas/WaitingForHumanStepLifecycle",
+                "error": "#/components/schemas/ErrorStepLifecycle",
+                "skipped": "#/components/schemas/SkippedStepLifecycle",
+                "cancelled": "#/components/schemas/CancelledStepLifecycle"
+              }
+            },
+            "title": "Lifecycle",
+            "description": "Current lifecycle state"
           },
           "started_at": {
             "anyOf": [
@@ -50609,36 +50644,6 @@
             ],
             "title": "Completed At",
             "description": "When the step finished executing"
-          },
-          "terminal": {
-            "anyOf": [
-              {
-                "oneOf": [
-                  {
-                    "$ref": "#/components/schemas/TerminalError"
-                  },
-                  {
-                    "$ref": "#/components/schemas/TerminalSkipped"
-                  },
-                  {
-                    "$ref": "#/components/schemas/TerminalCancelled"
-                  }
-                ],
-                "discriminator": {
-                  "propertyName": "kind",
-                  "mapping": {
-                    "cancelled": "#/components/schemas/TerminalCancelled",
-                    "error": "#/components/schemas/TerminalError",
-                    "skipped": "#/components/schemas/TerminalSkipped"
-                  }
-                }
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Terminal",
-            "description": "Structured terminal payload \u2014 present iff status is error/skipped/cancelled"
           },
           "model": {
             "anyOf": [
@@ -50718,11 +50723,11 @@
           "step_id",
           "block_type",
           "block_label",
-          "status",
+          "lifecycle",
           "run_id"
         ],
         "title": "StepStatusObject",
-        "description": "Public step status object without tenant isolation fields."
+        "description": "Public step lifecycle object."
       },
       "StoredFileRecord": {
         "properties": {
@@ -51123,115 +51128,6 @@
         ],
         "title": "TemplateSchema",
         "description": "A full Schema object with validation."
-      },
-      "TerminalCancelled": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "const": "cancelled",
-            "title": "Kind",
-            "default": "cancelled"
-          },
-          "reason": {
-            "type": "string",
-            "title": "Reason",
-            "description": "Reason the step was cancelled"
-          }
-        },
-        "type": "object",
-        "required": [
-          "reason"
-        ],
-        "title": "TerminalCancelled",
-        "description": "Terminal payload for ``status=\"cancelled\"``."
-      },
-      "TerminalError": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "const": "error",
-            "title": "Kind",
-            "default": "error"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message",
-            "description": "Human-readable error message"
-          },
-          "stage": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "input_collection",
-                  "registry_lookup",
-                  "document_fetch",
-                  "execution",
-                  "output_storage",
-                  "routing",
-                  "history_payload"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Stage"
-          },
-          "category": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "transient",
-                  "permanent",
-                  "quota"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ErrorDetails"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "message"
-        ],
-        "title": "TerminalError",
-        "description": "Terminal payload for ``status=\"error\"``."
-      },
-      "TerminalSkipped": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "const": "skipped",
-            "title": "Kind",
-            "default": "skipped"
-          },
-          "reason": {
-            "type": "string",
-            "title": "Reason",
-            "description": "Reason the step was skipped"
-          }
-        },
-        "type": "object",
-        "required": [
-          "reason"
-        ],
-        "title": "TerminalSkipped",
-        "description": "Terminal payload for ``status=\"skipped\"``."
       },
       "TextBox": {
         "properties": {
@@ -56922,7 +56818,6 @@
             "title": "Updated At"
           }
         },
-        "additionalProperties": true,
         "type": "object",
         "required": [
           "id",
@@ -57256,6 +57151,153 @@
         ],
         "title": "Function",
         "description": "The function that the model called."
+      },
+      "PendingStepLifecycle": {
+        "properties": {
+          "kind": {
+            "const": "pending",
+            "title": "Kind",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "title": "PendingStepLifecycle"
+      },
+      "QueuedStepLifecycle": {
+        "properties": {
+          "kind": {
+            "const": "queued",
+            "title": "Kind",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "title": "QueuedStepLifecycle"
+      },
+      "RunningStepLifecycle": {
+        "properties": {
+          "kind": {
+            "const": "running",
+            "title": "Kind",
+            "default": "running"
+          }
+        },
+        "type": "object",
+        "title": "RunningStepLifecycle"
+      },
+      "CompletedStepLifecycle": {
+        "properties": {
+          "kind": {
+            "const": "completed",
+            "title": "Kind",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CompletedStepLifecycle"
+      },
+      "WaitingForHumanStepLifecycle": {
+        "properties": {
+          "kind": {
+            "const": "waiting_for_human",
+            "title": "Kind",
+            "default": "waiting_for_human"
+          }
+        },
+        "type": "object",
+        "title": "WaitingForHumanStepLifecycle"
+      },
+      "ErrorStepLifecycle": {
+        "properties": {
+          "kind": {
+            "const": "error",
+            "title": "Kind",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage",
+            "description": "Which execution stage failed"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category",
+            "description": "Category of error for retry decisions"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured error context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ErrorStepLifecycle"
+      },
+      "SkippedStepLifecycle": {
+        "properties": {
+          "kind": {
+            "const": "skipped",
+            "title": "Kind",
+            "default": "skipped"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason the step was skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "SkippedStepLifecycle"
+      },
+      "CancelledStepLifecycle": {
+        "properties": {
+          "kind": {
+            "const": "cancelled",
+            "title": "Kind",
+            "default": "cancelled"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason the step was cancelled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "CancelledStepLifecycle"
       }
     },
     "securitySchemes": {

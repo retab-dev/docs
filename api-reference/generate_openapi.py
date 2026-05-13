@@ -175,6 +175,141 @@ def _strip_public_workflow_internal_fields(spec: dict[str, object]) -> None:
             ]
 
 
+def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
+    """Publish workflow steps with lifecycle, not status + terminal.
+
+    The backend service can lag the SDK/docs public contract during the hard
+    cutover. Keep the generated public OpenAPI aligned with the SDK surface.
+    """
+    schemas = spec.get("components", {}).get("schemas") if isinstance(spec.get("components"), dict) else None
+    if not isinstance(schemas, dict):
+        return
+
+    lifecycle_variants: dict[str, dict[str, object]] = {
+        "PendingStepLifecycle": {
+            "properties": {"kind": {"const": "pending", "title": "Kind", "default": "pending"}},
+            "type": "object",
+            "title": "PendingStepLifecycle",
+        },
+        "QueuedStepLifecycle": {
+            "properties": {"kind": {"const": "queued", "title": "Kind", "default": "queued"}},
+            "type": "object",
+            "title": "QueuedStepLifecycle",
+        },
+        "RunningStepLifecycle": {
+            "properties": {"kind": {"const": "running", "title": "Kind", "default": "running"}},
+            "type": "object",
+            "title": "RunningStepLifecycle",
+        },
+        "CompletedStepLifecycle": {
+            "properties": {"kind": {"const": "completed", "title": "Kind", "default": "completed"}},
+            "type": "object",
+            "title": "CompletedStepLifecycle",
+        },
+        "WaitingForHumanStepLifecycle": {
+            "properties": {
+                "kind": {
+                    "const": "waiting_for_human",
+                    "title": "Kind",
+                    "default": "waiting_for_human",
+                }
+            },
+            "type": "object",
+            "title": "WaitingForHumanStepLifecycle",
+        },
+        "ErrorStepLifecycle": {
+            "properties": {
+                "kind": {"const": "error", "title": "Kind", "default": "error"},
+                "message": {"type": "string", "title": "Message", "description": "Human-readable error message"},
+                "stage": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "title": "Stage",
+                    "description": "Which execution stage failed",
+                },
+                "category": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "title": "Category",
+                    "description": "Category of error for retry decisions",
+                },
+                "details": {
+                    "anyOf": [{"$ref": "#/components/schemas/ErrorDetails"}, {"type": "null"}],
+                    "description": "Structured error context",
+                },
+            },
+            "type": "object",
+            "required": ["message"],
+            "title": "ErrorStepLifecycle",
+        },
+        "SkippedStepLifecycle": {
+            "properties": {
+                "kind": {"const": "skipped", "title": "Kind", "default": "skipped"},
+                "reason": {"type": "string", "title": "Reason", "description": "Reason the step was skipped"},
+            },
+            "type": "object",
+            "required": ["reason"],
+            "title": "SkippedStepLifecycle",
+        },
+        "CancelledStepLifecycle": {
+            "properties": {
+                "kind": {"const": "cancelled", "title": "Kind", "default": "cancelled"},
+                "reason": {"type": "string", "title": "Reason", "description": "Reason the step was cancelled"},
+            },
+            "type": "object",
+            "required": ["reason"],
+            "title": "CancelledStepLifecycle",
+        },
+    }
+    schemas.update(lifecycle_variants)
+
+    variant_names = list(lifecycle_variants)
+    lifecycle_schema = {
+        "oneOf": [{"$ref": f"#/components/schemas/{schema_name}"} for schema_name in variant_names],
+        "discriminator": {
+            "propertyName": "kind",
+            "mapping": {
+                "pending": "#/components/schemas/PendingStepLifecycle",
+                "queued": "#/components/schemas/QueuedStepLifecycle",
+                "running": "#/components/schemas/RunningStepLifecycle",
+                "completed": "#/components/schemas/CompletedStepLifecycle",
+                "waiting_for_human": "#/components/schemas/WaitingForHumanStepLifecycle",
+                "error": "#/components/schemas/ErrorStepLifecycle",
+                "skipped": "#/components/schemas/SkippedStepLifecycle",
+                "cancelled": "#/components/schemas/CancelledStepLifecycle",
+            },
+        },
+        "title": "Lifecycle",
+        "description": "Current lifecycle state",
+    }
+
+    for schema_name in ("StepResponse", "StepStatusObject"):
+        schema = schemas.get(schema_name)
+        if not isinstance(schema, dict):
+            continue
+        properties = schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("status", None)
+            properties.pop("terminal", None)
+            properties["lifecycle"] = lifecycle_schema
+        required = schema.get("required")
+        if isinstance(required, list):
+            schema["required"] = ["lifecycle" if item == "status" else item for item in required]
+        description = schema.get("description")
+        if isinstance(description, str):
+            schema["description"] = description.replace("step status", "step lifecycle")
+
+    step_path = (
+        spec.get("paths", {}).get("/v1/workflows/runs/{run_id}/steps/{block_id}")
+        if isinstance(spec.get("paths"), dict)
+        else None
+    )
+    if isinstance(step_path, dict):
+        get_operation = step_path.get("get")
+        if isinstance(get_operation, dict):
+            description = get_operation.get("description")
+            if isinstance(description, str):
+                get_operation["description"] = description.replace("Get step status", "Get step lifecycle")
+
+
 def generate_openapi() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     backend_main_server = repo_root / "backend" / "main_server"
@@ -206,6 +341,7 @@ def generate_openapi() -> None:
     _strip_public_organization_id(spec)
     _scrub_public_organization_id_text(spec)
     _strip_public_workflow_internal_fields(spec)
+    _hard_cutover_workflow_step_lifecycle(spec)
 
     # Strip unused legacy request/response schemas that only belonged to the
     # document-scoped classification API.
