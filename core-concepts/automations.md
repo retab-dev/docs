@@ -65,20 +65,33 @@ To start receiving webhook events in your app:
 
 Start by creating a **processor** with your extraction configuration.
 
-```python
-from retab import Retab
+<CodeGroup>
+```python Python
+import os
+import requests
 
-client = Retab()
+api_key = os.environ["RETAB_API_KEY"]
+schema = {
+    "type": "object",
+    "properties": {
+        "invoice_number": {"type": "string"},
+    },
+}
 
-processor = client.processors.create(
-    name="Invoice Processor",
-    model="gpt-5.4",
-    json_schema="Invoice_schema.json"
+response = requests.post(
+    "https://api.retab.com/v1/processors",
+    headers={"Api-Key": api_key},
+    json={
+        "name": "Invoice Processor",
+        "model": "retab-small",
+        "json_schema": schema,
+    },
 )
-
+response.raise_for_status()
+processor = response.json()
 ```
 
-```go
+```go Go
 // The Go SDK does not yet model the processors API. Call /v1/processors directly.
 package main
 
@@ -101,7 +114,7 @@ func main() {
 	}
 	body, err := json.Marshal(map[string]any{
 		"name":        "Invoice Processor",
-		"model":       "gpt-5.4",
+		"model":       "retab-small",
 		"json_schema": schema,
 	})
 	if err != nil {
@@ -129,6 +142,7 @@ func main() {
 	fmt.Println(string(payload))
 }
 ```
+</CodeGroup>
 
 ## Create your FastAPI server with a webhook
 
@@ -136,16 +150,17 @@ Then, set up a FastAPI route that will handle incoming webhook POST requests. Yo
 
 <CodeGroup>
 ```python main.py
+import json
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from main_server.globals.sdk.automations .webhooks import WebhookRequest
-from pydantic import BaseModel, Field, ConfigDict
 
 app = FastAPI()
 
 @app.post("/webhook")
-async def webhook(request: WebhookRequest):
-    invoice_object = json.loads(request.completion.choices[0].message.content or "{}") # The parsed object is the same Invoice object as the one you defined in the Pydantic model
+async def webhook(request: Request):
+    webhook_request = await request.json()
+    invoice_object = json.loads(
+        webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
+    )
     print("📬 Webhook received:", invoice_object)
     return {"status": "success", "data": invoice_object}
 
@@ -170,20 +185,19 @@ curl -X POST http://localhost:8000/webhook \
 
 When you set up a webhook, you provide an **HTTP endpoint** on your server for Retab to send data to. If this endpoint is not secured (i.e., it accepts unauthenticated `POST` requests from anywhere), it essentially becomes a public door into your system. **Any actor** could attempt to call this URL and send fake data. This is inherently dangerous: a malicious party might send **forged webhook requests** that masquerade as Retab, but contain bogus or harmful data.
 
-To secure webhook deliveries, Retab employs a **signature verification** mechanism using an HMAC-like scheme. Retab and your application share a **webhook secret** (a random string known only to Retab and you). This secret is available in your [Retab dashboard](https://www.retab.com/dashboard/settings) (Labeled as `WEBHOOKS_SECRET`). Retab uses this secret to include a special signature header with every webhook request. When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret, then compare your computed signature to the value in the `Retab-Signature` header. If the signatures **match**, the request truly came from Retab and the payload was not altered in transit.
+To secure webhook deliveries, Retab employs a **signature verification** mechanism using an HMAC-like scheme. Retab and your application share a **webhook secret** (a random string known only to Retab and you). This secret is available in your [Retab dashboard](https://www.retab.com/dashboard/settings) (Labeled as `WEBHOOKS_SECRET`). Retab uses this secret to include a special signature header with every webhook request. When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret, then compare your computed signature to the value in the `X-Retab-Signature` header. If the signatures **match**, the request truly came from Retab and the payload was not altered in transit.
 
 <Warning>Make sure to set your `WEBHOOKS_SECRET` environment variable with the secret from your [Retab dashboard](https://www.retab.com/dashboard/settings).</Warning>
 
 Here's how to implement signature verification in your FastAPI webhook:
 
-```python {13-26}
+<CodeGroup>
+```python Python {13-26}
 import os
 import json
 from fastapi import FastAPI, Request, Response, HTTPException
 from retab import Retab
-from main_server.globals.sdk.automations .webhooks import WebhookRequest
 
-reclient = Retab()
 app = FastAPI()
 
 @app.post("/webhook")
@@ -192,11 +206,11 @@ async def webhook_handler(request: Request):
 
     # Signature verification
     try:
-        signature_header = request.headers.get("Retab-Signature")
+        signature_header = request.headers.get("X-Retab-Signature")
         if not signature_header:
-            raise HTTPException(status_code=400, detail="Missing Retab-Signature header")
+            raise HTTPException(status_code=400, detail="Missing X-Retab-Signature header")
         # Verify the signature using Retab SDK
-        reclient.processors.automations.verify_event(
+        Retab.verify_event(
             event_body=payload,
             event_signature=signature_header,
             secret=os.getenv("WEBHOOKS_SECRET"),  # Get secret from environment variable
@@ -204,16 +218,17 @@ async def webhook_handler(request: Request):
     except Exception as e:
         return Response(status_code=400, content=f"Webhook error: {str(e)}")
 
-    json_data = json.loads(payload.decode('utf-8'))
-    webhook_request = WebhookRequest.model_validate(json_data)
+    webhook_request = json.loads(payload.decode('utf-8'))
     
-    invoice_object = json.loads(webhook_request.completion.choices[0].message.content or "{}")
+    invoice_object = json.loads(
+        webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
+    )
     print("📬 Webhook received:", invoice_object)
     return {"status": "success", "data": invoice_object}
 ```
 
-```go
-// retab.VerifyEvent validates the Retab-Signature HMAC and decodes the
+```go Go
+// retab.VerifyEvent validates the X-Retab-Signature HMAC and decodes the
 // payload into a typed struct in one step.
 package main
 
@@ -241,9 +256,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	signature := r.Header.Get("Retab-Signature")
+	signature := r.Header.Get("X-Retab-Signature")
 	if signature == "" {
-		http.Error(w, "Missing Retab-Signature header", http.StatusBadRequest)
+		http.Error(w, "Missing X-Retab-Signature header", http.StatusBadRequest)
 		return
 	}
 	event, err := retab.VerifyEvent[WebhookRequest](
@@ -265,6 +280,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 ```
+</CodeGroup>
 
 
 
@@ -309,67 +325,8 @@ Take note of the `webhook URL`, you will need it on the next steps.
 
 Now, you can create an automation that will use your processor to extract data from emails.
 
-```python
-from retab import Retab
-
-client = Retab()
-
-# Create a mailbox automation and attach it to the processor
-mailbox = client.processors.automations.mailboxes.create(
-    name="Invoice Mailbox",
-    email="invoices@mailbox.retab.com",
-    processor_id=processor.id, # The processor id you created in the previous step
-    webhook_url="https://your-server.com/webhook",  # Replace with your actual webhook URL
-)
-```
-
-```go
-// The Go SDK does not yet model the automations API. Call the
-// /v1/processors/automations/mailboxes endpoint directly.
-package main
-
-import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"os"
-)
-
-func main() {
-	body, err := json.Marshal(map[string]any{
-		"name":         "Invoice Mailbox",
-		"email":        "invoices@mailbox.retab.com",
-		"processor_id": "proc_01G34H8J2K",
-		"webhook_url":  "https://your-server.com/webhook",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req, err := http.NewRequest(
-		http.MethodPost,
-		"https://api.retab.com/v1/processors/automations/mailboxes",
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	payload, _ := io.ReadAll(resp.Body)
-	fmt.Println(string(payload))
-}
-```
+Create the mailbox automation from the dashboard and attach it to the processor
+you created above. Use your deployed webhook URL as the automation destination.
 
 At any email sent to `invoices@mailbox.retab.com`, the automation will use your processor configuration to extract data and send a POST request to your FastAPI webhook endpoint.
 
@@ -379,31 +336,32 @@ You can see the processor and automation you just created on your [dashboard](ht
 
 Finally, you can test the processor and automation rapidly with the test functions of the SDK: 
 
-```python
-from retab import Retab
+<CodeGroup>
+```python Python
+import os
+import requests
 
-# Initialize the Retab client
-client = Retab()
+api_key = os.environ["RETAB_API_KEY"]
+automation_id = "auto_abc"
 
 # If you just want to send a test request to your webhook
-log = client.processors.automations.tests.webhook(
-    automation_id=mailbox.id, 
+webhook_log = requests.post(
+    f"https://api.retab.com/v1/processors/automations/tests/webhook/{automation_id}",
+    headers={"Api-Key": api_key},
 )
+webhook_log.raise_for_status()
 
 # If you want to test the file processing logic: 
-log = client.processors.automations.tests.upload(
-    automation_id=mailbox.id, 
-    document="your_invoice_email.eml"
-)
-
-# If you want to test a full email forwarding
-log = client.processors.automations.mailboxes.tests.forward(
-    email="invoices@mailbox.retab.com", 
-    document="your_invoice_email.eml"
-)
+with open("your_invoice_email.eml", "rb") as document:
+    upload_log = requests.post(
+        f"https://api.retab.com/v1/processors/automations/tests/upload/{automation_id}",
+        headers={"Api-Key": api_key},
+        files={"file": ("your_invoice_email.eml", document, "message/rfc822")},
+    )
+upload_log.raise_for_status()
 ```
 
-```go
+```go Go
 // The Go SDK does not yet model the automations test API. Call the test
 // endpoints directly via /v1/processors/automations/tests/...
 package main
@@ -448,7 +406,7 @@ func post(url string, body any) ([]byte, error) {
 func main() {
 	// Send a test request to your webhook
 	if out, err := post(
-		"https://api.retab.com/v1/processors/automations/auto_abc/tests/webhook",
+		"https://api.retab.com/v1/processors/automations/tests/webhook/auto_abc",
 		map[string]any{},
 	); err != nil {
 		log.Fatal(err)
@@ -462,7 +420,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if out, err := post(
-		"https://api.retab.com/v1/processors/automations/auto_abc/tests/upload",
+		"https://api.retab.com/v1/processors/automations/tests/upload/auto_abc",
 		map[string]any{"document": mime},
 	); err != nil {
 		log.Fatal(err)
@@ -470,80 +428,11 @@ func main() {
 		fmt.Println(string(out))
 	}
 
-	// Test a full email forward
-	if out, err := post(
-		"https://api.retab.com/v1/processors/automations/mailboxes/tests/forward",
-		map[string]any{
-			"email":    "invoices@mailbox.retab.com",
-			"document": mime,
-		},
-	); err != nil {
-		log.Fatal(err)
-	} else {
-		fmt.Println(string(out))
-	}
 }
 ```
-
-<Tip>You can also test your webhook locally by overriding the webhook url set in the automation</Tip>
+</CodeGroup>
 
 You can also test your automation directly from the [dashboard](https://www.retab.com/dashboard/processors).
-
-```python
-from retab import Retab
-
-client = Retab()
-
-# If you just want to send a test request to your webhook
-log = client.processors.automations.tests.webhook(
-    automation_id=mailbox.id, 
-    webhook_url="http://localhost:8000/webhook" # If you want to try your webhook locally, you can override the webhook url set in the automation
-)
-```
-
-```go
-package main
-
-import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"os"
-)
-
-func main() {
-	body, err := json.Marshal(map[string]any{
-		"webhook_url": "http://localhost:8000/webhook",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req, err := http.NewRequest(
-		http.MethodPost,
-		"https://api.retab.com/v1/processors/automations/auto_abc/tests/webhook",
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	payload, _ := io.ReadAll(resp.Body)
-	fmt.Println(string(payload))
-}
-```
-
 
 
 

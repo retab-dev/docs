@@ -167,7 +167,8 @@ Pick a supported block, give the experiment a name and a document set, and
 choose how many consensus passes per document (3, 5, or 7). Documents come from
 prior workflow runs (via `document_captures`) or as explicit handle inputs.
 
-```python python
+<CodeGroup>
+```python Python
 from retab import Retab
 
 client = Retab()
@@ -184,7 +185,7 @@ experiment = client.workflows.experiments.create(
 )
 ```
 
-```go go
+```go Go
 // The Go SDK does not yet model the workflow experiments API. Call the
 // /v1/workflows/{workflow_id}/experiments endpoints directly.
 package main
@@ -234,6 +235,7 @@ func main() {
 	fmt.Println(string(payload))
 }
 ```
+</CodeGroup>
 
 Creating an experiment does NOT trigger a run — the document set is registered
 but no metrics exist yet.
@@ -243,7 +245,8 @@ but no metrics exist yet.
 Trigger consensus runs against the current draft block config. This is async —
 the SDK returns a `job_id` and you poll for completion.
 
-```python python
+<CodeGroup>
+```python Python
 run = client.workflows.experiments.runs.create(
     workflow_id="wf_abc123",
     experiment_id=experiment.id,
@@ -253,7 +256,7 @@ run = client.workflows.experiments.runs.create(
 client.jobs.wait_for_completion(run.job_id)
 ```
 
-```go go
+```go Go
 // Trigger an experiment run. Polling for the resulting job is left to the caller.
 package main
 
@@ -288,6 +291,7 @@ func main() {
 	fmt.Println(string(payload))
 }
 ```
+</CodeGroup>
 
 Pass `n_consensus=...` to override per-run, or `retry_failed_only=True` to
 re-run only the documents that errored in the previous run.
@@ -298,7 +302,8 @@ Metrics live behind one endpoint with four views — start at `summary`, drill
 into `by_target` on low-scoring fields, then into `votes` to see voter
 disagreement on a specific cell.
 
-```python python
+<CodeGroup>
+```python Python
 summary = client.workflows.experiments.get_metrics(
     workflow_id="wf_abc123",
     experiment_id=experiment.id,
@@ -323,7 +328,7 @@ votes = client.workflows.experiments.get_metrics(
 )
 ```
 
-```go go
+```go Go
 package main
 
 import (
@@ -379,6 +384,7 @@ func main() {
 	fmt.Println(string(votes))
 }
 ```
+</CodeGroup>
 
 If the latest run is stale relative to the current block config or document
 set, `get_metrics` returns a `stale_metrics` error envelope — call
@@ -386,7 +392,8 @@ set, `get_metrics` returns a `stale_metrics` error envelope — call
 
 ### Update / delete / duplicate
 
-```python python
+<CodeGroup>
+```python Python
 # Change the document set or n_consensus — invalidates existing metrics
 client.workflows.experiments.update(
     workflow_id="wf_abc123",
@@ -406,7 +413,7 @@ client.workflows.experiments.delete(
 )
 ```
 
-```go go
+```go Go
 package main
 
 import (
@@ -469,13 +476,15 @@ func main() {
 	}
 }
 ```
+</CodeGroup>
 
 ### Run every experiment on a block at once
 
 Useful when you've changed a block config and want to refresh every experiment
 attached to it in one call.
 
-```python python
+<CodeGroup>
+```python Python
 result = client.workflows.experiments.run_batch(
     workflow_id="wf_abc123",
     block_id="extract-invoice",
@@ -483,7 +492,7 @@ result = client.workflows.experiments.run_batch(
 print(f"Triggered {result.experiment_count} experiments")
 ```
 
-```go go
+```go Go
 package main
 
 import (
@@ -523,6 +532,7 @@ func main() {
 	fmt.Println(string(payload))
 }
 ```
+</CodeGroup>
 
 For the full method reference (including async variants under
 `AsyncRetab.workflows.experiments`), see the

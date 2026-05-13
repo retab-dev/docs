@@ -51,16 +51,17 @@ Then, set up a route that will handle incoming webhook POST requests. You will n
 
 <CodeGroup>
 ```python Python (FastAPI)
+import json
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from main_server.globals.sdk.automations .webhooks import WebhookRequest
-from pydantic import BaseModel, Field, ConfigDict
 
 app = FastAPI()
 
 @app.post("/webhook")
-async def webhook(request: WebhookRequest):
-    invoice_object = json.loads(request.completion.choices[0].message.content or "{}") # The parsed object is the same Invoice object as the one you defined in the Pydantic model
+async def webhook(request: Request):
+    webhook_request = await request.json()
+    invoice_object = json.loads(
+        webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
+    )
     print("📬 Webhook received:", invoice_object)
     return {"status": "success", "data": invoice_object}
 
@@ -112,7 +113,7 @@ curl -X POST http://localhost:8000/webhook \
 
 When you set up a webhook, you provide an **HTTP endpoint** on your server for Retab to send data to. If this endpoint is not secured (i.e., it accepts unauthenticated `POST` requests from anywhere), it essentially becomes a public door into your system. **Any actor** could attempt to call this URL and send fake data. This is inherently dangerous: a malicious party might send **forged webhook requests** that masquerade as Retab, but contain bogus or harmful data.
 
-To secure webhook deliveries, Retab employs a **signature verification** mechanism using an HMAC-like scheme. Retab and your application share a **webhook secret** (a random string known only to Retab and you). This secret is available in your [Retab dashboard](https://www.retab.com/dashboard/settings) (Labeled as `WEBHOOKS_SECRET`). Retab uses this secret to include a special signature header with every webhook request. When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret, then compare your computed signature to the value in the `Retab-Signature` header. If the signatures **match**, the request truly came from Retab and the payload was not altered in transit.
+To secure webhook deliveries, Retab employs a **signature verification** mechanism using an HMAC-like scheme. Retab and your application share a **webhook secret** (a random string known only to Retab and you). This secret is available in your [Retab dashboard](https://www.retab.com/dashboard/settings) (Labeled as `WEBHOOKS_SECRET`). Retab uses this secret to include a special signature header with every webhook request. When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret, then compare your computed signature to the value in the `X-Retab-Signature` header. If the signatures **match**, the request truly came from Retab and the payload was not altered in transit.
 
 <Warning>Make sure to set your `WEBHOOKS_SECRET` environment variable with the secret from your [Retab dashboard](https://www.retab.com/dashboard/settings).</Warning>
 
@@ -124,9 +125,7 @@ import os
 import json
 from fastapi import FastAPI, Request, Response, HTTPException
 from retab import Retab
-from main_server.globals.sdk.automations .webhooks import WebhookRequest
 
-client = Retab()
 app = FastAPI()
 
 @app.post("/webhook")
@@ -135,11 +134,11 @@ async def webhook_handler(request: Request):
 
     # Signature verification
     try:
-        signature_header = request.headers.get("Retab-Signature")
+        signature_header = request.headers.get("X-Retab-Signature")
         if not signature_header:
-            raise HTTPException(status_code=400, detail="Missing Retab-Signature header")
+            raise HTTPException(status_code=400, detail="Missing X-Retab-Signature header")
         # Verify the signature using Retab SDK
-        client.verify_event(
+        Retab.verify_event(
             event_body=payload,
             event_signature=signature_header,
             secret=os.getenv("WEBHOOKS_SECRET"),  # Get secret from environment variable
@@ -147,19 +146,19 @@ async def webhook_handler(request: Request):
     except Exception as e:
         return Response(status_code=400, content=f"Signature verification error. Please verify your signature secret. {str(e)}")
 
-    json_data = json.loads(payload.decode('utf-8'))
-    webhook_request = WebhookRequest.model_validate(json_data)
+    webhook_request = json.loads(payload.decode('utf-8'))
     
-    invoice_object = json.loads(webhook_request.completion.choices[0].message.content or "{}")
+    invoice_object = json.loads(
+        webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
+    )
     print("📬 Webhook received:", invoice_object)
     return {"status": "success", "data": invoice_object}
 ```
 
 ```javascript Node.js (Express)
 import express from 'express';
-import { Retab } from '/node';
+import { Retab } from '@retab/node';
 
-const client = new Retab();
 const app = express();
 
 app.use(express.raw({ type: 'application/json' }));
@@ -169,16 +168,12 @@ app.post('/webhook', async (req, res) => {
 
     // Signature verification
     try {
-        const signatureHeader = req.headers['retab-signature'];
+        const signatureHeader = req.headers['x-retab-signature'];
         if (!signatureHeader) {
-            return res.status(400).json({ detail: 'Missing Retab-Signature header' });
+            return res.status(400).json({ detail: 'Missing X-Retab-Signature header' });
         }
         // Verify the signature using Retab SDK
-        await client.verifyEvent({
-            event_body: payload,
-            event_signature: signatureHeader,
-            secret: process.env.WEBHOOKS_SECRET,  // Get secret from environment variable
-        });
+        Retab.verifyEvent(payload, String(signatureHeader), process.env.WEBHOOKS_SECRET);
     } catch (error) {
         return res.status(400).send(`Signature verification error. Please verify your signature secret. ${error.message}`);
     }
@@ -231,6 +226,5 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 That's it! You can start processing documents at scale. 
 
 ---
-
 
 

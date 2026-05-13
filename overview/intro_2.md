@@ -46,7 +46,7 @@ Structured Generation is a feature that ensures the AI model will always generat
 Every LLM service providers native structured generation support.
 
 <CodeGroup>
-```python python
+```python Python
 from pydantic import BaseModel
 from openai import OpenAI
 
@@ -68,7 +68,7 @@ completion = client.completions.parse(
 )
 ```
 
-```javascript Javascript
+```javascript JavaScript
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";

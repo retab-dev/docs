@@ -5,9 +5,8 @@ graph BT
     subgraph PS["Processor Config"]
         JS["JSON Schema"]
         M["Model"]
-        MOD["Modality"]
         DPI["Image Resolution DPI"]
-        BC["Browser Canvas"]
+        RE["Reasoning Effort"]
         NC["N Consensus"]
     end
 ```
@@ -15,7 +14,7 @@ graph BT
 
 Processors eliminate the complexity of manually configuring extraction parameters for each document, allowing you to focus on defining your output schema and reusing proven configurations across multiple documents and automation workflows.
 
-Please check the [API Reference](https://docs.retab.com/api-reference/processors/create) for more details.
+Use `POST /v1/processors` to create a processor and `POST /v1/processors/{processor_id}/submit` to run it.
 
 
 
@@ -38,7 +37,7 @@ A Processor object containing the extraction configuration.
   The type of object. Always `"processor"`.
 </ResponseField>
 
-<ResponseField name="processor_id" type="string">
+<ResponseField name="id" type="string">
   Unique identifier for the processor, prefixed with `"proc_"`.
 </ResponseField>
 
@@ -51,27 +50,27 @@ A Processor object containing the extraction configuration.
 </ResponseField>
 
 <ResponseField name="model" type="string">
-  AI model used for extraction (e.g., `"gpt-5.4"`, `"gpt-5.4"`, `"claude-3-5-sonnet"`).
-</ResponseField>
-
-<ResponseField name="modality" type="string">
-  Document processing pipeline (`"native"`, `"vision"`, `"text"`).
+  AI model used for extraction, such as `"retab-small"`.
 </ResponseField>
 
 <ResponseField name="image_resolution_dpi" type="int">
   Resolution in DPI when converting PDFs to images for vision models.
 </ResponseField>
 
-<ResponseField name="browser_canvas" type="string">
-  Viewport size for rendering HTML documents (`"A3"`, `"A4"`, `"A5"`).
+<ResponseField name="reasoning_effort" type="string">
+  Reasoning effort passed to compatible models. Defaults to `"minimal"`.
 </ResponseField>
 
 <ResponseField name="n_consensus" type="int">
   Number of parallel extraction runs for consensus voting. Values > 1 enable consensus mode.
 </ResponseField>
 
-<ResponseField name="created_at" type="datetime">
-  UTC timestamp when the processor was created.
+<ResponseField name="schema_id" type="string">
+  Stable ID derived from the processor JSON schema.
+</ResponseField>
+
+<ResponseField name="schema_data_id" type="string">
+  Stable data-version ID derived from the processor JSON schema.
 </ResponseField>
 
 <ResponseField name="updated_at" type="datetime">
@@ -92,18 +91,32 @@ A newly created Processor object with the specified configuration.
 <CodeGroup>
 
 ```python Request
-from retab import Retab
+import os
+import requests
 
-reclient = Retab()
+api_key = os.environ["RETAB_API_KEY"]
 
-processor = reclient.processors.create(
-    name="Invoice Processor",
-    json_schema="Invoice_schema.json",
-    model="gpt-5.4",
-    modality="native",
-    n_consensus=3,  # Enable consensus with 3 parallel runs
-    image_resolution_dpi=150
+schema = {
+    "type": "object",
+    "properties": {
+        "invoice_number": {"type": "string"},
+        "total_amount": {"type": "number"},
+    },
+}
+
+response = requests.post(
+    "https://api.retab.com/v1/processors",
+    headers={"Api-Key": api_key},
+    json={
+        "name": "Invoice Processor",
+        "json_schema": schema,
+        "model": "retab-small",
+        "n_consensus": 3,
+        "image_resolution_dpi": 150,
+    },
 )
+response.raise_for_status()
+processor = response.json()
 ```
 
 ```go Request
@@ -132,8 +145,7 @@ func main() {
 	body, err := json.Marshal(map[string]any{
 		"name":                 "Invoice Processor",
 		"json_schema":          schema,
-		"model":                "gpt-5.4",
-		"modality":             "native",
+		"model":                "retab-small",
 		"n_consensus":          3,
 		"image_resolution_dpi": 150,
 	})
@@ -166,7 +178,7 @@ func main() {
 ```json Response
 {
   "object": "processor",
-  "processor_id": "proc_01G34H8J2K",
+  "id": "proc_01G34H8J2K",
   "name": "Invoice Processor",
   "json_schema": {
     "type": "object",
@@ -190,10 +202,12 @@ func main() {
     },
     "required": ["invoice_number", "total_amount", "issue_date", "vendor_name"]
   },
-  "model": "gpt-5.4",
+  "model": "retab-small",
+  "reasoning_effort": "minimal",
   "image_resolution_dpi": 150,
   "n_consensus": 3,
-  "created_at": "2025-01-21T12:34:56Z",
+  "schema_id": "schema_...",
+  "schema_data_id": "schema_data_...",
   "updated_at": "2025-01-21T12:34:56Z"
 }
 ```
@@ -205,63 +219,72 @@ func main() {
 Processes a document using an existing processor configuration and returns the extracted structured data.
 
 <ResponseField name="Returns" type="Dict[str, Any]">
-The extracted data as a JSON object matching the processor's schema.
+The parsed chat completion response. The extracted data is available as the top-level `data` shortcut and at `choices[0].message.parsed`.
 </ResponseField>
 
 <CodeGroup>
 
 ```python Request
-from retab import Retab, MIMEData
+import os
+import requests
 
-reclient = Retab()
+api_key = os.environ["RETAB_API_KEY"]
 
-with open("invoice.pdf", "rb") as f:
-    mime = MIMEData.from_bytes(f.read(), filename="invoice.pdf")
-
-completion = reclient.processors.submit(
-    processor_id="proc_01G34H8J2K",
-    document=mime
-)
+with open("invoice.pdf", "rb") as invoice:
+    response = requests.post(
+        "https://api.retab.com/v1/processors/proc_01G34H8J2K/submit",
+        headers={"Api-Key": api_key},
+        files={"document": ("invoice.pdf", invoice, "application/pdf")},
+    )
+response.raise_for_status()
+completion = response.json()
+print(completion["data"])
 ```
 
 ```go Request
-// The Go SDK does not yet model the processors API. Use retab.InferMIMEData
-// to build the document payload, then POST to /v1/processors/{id}/submit.
+// The Go SDK does not yet model the processors API. Submit documents as multipart form data.
 package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
-
-	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	mime, err := retab.InferMIMEData("invoice.pdf")
+	file, err := os.Open("invoice.pdf")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer file.Close()
 
-	body, err := json.Marshal(map[string]any{"document": mime})
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("document", "invoice.pdf")
 	if err != nil {
+		log.Fatal(err)
+	}
+	if _, err := io.Copy(part, file); err != nil {
+		log.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
 		log.Fatal(err)
 	}
 
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"https://api.retab.com/v1/processors/proc_01G34H8J2K/submit",
-		bytes.NewReader(body),
+		&body,
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -277,10 +300,26 @@ func main() {
 
 ```json Response
 {
-  "invoice_number": "INV-2024-0789",
-  "total_amount": 1576.75,
-  "issue_date": "2024-04-15",
-  "vendor_name": "ACME Corporation"
+  "id": "chatcmpl_...",
+  "object": "chat.completion",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"invoice_number\":\"INV-2024-0789\",\"total_amount\":1576.75}",
+        "parsed": {
+          "invoice_number": "INV-2024-0789",
+          "total_amount": 1576.75
+        }
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "data": {
+    "invoice_number": "INV-2024-0789",
+    "total_amount": 1576.75
+  }
 }
 ```
 

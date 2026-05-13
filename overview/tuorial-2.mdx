@@ -9,24 +9,19 @@ Set up your endpoint function so that it:
 - Quickly returns a successful status code (2xx) prior to any complex logic that might cause a timeout.
 
 ```python
-import os
+import json
 
-from fastapi import FastAPI, Request, Response, HTTPException
-from retab import Retab
+from fastapi import FastAPI, Request
 
-reclient = Retab()
 app = FastAPI()
 
 @app.post("/webhook")
 async def webhook_handler(request: Request):
+    webhook_request = await request.json()
 
-    payload = await request.body()
-
-    # Decode and parse the webhook request from the verified payload
-    json_data = json.loads(payload.decode('utf-8'))
-    webhook_request = WebhookRequest.model_validate(json_data)
-
-    invoice_object = Invoice.model_validate_json(webhook_request.completion.choices[0].message.content or "{}") # The parsed object is the same Invoice object as the one you defined in the Pydantic model
+    invoice_object = json.loads(
+        webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
+    )
     print("📬 Webhook received:", invoice_object)
     return {"status": "success", "data": invoice_object}
 
@@ -40,39 +35,38 @@ if __name__ == "__main__":
 
 ### Create a new deployment sending data to your webhook endpoint
 
-Let's create a new processor and automation to send data to your webhook endpoint.
+Let's create a new processor, then create an automation from the dashboard and attach that processor to your webhook endpoint.
 
 First, create a processor:
 
-```python
+<CodeGroup>
+```python Python
+import os
+import requests
+from pydantic import BaseModel, EmailStr
+
 class Invoice(BaseModel):
     amount: int
     currency: str
     customer_email: EmailStr
 
-
-from retab import Retab
-
-reclient = Retab()
-
-# Step 1: Create a processor
-processor = reclient.processors.create(
-    name="Invoice Processor",
-    model="gpt-5.4",
-    json_schema=Invoice.model_json_schema(),
+response = requests.post(
+    "https://api.retab.com/v1/processors",
+    headers={"Api-Key": os.environ["RETAB_API_KEY"]},
+    json={
+        "name": "Invoice Processor",
+        "model": "retab-small",
+        "json_schema": Invoice.model_json_schema(),
+    },
 )
+response.raise_for_status()
+processor = response.json()
 
-# Step 2: Create an automation and attach it to the processor
-extraction_link = reclient.processors.automations.links.create(
-    name="Invoices",
-    processor_id=processor.id,
-    webhook_url="https://your_server.com/invoices/webhook",
-)
+print("Processor ID:", processor["id"])
 ```
 
-```go
-// The Go SDK does not yet model the processors / automations APIs.
-// Call /v1/processors and /v1/processors/automations/links directly.
+```go Go
+// The Go SDK does not yet model the processors API. Call /v1/processors directly.
 package main
 
 import (
@@ -115,83 +109,97 @@ func main() {
 		"required": []string{"amount", "currency", "customer_email"},
 	}
 
-	// Step 1: Create a processor
 	processor, err := post("https://api.retab.com/v1/processors", map[string]any{
 		"name":        "Invoice Processor",
-		"model":       "gpt-5.4",
+		"model":       "retab-small",
 		"json_schema": invoiceSchema,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(string(processor))
-
-	// Step 2: Create an automation and attach it to the processor.
-	// Use the processor_id returned by step 1 in place of "proc_01G34H8J2K".
-	link, err := post("https://api.retab.com/v1/processors/automations/links", map[string]any{
-		"name":         "Invoices",
-		"processor_id": "proc_01G34H8J2K",
-		"webhook_url":  "https://your_server.com/invoices/webhook",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(link))
 }
 ```
+</CodeGroup>
 
-### Test your webhook endpoint handler locally using the Retab SDK
+Next, create an automation in the Retab dashboard, attach the processor ID returned above, and set the destination webhook URL to your deployed endpoint.
+
+### Test your webhook endpoint handler locally
 
 Before you go-live with your webhook endpoint function, we recommend that you test your application integration.
 
-You can do so by sending a test request to your webhook endpoint using the Retab SDK.
+You can do so by sending a test request to your webhook endpoint using the automation test endpoints.
 
-```python
-from retab import Retab
+<CodeGroup>
+```python Python
+import os
+import requests
 
-reclient = Retab()
-link_log = reclient.processors.automations.links.test_document_upload(
-    link_id=extraction_link.id,
-    document = "invoice.pdf"
-)
+automation_id = "auto_abc"
+
+with open("invoice.pdf", "rb") as document:
+    response = requests.post(
+        f"https://api.retab.com/v1/processors/automations/tests/upload/{automation_id}",
+        headers={"Api-Key": os.environ["RETAB_API_KEY"]},
+        files={"document": ("invoice.pdf", document, "application/pdf")},
+    )
+
+response.raise_for_status()
+print(response.json())
 ```
 
-```go
+```bash cURL
+curl -X POST "https://api.retab.com/v1/processors/automations/tests/webhook/auto_abc" \
+  -H "Api-Key: $RETAB_API_KEY"
+
+curl -X POST "https://api.retab.com/v1/processors/automations/tests/upload/auto_abc" \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -F "document=@invoice.pdf;type=application/pdf"
+```
+
+```go Go
 package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
-
-	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	mime, err := retab.InferMIMEData("invoice.pdf")
+	file, err := os.Open("invoice.pdf")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer file.Close()
 
-	body, err := json.Marshal(map[string]any{"document": mime})
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("document", "invoice.pdf")
 	if err != nil {
+		log.Fatal(err)
+	}
+	if _, err := io.Copy(part, file); err != nil {
+		log.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
 		log.Fatal(err)
 	}
 
 	req, err := http.NewRequest(
 		http.MethodPost,
-		"https://api.retab.com/v1/processors/automations/links/link_abc/tests/upload",
-		bytes.NewReader(body),
+		"https://api.retab.com/v1/processors/automations/tests/upload/auto_abc",
+		&body,
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -203,24 +211,26 @@ func main() {
 	fmt.Println(string(payload))
 }
 ```
+</CodeGroup>
 
 ### Secure your webhook endpoint
 
 You need to secure your integration by making sure your handler verifies that all webhook requests are generated by Retab. 
 
-You perform the verification by providing the event payload, the `Retab-Signature` header, and the endpoint's secret. If verification fails, you get an error.
+You perform the verification by providing the event payload, the `X-Retab-Signature` header, and the endpoint's secret. If verification fails, you get an error.
 
 
 **Important:** Make sure to replace `"your_webhooks_secret_here"` with the actual secret from your [Retab dashboard](https://www.retab.com/dashboard/settings).
 
 
-```python {13-39}
+<CodeGroup>
+```python Python {13-39}
+import json
 import os
 
 from fastapi import FastAPI, Request, Response, HTTPException
 from retab import Retab
 
-reclient = Retab()
 app = FastAPI()
 
 @app.post("/webhook")
@@ -234,19 +244,17 @@ async def webhook_handler(request: Request):
     try:
         # Read the signature from the request headers
         
-        signature_header = request.headers.get("Retab-Signature")
+        signature_header = request.headers.get("X-Retab-Signature")
 
         if not signature_header:
-            raise HTTPException(status_code=400, detail="Missing Retab-Signature header")
+            raise HTTPException(status_code=400, detail="Missing X-Retab-Signature header")
 
         # Verify the signature and process the event
-        reclient.processors.automations.verify_event(
+        Retab.verify_event(
             event_body=payload,
             event_signature=signature_header,
             secret=os.getenv("WEBHOOKS_SECRET"),
         )
-
-        return Response(status_code=200)
     except Exception as e:
         # Handle errors (optional: log the error)
         return Response(status_code=400, content=f"Webhook error: {str(e)}")
@@ -256,18 +264,19 @@ async def webhook_handler(request: Request):
     #########################################################
 
     # Decode and parse the webhook request from the verified payload
-    json_data = json.loads(payload.decode('utf-8'))
-    webhook_request = WebhookRequest.model_validate(json_data)
+    webhook_request = json.loads(payload.decode('utf-8'))
 
     #Then continue with your webhook handler logic .....
-    invoice_object = Invoice.model_validate_json(webhook_request.completion.choices[0].message.content or "{}") # The parsed object is the same Invoice object as the one you defined in the Pydantic model
+    invoice_object = json.loads(
+        webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
+    )
     print("📬 Webhook received:", invoice_object)
     return {"status": "success", "data": invoice_object}
 
 
 ```
 
-```go
+```go Go
 package main
 
 import (
@@ -304,9 +313,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	signature := r.Header.Get("Retab-Signature")
+	signature := r.Header.Get("X-Retab-Signature")
 	if signature == "" {
-		http.Error(w, "Missing Retab-Signature header", http.StatusBadRequest)
+		http.Error(w, "Missing X-Retab-Signature header", http.StatusBadRequest)
 		return
 	}
 
@@ -337,6 +346,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 ```
+</CodeGroup>
 
 #### Vulnerability
 
@@ -348,11 +358,11 @@ To secure webhook deliveries, Retab employs a **signature verification** mechani
 
 **How it works:** Retab and your application share a **webhook secret** (a random string known only to Retab and you). This secret is available in your Retab dashboard (often labeled as `WEBHOOKS_SECRET`). Retab uses this secret to include a special signature header with every webhook request:
 
-* **Signature Generation (Retab):** When Retab prepares to send a webhook, it computes an HMAC-SHA256 signature of the webhook's payload using your secret key, and includes this signature in the request headers (specifically in the `Retab-Signature` header).
-* **Signature Verification (Your Server):** When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret. Then, compare your computed signature to the value in the `Retab-Signature` header.
+* **Signature Generation (Retab):** When Retab prepares to send a webhook, it computes an HMAC-SHA256 signature of the webhook's payload using your secret key, and includes this signature in the request headers (specifically in the `X-Retab-Signature` header).
+* **Signature Verification (Your Server):** When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret. Then, compare your computed signature to the value in the `X-Retab-Signature` header.
 * **Comparison Result:** If the two signatures **match**, it means the request truly came from Retab (since only Retab knows the secret) and that the payload was not altered in transit. You can then safely trust and process the webhook. If the signatures **do not match**, the request is illegitimate – either coming from an impostor or corrupted – and you should reject it (e.g. respond with an HTTP 400 Bad Request or 401 Unauthorized).
 
-By using this HMAC signature validation, we achieve both **authentication** and **integrity** for webhook messages: only the genuine sender (Retab) can produce a matching signature, and any change to the data would break the signature verification. In other words, a valid `Retab-Signature` proves that the webhook content is exactly what Retab sent and has not been tampered with.
+By using this HMAC signature validation, we achieve both **authentication** and **integrity** for webhook messages: only the genuine sender (Retab) can produce a matching signature, and any change to the data would break the signature verification. In other words, a valid `X-Retab-Signature` proves that the webhook content is exactly what Retab sent and has not been tampered with.
 
 
 
@@ -375,13 +385,13 @@ async def webhook_handler(request: Request):
     try:
         # Read payload and signature from request
         payload = await request.body()
-        signature_header = request.headers.get("Retab-Signature")
+        signature_header = request.headers.get("X-Retab-Signature")
 
         if not signature_header:
-            raise HTTPException(status_code=400, detail="Missing Retab-Signature header")
+            raise HTTPException(status_code=400, detail="Missing X-Retab-Signature header")
 
         # Verify the signature and process the event
-        reclient.processors.automations.verify_event(
+        Retab.verify_event(
             event_body=payload,
             event_signature=signature_header,
             secret=os.getenv("WEBHOOKS_SECRET"),
@@ -402,10 +412,10 @@ reclient = Retab()
 
 def webhook_handler(request):
     payload = request.get_data()
-    signature_header = request.headers["Retab-Signature"]
+    signature_header = request.headers["X-Retab-Signature"]
 
     # Verify the signature and process the event
-    response = reclient.processors.automations.verify_event(
+    response = Retab.verify_event(
         event_body=payload,
         event_signature=signature_header,
         secret=os.getenv("WEBHOOKS_SECRET"),
@@ -427,10 +437,10 @@ app = Flask(__name__)
 @app.route("/webhook", methods=["POST"])
 def webhook_handler():
     payload = request.get_data()
-    signature_header = request.headers["Retab-Signature"]
+    signature_header = request.headers["X-Retab-Signature"]
 
     # Verify the signature and process the event
-    response = reclient.processors.automations.verify_event(
+    response = Retab.verify_event(
         event_body=payload,
         event_signature=signature_header,
         secret=os.getenv("WEBHOOKS_SECRET"),
@@ -458,9 +468,9 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	signature := r.Header.Get("Retab-Signature")
+	signature := r.Header.Get("X-Retab-Signature")
 	if signature == "" {
-		http.Error(w, "Missing Retab-Signature header", http.StatusBadRequest)
+		http.Error(w, "Missing X-Retab-Signature header", http.StatusBadRequest)
 		return
 	}
 
