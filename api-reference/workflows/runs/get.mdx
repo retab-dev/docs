@@ -3,7 +3,7 @@ title: 'Get Run'
 openapi: 'GET /v1/workflows/runs/{run_id}'
 ---
 
-Get a single workflow run by ID. Use this endpoint to check `lifecycle.kind` for a running workflow or retrieve the results of a completed workflow.
+Get a single workflow run by ID. Use this endpoint to check `lifecycle.status` for a running workflow or retrieve the results of a completed workflow.
 
 Run timing includes timestamps, not precomputed duration fields. Derive duration from
 `timing.completed_at - timing.started_at` when both timestamps are present.
@@ -23,8 +23,8 @@ client = Retab()
 
 run = client.workflows.runs.get("run_abc123xyz")
 
-print(f"Lifecycle: {run.lifecycle.kind}")
-if run.lifecycle.kind == "completed":
+print(f"Lifecycle: {run.lifecycle.status}")
+if run.lifecycle.status == "completed":
     if run.timing.started_at and run.timing.completed_at:
         duration_ms = int((run.timing.completed_at - run.timing.started_at).total_seconds() * 1000)
         print(f"Duration: {duration_ms}ms")
@@ -44,8 +44,8 @@ const client = new Retab();
 
 const run = await client.workflows.runs.get("run_abc123xyz");
 
-console.log(`Lifecycle: ${run.lifecycle.kind}`);
-if (run.lifecycle.kind === "completed") {
+console.log(`Lifecycle: ${run.lifecycle.status}`);
+if (run.lifecycle.status === "completed") {
     if (run.timing.started_at && run.timing.completed_at) {
         const durationMs = new Date(run.timing.completed_at).getTime() - new Date(run.timing.started_at).getTime();
         console.log(`Duration: ${durationMs}ms`);
@@ -88,8 +88,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Lifecycle: %s\n", run.Lifecycle.Kind)
-	if run.Lifecycle.Kind == "completed" {
+	fmt.Printf("Lifecycle: %s\n", run.Lifecycle.Status)
+	if run.Lifecycle.Status == "completed" {
 		stepSummaries, err := client.Workflows.Runs.Steps.List(ctx, run.ID)
 		if err != nil {
 			log.Fatal(err)
@@ -127,7 +127,7 @@ curl -X 'GET' \
     "name_at_run_time": "Invoice Processing"
   },
   "trigger": { "type": "api" },
-  "lifecycle": { "kind": "completed" },
+  "lifecycle": { "status": "completed" },
   "timing": {
     "created_at": "2024-01-15T10:30:00Z",
     "started_at": "2024-01-15T10:30:00Z",

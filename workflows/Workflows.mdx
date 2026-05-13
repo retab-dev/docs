@@ -257,17 +257,17 @@ run = client.workflows.runs.create(
     },
 )
 
-terminal_kinds = {"completed", "error", "cancelled"}
-while run.lifecycle.kind not in terminal_kinds and run.lifecycle.kind != "waiting_for_human":
+terminal_statuses = {"completed", "error", "cancelled"}
+while run.lifecycle.status not in terminal_statuses and run.lifecycle.status != "waiting_for_human":
     time.sleep(1)
     run = client.workflows.runs.get(run.id)
 
-print(run.lifecycle.kind)
-if run.lifecycle.kind == "waiting_for_human":
+print(run.lifecycle.status)
+if run.lifecycle.status == "waiting_for_human":
     print(run.lifecycle.waiting_for_block_ids)
-elif run.lifecycle.kind == "error":
+elif run.lifecycle.status == "error":
     raise RuntimeError(run.lifecycle.message)
-elif run.lifecycle.kind == "cancelled":
+elif run.lifecycle.status == "cancelled":
     raise RuntimeError(run.lifecycle.reason or "Workflow run was cancelled")
 else:
     for step_summary in client.workflows.runs.steps.list(run.id):
@@ -329,7 +329,7 @@ func main() {
 	}
 
 	deadline := time.Now().Add(10 * time.Minute)
-	for !run.Terminal() && run.Lifecycle.Kind != "waiting_for_human" {
+	for !run.Terminal() && run.Lifecycle.Status != "waiting_for_human" {
 		if time.Now().After(deadline) {
 			log.Fatalf("timed out waiting for workflow run %s", run.ID)
 		}
@@ -340,13 +340,13 @@ func main() {
 		}
 	}
 
-	fmt.Println(run.Lifecycle.Kind)
-	if run.Lifecycle.Kind == "waiting_for_human" {
+	fmt.Println(run.Lifecycle.Status)
+	if run.Lifecycle.Status == "waiting_for_human" {
 		fmt.Println(run.Lifecycle.WaitingForBlockIDs)
 		return
 	}
 	if !run.Completed() {
-		log.Fatalf("workflow finished with lifecycle %s", run.Lifecycle.Kind)
+		log.Fatalf("workflow finished with lifecycle %s", run.Lifecycle.Status)
 	}
 
 	steps, err := client.Workflows.Runs.Steps.List(ctx, run.ID)
@@ -376,13 +376,13 @@ Step payloads are normalized into `HandlePayload` objects. For JSON-producing bl
 ```python
 # Step roster:
 for step in client.workflows.runs.steps.list(run.id):
-    print(step.block_id, step.lifecycle.kind)
+    print(step.block_id, step.lifecycle.status)
     if step.artifact:
         print(step.artifact.operation, step.artifact.id)
 
 # Full execution record for one step:
 step = client.workflows.runs.steps.get(run.id, "extract-block-id")
-print(step.lifecycle.kind)
+print(step.lifecycle.status)
 if step.extracted_data:
     print(step.extracted_data)
 ```
@@ -394,7 +394,7 @@ if err != nil {
 	log.Fatal(err)
 }
 for _, step := range steps {
-	fmt.Println(step.BlockID, step.Lifecycle["kind"])
+	fmt.Println(step.BlockID, step.Lifecycle["status"])
 	if step.Artifact != nil {
 		fmt.Println(step.Artifact.Operation, step.Artifact.ID)
 	}
@@ -405,7 +405,7 @@ step, err := client.Workflows.Runs.Steps.Get(ctx, run.ID, "extract-block-id")
 if err != nil {
 	log.Fatal(err)
 }
-fmt.Println(step.Lifecycle["kind"])
+fmt.Println(step.Lifecycle["status"])
 if extractedData := step.ExtractedData(); extractedData != nil {
 	fmt.Println(extractedData)
 }
@@ -582,7 +582,7 @@ Use `client.workflows.list()` or `client.workflows.get(workflow_id)` when you ne
 ### Reading Workflow Results
 
 The standard production pattern is to run the workflow, keep the returned `run.id`,
-and poll the run until `lifecycle.kind` reaches `completed`, `error`, `cancelled`,
+and poll the run until `lifecycle.status` reaches `completed`, `error`, `cancelled`,
 or `waiting_for_human`.
 
 1. Start the workflow from the SDK or API

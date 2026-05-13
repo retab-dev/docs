@@ -187,30 +187,30 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
 
     lifecycle_variants: dict[str, dict[str, object]] = {
         "PendingStepLifecycle": {
-            "properties": {"kind": {"const": "pending", "title": "Kind", "default": "pending"}},
+            "properties": {"status": {"const": "pending", "title": "Status", "default": "pending"}},
             "type": "object",
             "title": "PendingStepLifecycle",
         },
         "QueuedStepLifecycle": {
-            "properties": {"kind": {"const": "queued", "title": "Kind", "default": "queued"}},
+            "properties": {"status": {"const": "queued", "title": "Status", "default": "queued"}},
             "type": "object",
             "title": "QueuedStepLifecycle",
         },
         "RunningStepLifecycle": {
-            "properties": {"kind": {"const": "running", "title": "Kind", "default": "running"}},
+            "properties": {"status": {"const": "running", "title": "Status", "default": "running"}},
             "type": "object",
             "title": "RunningStepLifecycle",
         },
         "CompletedStepLifecycle": {
-            "properties": {"kind": {"const": "completed", "title": "Kind", "default": "completed"}},
+            "properties": {"status": {"const": "completed", "title": "Status", "default": "completed"}},
             "type": "object",
             "title": "CompletedStepLifecycle",
         },
         "WaitingForHumanStepLifecycle": {
             "properties": {
-                "kind": {
+                "status": {
                     "const": "waiting_for_human",
-                    "title": "Kind",
+                    "title": "Status",
                     "default": "waiting_for_human",
                 }
             },
@@ -219,7 +219,7 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
         },
         "ErrorStepLifecycle": {
             "properties": {
-                "kind": {"const": "error", "title": "Kind", "default": "error"},
+                "status": {"const": "error", "title": "Status", "default": "error"},
                 "message": {"type": "string", "title": "Message", "description": "Human-readable error message"},
                 "stage": {
                     "anyOf": [{"type": "string"}, {"type": "null"}],
@@ -242,7 +242,7 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
         },
         "SkippedStepLifecycle": {
             "properties": {
-                "kind": {"const": "skipped", "title": "Kind", "default": "skipped"},
+                "status": {"const": "skipped", "title": "Status", "default": "skipped"},
                 "reason": {"type": "string", "title": "Reason", "description": "Reason the step was skipped"},
             },
             "type": "object",
@@ -251,7 +251,7 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
         },
         "CancelledStepLifecycle": {
             "properties": {
-                "kind": {"const": "cancelled", "title": "Kind", "default": "cancelled"},
+                "status": {"const": "cancelled", "title": "Status", "default": "cancelled"},
                 "reason": {"type": "string", "title": "Reason", "description": "Reason the step was cancelled"},
             },
             "type": "object",
@@ -265,7 +265,7 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
     lifecycle_schema = {
         "oneOf": [{"$ref": f"#/components/schemas/{schema_name}"} for schema_name in variant_names],
         "discriminator": {
-            "propertyName": "kind",
+            "propertyName": "status",
             "mapping": {
                 "pending": "#/components/schemas/PendingStepLifecycle",
                 "queued": "#/components/schemas/QueuedStepLifecycle",
