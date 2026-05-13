@@ -257,15 +257,19 @@ run = client.workflows.runs.create(
     },
 )
 
-while not run.is_terminal and run.lifecycle.kind != "waiting_for_human":
+terminal_kinds = {"completed", "error", "cancelled"}
+while run.lifecycle.kind not in terminal_kinds and run.lifecycle.kind != "waiting_for_human":
     time.sleep(1)
     run = client.workflows.runs.get(run.id)
 
 print(run.lifecycle.kind)
 if run.lifecycle.kind == "waiting_for_human":
     print(run.lifecycle.waiting_for_block_ids)
+elif run.lifecycle.kind == "error":
+    raise RuntimeError(run.lifecycle.message)
+elif run.lifecycle.kind == "cancelled":
+    raise RuntimeError(run.lifecycle.reason or "Workflow run was cancelled")
 else:
-    run.raise_for_status()
     for step_summary in client.workflows.runs.steps.list(run.id):
         step = client.workflows.runs.steps.get(run.id, step_summary.block_id)
         if step.handle_outputs:

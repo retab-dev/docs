@@ -5,10 +5,14 @@ openapi: 'GET /v1/workflows/runs/{run_id}'
 
 Get a single workflow run by ID. Use this endpoint to check `lifecycle.kind` for a running workflow or retrieve the results of a completed workflow.
 
-`run.steps` contains execution status for each block. For typed handle inputs
-and outputs, use [Get Step](/api-reference/workflows/runs/steps/get). For
-persisted step records such as HIL evaluations, function invocations, or API
-call traces, use [List Artifacts](/api-reference/workflows/artifacts/list).
+Run timing includes timestamps, not precomputed duration fields. Derive duration from
+`timing.completed_at - timing.started_at` when both timestamps are present.
+
+Run responses do not embed step records. Use [List Steps](/api-reference/workflows/runs/steps/list)
+for per-block status and `started_at` / `completed_at`, and use
+[Get Step](/api-reference/workflows/runs/steps/get) for typed handle inputs
+and outputs. For persisted step records such as HIL evaluations, function
+invocations, or API call traces, use [List Artifacts](/api-reference/workflows/artifacts/list).
 
 <RequestExample>
 
@@ -21,7 +25,9 @@ run = client.workflows.runs.get("run_abc123xyz")
 
 print(f"Lifecycle: {run.lifecycle.kind}")
 if run.lifecycle.kind == "completed":
-    print(f"Duration: {run.timing.duration_ms}ms")
+    if run.timing.started_at and run.timing.completed_at:
+        duration_ms = int((run.timing.completed_at - run.timing.started_at).total_seconds() * 1000)
+        print(f"Duration: {duration_ms}ms")
     for step_summary in client.workflows.runs.steps.list(run.id):
         step = client.workflows.runs.steps.get(run.id, step_summary.block_id)
         if step.handle_outputs:
@@ -40,7 +46,10 @@ const run = await client.workflows.runs.get("run_abc123xyz");
 
 console.log(`Lifecycle: ${run.lifecycle.kind}`);
 if (run.lifecycle.kind === "completed") {
-    console.log(`Duration: ${run.timing.duration_ms}ms`);
+    if (run.timing.started_at && run.timing.completed_at) {
+        const durationMs = new Date(run.timing.completed_at).getTime() - new Date(run.timing.started_at).getTime();
+        console.log(`Duration: ${durationMs}ms`);
+    }
     const stepSummaries = await client.workflows.runs.steps.list(run.id);
     for (const stepSummary of stepSummaries) {
         const step = await client.workflows.runs.steps.get(run.id, stepSummary.block_id);
@@ -124,9 +133,7 @@ curl -X 'GET' \
     "started_at": "2024-01-15T10:30:00Z",
     "completed_at": "2024-01-15T10:30:15Z",
     "human_waiting_started_at": null,
-    "accumulated_human_waiting_ms": 0,
-    "duration_ms": 15000,
-    "active_duration_ms": 15000
+    "accumulated_human_waiting_ms": 0
   },
   "inputs": {
     "documents": {
