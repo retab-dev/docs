@@ -3,12 +3,9 @@ title: 'Diagnose Workflow Graph'
 openapi: 'POST /v1/workflows/{workflow_id}/diagnose-graph'
 ---
 
-Validate an in-memory workflow graph and return any structural issues.
-This is the authoritative validation surface for the workflow editor —
-both for an unsaved draft (passing `blocks` and `edges` directly) and for
-the persisted draft (fetching them first via
-[Get Workflow Entities](/api-reference/workflows/get-entities) and
-forwarding them to this endpoint).
+Validate workflow blocks and edges before publishing. You can pass a draft
+graph directly, or fetch it with [Get Workflow Entities](/api-reference/workflows/get-entities)
+and forward it to this endpoint.
 
 The check covers:
 
@@ -29,12 +26,9 @@ Severities:
 | `info` | Advisory only. |
 
 `is_valid` is `true` when the issue list contains no errors. `re_propagate`
-defaults to `true` so derived schemas are recomputed before validation —
-turn it off if you've already propagated and want to validate the cached
-shape.
+defaults to `true` so derived schemas are refreshed before validation.
 
-The Python SDK exposes a one-shot helper that fetches the persisted draft
-and POSTs it for you:
+The SDKs also expose a convenience helper:
 
 <RequestExample>
 
@@ -43,7 +37,6 @@ from retab import Retab
 
 client = Retab()
 
-# One-shot — fetches the persisted draft entities and diagnoses them.
 diagnosis = client.workflows.diagnose("wf_abc123")
 if not diagnosis.is_valid:
     for issue in diagnosis.issues:
@@ -55,7 +48,6 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-// One-shot — fetches the persisted draft entities and diagnoses them.
 const diagnosis = await client.workflows.diagnose("wf_abc123");
 if (!diagnosis.is_valid) {
   for (const issue of diagnosis.issues) {
@@ -83,7 +75,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// One-shot — fetches the persisted draft entities and diagnoses them.
 	diagnosis, err := client.Workflows.Diagnose(ctx, "wf_abc123")
 	if err != nil {
 		log.Fatal(err)
