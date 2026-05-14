@@ -5,6 +5,8 @@ openapi: 'GET /v1/workflows/{workflow_id}/edges'
 
 List edges in a workflow's current draft. Optionally filter to edges incident to a specific block by passing `source_block` or `target_block`.
 
+Returns the canonical `{ "data": [...], "list_metadata": { "before": null, "after": null } }` pagination envelope shared with all Retab list endpoints. Cursor pagination is not yet implemented for this endpoint — `list_metadata` is always `{ before: null, after: null }`.
+
 For the full graph in a single call, use [Get Workflow Entities](/api-reference/workflows/get-entities).
 
 <RequestExample>
@@ -29,7 +31,7 @@ incoming = client.workflows.edges.list(
     target_block="hil-1",
 )
 
-for edge in edges:
+for edge in edges.data:
     print(f"{edge.source_block}/{edge.source_handle} -> {edge.target_block}/{edge.target_handle}")
 ```
 
@@ -90,7 +92,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, edge := range edges {
+	for _, edge := range edges.Data {
 		fmt.Printf("%s/%s -> %s/%s\n", edge.SourceBlock, edge.SourceHandle, edge.TargetBlock, edge.TargetHandle)
 	}
 	_, _ = outgoing, incoming
@@ -114,26 +116,32 @@ curl -X 'GET' \
 <ResponseExample>
 
 ```json 200
-[
+{
+  "data": [
     {
       "id": "edge-1",
       "workflow_id": "wf_abc123xyz",
       "source_block": "start-1",
       "target_block": "extract-1",
-    "source_handle": "output-file-0",
-    "target_handle": "input-file-0",
-    "updated_at": "2026-04-30T17:00:00Z"
-  },
+      "source_handle": "output-file-0",
+      "target_handle": "input-file-0",
+      "updated_at": "2026-04-30T17:00:00Z"
+    },
     {
       "id": "edge-2",
       "workflow_id": "wf_abc123xyz",
       "source_block": "extract-1",
       "target_block": "hil-1",
-    "source_handle": "output-json-0",
-    "target_handle": "input-json-0",
-    "updated_at": "2026-04-30T17:00:00Z"
+      "source_handle": "output-json-0",
+      "target_handle": "input-json-0",
+      "updated_at": "2026-04-30T17:00:00Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": null
   }
-]
+}
 ```
 
 ```json 404

@@ -6,6 +6,9 @@ openapi: 'GET /v1/workflows/{workflow_id}/experiments'
 List all experiments attached to a workflow, with the latest run's
 status, score, staleness flag, and merkle-based schema drift.
 
+The response uses the canonical Retab list envelope:
+`{ "data": [...], "list_metadata": { "before": null, "after": null } }`.
+
 <RequestExample>
 
 ```python python
@@ -13,8 +16,8 @@ from retab import Retab
 
 client = Retab()
 
-experiments = client.workflows.experiments.list(workflow_id="wf_abc123")
-for exp in experiments:
+page = client.workflows.experiments.list(workflow_id="wf_abc123")
+for exp in page.data:
     print(exp.id, exp.name, exp.status, exp.score)
 ```
 
@@ -23,52 +26,37 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-const experiments = await client.workflows.experiments.list("wf_abc123");
+const page = await client.workflows.experiments.list("wf_abc123");
+for (const exp of page.data) {
+  console.log(exp.id, exp.name, exp.status, exp.score);
+}
 ```
 
 ```go go
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	request, err := http.NewRequest(
-		http.MethodGet,
-		"https://api.retab.com/v1/workflows/wf_abc123/experiments",
-		nil,
-	)
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
-	request.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
 
-	response, err := http.DefaultClient.Do(request)
+	page, err := client.Workflows.Experiments.List(ctx, "wf_abc123")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer response.Body.Close()
-
-	responseBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if response.StatusCode >= 400 {
-		log.Fatalf("request failed: %s", responseBody)
-	}
-
-	var experiments []map[string]any
-	if err := json.Unmarshal(responseBody, &experiments); err != nil {
-		log.Fatal(err)
-	}
-	for _, experiment := range experiments {
-		fmt.Println(experiment["id"], experiment["name"], experiment["status"], experiment["score"])
+	for _, exp := range page.Data {
+		fmt.Println(exp.ID, exp.Name, exp.Status, exp.Score)
 	}
 }
 ```
@@ -84,26 +72,32 @@ curl -X 'GET' \
 <ResponseExample>
 
 ```json 200
-[
-  {
-    "id": "exp_abc",
-    "workflow_id": "wf_abc123",
-    "block_id": "extract-invoice",
-    "block_kind": "extract",
-    "n_consensus": 5,
-    "document_count": 12,
-    "name": "Q1 invoices",
-    "last_run_id": "exprun_1",
-    "status": "completed",
-    "score": 0.87,
-    "job_id": "job_42",
-    "is_stale": false,
-    "schema_drift": "none",
-    "schema_drift_detail": null,
-    "created_at": "2026-05-01T14:30:00Z",
-    "updated_at": "2026-05-02T09:00:00Z"
+{
+  "data": [
+    {
+      "id": "exp_abc",
+      "workflow_id": "wf_abc123",
+      "block_id": "extract-invoice",
+      "block_kind": "extract",
+      "n_consensus": 5,
+      "document_count": 12,
+      "name": "Q1 invoices",
+      "last_run_id": "exprun_1",
+      "status": "completed",
+      "score": 0.87,
+      "job_id": "job_42",
+      "is_stale": false,
+      "schema_drift": "none",
+      "schema_drift_detail": null,
+      "created_at": "2026-05-01T14:30:00Z",
+      "updated_at": "2026-05-02T09:00:00Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": null
   }
-]
+}
 ```
 
 </ResponseExample>

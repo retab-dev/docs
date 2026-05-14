@@ -10,6 +10,9 @@ use [Get Experiment Content](/api-reference/workflows/experiments/get-content);
 for consensus scores, use
 [Get Experiment Metrics](/api-reference/workflows/experiments/get-metrics).
 
+The response uses the canonical Retab list envelope:
+`{ "data": [...], "list_metadata": { "before": null, "after": null } }`.
+
 <RequestExample>
 
 ```python python
@@ -17,11 +20,11 @@ from retab import Retab
 
 client = Retab()
 
-result = client.workflows.experiments.runs.list(
+page = client.workflows.experiments.runs.list(
     workflow_id="wf_abc123",
     experiment_id="exp_abc",
 )
-for run in result.runs:
+for run in page.data:
     print(run.id, run.status, run.score, run.created_at)
 ```
 
@@ -30,12 +33,12 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-const result = await client.workflows.experiments.runs.list({
+const page = await client.workflows.experiments.runs.list({
   workflowId: "wf_abc123",
   experimentId: "exp_abc",
 });
 
-for (const run of result.runs) {
+for (const run of page.data) {
   console.log(run.id, run.status, run.score, run.created_at);
 }
 ```
@@ -59,12 +62,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Workflows.Experiments.Runs.List(ctx, "wf_abc123", "exp_abc")
+	page, err := client.Workflows.Experiments.Runs.List(ctx, "wf_abc123", "exp_abc")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for _, run := range result.Runs {
+	for _, run := range page.Data {
 		fmt.Println(run.ID, run.Status, run.Score, run.CreatedAt)
 	}
 }
@@ -82,7 +85,7 @@ curl -X 'GET' \
 
 ```json 200
 {
-  "runs": [
+  "data": [
     {
       "id": "exprun_2",
       "parent_run_id": "exprun_1",
@@ -100,7 +103,11 @@ curl -X 'GET' \
       "duration_ms": 258221,
       "job_id": "job_99"
     }
-  ]
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": null
+  }
 }
 ```
 

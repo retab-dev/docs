@@ -1,0 +1,142 @@
+---
+title: 'List Block Simulations'
+openapi: 'GET /v1/workflows/runs/{run_id}/steps/{block_id}/simulations'
+---
+
+List recent simulation results for a block in a workflow run, newest first.
+Each entry is a stored simulation produced by
+[Simulate Block](/api-reference/workflows/blocks/simulate) — includes the
+captured handle inputs, the produced outputs, the optional `artifact` ref to
+a persisted result, and the draft block config that was used.
+
+Returns the canonical `{ "data": [...], "list_metadata": { "before": null, "after": null } }` pagination envelope shared with all Retab list endpoints. Cursor pagination is not yet implemented for this endpoint — `list_metadata` is always `{ before: null, after: null }`. Use `limit` (default `20`, max `100`) to bound the page size.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+simulations = client.workflows.blocks.list_simulations(
+    "run_abc123xyz",
+    "extract-1",
+    limit=10,
+)
+
+for sim in simulations.data:
+    print(sim.id, sim.success, sim.duration_ms)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const simulations = await client.workflows.blocks.listSimulations(
+    "run_abc123xyz",
+    "extract-1",
+    { limit: 10 }
+);
+
+for (const sim of simulations.data) {
+    console.log(sim.id, sim.success, sim.duration_ms);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sims, err := client.Workflows.Blocks.ListSimulations(
+		ctx,
+		"run_abc123xyz",
+		"extract-1",
+		&retab.ListSimulationsParams{Limit: 10},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, sim := range sims.Data {
+		fmt.Println(sim.ID, sim.Success)
+	}
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/runs/run_abc123xyz/steps/extract-1/simulations?limit=10' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "id": "sim_4jHpQRxX8mnY",
+      "workflow_id": "wf_abc123xyz",
+      "run_id": "run_abc123xyz",
+      "block_id": "extract-1",
+      "block_type": "extract",
+      "success": true,
+      "handle_outputs": {
+        "output-json-0": {
+          "type": "json",
+          "data": {
+            "invoice_number": "INV-2024-001",
+            "total": 1234.56
+          }
+        }
+      },
+      "artifact": { "operation": "extraction", "id": "ext_kP7zRn2H" },
+      "duration_ms": 824,
+      "skipped": false,
+      "created_at": "2026-04-15T11:24:00Z"
+    },
+    {
+      "id": "sim_9BqxJV4PtKwm",
+      "workflow_id": "wf_abc123xyz",
+      "run_id": "run_abc123xyz",
+      "block_id": "extract-1",
+      "block_type": "extract",
+      "success": false,
+      "error": "model returned malformed JSON",
+      "duration_ms": 612,
+      "skipped": false,
+      "created_at": "2026-04-15T11:18:00Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": null
+  }
+}
+```
+
+```json 404
+{
+  "detail": "Workflow run not found"
+}
+```
+
+</ResponseExample>

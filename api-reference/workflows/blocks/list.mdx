@@ -5,6 +5,8 @@ openapi: 'GET /v1/workflows/{workflow_id}/blocks'
 
 List every authored block in a workflow's current draft.
 
+Returns the canonical `{ "data": [...], "list_metadata": { "before": null, "after": null } }` pagination envelope shared with all Retab list endpoints. Cursor pagination is not yet implemented for this endpoint — `list_metadata` is always `{ before: null, after: null }`.
+
 Use [Get Workflow Resolved Schemas](/api-reference/workflows/get-resolved-schemas) to fetch graph-derived input/output schemas for all blocks in one call. For the full graph (blocks + edges in a single call), use [Get Workflow Entities](/api-reference/workflows/get-entities).
 
 <RequestExample>
@@ -16,7 +18,7 @@ client = Retab()
 
 blocks = client.workflows.blocks.list("wf_abc123xyz")
 
-for block in blocks:
+for block in blocks.data:
     print(f"{block.id} ({block.type}): {block.label}")
 ```
 
@@ -27,7 +29,7 @@ const client = new Retab();
 
 const blocks = await client.workflows.blocks.list("wf_abc123xyz");
 
-for (const block of blocks) {
+for (const block of blocks.data) {
   console.log(`${block.id} (${block.type}): ${block.label}`);
 }
 ```
@@ -56,7 +58,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, block := range blocks {
+	for _, block := range blocks.Data {
 		fmt.Printf("%s (%s): %s\n", block.ID, block.Type, block.Label)
 	}
 }
@@ -73,43 +75,49 @@ curl -X 'GET' \
 <ResponseExample>
 
 ```json 200
-[
+{
+  "data": [
     {
       "id": "start-1",
       "workflow_id": "wf_abc123xyz",
       "type": "start",
       "label": "Invoice Input",
-    "position_x": 0,
-    "position_y": 0,
-    "width": 240,
-    "height": 120,
-    "config": null,
-    "parent_id": null,
-    "updated_at": "2026-04-30T17:00:00Z"
-  },
+      "position_x": 0,
+      "position_y": 0,
+      "width": 240,
+      "height": 120,
+      "config": null,
+      "parent_id": null,
+      "updated_at": "2026-04-30T17:00:00Z"
+    },
     {
       "id": "extract-1",
       "workflow_id": "wf_abc123xyz",
       "type": "extract",
       "label": "Extract Invoice Fields",
-    "position_x": 320,
-    "position_y": 0,
-    "width": 240,
-    "height": 120,
-    "config": {
-      "model": "gpt-5",
-      "json_schema": {
-        "type": "object",
-        "properties": {
-          "invoice_number": {"type": "string"},
-          "total": {"type": "number"}
+      "position_x": 320,
+      "position_y": 0,
+      "width": 240,
+      "height": 120,
+      "config": {
+        "model": "gpt-5",
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "invoice_number": {"type": "string"},
+            "total": {"type": "number"}
+          }
         }
-      }
-    },
-    "parent_id": null,
-    "updated_at": "2026-05-01T14:30:00Z"
+      },
+      "parent_id": null,
+      "updated_at": "2026-05-01T14:30:00Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": null
   }
-]
+}
 ```
 
 ```json 404
