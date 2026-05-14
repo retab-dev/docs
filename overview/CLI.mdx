@@ -1,0 +1,253 @@
+---
+title: "CLI"
+description: "Drive every Retab primitive — parse, extract, classify, split, edit, partition — from your terminal or a CI pipeline."
+---
+
+The Retab CLI is a single static binary that wraps the same API as the Python, Node, and Go SDKs. It's the right tool when you want to:
+
+- pipe a PDF through `retab extractions create` from a shell script,
+- automate workflow tests in CI,
+- explore endpoints quickly without writing client code.
+
+The binary is available for **macOS**, **Linux**, and **Windows** on both **amd64** and **arm64**.
+
+---
+
+## Install
+
+<Steps>
+  <Step title="One-liner install" stepNumber={1}>
+    Run this in your terminal:
+
+    ```sh
+    curl -fsSL https://retab.com/install.sh | sh
+    ```
+
+    The installer detects your OS and architecture, downloads the matching release from [`github.com/retab-dev/retab/releases`](https://github.com/retab-dev/retab/releases), verifies the SHA-256 checksum, drops the binary at `~/.retab/bin/retab`, and appends a `PATH` entry to your shell's rc file (`.zshrc`, `.bashrc`, `.bash_profile`, or `~/.config/fish/config.fish`).
+  </Step>
+
+  <Step title="Reload your shell" stepNumber={2}>
+    Open a new terminal, or `source` the rc file the installer modified.
+
+    ```sh
+    retab version
+    ```
+  </Step>
+
+  <Step title="Authenticate" stepNumber={3}>
+    ```sh
+    retab auth login
+    ```
+
+    This prompts for your API key and stores it (mode `0600`) at `~/.retab/config.json`. Get a key from the [dashboard settings](https://retab.com/dashboard/settings).
+  </Step>
+</Steps>
+
+<Tip>
+  Prefer not to run a script piped from the internet? Each release also publishes raw binaries on the [GitHub releases page](https://github.com/retab-dev/retab/releases). Download, `chmod +x`, and put it anywhere on your `PATH`.
+</Tip>
+
+### Install options
+
+The installer honors a few environment variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `RETAB_VERSION` | latest | Pin a specific CLI version (e.g. `0.1.0`). |
+| `RETAB_INSTALL_DIR` | `$HOME/.retab/bin` | Where the binary is dropped. |
+| `RETAB_NO_MODIFY_PATH` | unset | Set to `1` to skip the rc-file `PATH` edit. |
+
+```sh
+# pin a version, install to a custom dir, leave PATH alone
+curl -fsSL https://retab.com/install.sh \
+  | RETAB_VERSION=0.1.0 RETAB_INSTALL_DIR=/usr/local/bin RETAB_NO_MODIFY_PATH=1 sh
+```
+
+### Upgrade
+
+Re-run the installer — it always installs the latest published release:
+
+```sh
+curl -fsSL https://retab.com/install.sh | sh
+```
+
+### Uninstall
+
+```sh
+retab auth logout            # removes ~/.retab/config.json
+rm -rf ~/.retab              # removes the binary and config dir
+# then drop the `export PATH=…` line the installer added to your shell rc
+```
+
+---
+
+## Authentication
+
+The CLI resolves credentials in this order (first match wins):
+
+1. The `--api-key` and `--base-url` flags on the command.
+2. The `RETAB_API_KEY` and `RETAB_BASE_URL` environment variables.
+3. The `api_key` / `base_url` values in `~/.retab/config.json`.
+
+```sh
+retab auth status            # prints which credentials are active and verifies them
+retab auth login             # interactive: prompts for API key, saves to ~/.retab/config.json
+retab auth login --api-key sk_live_…    # non-interactive variant
+retab auth logout            # deletes ~/.retab/config.json
+```
+
+In CI, prefer the env-var path:
+
+```sh
+export RETAB_API_KEY=sk_live_…
+retab extractions list
+```
+
+---
+
+## Core commands
+
+Every primitive in the [Retab API](../api-reference/introduction) has a matching command group. Output is JSON on stdout so it pipes cleanly into `jq`.
+
+<CodeGroup>
+```sh Extract structured data
+retab extractions create \
+  --file Invoice.pdf \
+  --json-schema-file invoice.schema.json \
+  --model retab-micro \
+  | jq '.output'
+```
+
+```sh Generate a schema from samples
+retab schemas generate \
+  --file Invoice1.pdf --file Invoice2.pdf \
+  --model retab-small \
+  > invoice.schema.json
+```
+
+```sh Parse to markdown
+retab parses create \
+  --file Contract.pdf \
+  --model retab-small \
+  | jq -r '.markdown'
+```
+
+```sh Stream a long extraction
+retab extractions stream \
+  --file LargeReport.pdf \
+  --json-schema-file report.schema.json \
+  --model retab-small
+# emits one JSON object per line as tokens stream in
+```
+</CodeGroup>
+
+### Files
+
+```sh
+retab files upload ./Invoice.pdf          # → returns a file id
+retab files list
+retab files download <file-id> ./out.pdf  # use `-` for stdout
+retab files download-link <file-id>
+```
+
+### Workflows
+
+```sh
+retab workflows list
+retab workflows get <workflow-id>
+retab workflows runs create <workflow-id> --input-file payload.json
+retab workflows tests execute <test-id>
+```
+
+The full surface — `classifications`, `splits`, `partitions`, `edits`, `jobs`, `webhooks`, and the workflow sub-trees (`blocks`, `edges`, `runs`, `artifacts`, `tests`, `experiments`) — follows the same `retab <noun> <verb>` shape. Run `retab <noun> --help` to enumerate verbs, then `retab <noun> <verb> --help` for the flags.
+
+---
+
+## Discoverability
+
+The CLI is a tree of commands. Two shortcuts you'll want:
+
+- **`--help` everywhere.** `retab --help` lists nouns; `retab extractions --help` lists verbs; `retab extractions create --help` lists flags.
+- **Shell completion.** Generate a completion script once and source it from your shell rc:
+
+  <CodeGroup>
+  ```sh zsh
+  retab completion zsh > "${fpath[1]}/_retab"
+  ```
+
+  ```sh bash
+  retab completion bash > /usr/local/etc/bash_completion.d/retab
+  ```
+
+  ```sh fish
+  retab completion fish > ~/.config/fish/completions/retab.fish
+  ```
+
+  ```powershell PowerShell
+  retab completion powershell | Out-String | Invoke-Expression
+  ```
+  </CodeGroup>
+
+---
+
+## Configuration reference
+
+<CardGroup cols={2}>
+  <Card title="Config file" icon="file-lines">
+    `~/.retab/config.json` — written by `retab auth login`, mode `0600`. Holds `api_key` and (optionally) `base_url`.
+  </Card>
+
+  <Card title="Environment" icon="terminal">
+    `RETAB_API_KEY`, `RETAB_BASE_URL` — override the config file. Useful in CI.
+  </Card>
+
+  <Card title="Flags" icon="flag">
+    `--api-key`, `--base-url`, `--debug` — persistent flags on every command. Override env vars.
+  </Card>
+
+  <Card title="Binary" icon="microchip">
+    Installed at `~/.retab/bin/retab` by default. Single static binary, no runtime dependencies.
+  </Card>
+</CardGroup>
+
+The `--debug` flag turns on verbose output (request URLs, response codes, raw bodies). Use it when filing an issue against the CLI.
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="`retab: command not found` after install">
+    The installer added `~/.retab/bin` to your shell rc, but the current shell hasn't reloaded it. Either open a new terminal or run `source ~/.zshrc` (or your shell's rc file). On `fish`, run `source ~/.config/fish/config.fish`.
+  </Accordion>
+
+  <Accordion title="`401 Unauthorized`">
+    Run `retab auth status` — it shows which credential source the CLI is reading from and pings the API to verify. If the key looks correct but still 401s, re-run `retab auth login` to overwrite the stored key.
+  </Accordion>
+
+  <Accordion title="`unsupported architecture` during install">
+    The installer supports `x86_64` and `arm64` only. On other architectures, build from source: `git clone https://github.com/retab-dev/retab && cd retab/cli && go build -o retab .`
+  </Accordion>
+
+  <Accordion title="Checksum mismatch during install">
+    A checksum mismatch means the downloaded archive doesn't match the SHA-256 published in `checksums.txt`. Don't bypass the check — re-run the installer (it's idempotent). If it persists, file an issue at [github.com/retab-dev/retab](https://github.com/retab-dev/retab/issues).
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card title={<div className="card-title">Try it</div>} icon="play" href="../api-reference/introduction">
+    <div className="text-lg">
+      Walk through an end-to-end extraction with the CLI.
+    </div>
+  </Card>
+
+  <Card title={<div className="card-title">GitHub</div>} icon="github" href="https://github.com/retab-dev/retab">
+    <div className="text-lg">
+      Source code, releases, and issues live here.
+    </div>
+  </Card>
+</CardGroup>
