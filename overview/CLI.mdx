@@ -39,7 +39,9 @@ The binary is available for **macOS**, **Linux**, and **Windows** on both **amd6
     retab auth login
     ```
 
-    This prompts for your API key and stores it (mode `0600`) at `~/.retab/config.json`. Get a key from the [dashboard settings](https://retab.com/dashboard/settings).
+    Opens your browser for an OAuth login through WorkOS (the same identity provider as the dashboard — SSO, Google, email, all work). The CLI captures the callback on a local loopback port, exchanges it for OAuth tokens, and stores them at `~/.retab/config.json` (mode `0600`). Tokens refresh transparently.
+
+    For headless setups (CI, servers, no browser), use an API key directly — see [Authentication](#authentication) below.
   </Step>
 </Steps>
 
@@ -83,24 +85,62 @@ rm -rf ~/.retab              # removes the binary and config dir
 
 ## Authentication
 
-The CLI resolves credentials in this order (first match wins):
+The CLI supports two auth modes. **Pick OAuth on your laptop, API keys in CI.**
 
-1. The `--api-key` and `--base-url` flags on the command.
-2. The `RETAB_API_KEY` and `RETAB_BASE_URL` environment variables.
-3. The `api_key` / `base_url` values in `~/.retab/config.json`.
+### Browser OAuth (default on workstations)
 
 ```sh
-retab auth status            # prints which credentials are active and verifies them
-retab auth login             # interactive: prompts for API key, saves to ~/.retab/config.json
-retab auth login --api-key sk_live_…    # non-interactive variant
-retab auth logout            # deletes ~/.retab/config.json
+retab auth login
 ```
 
-In CI, prefer the env-var path:
+Opens your browser, runs an OAuth Authorization Code + PKCE flow against WorkOS, and writes the resulting access + refresh tokens to `~/.retab/config.json`. Subsequent commands send `Authorization: Bearer <token>` and refresh transparently when the access token nears expiry.
+
+The redirect lands on `http://127.0.0.1:<random-port>/callback` — nothing leaves your machine except the request to your identity provider. The flow times out after 5 minutes if you close the browser without finishing.
+
+### API key (CI, servers, headless boxes)
+
+Any of these three paths works, in order of precedence:
+
+1. **Flag**: `--api-key sk_live_…` on a single command.
+2. **Env**: `RETAB_API_KEY=sk_live_…` exported in the shell or CI runner.
+3. **Stored**: `retab auth login --api-key sk_live_…` to persist to `~/.retab/config.json`.
+
+In a CI job you typically want option 2:
 
 ```sh
 export RETAB_API_KEY=sk_live_…
 retab extractions list
+```
+
+Get a key from the [dashboard settings](https://retab.com/dashboard/settings).
+
+### Precedence
+
+The CLI picks credentials in this strict order. **The flag and env paths always win** so an `RETAB_API_KEY` in your environment overrides any logged-in OAuth session — useful when you want to scope a single command to a different identity.
+
+| # | Source | Header sent |
+|---|---|---|
+| 1 | `--api-key` flag | `Api-Key` |
+| 2 | `RETAB_API_KEY` env var | `Api-Key` |
+| 3 | OAuth tokens in `~/.retab/config.json` | `Authorization: Bearer …` (refreshed automatically) |
+| 4 | `api_key` field in `~/.retab/config.json` | `Api-Key` |
+| 5 | nothing → error | — |
+
+### Inspecting the active credential
+
+```sh
+retab auth status
+```
+
+Prints (as JSON) which source was used, the redacted credential, the API base URL, and whether the credential currently works against the server.
+
+### Switching and clearing
+
+```sh
+retab auth login                          # OAuth — overwrites any stored API key
+retab auth login --api-key sk_live_…      # API key — overwrites any stored OAuth tokens
+retab auth login --browser=false          # interactive prompt for an API key, no browser
+retab auth logout                         # deletes ~/.retab/config.json entirely
 ```
 
 ---
@@ -194,11 +234,11 @@ The CLI is a tree of commands. Two shortcuts you'll want:
 
 <CardGroup cols={2}>
   <Card title="Config file" icon="file-lines">
-    `~/.retab/config.json` — written by `retab auth login`, mode `0600`. Holds `api_key` and (optionally) `base_url`.
+    `~/.retab/config.json` — written by `retab auth login`, mode `0600`. Holds either an `oauth` block (tokens, expiry, WorkOS domain) or an `api_key`, plus optional `base_url`.
   </Card>
 
   <Card title="Environment" icon="terminal">
-    `RETAB_API_KEY`, `RETAB_BASE_URL` — override the config file. Useful in CI.
+    `RETAB_API_KEY`, `RETAB_BASE_URL` — override anything stored on disk. The right choice in CI.
   </Card>
 
   <Card title="Flags" icon="flag">
@@ -222,7 +262,11 @@ The `--debug` flag turns on verbose output (request URLs, response codes, raw bo
   </Accordion>
 
   <Accordion title="`401 Unauthorized`">
-    Run `retab auth status` — it shows which credential source the CLI is reading from and pings the API to verify. If the key looks correct but still 401s, re-run `retab auth login` to overwrite the stored key.
+    Run `retab auth status` — it shows which credential source the CLI is reading from and pings the API to verify. If the source is `~/.retab/config.json (oauth)` and the access token has expired, the CLI will refresh on its own; if the refresh token itself has expired, you'll see `invalid_grant` — run `retab auth login` to re-authenticate. If the source is an API key but still 401s, double-check the key in the [dashboard settings](https://retab.com/dashboard/settings).
+  </Accordion>
+
+  <Accordion title="Browser didn't open during `retab auth login`">
+    The CLI uses `open` (macOS), `xdg-open` (Linux), or `rundll32 url.dll` (Windows). If none of those are wired up — typical on minimal Docker images or remote SSH — the CLI prints the authorize URL to stderr instead. Copy it into a browser on a machine that can talk to your identity provider; the callback still lands on `127.0.0.1:<port>` of the box where the CLI is running, so port-forward or use `RETAB_API_KEY` instead.
   </Accordion>
 
   <Accordion title="`unsupported architecture` during install">
