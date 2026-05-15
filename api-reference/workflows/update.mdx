@@ -5,13 +5,6 @@ openapi: 'PATCH /v1/workflows/{workflow_id}'
 
 Update workflow metadata. Only the fields you supply are touched — omit a field to leave it unchanged.
 
-The email trigger allowlist is configured under `email_trigger`:
-
-- `allowed_senders` — full email addresses (e.g. `"ap@acme.com"`)
-- `allowed_domains` — bare domains (e.g. `"acme.com"`)
-
-If a workflow has neither list configured, inbound email triggers are accepted from any sender.
-
 <RequestExample>
 
 ```python python
@@ -19,20 +12,10 @@ from retab import Retab
 
 client = Retab()
 
-# Rename + update description
 workflow = client.workflows.update(
     "wf_abc123xyz",
     name="Invoice Processing v2",
     description="Extract invoice fields, validate, and route for review",
-)
-
-# Configure email-trigger allowlist
-workflow = client.workflows.update(
-    "wf_abc123xyz",
-    email_trigger={
-        "allowed_senders": ["ap@acme.com"],
-        "allowed_domains": ["acme.com", "acme-subsidiary.com"],
-    },
 )
 ```
 
@@ -44,13 +27,6 @@ const client = new Retab();
 const workflow = await client.workflows.update("wf_abc123xyz", {
   name: "Invoice Processing v2",
   description: "Extract invoice fields, validate, and route for review",
-});
-
-await client.workflows.update("wf_abc123xyz", {
-  emailTrigger: {
-    allowedSenders: ["ap@acme.com"],
-    allowedDomains: ["acme.com", "acme-subsidiary.com"],
-  },
 });
 ```
 
@@ -83,16 +59,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	workflow, err = client.Workflows.Update(ctx, "wf_abc123xyz", retab.UpdateWorkflowRequest{
-		EmailTrigger: &retab.WorkflowEmailTrigger{
-			AllowedSenders: []string{"ap@acme.com"},
-			AllowedDomains: []string{"acme.com", "acme-subsidiary.com"},
-		},
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	fmt.Println(workflow.Name)
 }
 ```
@@ -104,11 +70,7 @@ curl -X 'PATCH' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
     "name": "Invoice Processing v2",
-    "description": "Extract invoice fields, validate, and route for review",
-    "email_trigger": {
-      "allowed_senders": ["ap@acme.com"],
-      "allowed_domains": ["acme.com", "acme-subsidiary.com"]
-    }
+    "description": "Extract invoice fields, validate, and route for review"
   }'
 ```
 
@@ -124,10 +86,6 @@ curl -X 'PATCH' \
   "published": {
     "version_id": "ver_8zJfV7T9qK2mP4xN6bR1cD3eF5gH7iJ9",
     "published_at": "2026-04-30T18:00:00Z"
-  },
-  "email_trigger": {
-    "allowed_senders": ["ap@acme.com"],
-    "allowed_domains": ["acme.com", "acme-subsidiary.com"]
   },
   "created_at": "2026-04-30T17:00:00Z",
   "updated_at": "2026-05-01T14:30:00Z"

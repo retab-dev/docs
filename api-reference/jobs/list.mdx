@@ -95,7 +95,7 @@ func main() {
 	// Paginate through results
 	if filtered.HasMore {
 		nextPage, err := client.Jobs.List(ctx, &retab.ListJobsParams{
-			After: filtered.NextCursor,
+			After: filtered.LastID,
 			Limit: 10,
 		})
 		if err != nil {
@@ -188,7 +188,7 @@ curl -X GET \
 </ParamField>
 
 <ParamField query="after" type="string">
-  Pagination cursor. Use the `last_id` from the previous response to get the next page.
+  Job ID. Use the `last_id` from the previous response to get the next page.
 </ParamField>
 
 <ParamField query="limit" type="integer" default="20">
@@ -342,7 +342,7 @@ By default, list responses are lightweight (`request` and `response` are omitted
 
 ## Pagination
 
-Jobs are returned in descending order by creation time (newest first). Use cursor-based pagination to iterate through all results:
+Jobs are returned in descending order by creation time (newest first). Use id-based pagination to iterate through all results:
 
 <CodeGroup>
 ```python Python
@@ -412,7 +412,7 @@ func main() {
 		if !response.HasMore {
 			break
 		}
-		after = response.NextCursor
+		after = response.LastID
 	}
 
 	fmt.Printf("Total jobs: %d\n", len(allJobs))
