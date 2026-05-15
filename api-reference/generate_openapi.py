@@ -175,6 +175,29 @@ def _strip_public_workflow_internal_fields(spec: dict[str, object]) -> None:
             ]
 
 
+def _strip_update_workflow_email_trigger_docs(spec: dict[str, object]) -> None:
+    """Hide private workflow email policy fields from the public update docs."""
+    schemas = spec.get("components", {}).get("schemas") if isinstance(spec.get("components"), dict) else None
+    if not isinstance(schemas, dict):
+        return
+
+    patch_workflow_schema = schemas.get("PatchWorkflowRequest")
+    if not isinstance(patch_workflow_schema, dict):
+        return
+
+    properties = patch_workflow_schema.get("properties")
+    if isinstance(properties, dict):
+        properties.pop("email_trigger", None)
+
+    required = patch_workflow_schema.get("required")
+    if isinstance(required, list):
+        patch_workflow_schema["required"] = [
+            field_name
+            for field_name in required
+            if field_name != "email_trigger"
+        ]
+
+
 def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
     """Publish workflow steps with lifecycle, not status + terminal.
 
@@ -341,6 +364,7 @@ def generate_openapi() -> None:
     _strip_public_organization_id(spec)
     _scrub_public_organization_id_text(spec)
     _strip_public_workflow_internal_fields(spec)
+    _strip_update_workflow_email_trigger_docs(spec)
     _hard_cutover_workflow_step_lifecycle(spec)
 
     # Strip unused legacy request/response schemas that only belonged to the
