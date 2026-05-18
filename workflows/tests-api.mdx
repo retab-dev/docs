@@ -1,9 +1,9 @@
 ---
-title: Block Tests
+title: Workflow Tests
 description: Reusable per-block checks with discriminated target/source shapes, async batch execution, and a 7-status run record
 ---
 
-Block tests let you freeze the inputs to a single workflow block and assert
+Workflow tests let you freeze the inputs to a single workflow block and assert
 something about its output the next time it runs. They are designed to catch
 regressions when you change a schema, prompt, function code, classifier
 categories, or split definition without having to replay the whole workflow.
@@ -11,7 +11,7 @@ categories, or split definition without having to replay the whole workflow.
 This page covers the API contract — `target`, `source`, `assertion`, the
 run-record shape, and the seven values of the run-record status enum. For
 the conceptual mental model and the dashboard workflow, see
-[Tests](/workflows/Tests).
+[Tests](/workflows/tests).
 
 ## What's in a test
 
@@ -76,7 +76,7 @@ the test still runs months later even if the original upload session is gone.
 }
 ```
 
-Block tests intentionally normalize to **one assertion per test**. Multiple
+Workflow tests intentionally normalize to **one assertion per test**. Multiple
 small tests beat one broad assertion: when an assertion fails, the failure
 points at exactly which output behavior changed.
 
@@ -104,7 +104,7 @@ catalog below.
 | `split_iou_gte` | IOU threshold for split manifests | |
 
 The full assertion-targeting reference, including which path syntaxes work
-inside each handle type, lives at [Tests](/workflows/Tests).
+inside each handle type, lives at [Tests](/workflows/tests).
 
 ## Two distinct status enums — don't confuse them
 
@@ -126,11 +126,11 @@ The outcome of evaluating ONE assertion against the block's output.
 
 The status of a TEST RUN — aggregates the assertion result with execution-side
 state. This is what appears on `WorkflowTestRunRecord.status`,
-`latest_run_summary.status`, and `BlockTestBatchExecutionItem.status`.
+`latest_run_summary.status`, and `WorkflowTestBatchExecutionItem.status`.
 
 | Status | Meaning |
 |---|---|
-| `queued` | The run has been scheduled (job dispatched) but the worker hasn't picked it up yet. |
+| `queued` | The run has been scheduled but the worker hasn't picked it up yet. |
 | `running` | The worker is mid-execution. |
 | `passed` | Execution finished and the assertion passed. |
 | `failed` | Execution finished and the assertion failed. |
@@ -138,11 +138,10 @@ state. This is what appears on `WorkflowTestRunRecord.status`,
 | `error` | Execution itself failed (block raised, simulation timed out, etc.) before any assertion could be evaluated. |
 | `cancelled` | The user or a downstream system cancelled the run. |
 
-When polling [`jobs.retrieve(job_id)`](/api-reference/jobs/retrieve) after
-[Execute Block Tests](/api-reference/workflows/block-tests/execute), expect to
-see the transient `queued` / `running` states. The terminal states (everything
-else) are what land in `latest_run_summary` and the per-batch
-`BlockTestBatchExecutionCounts`.
+After [Execute Workflow Tests](/api-reference/workflows/tests/execute),
+poll the returned workflow-test `run_id`. Expect transient `queued` /
+`running` parent-run states before terminal counts and per-test results are
+available.
 
 ## Run records
 
@@ -193,11 +192,10 @@ The new shape collapses these into a single field:
 outputs: { [handle_id]: any } | null
 ```
 
-A backfill migration (`001_block_test_runs_outputs_field`) copies legacy
-`handle_outputs` → `outputs` on first server startup, so reads through this
-field always work. The legacy `output` and `handle_outputs` fields are
-intentionally kept on legacy docs for forensic debugging — drop them via a
-later cleanup migration once nothing reads them.
+A backfill migration copies legacy `handle_outputs` → `outputs` on first server
+startup, so reads through this field always work. The legacy `output` and
+`handle_outputs` fields are intentionally kept on legacy docs for forensic
+debugging — drop them via a later cleanup migration once nothing reads them.
 
 ### Fingerprints
 
@@ -230,31 +228,29 @@ draft, not the draft at create time.
 
 Test execution is asynchronous. The flow:
 
-1. `POST /v1/workflows/{wf}/block-tests/execute` → returns `{batch_id, job_id, status: "queued"}` immediately.
-2. Poll [`GET /v1/jobs/{job_id}`](/api-reference/jobs/retrieve) or
-   `client.jobs.retrieve(job_id)` until `status: "completed"`, then read the
-   batch result from `response.body`. If the job ends in `failed`,
-   `cancelled`, or `expired`, inspect the job's `error` field.
-3. `BlockTestBatchExecutionResult` shape:
+1. `POST /v1/workflows/{wf}/tests/runs` -> returns `{run_id, status: "queued"}` immediately.
+2. Poll `GET /v1/workflows/{wf}/tests/runs/{run_id}` until `status` is
+   `completed` or `failed`, then fetch results from
+   `GET /v1/workflows/{wf}/tests/runs/{run_id}/results`.
+3. Workflow-test run results shape:
     - `counts` — one bucket per run-record status (7 fields)
-    - `results[]` — one `BlockTestBatchExecutionItem` per test, with `run_record_id` you can pass to [Get Block Test Run](/api-reference/workflows/block-tests/runs/get) for the full snapshot.
+    - `results[]` — one run record per test, with `id` you can pass to [Get Workflow Test Run](/api-reference/workflows/tests/runs/get) for the full snapshot.
 
-For a single test, also subscribe to the dashboard's Socket.IO stream — the
-`block-test-batch-test-completed` event fires per-test as runs land, so the UI
-shows live progress instead of waiting for the whole batch.
+For dashboard integrations, poll the parent run status and refresh test-run
+records when the parent run reaches a terminal state.
 
 ## Endpoints
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/v1/workflows/{wf}/block-tests` | [Create](/api-reference/workflows/block-tests/create) |
-| `GET` | `/v1/workflows/{wf}/block-tests` | [List](/api-reference/workflows/block-tests/list) |
-| `GET` | `/v1/workflows/{wf}/block-tests/{id}` | [Get](/api-reference/workflows/block-tests/get) |
-| `PATCH` | `/v1/workflows/{wf}/block-tests/{id}` | [Update](/api-reference/workflows/block-tests/update) |
-| `DELETE` | `/v1/workflows/{wf}/block-tests/{id}` | [Delete](/api-reference/workflows/block-tests/delete) |
-| `POST` | `/v1/workflows/{wf}/block-tests/execute` | [Execute](/api-reference/workflows/block-tests/execute) |
-| `GET` | `/v1/workflows/{wf}/block-tests/{id}/runs` | [List Runs](/api-reference/workflows/block-tests/runs/list) |
-| `GET` | `/v1/workflows/{wf}/block-tests/{id}/runs/{run_id}` | [Get Run](/api-reference/workflows/block-tests/runs/get) |
+| `POST` | `/v1/workflows/{wf}/tests` | [Create](/api-reference/workflows/tests/create) |
+| `GET` | `/v1/workflows/{wf}/tests` | [List](/api-reference/workflows/tests/list) |
+| `GET` | `/v1/workflows/{wf}/tests/{id}` | [Get](/api-reference/workflows/tests/get) |
+| `PATCH` | `/v1/workflows/{wf}/tests/{id}` | [Update](/api-reference/workflows/tests/update) |
+| `DELETE` | `/v1/workflows/{wf}/tests/{id}` | [Delete](/api-reference/workflows/tests/delete) |
+| `POST` | `/v1/workflows/{wf}/tests/runs` | [Execute](/api-reference/workflows/tests/execute) |
+| `GET` | `/v1/workflows/{wf}/tests/{id}/runs` | [List Runs](/api-reference/workflows/tests/runs/list) |
+| `GET` | `/v1/workflows/{wf}/tests/{id}/runs/{run_id}` | [Get Run](/api-reference/workflows/tests/runs/get) |
 
 ## MCP
 
