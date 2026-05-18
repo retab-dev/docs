@@ -138,10 +138,10 @@ state. This is what appears on `WorkflowTestRunRecord.status`,
 | `error` | Execution itself failed (block raised, simulation timed out, etc.) before any assertion could be evaluated. |
 | `cancelled` | The user or a downstream system cancelled the run. |
 
-After [Execute Workflow Tests](/api-reference/workflows/tests/execute),
-poll the returned workflow-test `run_id`. Expect transient `queued` /
-`running` parent-run states before terminal counts and per-test results are
-available.
+After [Create Workflow Test Run](/api-reference/workflows/tests/runs/create),
+poll the returned workflow-test run `id`. Expect transient `pending` /
+`running` parent-run lifecycle states before terminal counts and per-test
+results are available.
 
 ## Run records
 
@@ -228,13 +228,13 @@ draft, not the draft at create time.
 
 Test execution is asynchronous. The flow:
 
-1. `POST /v1/workflows/{wf}/tests/runs` -> returns `{run_id, status: "queued"}` immediately.
-2. Poll `GET /v1/workflows/{wf}/tests/runs/{run_id}` until `status` is
-   `completed` or `failed`, then fetch results from
-   `GET /v1/workflows/{wf}/tests/runs/{run_id}/results`.
+1. `POST /v1/workflows/{wf}/tests/runs` returns a run object immediately.
+2. Poll `GET /v1/workflows/tests/runs/{run_id}` until `lifecycle.status` is
+   `completed`, `error`, or `cancelled`, then fetch results from
+   `GET /v1/workflows/tests/runs/{run_id}/results`.
 3. Workflow-test run results shape:
     - `counts` — one bucket per run-record status (7 fields)
-    - `results[]` — one run record per test, with `id` you can pass to [Get Workflow Test Run](/api-reference/workflows/tests/runs/get) for the full snapshot.
+    - `data[]` — one result per test, keyed by `test_id` within the parent run.
 
 For dashboard integrations, poll the parent run status and refresh test-run
 records when the parent run reaches a terminal state.
@@ -248,16 +248,21 @@ records when the parent run reaches a terminal state.
 | `GET` | `/v1/workflows/{wf}/tests/{id}` | [Get](/api-reference/workflows/tests/get) |
 | `PATCH` | `/v1/workflows/{wf}/tests/{id}` | [Update](/api-reference/workflows/tests/update) |
 | `DELETE` | `/v1/workflows/{wf}/tests/{id}` | [Delete](/api-reference/workflows/tests/delete) |
-| `POST` | `/v1/workflows/{wf}/tests/runs` | [Execute](/api-reference/workflows/tests/execute) |
-| `GET` | `/v1/workflows/{wf}/tests/{id}/runs` | [List Runs](/api-reference/workflows/tests/runs/list) |
-| `GET` | `/v1/workflows/{wf}/tests/{id}/runs/{run_id}` | [Get Run](/api-reference/workflows/tests/runs/get) |
+| `POST` | `/v1/workflows/{wf}/tests/runs` | [Create Run](/api-reference/workflows/tests/runs/create) |
+| `GET` | `/v1/workflows/tests/runs` | [List Runs](/api-reference/workflows/tests/runs/list) |
+| `GET` | `/v1/workflows/tests/runs/{run_id}` | [Get Run](/api-reference/workflows/tests/runs/get) |
+| `POST` | `/v1/workflows/tests/runs/{run_id}/cancel` | [Cancel Run](/api-reference/workflows/tests/runs/cancel) |
+| `GET` | `/v1/workflows/tests/runs/{run_id}/results` | [List Results](/api-reference/workflows/tests/runs/results/list) |
+| `GET` | `/v1/workflows/tests/runs/{run_id}/results/{test_id}` | [Get Result](/api-reference/workflows/tests/runs/results/get) |
 
 ## MCP
 
 Every endpoint above is also exposed as an MCP tool (`workflows_tests_create`,
 `workflows_tests_list`, `workflows_tests_get`, `workflows_tests_update`,
-`workflows_tests_delete`, `workflows_tests_execute`). The tool input schemas
-match the request bodies documented above. The MCP layer additionally rejects
+`workflows_tests_delete`, `workflows_tests_runs_create`,
+`workflows_tests_runs_get`, `workflows_tests_runs_results_list`,
+`workflows_tests_runs_results_get`). The tool input schemas match the request
+bodies documented above. The MCP layer additionally rejects
 the pre-rewrite top-level `block_id` / `run_id` / `step_id` / `handle_inputs`
 fields with a per-field migration hint pointing at the new shape (e.g.
 `block_id → use 'target.block_id'`).

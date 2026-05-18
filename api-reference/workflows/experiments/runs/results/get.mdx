@@ -1,0 +1,70 @@
+---
+title: 'Get Experiment Run Result'
+openapi: 'GET /v1/workflows/experiments/runs/{run_id}/results/{document_id}'
+---
+
+Fetch one per-document result from an experiment run. The child key is
+`document_id`, not an internal job or result id.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+result = client.workflows.experiments.runs.results.get(
+    "exprun_2",
+    "expdoc_xyz",
+)
+print(result.lifecycle.status, result.artifact)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const result = await client.workflows.experiments.runs.results.get(
+  "exprun_2",
+  "expdoc_xyz",
+);
+console.log(result.lifecycle.status, result.artifact);
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/experiments/runs/exprun_2/results/expdoc_xyz' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "expresult_1",
+  "run_id": "exprun_2",
+  "experiment_id": "exp_abc",
+  "document_id": "expdoc_xyz",
+  "block_kind": "extract",
+  "lifecycle": { "status": "completed" },
+  "timing": {
+    "started_at": "2026-05-02T11:00:01Z",
+    "completed_at": "2026-05-02T11:00:05Z",
+    "duration_ms": 4120
+  },
+  "handle_inputs": {
+    "input-document-0": { "type": "file", "filename": "invoice_q1.pdf" }
+  },
+  "artifact": { "operation": "extraction", "id": "ext_xyz" },
+  "attempt": 0
+}
+```
+
+```json 404
+{ "detail": "Experiment result not found: document_id=expdoc_xyz" }
+```
+
+</ResponseExample>

@@ -1,13 +1,13 @@
 ---
 title: 'List Workflow Test Runs'
-openapi: 'GET /v1/workflows/{workflow_id}/tests/{test_id}/runs'
+openapi: 'GET /v1/workflows/tests/runs'
 ---
 
-List the most recent run records for a workflow test, newest first. Each entry is
-a full `WorkflowTestRunRecord` (target, source, fingerprints, outputs,
-assertion result, verdict summary).
+List workflow-test runs, newest first. This is the run index for parent test
+runs, not the per-test result history.
 
-`limit` defaults to 20, max 100.
+Filter by `workflow_id`, `test_id`, `target_block_id`, lifecycle status,
+trigger type, date range, or id pagination. `limit` defaults to 20, max 100.
 
 The response uses the canonical Retab list envelope:
 `{ "data": [...], "list_metadata": { "before": null, "after": null } }`.
@@ -21,11 +21,11 @@ client = Retab()
 
 runs = client.workflows.tests.runs.list(
     workflow_id="wf_abc123xyz",
-    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+    statuses=["completed", "error"],
     limit=10,
 )
 for run in runs.data:
-    print(run.id, run.status, run.duration_ms)
+    print(run.id, run.lifecycle.status, run.counts)
 ```
 
 ```javascript javascript
@@ -35,12 +35,12 @@ const client = new Retab();
 
 const runs = await client.workflows.tests.runs.list({
   workflowId: "wf_abc123xyz",
-  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  statuses: ["completed", "error"],
   limit: 10,
 });
 
 for (const run of runs.data) {
-  console.log(run.id, run.status, run.duration_ms);
+  console.log(run.id, run.lifecycle.status, run.counts);
 }
 ```
 
@@ -63,20 +63,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	runs, err := client.Workflows.Tests.Runs.List(ctx, "wf_abc123xyz", "wfnodetest_hsLEQiM61ez9Piv147MWk", 10)
+	runs, err := client.Workflows.Tests.Runs.List(ctx, &retab.ListWorkflowTestRunsParams{
+		WorkflowID: "wf_abc123xyz",
+		Limit:      10,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, run := range runs.Data {
-		fmt.Println(run["id"], run["status"], run["duration_ms"])
+		fmt.Println(run.ID, run.Lifecycle.Status, run.Counts)
 	}
 }
 ```
 
 ```bash curl
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/wf_abc123xyz/tests/wfnodetest_hsLEQiM61ez9Piv147MWk/runs?limit=10' \
+  'https://api.retab.com/v1/workflows/tests/runs?workflow_id=wf_abc123xyz&statuses=completed%2Cerror&limit=10' \
   -H 'accept: application/json' \
   -H 'Api-Key: <your-api-key>'
 ```
@@ -90,44 +93,31 @@ curl -X 'GET' \
   "data": [
     {
       "id": "wfnodetestrun_tRNzPiMpBas4kDwD74M8d",
-      "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
-      "workflow_id": "wf_abc123xyz",
+      "workflow": {
+        "workflow_id": "wf_abc123xyz",
+        "version_id": "draft_2026_05_18",
+        "name_at_run_time": "Invoice workflow",
+        "requested_version": "draft"
+      },
+      "trigger": { "type": "api" },
+      "lifecycle": { "status": "completed" },
+      "timing": {
+        "created_at": "2026-05-18T10:00:00Z",
+        "started_at": "2026-05-18T10:00:01Z",
+        "completed_at": "2026-05-18T10:00:29Z",
+        "duration_ms": 28000
+      },
+      "test_id": null,
       "target": { "type": "block", "block_id": "block_extract_invoice" },
-      "source": { "type": "manual", "handle_inputs": { "...": "..." } },
-      "status": "passed",
-      "execution_fingerprint": "d03d5d7cc9f55ba2db4399bc430f5bdc",
-      "handle_inputs_fingerprint": "7ee7814256df5a34a387d0e95190b776",
-      "workflow_draft_fingerprint": "ddd95baadce6045f2410a8074574c6bc",
-      "block_config_fingerprint": "0ff93ddc7cefcb42b9375a405957a564",
-      "started_at": "2026-04-08T14:27:35Z",
-      "completed_at": "2026-04-08T14:27:52Z",
-      "duration_ms": 17228,
-      "outputs": {
-        "output-json-0": { "total": 1234.56, "vendor": { "name": "Acme Inc" } },
-        "output-file-0": { "type": "file", "file_id": "file_normalized_q1" }
-      },
-      "routing_decision": null,
-      "warnings": [],
-      "error": null,
-      "skipped": false,
-      "assertion_result": {
-        "assertion_id": "assert_xyz",
-        "condition_kind": "equals",
-        "status": "passed",
-        "actual_value": 1234.56,
-        "expected_value": 1234.56,
-        "score": null,
-        "threshold": null,
-        "metric_kind": null,
-        "assertion_label": null,
-        "failure": null
-      },
-      "verdict_summary": {
-        "result": true,
-        "assertions_passed": 1,
-        "assertions_failed": 0,
-        "blocked_assertions": 0,
-        "failed_assertion_ids": []
+      "total_tests": 4,
+      "counts": {
+        "queued": 0,
+        "running": 0,
+        "passed": 3,
+        "failed": 1,
+        "blocked": 0,
+        "error": 0,
+        "cancelled": 0
       }
     }
   ],

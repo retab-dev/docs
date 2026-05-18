@@ -61,7 +61,8 @@ An experiment is attached to one block in one workflow. It stores:
 
 When you run the experiment, Retab freezes the current block configuration and
 replays the selected block for each document. Each document execution becomes an
-experiment job. The job stores the canonical artifact produced by the block:
+experiment result under the parent experiment run. The result stores the
+canonical artifact produced by the block:
 
 | Block | Artifact |
 |---|---|
@@ -186,53 +187,38 @@ experiment = client.workflows.experiments.create(
 ```
 
 ```go Go
-// The Go SDK does not yet model the workflow experiments API. Call the
-// /v1/workflows/{workflow_id}/experiments endpoints directly.
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	body, err := json.Marshal(map[string]any{
-		"block_id": "extract-invoice",
-		"name":     "Q1 invoices",
-		"document_captures": []map[string]any{
-			{"workflow_run_id": "wfrun_1"},
-			{"workflow_run_id": "wfrun_2", "step_id": "for_each-0"},
+	ctx := context.Background()
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	experiment, err := client.Workflows.Experiments.Create(ctx, retab.CreateExperimentRequest{
+		WorkflowID: "wf_abc123",
+		BlockID:    "extract-invoice",
+		Name:       "Q1 invoices",
+		DocumentCaptures: []retab.ExperimentDocumentCaptureRequest{
+			{WorkflowRunID: "wfrun_1"},
+			{WorkflowRunID: "wfrun_2", StepID: "for_each-0"},
 		},
-		"n_consensus": 5,
+		NConsensus: 5,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	req, err := http.NewRequest(
-		http.MethodPost,
-		"https://api.retab.com/v1/workflows/wf_abc123/experiments",
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	payload, _ := io.ReadAll(resp.Body)
-	fmt.Println(string(payload))
+	fmt.Println(experiment.ID)
 }
 ```
 </CodeGroup>
@@ -243,7 +229,7 @@ but no metrics exist yet.
 ### Run the experiment
 
 Trigger consensus runs against the current draft block config. This is async;
-the SDK returns a `run_id` that you inspect through the experiment runs API.
+the SDK returns a run resource that you inspect through the experiment runs API.
 
 <CodeGroup>
 ```python Python
@@ -252,75 +238,126 @@ run = client.workflows.experiments.runs.create(
     experiment_id=experiment.id,
 )
 
-print(run.run_id, run.status)
+print(run.id, run.lifecycle.status)
 ```
 
 ```go Go
-// Trigger an experiment run. Polling the resulting run is left to the caller.
 package main
 
 import (
-	"bytes"
+	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	req, err := http.NewRequest(
-		http.MethodPost,
-		"https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc123/runs",
-		bytes.NewReader([]byte("{}")),
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	run, err := client.Workflows.Experiments.Runs.Create(
+		context.Background(),
+		"wf_abc123",
+		"exp_abc123",
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	payload, _ := io.ReadAll(resp.Body)
-	fmt.Println(string(payload))
+	fmt.Println(run.ID, run.Lifecycle.Status)
 }
 ```
 </CodeGroup>
 
-Pass `n_consensus=...` to override per-run, or `retry_failed_only=True` to
-re-run only the documents that errored in the previous run.
+Runs use the experiment's stored `n_consensus` and document set.
+
+### Inspect the run and results
+
+Poll the run until `lifecycle.status` is terminal, then read the per-document
+results produced by that run.
+
+<CodeGroup>
+```python Python
+run = client.workflows.experiments.runs.get(run.id)
+
+results = client.workflows.experiments.runs.results.list(run.id)
+for result in results.data:
+    print(result.document_id, result.lifecycle.status)
+
+result = client.workflows.experiments.runs.results.get(
+    run.id,
+    document_id="expdoc_xyz",
+)
+print(result.artifact)
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	run, err := client.Workflows.Experiments.Runs.Get(ctx, "exprun_2")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(run.ID, run.Lifecycle.Status)
+
+	results, err := client.Workflows.Experiments.Runs.Results.List(ctx, "exprun_2", 20)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, result := range results.Data {
+		fmt.Println(result.DocumentID, result.Lifecycle.Status)
+	}
+
+	result, err := client.Workflows.Experiments.Runs.Results.Get(ctx, "exprun_2", "expdoc_xyz")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(result.Artifact)
+}
+```
+</CodeGroup>
 
 ### Read metrics
 
-Metrics live behind one endpoint with four views — start at `summary`, drill
+Metrics live under the experiment run with four views — start at `summary`, drill
 into `by_target` on low-scoring fields, then into `votes` to see voter
 disagreement on a specific cell.
 
 <CodeGroup>
 ```python Python
-summary = client.workflows.experiments.get_metrics(
-    workflow_id="wf_abc123",
-    experiment_id=experiment.id,
+summary = client.workflows.experiments.runs.metrics.get(
+    run.id,
     view="summary",
 )
 
 # A weak field surfaces in summary.aggregate.likelihoods → drill in
-target_view = client.workflows.experiments.get_metrics(
-    workflow_id="wf_abc123",
-    experiment_id=experiment.id,
+target_view = client.workflows.experiments.runs.metrics.get(
+    run.id,
     view="by_target",
     target_path="line_items.*.unit_price",
 )
 
 # To see what each voter said for one document/target cell
-votes = client.workflows.experiments.get_metrics(
-    workflow_id="wf_abc123",
-    experiment_id=experiment.id,
+votes = client.workflows.experiments.runs.metrics.get(
+    run.id,
     view="votes",
     document_id="expdoc_xyz",
     target_path="line_items.*.unit_price",
@@ -331,63 +368,64 @@ votes = client.workflows.experiments.get_metrics(
 package main
 
 import (
+	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"net/url"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
-func fetchMetrics(query url.Values) ([]byte, error) {
-	endpoint := "https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc123/metrics?" + query.Encode()
-	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	return io.ReadAll(resp.Body)
-}
-
 func main() {
-	summary, err := fetchMetrics(url.Values{"view": {"summary"}})
+	client, err := retab.NewClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(summary))
+
+	summary, err := client.Workflows.Experiments.Runs.Metrics.Get(
+		context.Background(),
+		"exprun_2",
+		&retab.GetExperimentMetricsParams{View: "summary"},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(summary)
 
 	// A weak field surfaces in summary.aggregate.likelihoods - drill in
-	target, err := fetchMetrics(url.Values{
-		"view":        {"by_target"},
-		"target_path": {"line_items.*.unit_price"},
-	})
+	target, err := client.Workflows.Experiments.Runs.Metrics.Get(
+		context.Background(),
+		"exprun_2",
+		&retab.GetExperimentMetricsParams{
+			View:       "by_target",
+			TargetPath: "line_items.*.unit_price",
+		},
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(target))
+	fmt.Println(target)
 
 	// To see what each voter said for one document/target cell
-	votes, err := fetchMetrics(url.Values{
-		"view":        {"votes"},
-		"document_id": {"expdoc_xyz"},
-		"target_path": {"line_items.*.unit_price"},
-	})
+	votes, err := client.Workflows.Experiments.Runs.Metrics.Get(
+		context.Background(),
+		"exprun_2",
+		&retab.GetExperimentMetricsParams{
+			View:       "votes",
+			DocumentID: "expdoc_xyz",
+			TargetPath: "line_items.*.unit_price",
+		},
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(votes))
+	fmt.Println(votes)
 }
 ```
 </CodeGroup>
 
-If the latest run is stale relative to the current block config or document
-set, `get_metrics` returns a `stale_metrics` error envelope — call
-`runs.create(...)` to recompute.
+If a run is stale relative to the current block config or document set,
+`runs.metrics.get(...)` returns a `stale_metrics` error envelope — call
+`runs.create(...)` to recompute and then inspect the new run's metrics.
 
 ### Update / delete / duplicate
 
@@ -416,119 +454,41 @@ client.workflows.experiments.delete(
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
-const base = "https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc123"
-
-func send(method, url string, body any) ([]byte, error) {
-	var reader *bytes.Reader
-	if body != nil {
-		raw, err := json.Marshal(body)
-		if err != nil {
-			return nil, err
-		}
-		reader = bytes.NewReader(raw)
-	} else {
-		reader = bytes.NewReader(nil)
-	}
-	req, err := http.NewRequest(method, url, reader)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	return io.ReadAll(resp.Body)
-}
-
 func main() {
-	// Change n_consensus - invalidates existing metrics
-	updated, err := send(http.MethodPatch, base, map[string]any{"n_consensus": 7})
+	ctx := context.Background()
+	client, err := retab.NewClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(updated))
+
+	// Change n_consensus - invalidates existing metrics
+	nConsensus := 7
+	updated, err := client.Workflows.Experiments.Update(ctx, "wf_abc123", "exp_abc123", retab.UpdateExperimentRequest{
+		NConsensus: &nConsensus,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(updated.ID)
 
 	// Snapshot an experiment for a quick A/B against a config change
-	copy, err := send(http.MethodPost, base+"/duplicate", map[string]any{})
+	copy, err := client.Workflows.Experiments.Duplicate(ctx, "wf_abc123", "exp_abc123")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(copy))
+	fmt.Println(copy.ID)
 
 	// Delete the experiment
-	if _, err := send(http.MethodDelete, base, nil); err != nil {
+	if err := client.Workflows.Experiments.Delete(ctx, "wf_abc123", "exp_abc123"); err != nil {
 		log.Fatal(err)
 	}
-}
-```
-</CodeGroup>
-
-### Run every experiment on a block at once
-
-Useful when you've changed a block config and want to refresh every experiment
-attached to it in one call.
-
-<CodeGroup>
-```python Python
-result = client.workflows.experiments.run_batch(
-    workflow_id="wf_abc123",
-    block_id="extract-invoice",
-)
-print(f"Triggered {result.experiment_count} experiments")
-```
-
-```go Go
-package main
-
-import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"os"
-)
-
-func main() {
-	body, err := json.Marshal(map[string]any{"block_id": "extract-invoice"})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req, err := http.NewRequest(
-		http.MethodPost,
-		"https://api.retab.com/v1/workflows/wf_abc123/experiments/run-batch",
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	payload, _ := io.ReadAll(resp.Body)
-	fmt.Println(string(payload))
 }
 ```
 </CodeGroup>

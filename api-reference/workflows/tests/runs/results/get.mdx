@@ -1,0 +1,78 @@
+---
+title: 'Get Test Run Result'
+openapi: 'GET /v1/workflows/tests/runs/{run_id}/results/{test_id}'
+---
+
+Fetch one result from a workflow-test run. The child key is the saved
+`test_id`, not an internal result row id.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+result = client.workflows.tests.runs.results.get(
+    "wftestrun_q1z2",
+    "wfnodetest_a",
+)
+print(result.verdict.status, result.outputs)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const result = await client.workflows.tests.runs.results.get(
+  "wftestrun_q1z2",
+  "wfnodetest_a",
+);
+console.log(result.verdict.status, result.outputs);
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/tests/runs/wftestrun_q1z2/results/wfnodetest_a' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "wfnodetestrun_a",
+  "run_id": "wftestrun_q1z2",
+  "test_id": "wfnodetest_a",
+  "target": { "type": "block", "block_id": "block_extract_invoice" },
+  "lifecycle": { "status": "completed" },
+  "timing": {
+    "started_at": "2026-05-18T10:00:02Z",
+    "completed_at": "2026-05-18T10:00:20Z",
+    "duration_ms": 18221
+  },
+  "outputs": {
+    "output-json-0": { "total": 1234.56, "vendor": { "name": "Acme Inc" } }
+  },
+  "assertion_result": {
+    "assertion_id": "assert_xyz",
+    "condition_kind": "equals",
+    "status": "passed",
+    "actual_value": 1234.56,
+    "expected_value": 1234.56,
+    "failure": null
+  },
+  "verdict": { "status": "passed" }
+}
+```
+
+```json 404
+{
+  "detail": "Workflow test result not found: test_id=wfnodetest_a"
+}
+```
+
+</ResponseExample>
