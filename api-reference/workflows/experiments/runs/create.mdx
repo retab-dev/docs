@@ -1,6 +1,6 @@
 ---
 title: 'Run Experiment'
-openapi: 'POST /v1/workflows/{workflow_id}/experiments/{experiment_id}/run'
+openapi: 'POST /v1/workflows/{workflow_id}/experiments/{experiment_id}/runs'
 ---
 
 Trigger an experiment run with the current draft block configuration.
@@ -10,9 +10,8 @@ document through the block with `n_consensus` parallel passes per document.
 Use it after creating an experiment, after editing the block, or after
 changing the document set.
 
-The endpoint is async — it returns a `job_id` immediately. Poll the job
-with [Get Job](/api-reference/jobs/retrieve) until it reaches a terminal
-status, then read the new metrics with
+The endpoint is async — it returns a `run_id` immediately. Poll the experiment
+run until it reaches a terminal status, then read the new metrics with
 [Get Experiment Metrics](/api-reference/workflows/experiments/get-metrics).
 
 Optional fields:
@@ -34,10 +33,9 @@ run = client.workflows.experiments.runs.create(
     workflow_id="wf_abc123",
     experiment_id="exp_abc",
 )
-print(run.job_id)
+print(run.run_id, run.status)
 
-# Wait for the metrics to be ready, then read them.
-client.jobs.wait_for_completion(run.job_id)
+# Wait for the run to complete, then read metrics.
 metrics = client.workflows.experiments.get_metrics(
     workflow_id="wf_abc123",
     experiment_id="exp_abc",
@@ -54,10 +52,9 @@ const run = await client.workflows.experiments.runs.create({
   workflowId: "wf_abc123",
   experimentId: "exp_abc",
 });
-console.log(run.job_id);
+console.log(run.run_id, run.status);
 
-// Wait for the metrics to be ready, then read them.
-await client.jobs.waitForCompletion(run.job_id);
+// Wait for the run to complete, then read metrics.
 const metrics = await client.workflows.experiments.getMetrics({
   workflowId: "wf_abc123",
   experimentId: "exp_abc",
@@ -88,12 +85,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(run.JobID)
+	fmt.Println(run.RunID, run.Status)
 
-	// Wait for the metrics to be ready, then read them.
-	if _, err := client.Jobs.WaitForCompletion(ctx, run.JobID, nil); err != nil {
-		log.Fatal(err)
-	}
+	// Wait for the run to complete, then read metrics.
 	metrics, err := client.Workflows.Experiments.GetMetrics(ctx, "wf_abc123", "exp_abc",
 		&retab.GetExperimentMetricsParams{View: "summary"})
 	if err != nil {
@@ -106,14 +100,14 @@ func main() {
 ```bash curl
 # Default — use the experiment's stored n_consensus and document set.
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc/run' \
+  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc/runs' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{}'
 
 # Override n_consensus for this run only.
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc/run' \
+  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc/runs' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{"n_consensus": 7}'
@@ -127,7 +121,6 @@ curl -X 'POST' \
 {
   "experiment_id": "exp_abc",
   "run_id": "exprun_2",
-  "job_id": "job_99",
   "status": "pending",
   "definition_fingerprint": "0ff93ddc7cefcb42",
   "document_count": 12,
