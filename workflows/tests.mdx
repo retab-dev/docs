@@ -96,20 +96,32 @@ When a test runs, Retab:
 5. Resolves the assertion target from the block outputs.
 6. Evaluates the assertion and records a run result.
 
-Test runs are asynchronous. The dashboard streams live progress and stores each
-run record so you can inspect the run history later.
+Test runs are asynchronous. The dashboard streams live progress and stores a
+parent run plus one result per saved test. API clients inspect the parent run by
+`run_id`, then read results under `/v1/workflows/tests/runs/{run_id}/results`.
 
 ## Results
 
-A test run ends in one of three statuses:
+A parent test run uses the shared run lifecycle:
+
+| Status | Meaning |
+|---|---|
+| **pending** | The run has been scheduled but has not started yet. |
+| **running** | One or more test results are still executing. |
+| **completed** | The run finished; inspect result verdicts for pass/fail detail. |
+| **error** | The parent run failed before all results could be recorded. |
+| **cancelled** | The run was cancelled. |
+
+Each child result has its own verdict:
 
 | Status | Meaning |
 |---|---|
 | **passed** | The block ran successfully and the assertion passed. |
-| **failed** | The block ran successfully, but the assertion did not pass or could not be evaluated against the selected target. |
+| **failed** | The block ran successfully, but the assertion did not pass. |
+| **blocked** | The assertion could not be evaluated against the selected target. |
 | **error** | The block simulation failed or another execution error occurred. |
 
-Each run record includes the saved inputs used for that run, the block output,
+Each result includes the saved inputs used for that execution, the block output,
 handle outputs, assertion result, warnings, duration, and execution
 fingerprints. Retab also tracks the latest passing and failing summaries on the
 test definition.

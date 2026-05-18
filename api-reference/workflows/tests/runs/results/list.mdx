@@ -1,0 +1,80 @@
+---
+title: 'List Test Run Results'
+openapi: 'GET /v1/workflows/tests/runs/{run_id}/results'
+---
+
+List the test results produced by one workflow-test run. Results are addressed
+under the parent run by `test_id`, matching workflow run steps under `block_id`.
+
+The response uses the canonical Retab list envelope:
+`{ "data": [...], "list_metadata": { "before": null, "after": null } }`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+results = client.workflows.tests.runs.results.list("wftestrun_q1z2")
+for result in results.data:
+    print(result.test_id, result.verdict.status)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const results = await client.workflows.tests.runs.results.list("wftestrun_q1z2");
+for (const result of results.data) {
+  console.log(result.test_id, result.verdict.status);
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/tests/runs/wftestrun_q1z2/results?limit=20' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "id": "wfnodetestrun_a",
+      "run_id": "wftestrun_q1z2",
+      "test_id": "wfnodetest_a",
+      "target": { "type": "block", "block_id": "block_extract_invoice" },
+      "lifecycle": { "status": "completed" },
+      "timing": {
+        "started_at": "2026-05-18T10:00:02Z",
+        "completed_at": "2026-05-18T10:00:20Z",
+        "duration_ms": 18221
+      },
+      "outputs": {
+        "output-json-0": { "total": 1234.56, "vendor": { "name": "Acme Inc" } }
+      },
+      "assertion_result": {
+        "assertion_id": "assert_xyz",
+        "condition_kind": "equals",
+        "status": "passed",
+        "actual_value": 1234.56,
+        "expected_value": 1234.56,
+        "failure": null
+      },
+      "verdict": { "status": "passed" }
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": null
+  }
+}
+```
+
+</ResponseExample>

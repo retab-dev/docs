@@ -1,14 +1,12 @@
 ---
 title: 'List Experiment Runs'
-openapi: 'GET /v1/workflows/{workflow_id}/experiments/{experiment_id}/runs'
+openapi: 'GET /v1/workflows/experiments/runs'
 ---
 
-List historical runs for one experiment, newest first. Each row is a slim
-projection of an `ExperimentRun` (status, score, fingerprints, timing) — the
-fields needed for a runs table. For the underlying per-document execution data,
-use [Get Experiment Content](/api-reference/workflows/experiments/get-content);
-for consensus scores, use
-[Get Experiment Metrics](/api-reference/workflows/experiments/get-metrics).
+List experiment runs, newest first. Filter by `workflow_id`, `experiment_id`,
+`block_id`, lifecycle status, trigger type, date range, or id pagination. For
+per-document execution data, use [List Experiment Run Results](/api-reference/workflows/experiments/runs/results/list);
+for consensus scores, use [Get Experiment Run Metrics](/api-reference/workflows/experiments/runs/metrics/get).
 
 The response uses the canonical Retab list envelope:
 `{ "data": [...], "list_metadata": { "before": null, "after": null } }`.
@@ -21,11 +19,10 @@ from retab import Retab
 client = Retab()
 
 page = client.workflows.experiments.runs.list(
-    workflow_id="wf_abc123",
     experiment_id="exp_abc",
 )
 for run in page.data:
-    print(run.id, run.status, run.score, run.created_at)
+    print(run.id, run.lifecycle.status, run.score)
 ```
 
 ```javascript javascript
@@ -34,12 +31,11 @@ import { Retab } from '@retab/node';
 const client = new Retab();
 
 const page = await client.workflows.experiments.runs.list({
-  workflowId: "wf_abc123",
   experimentId: "exp_abc",
 });
 
 for (const run of page.data) {
-  console.log(run.id, run.status, run.score, run.created_at);
+  console.log(run.id, run.lifecycle.status, run.score);
 }
 ```
 
@@ -62,20 +58,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	page, err := client.Workflows.Experiments.Runs.List(ctx, "wf_abc123", "exp_abc")
+	page, err := client.Workflows.Experiments.Runs.List(ctx, &retab.ListExperimentRunsParams{
+		ExperimentID: "exp_abc",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, run := range page.Data {
-		fmt.Println(run.ID, run.Status, run.Score, run.CreatedAt)
+		fmt.Println(run.ID, run.Lifecycle.Status, run.Score)
 	}
 }
 ```
 
 ```bash curl
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc/runs' \
+  'https://api.retab.com/v1/workflows/experiments/runs?experiment_id=exp_abc' \
   -H 'Api-Key: <your-api-key>'
 ```
 
@@ -88,19 +86,30 @@ curl -X 'GET' \
   "data": [
     {
       "id": "exprun_2",
-      "parent_run_id": "exprun_1",
-      "block_config": { "model": "gpt-5", "json_schema": { "type": "object" } },
-      "definition_fingerprint": "0ff93ddc7cefcb42",
-      "documents_fingerprint": "ddd95baadce6045f",
-      "status": "completed",
+      "workflow": {
+        "workflow_id": "wf_abc123",
+        "version_id": "draft_2026_05_18",
+        "name_at_run_time": "Invoice workflow",
+        "requested_version": "draft"
+      },
+      "trigger": { "type": "api" },
+      "lifecycle": { "status": "completed" },
+      "timing": {
+        "created_at": "2026-05-02T11:00:00Z",
+        "started_at": "2026-05-02T11:00:01Z",
+        "completed_at": "2026-05-02T11:04:18Z",
+        "duration_ms": 258221
+      },
+      "experiment_id": "exp_abc",
+      "block_id": "extract-invoice",
       "block_kind": "extract",
-      "score": 0.87,
-      "document_count": 12,
-      "error_count": 0,
       "n_consensus": 5,
-      "created_at": "2026-05-02T11:00:00Z",
-      "completed_at": "2026-05-02T11:04:18Z",
-      "duration_ms": 258221,
+      "total_document_count": 12,
+      "completed_document_count": 12,
+      "error_count": 0,
+      "score": 0.87,
+      "definition_fingerprint": "0ff93ddc7cefcb42",
+      "documents_fingerprint": "ddd95baadce6045f"
     }
   ],
   "list_metadata": {

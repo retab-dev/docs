@@ -78,6 +78,39 @@
         ]
       }
     },
+    "/v1/auth/cli/config": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "CLI OAuth Discovery",
+        "description": "Returns the WorkOS configuration the Retab CLI needs to start an OAuth 2.0 Authorization Code + PKCE flow. No authentication is required: everything in the response is already public (client_id, authkit_domain).",
+        "operationId": "cli_oauth_config_v1_auth_cli_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CLIConfigResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ]
+      }
+    },
     "/v1/schemas/templates": {
       "get": {
         "tags": [
@@ -11772,7 +11805,7 @@
           "Splits"
         ],
         "summary": "Stress Test Split",
-        "description": "Run the full split pipeline (upload → preprocess → orchestrator) without an LLM call.\n\nUseful for load-testing the non-LLM stages of the pipeline (GCS uploads,\npreprocessing PDF render + image generation + GCS page writes, orchestrator\nround-trip). The LLM call is replaced by a configurable parallel\n`asyncio.sleep`. Stress-test runs are NOT persisted to the splits\ncollection.",
+        "description": "Run the full split pipeline (upload \u2192 preprocess \u2192 orchestrator) without an LLM call.\n\nUseful for load-testing the non-LLM stages of the pipeline (GCS uploads,\npreprocessing PDF render + image generation + GCS page writes, orchestrator\nround-trip). The LLM call is replaced by a configurable parallel\n`asyncio.sleep`. Stress-test runs are NOT persisted to the splits\ncollection.",
         "operationId": "stress_test_split_v1_splits_stress_test_post",
         "requestBody": {
           "content": {
@@ -18802,7 +18835,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MIMEData"
+                  "$ref": "#/components/schemas/MIMEData-Output"
                 }
               }
             }
@@ -18933,6 +18966,38 @@
             }
           },
           {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
             "name": "include_embeddings",
             "in": "query",
             "required": false,
@@ -19058,6 +19123,51 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Delete File",
+        "description": "Delete a file metadata record.\n\nRemoves the ``files`` collection document for the given file, scoped to the\ncaller's organization. The backing storage blob is left in place because\ndownstream artifacts (parses, extractions, workflow run artifacts) may still\nreference it. Deleting a file in another organization, or a file id that\ndoes not exist, returns 404.",
+        "operationId": "delete_file_v1_files__file_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -19936,9 +20046,11 @@
                 {
                   "enum": [
                     "pending",
+                    "queued",
                     "running",
                     "completed",
                     "error",
+                    "failed",
                     "waiting_for_human",
                     "cancelled"
                   ],
@@ -19966,10 +20078,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by multiple statuses (comma-separated: pending,running,completed,error,waiting_for_human,cancelled)",
+              "description": "Filter by multiple statuses (comma-separated: pending,queued,running,completed,error,failed,waiting_for_human,cancelled)",
               "title": "Statuses"
             },
-            "description": "Filter by multiple statuses (comma-separated: pending,running,completed,error,waiting_for_human,cancelled)"
+            "description": "Filter by multiple statuses (comma-separated: pending,queued,running,completed,error,failed,waiting_for_human,cancelled)"
           },
           {
             "name": "exclude_status",
@@ -19980,9 +20092,11 @@
                 {
                   "enum": [
                     "pending",
+                    "queued",
                     "running",
                     "completed",
                     "error",
+                    "failed",
                     "waiting_for_human",
                     "cancelled"
                   ],
@@ -20344,10 +20458,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by multiple statuses (comma-separated: pending,running,completed,error,waiting_for_human,cancelled)",
+              "description": "Filter by multiple statuses (comma-separated: pending,queued,running,completed,error,failed,waiting_for_human,cancelled)",
               "title": "Statuses"
             },
-            "description": "Filter by multiple statuses (comma-separated: pending,running,completed,error,waiting_for_human,cancelled)"
+            "description": "Filter by multiple statuses (comma-separated: pending,queued,running,completed,error,failed,waiting_for_human,cancelled)"
           },
           {
             "name": "trigger_types",
@@ -21099,7 +21213,7 @@
           "Workflow Runs"
         ],
         "summary": "List Workflow Run Steps",
-        "description": "List steps for a workflow run with status and artifact summaries.",
+        "description": "List steps for a workflow run with status and artifact summaries.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. ID pagination is not yet implemented for this\nendpoint \u2014 ``list_metadata`` is always ``{before: null, after: null}``.",
         "operationId": "list_workflow_run_steps_v1_workflows_runs__run_id__steps_get",
         "security": [
           {
@@ -21129,11 +21243,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/StepStatusObject"
-                  },
-                  "title": "Response List Workflow Run Steps V1 Workflows Runs  Run Id  Steps Get"
+                  "$ref": "#/components/schemas/PaginatedList_StepStatusObject_"
                 }
               }
             }
@@ -21702,7 +21812,7 @@
           "Workflow Runs"
         ],
         "summary": "List Block Simulations",
-        "description": "List recent simulation results for a block in a workflow run.",
+        "description": "List recent simulation results for a block in a workflow run.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. ID pagination is not yet implemented for this\nendpoint \u2014 ``list_metadata`` is always ``{before: null, after: null}``.",
         "operationId": "list_block_simulations_v1_workflows_runs__run_id__steps__block_id__simulations_get",
         "security": [
           {
@@ -21753,11 +21863,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/BlockSimulationObject"
-                  },
-                  "title": "Response List Block Simulations V1 Workflows Runs  Run Id  Steps  Block Id  Simulations Get"
+                  "$ref": "#/components/schemas/PaginatedList_BlockSimulationObject_"
                 }
               }
             }
@@ -22049,6 +22155,7 @@
           "Workflow Artifacts"
         ],
         "summary": "List Workflow Artifacts",
+        "description": "List artifacts produced by a workflow run.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. Each ``data`` item is a flattened\n``WorkflowArtifact`` record (operation-tagged dereferenced artifact);\narbitrary operation-specific fields are preserved. Cursor pagination is\nnot yet implemented \u2014 ``list_metadata`` is always\n``{before: null, after: null}``.",
         "operationId": "list_workflow_artifacts_v1_workflows_artifacts_get",
         "security": [
           {
@@ -22129,12 +22236,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "additionalProperties": true
-                  },
-                  "title": "Response List Workflow Artifacts V1 Workflows Artifacts Get"
+                  "$ref": "#/components/schemas/PaginatedList_dict_str__Any__"
                 }
               }
             }
@@ -23107,6 +23209,528 @@
         ]
       }
     },
+    "/v1/workflows/tests/runs": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Tests"
+        ],
+        "summary": "List Test Execution Runs",
+        "operationId": "list_test_execution_runs_v1_workflows_tests_runs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "test_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Test Id"
+            }
+          },
+          {
+            "name": "target_block_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Block Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Statuses"
+            }
+          },
+          {
+            "name": "exclude_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exclude Status"
+            }
+          },
+          {
+            "name": "trigger_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trigger Type"
+            }
+          },
+          {
+            "name": "trigger_types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trigger Types"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "created_at",
+              "title": "Sort By"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fields"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedList_WorkflowTestRunStatus_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/tests/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Tests"
+        ],
+        "summary": "Get Test Execution Run",
+        "operationId": "get_test_execution_run_v1_workflows_tests_runs__run_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowTestRunStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/tests/runs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow Tests"
+        ],
+        "summary": "Cancel Test Execution Run",
+        "operationId": "cancel_test_execution_run_v1_workflows_tests_runs__run_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowTestRunStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/tests/runs/{run_id}/results": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Tests"
+        ],
+        "summary": "Get Test Execution Run Results",
+        "operationId": "get_test_execution_run_results_v1_workflows_tests_runs__run_id__results_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedList_WorkflowTestRunRecord_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/tests/runs/{run_id}/results/{test_id}": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Tests"
+        ],
+        "summary": "Get Test Execution Run Result",
+        "operationId": "get_test_execution_run_result_v1_workflows_tests_runs__run_id__results__test_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "test_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Test Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowTestRunRecord"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workflows/{workflow_id}/blocks": {
       "get": {
         "tags": [
@@ -23114,7 +23738,7 @@
           "Workflow Blocks"
         ],
         "summary": "List Blocks",
-        "description": "List all blocks for a workflow.\n\nReturns all blocks in the workflow draft.",
+        "description": "List all blocks for a workflow.\n\nReturns all blocks in the workflow draft wrapped in the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. ID pagination is not yet implemented for this\nendpoint \u2014 ``list_metadata`` is always ``{before: null, after: null}``.",
         "operationId": "list_blocks_v1_workflows__workflow_id__blocks_get",
         "security": [
           {
@@ -23144,11 +23768,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WorkflowBlockObject"
-                  },
-                  "title": "Response List Blocks V1 Workflows  Workflow Id  Blocks Get"
+                  "$ref": "#/components/schemas/PaginatedList_WorkflowBlockObject_"
                 }
               }
             }
@@ -23491,7 +24111,7 @@
           "Workflow Blocks"
         ],
         "summary": "Get Block Config History Route",
-        "description": "Return the config version timeline for a block.\n\nGroups consecutive workflow publishes where the block config didn't change\ninto a single entry. Each entry includes the config fingerprint, the actual\nconfig snapshot, the range of snapshot versions, and the number of runs\nexecuted with that config.",
+        "description": "Return the config version timeline for a block.\n\nGroups consecutive workflow publishes where the block config didn't change\ninto a single entry. Each entry includes the config fingerprint, the actual\nconfig snapshot, the range of snapshot versions, and the number of runs\nexecuted with that config.\n\nWrapped in the canonical pagination envelope; id pagination is not yet\nsupported for this endpoint, so ``list_metadata`` is always\n``{before: null, after: null}``.",
         "operationId": "get_block_config_history_route_v1_workflows__workflow_id__blocks__block_id__config_history_get",
         "security": [
           {
@@ -23530,11 +24150,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/BlockConfigVersion"
-                  },
-                  "title": "Response Get Block Config History Route V1 Workflows  Workflow Id  Blocks  Block Id  Config History Get"
+                  "$ref": "#/components/schemas/PaginatedList_BlockConfigVersion_"
                 }
               }
             }
@@ -23632,7 +24248,7 @@
           "Workflow Edges"
         ],
         "summary": "List Edges",
-        "description": "List all edges for a workflow.\n\nOptionally filter by source or target block ID.",
+        "description": "List all edges for a workflow.\n\nOptionally filter by source or target block ID. Returns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. ID pagination is not yet implemented for this\nendpoint \u2014 ``list_metadata`` is always ``{before: null, after: null}``.",
         "operationId": "list_edges_v1_workflows__workflow_id__edges_get",
         "security": [
           {
@@ -23698,11 +24314,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WorkflowEdgeObject"
-                  },
-                  "title": "Response List Edges V1 Workflows  Workflow Id  Edges Get"
+                  "$ref": "#/components/schemas/PaginatedList_WorkflowEdgeObject_"
                 }
               }
             }
@@ -24192,7 +24804,7 @@
       "post": {
         "tags": [
           "Workflows",
-          "Workflow Tests"
+          "Workflow Block Tests"
         ],
         "summary": "Materialize File Input",
         "operationId": "materialize_file_input_v1_workflows__workflow_id__tests_materialize_file_input_post",
@@ -24223,7 +24835,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MaterializeWorkflowTestFileInputRequest"
+                "$ref": "#/components/schemas/MaterializeBlockTestFileInputRequest"
               }
             }
           }
@@ -24256,7 +24868,7 @@
       "post": {
         "tags": [
           "Workflows",
-          "Workflow Tests"
+          "Workflow Block Tests"
         ],
         "summary": "Create Test",
         "operationId": "create_test_v1_workflows__workflow_id__tests_post",
@@ -24287,7 +24899,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateWorkflowTestRequest"
+                "$ref": "#/components/schemas/CreateBlockTestRequest"
               }
             }
           }
@@ -24318,7 +24930,7 @@
       "get": {
         "tags": [
           "Workflows",
-          "Workflow Tests"
+          "Workflow Block Tests"
         ],
         "summary": "List Tests",
         "operationId": "list_tests_v1_workflows__workflow_id__tests_get",
@@ -24378,7 +24990,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestListResponse"
+                  "$ref": "#/components/schemas/PaginatedList_WorkflowTest_"
                 }
               }
             }
@@ -24400,7 +25012,7 @@
       "get": {
         "tags": [
           "Workflows",
-          "Workflow Tests"
+          "Workflow Block Tests"
         ],
         "summary": "Get Test",
         "operationId": "get_test_v1_workflows__workflow_id__tests__test_id__get",
@@ -24461,7 +25073,7 @@
       "patch": {
         "tags": [
           "Workflows",
-          "Workflow Tests"
+          "Workflow Block Tests"
         ],
         "summary": "Update Test",
         "operationId": "update_test_v1_workflows__workflow_id__tests__test_id__patch",
@@ -24501,7 +25113,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateWorkflowTestRequest"
+                "$ref": "#/components/schemas/UpdateBlockTestRequest"
               }
             }
           }
@@ -24532,7 +25144,7 @@
       "delete": {
         "tags": [
           "Workflows",
-          "Workflow Tests"
+          "Workflow Block Tests"
         ],
         "summary": "Delete Test",
         "operationId": "delete_test_v1_workflows__workflow_id__tests__test_id__delete",
@@ -24584,14 +25196,14 @@
         }
       }
     },
-    "/v1/workflows/{workflow_id}/tests/execute": {
+    "/v1/workflows/{workflow_id}/tests/runs": {
       "post": {
         "tags": [
           "Workflows",
-          "Workflow Tests"
+          "Workflow Block Tests"
         ],
-        "summary": "Execute Tests",
-        "operationId": "execute_tests_v1_workflows__workflow_id__tests_execute_post",
+        "summary": "Create Test Run",
+        "operationId": "create_test_run_v1_workflows__workflow_id__tests_runs_post",
         "security": [
           {
             "HTTPBearer": []
@@ -24619,18 +25231,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ExecuteWorkflowTestsRequest"
+                "$ref": "#/components/schemas/CreateWorkflowTestRunRequest"
               }
             }
           }
         },
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExecuteWorkflowTestsResponse"
+                  "$ref": "#/components/schemas/WorkflowTestRunStatus"
                 }
               }
             }
@@ -24648,14 +25260,14 @@
         }
       }
     },
-    "/v1/workflows/{workflow_id}/tests/{test_id}/runs": {
+    "/v1/workflows/experiments/runs": {
       "get": {
         "tags": [
           "Workflows",
-          "Workflow Tests"
+          "Workflow Experiments"
         ],
-        "summary": "List Test Runs",
-        "operationId": "list_test_runs_v1_workflows__workflow_id__tests__test_id__runs_get",
+        "summary": "List Experiment Runs",
+        "operationId": "list_experiment_runs_v1_workflows_experiments_runs_get",
         "security": [
           {
             "HTTPBearer": []
@@ -24670,20 +25282,218 @@
         "parameters": [
           {
             "name": "workflow_id",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": "string",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Workflow Id"
             }
           },
           {
-            "name": "test_id",
-            "in": "path",
-            "required": true,
+            "name": "experiment_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Experiment Id"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Block Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "running",
+                    "completed",
+                    "error",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Statuses"
+            }
+          },
+          {
+            "name": "exclude_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "running",
+                    "completed",
+                    "error",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exclude Status"
+            }
+          },
+          {
+            "name": "trigger_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trigger Type"
+            }
+          },
+          {
+            "name": "trigger_types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trigger Types"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
             "schema": {
               "type": "string",
-              "title": "Test Id"
+              "default": "created_at",
+              "title": "Sort By"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
             }
           },
           {
@@ -24697,6 +25507,20 @@
               "default": 20,
               "title": "Limit"
             }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
+            }
           }
         ],
         "responses": {
@@ -24705,7 +25529,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestRunListResponse"
+                  "$ref": "#/components/schemas/PaginatedList_ExperimentRunPublic_"
                 }
               }
             }
@@ -24723,14 +25547,14 @@
         }
       }
     },
-    "/v1/workflows/{workflow_id}/tests/{test_id}/runs/{run_id}": {
+    "/v1/workflows/experiments/runs/{run_id}": {
       "get": {
         "tags": [
           "Workflows",
-          "Workflow Tests"
+          "Workflow Experiments"
         ],
-        "summary": "Get Test Run",
-        "operationId": "get_test_run_v1_workflows__workflow_id__tests__test_id__runs__run_id__get",
+        "summary": "Get Experiment Run",
+        "operationId": "get_experiment_run_v1_workflows_experiments_runs__run_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -24743,24 +25567,6 @@
           }
         ],
         "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "test_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Test Id"
-            }
-          },
           {
             "name": "run_id",
             "in": "path",
@@ -24777,7 +25583,351 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestRunRecord"
+                  "$ref": "#/components/schemas/ExperimentRunPublic"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/experiments/runs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow Experiments"
+        ],
+        "summary": "Cancel Experiment Run",
+        "operationId": "cancel_experiment_run_v1_workflows_experiments_runs__run_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentRunCancelResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/experiments/runs/{run_id}/results": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Experiments"
+        ],
+        "summary": "List Experiment Run Results",
+        "operationId": "list_experiment_run_results_v1_workflows_experiments_runs__run_id__results_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedList_ExperimentResultPublic_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/experiments/runs/{run_id}/results/{document_id}": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Experiments"
+        ],
+        "summary": "Get Experiment Run Result",
+        "operationId": "get_experiment_run_result_v1_workflows_experiments_runs__run_id__results__document_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentResultPublic"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/experiments/runs/{run_id}/metrics": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Experiments"
+        ],
+        "summary": "Get Experiment Run Metrics",
+        "operationId": "get_experiment_run_metrics_v1_workflows_experiments_runs__run_id__metrics_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "summary",
+                "by_document",
+                "by_target",
+                "votes"
+              ],
+              "type": "string",
+              "default": "summary",
+              "title": "View"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "target_path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Path"
+            }
+          },
+          {
+            "name": "include_prior",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Include Prior"
+            }
+          },
+          {
+            "name": "prior_run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prior Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/ExperimentSummaryMetricsResponse"
+                        },
+                        {
+                          "$ref": "#/components/schemas/ExperimentByDocumentMetricsResponse"
+                        },
+                        {
+                          "$ref": "#/components/schemas/ExperimentByTargetMetricsResponse"
+                        },
+                        {
+                          "$ref": "#/components/schemas/ExperimentVotesMetricsResponse"
+                        }
+                      ],
+                      "discriminator": {
+                        "propertyName": "view",
+                        "mapping": {
+                          "summary": "#/components/schemas/ExperimentSummaryMetricsResponse",
+                          "by_document": "#/components/schemas/ExperimentByDocumentMetricsResponse",
+                          "by_target": "#/components/schemas/ExperimentByTargetMetricsResponse",
+                          "votes": "#/components/schemas/ExperimentVotesMetricsResponse"
+                        }
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/ExperimentMetricsStaleError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ExperimentMetricsMissingError"
+                    }
+                  ],
+                  "title": "Response Get Experiment Run Metrics V1 Workflows Experiments Runs  Run Id  Metrics Get"
                 }
               }
             }
@@ -24914,71 +26064,6 @@
         }
       }
     },
-    "/v1/workflows/{workflow_id}/experiments/run-batch": {
-      "post": {
-        "tags": [
-          "Workflows",
-          "Workflow Experiments"
-        ],
-        "summary": "Run Batch",
-        "description": "Enqueue async runs for every experiment attached to a block.",
-        "operationId": "run_batch_v1_workflows__workflow_id__experiments_run_batch_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RunBatchRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunBatchResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/workflows/{workflow_id}/experiments": {
       "get": {
         "tags": [
@@ -25015,11 +26100,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ExperimentResponse"
-                  },
-                  "title": "Response List Experiments V1 Workflows  Workflow Id  Experiments Get"
+                  "$ref": "#/components/schemas/PaginatedList_ExperimentResponse_"
                 }
               }
             }
@@ -25413,557 +26494,14 @@
         }
       }
     },
-    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/run": {
-      "post": {
-        "tags": [
-          "Workflows",
-          "Workflow Experiments"
-        ],
-        "summary": "Run Experiment",
-        "operationId": "run_experiment_v1_workflows__workflow_id__experiments__experiment_id__run_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "experiment_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Experiment Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RunExperimentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunExperimentResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/cancel": {
-      "post": {
-        "tags": [
-          "Workflows",
-          "Workflow Experiments"
-        ],
-        "summary": "Cancel Experiment",
-        "operationId": "cancel_experiment_v1_workflows__workflow_id__experiments__experiment_id__cancel_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "experiment_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Experiment Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Cancel Experiment V1 Workflows  Workflow Id  Experiments  Experiment Id  Cancel Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/documents/{document_id}/cancel": {
-      "post": {
-        "tags": [
-          "Workflows",
-          "Workflow Experiments"
-        ],
-        "summary": "Cancel Experiment Document",
-        "operationId": "cancel_experiment_document_v1_workflows__workflow_id__experiments__experiment_id__documents__document_id__cancel_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "experiment_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Experiment Id"
-            }
-          },
-          {
-            "name": "document_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Document Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Cancel Experiment Document V1 Workflows  Workflow Id  Experiments  Experiment Id  Documents  Document Id  Cancel Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/content": {
-      "get": {
-        "tags": [
-          "Workflows",
-          "Workflow Experiments"
-        ],
-        "summary": "Get Content",
-        "operationId": "get_content_v1_workflows__workflow_id__experiments__experiment_id__content_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "experiment_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Experiment Id"
-            }
-          },
-          {
-            "name": "run_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Run Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExperimentContentResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/metrics": {
-      "get": {
-        "tags": [
-          "Workflows",
-          "Workflow Experiments"
-        ],
-        "summary": "Get Metrics",
-        "description": "Get experiment metrics for REST/frontend consumers.\n\nPrior comparison is inline by default: supported score-bearing rows carry\n``prior_score`` when a prior completed run exists. Pass\n``include_prior=false`` to strip those fields, or\n``prior_run_id=...`` to compare against a specific run.",
-        "operationId": "get_metrics_v1_workflows__workflow_id__experiments__experiment_id__metrics_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "experiment_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Experiment Id"
-            }
-          },
-          {
-            "name": "view",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "summary",
-                "by_document",
-                "by_target",
-                "votes"
-              ],
-              "type": "string",
-              "default": "summary",
-              "title": "View"
-            }
-          },
-          {
-            "name": "run_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "document_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Document Id"
-            }
-          },
-          {
-            "name": "target_path",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Target Path"
-            }
-          },
-          {
-            "name": "include_prior",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Include Prior"
-            }
-          },
-          {
-            "name": "prior_run_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Prior Run Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "oneOf": [
-                        {
-                          "$ref": "#/components/schemas/ExperimentSummaryMetricsResponse"
-                        },
-                        {
-                          "$ref": "#/components/schemas/ExperimentByDocumentMetricsResponse"
-                        },
-                        {
-                          "$ref": "#/components/schemas/ExperimentByTargetMetricsResponse"
-                        },
-                        {
-                          "$ref": "#/components/schemas/ExperimentVotesMetricsResponse"
-                        }
-                      ],
-                      "discriminator": {
-                        "propertyName": "view",
-                        "mapping": {
-                          "summary": "#/components/schemas/ExperimentSummaryMetricsResponse",
-                          "by_document": "#/components/schemas/ExperimentByDocumentMetricsResponse",
-                          "by_target": "#/components/schemas/ExperimentByTargetMetricsResponse",
-                          "votes": "#/components/schemas/ExperimentVotesMetricsResponse"
-                        }
-                      }
-                    },
-                    {
-                      "$ref": "#/components/schemas/ExperimentMetricsStaleError"
-                    },
-                    {
-                      "$ref": "#/components/schemas/ExperimentMetricsMissingError"
-                    }
-                  ],
-                  "title": "Response Get Metrics V1 Workflows  Workflow Id  Experiments  Experiment Id  Metrics Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/workflows/{workflow_id}/experiments/{experiment_id}/runs": {
-      "get": {
-        "tags": [
-          "Workflows",
-          "Workflow Experiments"
-        ],
-        "summary": "List Runs",
-        "operationId": "list_runs_v1_workflows__workflow_id__experiments__experiment_id__runs_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "experiment_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Experiment Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunListResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "tags": [
           "Workflows",
           "Workflow Experiments"
         ],
-        "summary": "Run Experiment",
-        "operationId": "run_experiment_v1_workflows__workflow_id__experiments__experiment_id__run_post",
+        "summary": "Create Experiment Run",
+        "operationId": "create_experiment_run_v1_workflows__workflow_id__experiments__experiment_id__runs_post",
         "security": [
           {
             "HTTPBearer": []
@@ -26011,88 +26549,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunExperimentResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/experiments/{experiment_id}/runs/{run_id}/documents/{document_id}": {
-      "get": {
-        "tags": [
-          "Workflows",
-          "Workflow Experiments"
-        ],
-        "summary": "Get Job",
-        "operationId": "get_job_v1_workflows__workflow_id__experiments__experiment_id__runs__run_id__documents__document_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "experiment_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Experiment Id"
-            }
-          },
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "document_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Document Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExperimentJobResponse"
+                  "$ref": "#/components/schemas/ExperimentRunPublic"
                 }
               }
             }
@@ -27578,7 +28035,7 @@
           "Workflows"
         ],
         "summary": "List Workflow Snapshots Endpoint",
-        "description": "List all snapshots for a workflow.\n\nReturns snapshots in reverse chronological order (newest first).\nEach snapshot represents a published version of the workflow.",
+        "description": "List all snapshots for a workflow.\n\nReturns snapshots in reverse chronological order (newest first), wrapped\nin the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. Each snapshot represents a published version of the\nworkflow. ID pagination is not yet implemented \u2014 ``list_metadata`` is\nalways ``{before: null, after: null}``.",
         "operationId": "list_workflow_snapshots_endpoint_v1_workflows__workflow_id__snapshots_get",
         "security": [
           {
@@ -27622,11 +28079,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WorkflowSnapshot"
-                  },
-                  "title": "Response List Workflow Snapshots Endpoint V1 Workflows  Workflow Id  Snapshots Get"
+                  "$ref": "#/components/schemas/PaginatedList_WorkflowSnapshot_"
                 }
               }
             }
@@ -28234,23 +28687,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/DuplicateWorkflowRequest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Request"
-              }
-            }
-          }
-        },
         "responses": {
           "201": {
             "description": "Successful Response",
@@ -28707,6 +29143,70 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RunWorkflowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRunObject"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflow_id}/stress-test/run": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Run Workflow Stress Test",
+        "description": "Run a workflow through the non-billable stress-test execution path.",
+        "operationId": "run_workflow_stress_test_v1_workflows__workflow_id__stress_test_run_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowStressTestRunRequest"
               }
             }
           }
@@ -29240,7 +29740,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MIMEData"
+                  "$ref": "#/components/schemas/MIMEData-Output"
                 }
               }
             }
@@ -30695,7 +31195,7 @@
           "MCP"
         ],
         "summary": "Mcp Endpoint",
-        "description": "Unified MCP JSON-RPC 2.0 endpoint (Streamable HTTP transport).\n\nSupported methods:\n    initialize          — MCP protocol handshake\n    ping                — keepalive / health check\n    notifications/*     — client notifications (no response body)\n    tools/list          — returns available tools\n    tools/call          — executes a tool",
+        "description": "Unified MCP JSON-RPC 2.0 endpoint (Streamable HTTP transport).\n\nSupported methods:\n    initialize          \u2014 MCP protocol handshake\n    ping                \u2014 keepalive / health check\n    notifications/*     \u2014 client notifications (no response body)\n    tools/list          \u2014 returns available tools\n    tools/call          \u2014 executes a tool",
         "operationId": "mcp_endpoint_v1_mcp_post",
         "requestBody": {
           "content": {
@@ -31154,7 +31654,7 @@
           "MCP"
         ],
         "summary": "Mcp Endpoint",
-        "description": "Unified MCP JSON-RPC 2.0 endpoint (Streamable HTTP transport).\n\nSupported methods:\n    initialize          — MCP protocol handshake\n    ping                — keepalive / health check\n    notifications/*     — client notifications (no response body)\n    tools/list          — returns available tools\n    tools/call          — executes a tool",
+        "description": "Unified MCP JSON-RPC 2.0 endpoint (Streamable HTTP transport).\n\nSupported methods:\n    initialize          \u2014 MCP protocol handshake\n    ping                \u2014 keepalive / health check\n    notifications/*     \u2014 client notifications (no response body)\n    tools/list          \u2014 returns available tools\n    tools/call          \u2014 executes a tool",
         "operationId": "mcp_endpoint_mcp_post",
         "requestBody": {
           "content": {
@@ -31312,46 +31812,6 @@
         }
       }
     },
-    "/test-webhook": {
-      "post": {
-        "summary": "Test Webhook",
-        "operationId": "test_webhook_test_webhook_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Test Webhook Test Webhook Post"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/test-webhook-unverified": {
-      "post": {
-        "summary": "Test Webhook Unverified",
-        "operationId": "test_webhook_unverified_test_webhook_unverified_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Test Webhook Unverified Test Webhook Unverified Post"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/test-cron-webhook": {
       "post": {
         "summary": "Test Cron Webhook",
@@ -31467,150 +31927,6 @@
           }
         }
       }
-    },
-    "/v1/workflows/runs/{run_id}/agent-hil-reviews/{block_id}": {
-      "get": {
-        "tags": [
-          "Workflows",
-          "Workflow Runs"
-        ],
-        "summary": "Get the managed-agent review state for a HIL block.",
-        "description": "Returns the agent-in-the-loop review row tracking a managed-agent session for the given HIL block. 404 when no agent review has been spawned (block has agent_in_the_loop='disabled' or the workflow hasn't reached the block yet).",
-        "operationId": "getAgentHilReview",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "block_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Block Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AgentHilReview"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/tests/runs": {
-      "post": {
-        "tags": [
-          "Workflows",
-          "Workflow Tests"
-        ],
-        "summary": "Execute Tests",
-        "operationId": "execute_tests_v1_workflows__workflow_id__tests_execute_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ExecuteWorkflowTestsRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExecuteWorkflowTestsResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -31713,7 +32029,7 @@
       "AddBuilderDocumentRequest": {
         "properties": {
           "mime_data": {
-            "$ref": "#/components/schemas/MIMEData"
+            "$ref": "#/components/schemas/MIMEData-Input"
           },
           "prediction_data": {
             "$ref": "#/components/schemas/PredictionData",
@@ -31737,7 +32053,7 @@
       "AddDatasetDocumentRequest": {
         "properties": {
           "mime_data": {
-            "$ref": "#/components/schemas/MIMEData"
+            "$ref": "#/components/schemas/MIMEData-Input"
           },
           "prediction_data": {
             "$ref": "#/components/schemas/PredictionData",
@@ -32706,7 +33022,7 @@
           "condition"
         ],
         "title": "AssertionSpec",
-        "description": "Workflow test assertion against one declared output handle.\n\n``target`` is the only supported shape: an output handle id and an\noptional relative path inside that handle's payload."
+        "description": "Block-test assertion against one declared output handle.\n\n``target`` is the only supported shape: an output handle id and an\noptional relative path inside that handle's payload."
       },
       "AssertionSpec-Output": {
         "properties": {
@@ -32837,7 +33153,7 @@
           "condition"
         ],
         "title": "AssertionSpec",
-        "description": "Workflow test assertion against one declared output handle.\n\n``target`` is the only supported shape: an output handle id and an\noptional relative path inside that handle's payload."
+        "description": "Block-test assertion against one declared output handle.\n\n``target`` is the only supported shape: an output handle id and an\noptional relative path inside that handle's payload."
       },
       "AttachmentMIMEData-Input": {
         "properties": {
@@ -32858,6 +33174,18 @@
             "examples": [
               "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
             ]
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type",
+            "description": "Explicit MIME type override when it cannot be inferred from the URL or filename"
           },
           "metadata": {
             "$ref": "#/components/schemas/AttachmentMetadata-Input",
@@ -32900,12 +33228,18 @@
             "default": {
               "is_inline": false
             }
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "readOnly": true
           }
         },
         "type": "object",
         "required": [
           "filename",
-          "url"
+          "url",
+          "mime_type"
         ],
         "title": "AttachmentMIMEData"
       },
@@ -33184,12 +33518,12 @@
           "width": {
             "type": "number",
             "title": "Width",
-            "description": "Width of the bounding box, relative to page width (0.0–1.0)."
+            "description": "Width of the bounding box, relative to page width (0.0\u20131.0)."
           },
           "height": {
             "type": "number",
             "title": "Height",
-            "description": "Height of the bounding box, relative to page height (0.0–1.0)."
+            "description": "Height of the bounding box, relative to page height (0.0\u20131.0)."
           },
           "page": {
             "type": "integer",
@@ -33912,37 +34246,46 @@
         "title": "BlockSimulationObject",
         "description": "Public simulation result for a single workflow block."
       },
-      "WorkflowTestListResponse": {
+      "BlockTestBatchExecutionCounts": {
         "properties": {
-          "tests": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowTest"
-            },
-            "type": "array",
-            "title": "Tests"
+          "queued": {
+            "type": "integer",
+            "title": "Queued",
+            "default": 0
+          },
+          "running": {
+            "type": "integer",
+            "title": "Running",
+            "default": 0
+          },
+          "passed": {
+            "type": "integer",
+            "title": "Passed",
+            "default": 0
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "default": 0
+          },
+          "blocked": {
+            "type": "integer",
+            "title": "Blocked",
+            "default": 0
+          },
+          "error": {
+            "type": "integer",
+            "title": "Error",
+            "default": 0
+          },
+          "cancelled": {
+            "type": "integer",
+            "title": "Cancelled",
+            "default": 0
           }
         },
         "type": "object",
-        "required": [
-          "tests"
-        ],
-        "title": "WorkflowTestListResponse"
-      },
-      "WorkflowTestRunListResponse": {
-        "properties": {
-          "runs": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowTestRunRecord"
-            },
-            "type": "array",
-            "title": "Runs"
-          }
-        },
-        "type": "object",
-        "required": [
-          "runs"
-        ],
-        "title": "WorkflowTestRunListResponse"
+        "title": "BlockTestBatchExecutionCounts"
       },
       "Body_convert_msg_to_email_model_v1_processors_automations_outlook_convert_msg_to_email_model_post": {
         "properties": {
@@ -35030,6 +35373,36 @@
         "type": "object",
         "title": "BuilderDocumentPreview"
       },
+      "CLIConfigResponse": {
+        "properties": {
+          "authkit_domain": {
+            "type": "string",
+            "title": "Authkit Domain",
+            "description": "WorkOS AuthKit hostname (e.g. 'auth.retab.com'). The CLI builds the authorize URL as 'https://{authkit_domain}/oauth2/authorize?...' and exchanges the authorization code at 'https://{authkit_domain}/oauth2/token'."
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "description": "Public OAuth client_id registered with WorkOS for the CLI."
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes",
+            "description": "OAuth scopes the CLI should request. `offline_access` is required to receive a refresh token; without it the user must re-login every ~10 minutes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "authkit_domain",
+          "client_id",
+          "scopes"
+        ],
+        "title": "CLIConfigResponse",
+        "description": "Public discovery payload consumed by `retab auth login`.\n\nThe CLI uses this to build an OAuth 2.0 Authorization Code flow with PKCE\nagainst WorkOS AuthKit. No secrets are returned \u2014 `client_id` is a public\nidentifier per RFC 6749 \u00a72.2 and `authkit_domain` is already discoverable\nfrom the dashboard."
+      },
       "CachePreloadRequest": {
         "properties": {
           "model": {
@@ -36054,7 +36427,15 @@
       "ClassificationRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to classify"
           },
           "categories": {
@@ -36062,6 +36443,7 @@
               "$ref": "#/components/schemas/Category"
             },
             "type": "array",
+            "minItems": 1,
             "title": "Categories",
             "description": "The categories to classify the document into"
           },
@@ -36932,7 +37314,7 @@
         "title": "CreateBlockRequest",
         "description": "Request to create a new block."
       },
-      "CreateWorkflowTestRequest": {
+      "CreateBlockTestRequest": {
         "properties": {
           "target": {
             "$ref": "#/components/schemas/WorkflowTestBlockTarget"
@@ -36977,7 +37359,7 @@
           "source",
           "assertion"
         ],
-        "title": "CreateWorkflowTestRequest"
+        "title": "CreateBlockTestRequest"
       },
       "CreateChatMessageRequest": {
         "properties": {
@@ -37203,7 +37585,15 @@
       "CreateExtractionRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to extract from"
           },
           "json_schema": {
@@ -37363,7 +37753,7 @@
               }
             ],
             "title": "Metadata",
-            "description": "Max 16 pairs; keys ≤64 chars, values ≤512 chars"
+            "description": "Max 16 pairs; keys \u226464 chars, values \u2264512 chars"
           }
         },
         "type": "object",
@@ -37390,7 +37780,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEData-Input"
               },
               {
                 "type": "null"
@@ -37450,7 +37840,15 @@
       "CreateSplitRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to split"
           },
           "subdocuments": {
@@ -37507,7 +37905,15 @@
       "CreateSplitTestRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to split"
           },
           "subdocuments": {
@@ -37599,7 +38005,7 @@
             "description": "Headers required by the signed upload URL"
           },
           "mimeData": {
-            "$ref": "#/components/schemas/MIMEData",
+            "$ref": "#/components/schemas/MIMEData-Output",
             "description": "Durable Retab MIMEData reference"
           },
           "expiresAt": {
@@ -37780,6 +38186,45 @@
         },
         "type": "object",
         "title": "CreateWorkflowTableRowsRequest"
+      },
+      "CreateWorkflowTestRunRequest": {
+        "properties": {
+          "test_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Id"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowTestBlockTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "n_consensus": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Consensus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CreateWorkflowTestRunRequest"
       },
       "Credits": {
         "properties": {
@@ -38677,7 +39122,7 @@
       "DeepResearchRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData"
+            "$ref": "#/components/schemas/MIMEData-Input"
           },
           "json_schema": {
             "additionalProperties": true,
@@ -38812,7 +39257,7 @@
       "DocumentUploadRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData"
+            "$ref": "#/components/schemas/MIMEData-Input"
           }
         },
         "type": "object",
@@ -38961,25 +39406,6 @@
         "type": "object",
         "title": "DuplicateProjectRequest"
       },
-      "DuplicateWorkflowRequest": {
-        "properties": {
-          "org_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Org Id",
-            "description": "Optional destination organization ID override"
-          }
-        },
-        "type": "object",
-        "title": "DuplicateWorkflowRequest",
-        "description": "Optional request body for duplicate workflow."
-      },
       "Edit": {
         "properties": {
           "id": {
@@ -39085,7 +39511,7 @@
             "description": "Filled form fields (positions, descriptions, and filled values)."
           },
           "filled_document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "$ref": "#/components/schemas/MIMEData-Output",
             "description": "PDF with the filled form values rendered in."
           }
         },
@@ -39157,7 +39583,7 @@
             "description": "Name of the template."
           },
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "$ref": "#/components/schemas/MIMEData-Input",
             "description": "The PDF document to use as the empty template."
           },
           "form_fields": {
@@ -40071,155 +40497,6 @@
         ],
         "title": "Event"
       },
-      "ExecuteWorkflowTestsRequest": {
-        "properties": {
-          "test_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Test Id"
-          },
-          "target": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WorkflowTestBlockTarget"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "n_consensus": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "N Consensus"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "ExecuteWorkflowTestsRequest"
-      },
-      "ExecuteWorkflowTestsResponse": {
-        "properties": {
-          "run_id": {
-            "type": "string",
-            "title": "Run Id"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "queued",
-              "running",
-              "completed",
-              "failed"
-            ],
-            "title": "Status",
-            "default": "queued"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "target": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WorkflowTestBlockTarget"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "test_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Test Id"
-          },
-          "total_tests": {
-            "type": "integer",
-            "title": "Total Tests"
-          },
-          "counts": {
-            "$ref": "#/components/schemas/WorkflowTestBatchExecutionCounts"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "started_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Started At"
-          },
-          "completed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Completed At"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          }
-        },
-        "type": "object",
-        "required": [
-          "run_id",
-          "workflow_id",
-          "total_tests",
-          "created_at"
-        ],
-        "title": "ExecuteWorkflowTestsResponse"
-      },
       "ExistsCondition": {
         "properties": {
           "kind": {
@@ -40499,42 +40776,6 @@
         "title": "ExperimentConfusionSummaryAggregate",
         "description": "Split/classifier diagnostics attached to the summary response."
       },
-      "ExperimentContent": {
-        "properties": {
-          "jobs": {
-            "items": {
-              "$ref": "#/components/schemas/ExperimentJobResponse"
-            },
-            "type": "array",
-            "title": "Jobs"
-          }
-        },
-        "type": "object",
-        "title": "ExperimentContent"
-      },
-      "ExperimentContentResponse": {
-        "properties": {
-          "experiment_id": {
-            "type": "string",
-            "title": "Experiment Id"
-          },
-          "run_id": {
-            "type": "string",
-            "title": "Run Id"
-          },
-          "content": {
-            "$ref": "#/components/schemas/ExperimentContent"
-          }
-        },
-        "type": "object",
-        "required": [
-          "experiment_id",
-          "run_id",
-          "content"
-        ],
-        "title": "ExperimentContentResponse",
-        "description": "Execution content for one experiment run."
-      },
       "ExperimentDocumentCaptureRequest": {
         "properties": {
           "workflow_run_id": {
@@ -40624,156 +40865,6 @@
         "type": "object",
         "title": "ExperimentExtractSummaryAggregate",
         "description": "Extract-only diagnostics attached to the summary response."
-      },
-      "ExperimentJobResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "run_id": {
-            "type": "string",
-            "title": "Run Id"
-          },
-          "experiment_id": {
-            "type": "string",
-            "title": "Experiment Id"
-          },
-          "document_id": {
-            "type": "string",
-            "title": "Document Id"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "completed",
-              "error"
-            ],
-            "title": "Status"
-          },
-          "block_kind": {
-            "type": "string",
-            "enum": [
-              "extract",
-              "classifier",
-              "split",
-              "for_each"
-            ],
-            "title": "Block Kind"
-          },
-          "handle_inputs": {
-            "additionalProperties": {
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/JsonHandleInput"
-                },
-                {
-                  "$ref": "#/components/schemas/FileHandleInput"
-                }
-              ],
-              "discriminator": {
-                "propertyName": "type",
-                "mapping": {
-                  "file": "#/components/schemas/FileHandleInput",
-                  "json": "#/components/schemas/JsonHandleInput"
-                }
-              }
-            },
-            "type": "object",
-            "title": "Handle Inputs"
-          },
-          "artifact": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/StepArtifactRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
-          },
-          "started_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Started At"
-          },
-          "completed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Completed At"
-          },
-          "attempt": {
-            "type": "integer",
-            "title": "Attempt",
-            "default": 0
-          },
-          "is_placeholder": {
-            "type": "boolean",
-            "title": "Is Placeholder",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "run_id",
-          "experiment_id",
-          "document_id",
-          "status",
-          "block_kind"
-        ],
-        "title": "ExperimentJobResponse",
-        "description": "Execution content for one document job inside an experiment run."
       },
       "ExperimentMetricDocumentRef": {
         "properties": {
@@ -40993,6 +41084,215 @@
         ],
         "title": "ExperimentResponse"
       },
+      "ExperimentResultLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "error"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ExperimentResultLifecycle"
+      },
+      "ExperimentResultPublic": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "experiment_id": {
+            "type": "string",
+            "title": "Experiment Id"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "lifecycle": {
+            "$ref": "#/components/schemas/ExperimentResultLifecycle"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/ExperimentResultTiming"
+          },
+          "block_kind": {
+            "type": "string",
+            "enum": [
+              "extract",
+              "classifier",
+              "split",
+              "for_each"
+            ],
+            "title": "Block Kind"
+          },
+          "handle_inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Handle Inputs"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt",
+            "default": 0
+          },
+          "is_placeholder": {
+            "type": "boolean",
+            "title": "Is Placeholder",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "run_id",
+          "experiment_id",
+          "document_id",
+          "lifecycle",
+          "timing",
+          "block_kind"
+        ],
+        "title": "ExperimentResultPublic",
+        "description": "Run-scoped per-document experiment result.\n\nThe storage row is still named ``experiment_jobs`` internally, but the\npublic contract is a result row addressed by ``run_id`` + ``document_id``."
+      },
+      "ExperimentResultTiming": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          }
+        },
+        "type": "object",
+        "title": "ExperimentResultTiming"
+      },
+      "ExperimentRunCancelResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "lifecycle": {
+            "$ref": "#/components/schemas/ExperimentRunLifecycle"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "lifecycle"
+        ],
+        "title": "ExperimentRunCancelResponse"
+      },
+      "ExperimentRunLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "error",
+              "cancelled"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ExperimentRunLifecycle"
+      },
       "ExperimentRunPlanResponse": {
         "properties": {
           "mode": {
@@ -41015,11 +41315,50 @@
         ],
         "title": "ExperimentRunPlanResponse"
       },
-      "ExperimentRunSummary": {
+      "ExperimentRunPublic": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
+          },
+          "workflow": {
+            "$ref": "#/components/schemas/WorkflowSnapshotRef"
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/ExperimentRunTrigger"
+          },
+          "experiment_id": {
+            "type": "string",
+            "title": "Experiment Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "block_kind": {
+            "type": "string",
+            "enum": [
+              "extract",
+              "classifier",
+              "split",
+              "for_each"
+            ],
+            "title": "Block Kind"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "enum": [
+              3,
+              5,
+              7
+            ],
+            "title": "N Consensus"
+          },
+          "lifecycle": {
+            "$ref": "#/components/schemas/ExperimentRunLifecycle"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/ExperimentRunTiming"
           },
           "parent_run_id": {
             "anyOf": [
@@ -41032,18 +41371,6 @@
             ],
             "title": "Parent Run Id"
           },
-          "block_config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Block Config"
-          },
           "definition_fingerprint": {
             "type": "string",
             "title": "Definition Fingerprint"
@@ -41051,27 +41378,6 @@
           "documents_fingerprint": {
             "type": "string",
             "title": "Documents Fingerprint"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "completed",
-              "error",
-              "cancelled"
-            ],
-            "title": "Status"
-          },
-          "block_kind": {
-            "type": "string",
-            "enum": [
-              "extract",
-              "classifier",
-              "split",
-              "for_each"
-            ],
-            "title": "Block Kind"
           },
           "score": {
             "anyOf": [
@@ -41103,20 +41409,43 @@
             "type": "integer",
             "title": "Error Count",
             "default": 0
-          },
-          "n_consensus": {
-            "type": "integer",
-            "enum": [
-              3,
-              5,
-              7
-            ],
-            "title": "N Consensus"
-          },
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflow",
+          "trigger",
+          "experiment_id",
+          "block_id",
+          "block_kind",
+          "n_consensus",
+          "lifecycle",
+          "timing",
+          "definition_fingerprint",
+          "documents_fingerprint"
+        ],
+        "title": "ExperimentRunPublic",
+        "description": "Run-id-first public experiment run shape.\n\nThe canonical identity is ``id``. Internal queue handles and duplicate\nidentity aliases are intentionally absent."
+      },
+      "ExperimentRunTiming": {
+        "properties": {
           "created_at": {
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
           },
           "completed_at": {
             "anyOf": [
@@ -41144,16 +41473,26 @@
         },
         "type": "object",
         "required": [
-          "id",
-          "definition_fingerprint",
-          "documents_fingerprint",
-          "status",
-          "block_kind",
-          "n_consensus",
           "created_at"
         ],
-        "title": "ExperimentRunSummary",
-        "description": "Summary of an experiment run returned by ``GET /experiments/{id}/runs``."
+        "title": "ExperimentRunTiming"
+      },
+      "ExperimentRunTrigger": {
+        "properties": {
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "title": "ExperimentRunTrigger"
       },
       "ExperimentSummaryMetricDocument": {
         "properties": {
@@ -41924,6 +42263,17 @@
             "type": "string",
             "title": "Filename",
             "description": "The name of the file"
+          },
+          "mime_data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Output"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Durable Retab MIMEData reference for API reuse"
           }
         },
         "type": "object",
@@ -42180,7 +42530,7 @@
             },
             "type": "object",
             "title": "Handle Outputs",
-            "description": "Handle output payloads — function blocks produce 'output-json-0'"
+            "description": "Handle output payloads \u2014 function blocks produce 'output-json-0'"
           },
           "sandbox": {
             "$ref": "#/components/schemas/FunctionTestSandboxResult",
@@ -42290,7 +42640,7 @@
         "properties": {
           "documents": {
             "items": {
-              "$ref": "#/components/schemas/MIMEData"
+              "$ref": "#/components/schemas/MIMEData-Input"
             },
             "type": "array",
             "title": "Documents"
@@ -42728,7 +43078,7 @@
       "InferFormSchemaRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "$ref": "#/components/schemas/MIMEData-Input",
             "description": "Input document (PDF, DOCX, XLSX or PPTX)."
           },
           "model": {
@@ -42752,7 +43102,7 @@
             "description": "Form schema with detected bounding boxes and field names"
           },
           "annotated_pdf": {
-            "$ref": "#/components/schemas/MIMEData",
+            "$ref": "#/components/schemas/MIMEData-Output",
             "description": "PDF with form field bounding boxes"
           },
           "field_count": {
@@ -43269,7 +43619,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-05-13T14:03:04.750762Z",
+              "updated_at": "2026-05-18T17:12:07.271680Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -44149,7 +44499,7 @@
         ],
         "title": "LatencyStats"
       },
-      "LatestWorkflowTestRunSummary": {
+      "LatestBlockTestRunSummary": {
         "properties": {
           "run_record_id": {
             "type": "string",
@@ -44228,7 +44578,7 @@
           "status",
           "started_at"
         ],
-        "title": "LatestWorkflowTestRunSummary"
+        "title": "LatestBlockTestRunSummary"
       },
       "LayoutBlockInput": {
         "properties": {
@@ -44756,7 +45106,7 @@
         ],
         "title": "MCPRequest"
       },
-      "MIMEData": {
+      "MIMEData-Input": {
         "properties": {
           "filename": {
             "type": "string",
@@ -44775,12 +45125,58 @@
             "examples": [
               "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
             ]
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type",
+            "description": "Explicit MIME type override when it cannot be inferred from the URL or filename"
           }
         },
         "type": "object",
         "required": [
           "filename",
           "url"
+        ],
+        "title": "MIMEData"
+      },
+      "MIMEData-Output": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "The filename of the file",
+            "examples": [
+              "file.pdf",
+              "image.png",
+              "data.txt"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "The URL of the file in base64 format",
+            "examples": [
+              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
+            ]
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "url",
+          "mime_type"
         ],
         "title": "MIMEData"
       },
@@ -45028,10 +45424,10 @@
         ],
         "title": "MatchesRegexCondition"
       },
-      "MaterializeWorkflowTestFileInputRequest": {
+      "MaterializeBlockTestFileInputRequest": {
         "properties": {
           "mimeData": {
-            "$ref": "#/components/schemas/MIMEData"
+            "$ref": "#/components/schemas/MIMEData-Input"
           }
         },
         "additionalProperties": false,
@@ -45039,12 +45435,12 @@
         "required": [
           "mimeData"
         ],
-        "title": "MaterializeWorkflowTestFileInputRequest"
+        "title": "MaterializeBlockTestFileInputRequest"
       },
       "MaterializeExperimentFileInputRequest": {
         "properties": {
           "mimeData": {
-            "$ref": "#/components/schemas/MIMEData"
+            "$ref": "#/components/schemas/MIMEData-Input"
           }
         },
         "additionalProperties": false,
@@ -45998,7 +46394,7 @@
           "output_handle_id"
         ],
         "title": "OutputTarget",
-        "description": "Structured workflow test assertion target."
+        "description": "Structured block-test assertion target."
       },
       "OverviewUsageSeriesPoint": {
         "properties": {
@@ -46071,6 +46467,267 @@
           "list_metadata"
         ],
         "title": "PaginatedList"
+      },
+      "PaginatedList_BlockConfigVersion_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/BlockConfigVersion"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[BlockConfigVersion]"
+      },
+      "PaginatedList_BlockSimulationObject_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/BlockSimulationObject"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[BlockSimulationObject]"
+      },
+      "PaginatedList_ExperimentResponse_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentResponse"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[ExperimentResponse]"
+      },
+      "PaginatedList_ExperimentResultPublic_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentResultPublic"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[ExperimentResultPublic]"
+      },
+      "PaginatedList_ExperimentRunPublic_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentRunPublic"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[ExperimentRunPublic]"
+      },
+      "PaginatedList_StepStatusObject_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/StepStatusObject"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[StepStatusObject]"
+      },
+      "PaginatedList_WorkflowBlockObject_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowBlockObject"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[WorkflowBlockObject]"
+      },
+      "PaginatedList_WorkflowEdgeObject_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowEdgeObject"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[WorkflowEdgeObject]"
+      },
+      "PaginatedList_WorkflowSnapshot_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowSnapshot"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[WorkflowSnapshot]"
+      },
+      "PaginatedList_WorkflowTestRunRecord_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowTestRunRecord"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[WorkflowTestRunRecord]"
+      },
+      "PaginatedList_WorkflowTestRunStatus_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowTestRunStatus"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[WorkflowTestRunStatus]"
+      },
+      "PaginatedList_WorkflowTest_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowTest"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[WorkflowTest]"
+      },
+      "PaginatedList_dict_str__Any__": {
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[dict[str, Any]]"
       },
       "ParseOutput": {
         "properties": {
@@ -46498,7 +47155,15 @@
       "PartitionRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to partition"
           },
           "key": {
@@ -46529,6 +47194,12 @@
             "type": "boolean",
             "title": "Bust Cache",
             "description": "If true, skip the LLM cache and force a fresh completion",
+            "default": false
+          },
+          "no_fallback_on_5xx": {
+            "type": "boolean",
+            "title": "No Fallback On 5Xx",
+            "description": "If true, skip LLM fallback when the selected provider returns a 5xx-style error",
             "default": false
           }
         },
@@ -47097,7 +47768,7 @@
           "resource": {
             "type": "string",
             "title": "Resource",
-            "description": "The resource being stress-tested — splits, extractions, classifications, parses, edits, partitions."
+            "description": "The resource being stress-tested \u2014 splits, extractions, classifications, parses, edits, partitions."
           },
           "document_id": {
             "type": "string",
@@ -47107,7 +47778,7 @@
           "page_count": {
             "type": "integer",
             "title": "Page Count",
-            "description": "Page count reported by the orchestrator dry-run payload — 0 when the dry-run payload doesn't carry one. Non-zero confirms preprocessing ran."
+            "description": "Page count reported by the orchestrator dry-run payload \u2014 0 when the dry-run payload doesn't carry one. Non-zero confirms preprocessing ran."
           },
           "dry_run_payload_size_bytes": {
             "type": "integer",
@@ -47165,7 +47836,7 @@
           "upload_ms": {
             "type": "number",
             "title": "Upload Ms",
-            "description": "Time spent in `normalize_document_to_stored_ref` — resolve + persist to GCS."
+            "description": "Time spent in `normalize_document_to_stored_ref` \u2014 resolve + persist to GCS."
           },
           "orchestrator_dry_run_ms": {
             "type": "number",
@@ -47175,12 +47846,57 @@
           "simulated_llm_ms": {
             "type": "number",
             "title": "Simulated Llm Ms",
-            "description": "Time spent in the fake LLM step — asyncio.sleep when mode=sleep, or the slowest of N parallel POSTs to llm_server's dummy_structured endpoint when mode=llm_server_dummy."
+            "description": "Time spent in the fake LLM step \u2014 asyncio.sleep when mode=sleep, or the slowest of N parallel POSTs to llm_server's dummy_structured endpoint when mode=llm_server_dummy."
           },
           "total_ms": {
             "type": "number",
             "title": "Total Ms",
             "description": "Wall-clock time for the entire stress-test run."
+          },
+          "request_timings_ms": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Timings Ms",
+            "description": "Fine-grained request-local timings recorded from middleware/dependencies through the stress route body."
+          },
+          "upload_timings_ms": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Timings Ms",
+            "description": "Fine-grained request-local timings recorded by file normalization, Mongo, Valkey, and GCS upload paths."
+          },
+          "preprocessing_timings_ms": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preprocessing Timings Ms",
+            "description": "Nested timings emitted by preprocessing create_openai_entry when available."
           }
         },
         "type": "object",
@@ -47430,42 +48146,6 @@
         },
         "type": "object",
         "title": "PredictionMetadata"
-      },
-      "PreviousRunSummary": {
-        "properties": {
-          "run_id": {
-            "type": "string",
-            "title": "Run Id"
-          },
-          "definition_fingerprint": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Definition Fingerprint"
-          },
-          "score": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Score"
-          }
-        },
-        "type": "object",
-        "required": [
-          "run_id"
-        ],
-        "title": "PreviousRunSummary",
-        "description": "Summary of the previous completed run."
       },
       "ProcessBuilderDocumentRequest": {
         "properties": {
@@ -49227,7 +49907,7 @@
       "ReadPagesRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData"
+            "$ref": "#/components/schemas/MIMEData-Input"
           },
           "page_indices": {
             "items": {
@@ -49647,7 +50327,7 @@
               }
             ],
             "title": "Likelihoods",
-            "description": "Uncertainty information for extracted fields when using consensus. Follows the same structure as the extraction object."
+            "description": "Object defining the uncertainties of the fields extracted when using consensus. Follows the same structure as the extraction object."
           },
           "request_at": {
             "anyOf": [
@@ -49673,7 +50353,7 @@
               }
             ],
             "title": "First Token At",
-            "description": "Timestamp when streaming first produced output"
+            "description": "Timestamp of the first token of the document. If non-streaming, set to last_token_at"
           },
           "last_token_at": {
             "anyOf": [
@@ -49686,7 +50366,7 @@
               }
             ],
             "title": "Last Token At",
-            "description": "Timestamp when extraction output completed"
+            "description": "Timestamp of the last token of the document"
           }
         },
         "type": "object",
@@ -49791,7 +50471,7 @@
               }
             ],
             "title": "Likelihoods",
-            "description": "Uncertainty information for extracted fields when using consensus. Follows the same structure as the extraction object."
+            "description": "Object defining the uncertainties of the fields extracted when using consensus. Follows the same structure as the extraction object."
           },
           "request_at": {
             "anyOf": [
@@ -49817,7 +50497,7 @@
               }
             ],
             "title": "First Token At",
-            "description": "Timestamp when streaming first produced output"
+            "description": "Timestamp of the first token of the document. If non-streaming, set to last_token_at"
           },
           "last_token_at": {
             "anyOf": [
@@ -49830,7 +50510,7 @@
               }
             ],
             "title": "Last Token At",
-            "description": "Timestamp when extraction output completed"
+            "description": "Timestamp of the last token of the document"
           },
           "data": {
             "title": "Data",
@@ -49945,119 +50625,11 @@
         "title": "RetabUsage",
         "description": "Usage information for document processing."
       },
-      "RunBatchRequest": {
-        "properties": {
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "block_id"
-        ],
-        "title": "RunBatchRequest"
-      },
-      "RunBatchResponse": {
-        "properties": {
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          },
-          "experiment_count": {
-            "type": "integer",
-            "title": "Experiment Count"
-          },
-          "runs": {
-            "items": {
-              "$ref": "#/components/schemas/RunExperimentResponse"
-            },
-            "type": "array",
-            "title": "Runs"
-          }
-        },
-        "type": "object",
-        "required": [
-          "block_id",
-          "experiment_count",
-          "runs"
-        ],
-        "title": "RunBatchResponse"
-      },
       "RunExperimentRequest": {
         "properties": {},
         "additionalProperties": false,
         "type": "object",
         "title": "RunExperimentRequest"
-      },
-      "RunExperimentResponse": {
-        "properties": {
-          "experiment_id": {
-            "type": "string",
-            "title": "Experiment Id"
-          },
-          "run_id": {
-            "type": "string",
-            "title": "Run Id"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "definition_fingerprint": {
-            "type": "string",
-            "title": "Definition Fingerprint"
-          },
-          "total_document_count": {
-            "type": "integer",
-            "title": "Total Document Count",
-            "default": 0
-          },
-          "completed_document_count": {
-            "type": "integer",
-            "title": "Completed Document Count",
-            "default": 0
-          },
-          "document_count": {
-            "type": "integer",
-            "title": "Document Count"
-          },
-          "n_consensus": {
-            "type": "integer",
-            "enum": [
-              3,
-              5,
-              7
-            ],
-            "title": "N Consensus"
-          },
-          "previous_run": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PreviousRunSummary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "noop": {
-            "type": "boolean",
-            "title": "Noop",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "experiment_id",
-          "run_id",
-          "status",
-          "definition_fingerprint",
-          "document_count",
-          "n_consensus"
-        ],
-        "title": "RunExperimentResponse"
       },
       "RunInputs": {
         "properties": {
@@ -50079,22 +50651,6 @@
         "type": "object",
         "title": "RunInputs",
         "description": "Input payloads supplied at run creation time."
-      },
-      "RunListResponse": {
-        "properties": {
-          "runs": {
-            "items": {
-              "$ref": "#/components/schemas/ExperimentRunSummary"
-            },
-            "type": "array",
-            "title": "Runs"
-          }
-        },
-        "type": "object",
-        "required": [
-          "runs"
-        ],
-        "title": "RunListResponse"
       },
       "RunStepWorkflowTestSource": {
         "properties": {
@@ -50190,7 +50746,14 @@
         "properties": {
           "documents": {
             "additionalProperties": {
-              "$ref": "#/components/schemas/MIMEDataInput"
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FileRef"
+                },
+                {
+                  "$ref": "#/components/schemas/MIMEDataInput"
+                }
+              ]
             },
             "type": "object",
             "title": "Documents",
@@ -50871,6 +51434,17 @@
               }
             ],
             "title": "Updated At"
+          },
+          "normalized_pdf_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StoredDocumentRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stored normalized PDF source used by the orchestrator split pipeline."
           }
         },
         "type": "object",
@@ -51018,7 +51592,7 @@
           "id"
         ],
         "title": "StepArtifactRef",
-        "description": "Canonical persisted resource produced by a workflow step.\n\nUniformly a `(operation, id)` ref into a backing collection. The artifact\nitself carries no payload — consumers dispatch on ``operation`` and fetch\nthe backing record by ``id``."
+        "description": "Canonical persisted resource produced by a workflow step.\n\nUniformly a `(operation, id)` ref into a backing collection. The artifact\nitself carries no payload \u2014 consumers dispatch on ``operation`` and fetch\nthe backing record by ``id``."
       },
       "StepBatchResponse": {
         "properties": {
@@ -51346,6 +51920,45 @@
         "title": "StepStatusObject",
         "description": "Public step lifecycle object."
       },
+      "StoredDocumentRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "ID of the file"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename of the file"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the file"
+          },
+          "gcs_path_override": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gcs Path Override",
+            "description": "Explicit GCS blob path when the file is not stored at the canonical {tenant scope}/file/{id}.{extension} location."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "filename",
+          "mime_type"
+        ],
+        "title": "StoredDocumentRef",
+        "description": "Internal service transport for stored files that may live at a non-canonical GCS path."
+      },
       "StoredFileRecord": {
         "properties": {
           "id": {
@@ -51602,7 +52215,15 @@
       "StressTestClassificationRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to classify"
           },
           "categories": {
@@ -51610,6 +52231,7 @@
               "$ref": "#/components/schemas/Category"
             },
             "type": "array",
+            "minItems": 1,
             "title": "Categories",
             "description": "The categories to classify the document into"
           },
@@ -51662,7 +52284,7 @@
             "maximum": 60000.0,
             "minimum": 0.0,
             "title": "Simulated Llm Latency Ms",
-            "default": 1000
+            "default": 0
           },
           "n_simulated_llm_calls": {
             "type": "integer",
@@ -51689,7 +52311,7 @@
           "categories"
         ],
         "title": "StressTestClassificationRequest",
-        "description": "Load-test request — runs the full classify pipeline but replaces the LLM call with a fake sleep."
+        "description": "Load-test request \u2014 runs the full classify pipeline but replaces the LLM call with a fake sleep."
       },
       "StressTestEditRequest": {
         "properties": {
@@ -51701,12 +52323,16 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
               },
               {
                 "type": "null"
               }
             ],
+            "title": "Document",
             "description": "Input document (PDF, DOCX, XLSX, or PPTX). Mutually exclusive with template_id."
           },
           "template_id": {
@@ -51742,7 +52368,7 @@
             "maximum": 60000.0,
             "minimum": 0.0,
             "title": "Simulated Llm Latency Ms",
-            "default": 1000
+            "default": 0
           },
           "n_simulated_llm_calls": {
             "type": "integer",
@@ -51768,12 +52394,20 @@
           "instructions"
         ],
         "title": "StressTestEditRequest",
-        "description": "Load-test request — runs the full edit pipeline but replaces the LLM call with a fake sleep.\n\nRequires `document` (not `template_id`) since the template path doesn't\nexercise the form-bounding-box preprocessing that we want to load-test."
+        "description": "Load-test request \u2014 runs the full edit pipeline but replaces the LLM call with a fake sleep.\n\nRequires `document` (not `template_id`) since the template path doesn't\nexercise the form-bounding-box preprocessing that we want to load-test."
       },
       "StressTestExtractionRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to extract from"
           },
           "json_schema": {
@@ -51851,7 +52485,7 @@
             "maximum": 60000.0,
             "minimum": 0.0,
             "title": "Simulated Llm Latency Ms",
-            "default": 1000
+            "default": 0
           },
           "n_simulated_llm_calls": {
             "type": "integer",
@@ -51878,12 +52512,20 @@
           "json_schema"
         ],
         "title": "StressTestExtractionRequest",
-        "description": "Load-test request — runs the full extract pipeline but replaces the LLM call with a fake sleep."
+        "description": "Load-test request \u2014 runs the full extract pipeline but replaces the LLM call with a fake sleep."
       },
       "StressTestParseRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to parse"
           },
           "model": {
@@ -51935,7 +52577,7 @@
             "maximum": 60000.0,
             "minimum": 0.0,
             "title": "Simulated Llm Latency Ms",
-            "default": 1000
+            "default": 0
           },
           "n_simulated_llm_calls": {
             "type": "integer",
@@ -51961,12 +52603,20 @@
           "document"
         ],
         "title": "StressTestParseRequest",
-        "description": "Load-test request — runs the full parse pipeline but replaces the LLM call with a fake sleep."
+        "description": "Load-test request \u2014 runs the full parse pipeline but replaces the LLM call with a fake sleep."
       },
       "StressTestPartitionRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to partition"
           },
           "key": {
@@ -51999,12 +52649,18 @@
             "description": "If true, skip the LLM cache and force a fresh completion",
             "default": false
           },
+          "no_fallback_on_5xx": {
+            "type": "boolean",
+            "title": "No Fallback On 5Xx",
+            "description": "If true, skip LLM fallback when the selected provider returns a 5xx-style error",
+            "default": false
+          },
           "simulated_llm_latency_ms": {
             "type": "integer",
             "maximum": 60000.0,
             "minimum": 0.0,
             "title": "Simulated Llm Latency Ms",
-            "default": 1000
+            "default": 0
           },
           "n_simulated_llm_calls": {
             "type": "integer",
@@ -52032,12 +52688,20 @@
           "instructions"
         ],
         "title": "StressTestPartitionRequest",
-        "description": "Load-test request — runs the full partition pipeline but replaces the LLM call with a fake sleep."
+        "description": "Load-test request \u2014 runs the full partition pipeline but replaces the LLM call with a fake sleep."
       },
       "StressTestSplitRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to split"
           },
           "subdocuments": {
@@ -52087,7 +52751,7 @@
             "minimum": 0.0,
             "title": "Simulated Llm Latency Ms",
             "description": "Per-call sleep (ms) standing in for the real structured-LLM call. 0 disables the fake call.",
-            "default": 1000
+            "default": 0
           },
           "n_simulated_llm_calls": {
             "type": "integer",
@@ -52116,7 +52780,7 @@
           "subdocuments"
         ],
         "title": "StressTestSplitRequest",
-        "description": "Load-test request — runs the full pipeline but replaces the LLM call with a fake sleep.\n\nInherits every field of CreateSplitRequest (extra='forbid') and adds two\nknobs to tune how much LLM latency to simulate. Stress-test runs are NOT\npersisted to the splits collection."
+        "description": "Load-test request \u2014 runs the full pipeline but replaces the LLM call with a fake sleep.\n\nInherits every field of CreateSplitRequest (extra='forbid') and adds two\nknobs to tune how much LLM latency to simulate. Stress-test runs are NOT\npersisted to the splits collection."
       },
       "SubmitHILDecisionRequest": {
         "properties": {
@@ -52462,7 +53126,7 @@
         ],
         "title": "TopLogprob"
       },
-      "UpdateWorkflowTestRequest": {
+      "UpdateBlockTestRequest": {
         "properties": {
           "name": {
             "anyOf": [
@@ -52513,7 +53177,7 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "title": "UpdateWorkflowTestRequest"
+        "title": "UpdateBlockTestRequest"
       },
       "UpdateChatRequest": {
         "properties": {
@@ -53221,7 +53885,7 @@
           "sample_document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEData-Input"
               },
               {
                 "type": "null"
@@ -53369,7 +54033,7 @@
       "UploadFileForChatRequest": {
         "properties": {
           "mimeData": {
-            "$ref": "#/components/schemas/MIMEData"
+            "$ref": "#/components/schemas/MIMEData-Input"
           }
         },
         "type": "object",
@@ -53404,7 +54068,7 @@
       "UploadFileForWorkflowChatRequest": {
         "properties": {
           "mimeData": {
-            "$ref": "#/components/schemas/MIMEData",
+            "$ref": "#/components/schemas/MIMEData-Input",
             "description": "File data to upload"
           }
         },
@@ -55083,42 +55747,6 @@
         "type": "object",
         "title": "WorkflowEmailTrigger"
       },
-      "WorkflowEmailTriggerPatchRequest": {
-        "properties": {
-          "allowed_senders": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Allowed Senders",
-            "description": "Allowed sender email addresses for workflow email triggers"
-          },
-          "allowed_domains": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Allowed Domains",
-            "description": "Allowed sender email domains for workflow email triggers"
-          }
-        },
-        "type": "object",
-        "title": "WorkflowEmailTriggerPatchRequest"
-      },
       "WorkflowEnvVar": {
         "properties": {
           "name": {
@@ -55234,9 +55862,11 @@
                 "type": "string",
                 "enum": [
                   "pending",
+                  "queued",
                   "running",
                   "completed",
                   "error",
+                  "failed",
                   "waiting_for_human",
                   "cancelled"
                 ]
@@ -55254,9 +55884,11 @@
                 "type": "string",
                 "enum": [
                   "pending",
+                  "queued",
                   "running",
                   "completed",
                   "error",
+                  "failed",
                   "waiting_for_human",
                   "cancelled"
                 ]
@@ -55418,9 +56050,11 @@
                 "type": "string",
                 "enum": [
                   "pending",
+                  "queued",
                   "running",
                   "completed",
                   "error",
+                  "failed",
                   "waiting_for_human",
                   "cancelled"
                 ]
@@ -55438,9 +56072,11 @@
                 "type": "string",
                 "enum": [
                   "pending",
+                  "queued",
                   "running",
                   "completed",
                   "error",
+                  "failed",
                   "waiting_for_human",
                   "cancelled"
                 ]
@@ -55617,9 +56253,11 @@
                 "type": "string",
                 "enum": [
                   "pending",
+                  "queued",
                   "running",
                   "completed",
                   "error",
+                  "failed",
                   "waiting_for_human",
                   "cancelled"
                 ]
@@ -55637,9 +56275,11 @@
                 "type": "string",
                 "enum": [
                   "pending",
+                  "queued",
                   "running",
                   "completed",
                   "error",
+                  "failed",
                   "waiting_for_human",
                   "cancelled"
                 ]
@@ -56384,6 +57024,83 @@
         "title": "WorkflowSnapshotRef",
         "description": "Reference to the workflow + immutable version that drove the run.\n\nThe class name is retained temporarily for compatibility with surrounding\nrun-model code, but public API output uses ``version_id`` rather than\nsnapshot identity."
       },
+      "WorkflowStressTestRunRequest": {
+        "properties": {
+          "documents": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FileRef"
+                },
+                {
+                  "$ref": "#/components/schemas/MIMEDataInput"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Documents",
+            "description": "Mapping of start block IDs to their input documents"
+          },
+          "json_inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Inputs",
+            "description": "Mapping of start_json block IDs to their input JSON data"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Workflow version to run: 'production', 'draft', or a pinned version id like 'ver_...'",
+            "default": "production",
+            "examples": [
+              "production",
+              "draft",
+              "ver_abc123def456"
+            ]
+          },
+          "simulated_llm_latency_ms": {
+            "type": "integer",
+            "maximum": 60000.0,
+            "minimum": 0.0,
+            "title": "Simulated Llm Latency Ms",
+            "default": 0
+          },
+          "n_simulated_llm_calls": {
+            "type": "integer",
+            "maximum": 32.0,
+            "minimum": 0.0,
+            "title": "N Simulated Llm Calls",
+            "default": 1
+          },
+          "simulated_llm_mode": {
+            "type": "string",
+            "enum": [
+              "sleep",
+              "llm_server_dummy",
+              "orchestrator_dummy_llm"
+            ],
+            "title": "Simulated Llm Mode",
+            "default": "sleep"
+          },
+          "routing_strategy": {
+            "type": "string",
+            "enum": [
+              "first",
+              "all"
+            ],
+            "title": "Routing Strategy",
+            "default": "first"
+          },
+          "record_processing_logs": {
+            "type": "boolean",
+            "title": "Record Processing Logs",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "WorkflowStressTestRunRequest",
+        "description": "Request to run a workflow through the non-billable stress path."
+      },
       "WorkflowTable": {
         "properties": {
           "id": {
@@ -56610,12 +57327,27 @@
             "title": "Has More",
             "default": false
           },
-          "list_metadata": {
-            "$ref": "#/components/schemas/ListMetadata",
-            "default": {
-              "before": null,
-              "after": null
-            }
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "previous_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Cursor"
           }
         },
         "type": "object",
@@ -56738,7 +57470,7 @@
           "latest_run_summary": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/LatestWorkflowTestRunSummary"
+                "$ref": "#/components/schemas/LatestBlockTestRunSummary"
               },
               {
                 "type": "null"
@@ -56748,7 +57480,7 @@
           "latest_passing_run_summary": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/LatestWorkflowTestRunSummary"
+                "$ref": "#/components/schemas/LatestBlockTestRunSummary"
               },
               {
                 "type": "null"
@@ -56758,7 +57490,7 @@
           "latest_failing_run_summary": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/LatestWorkflowTestRunSummary"
+                "$ref": "#/components/schemas/LatestBlockTestRunSummary"
               },
               {
                 "type": "null"
@@ -56806,7 +57538,38 @@
           "block_id"
         ],
         "title": "WorkflowTestBlockTarget",
-        "description": "Public workflow test target.\n\nThe storage layer remains block-scoped today, but the API shape names the\ntested entity explicitly so workflow-level targets can be added later."
+        "description": "Public workflow-test target.\n\nThe storage layer remains block-scoped today, but the API shape names the\ntested entity explicitly so workflow-level targets can be added later."
+      },
+      "WorkflowTestRunLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "error",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "WorkflowTestRunLifecycle"
       },
       "WorkflowTestRunRecord": {
         "properties": {
@@ -56814,22 +57577,52 @@
             "type": "string",
             "title": "Id"
           },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
           "test_id": {
             "type": "string",
             "title": "Test Id"
           },
-          "status": {
-            "type": "string",
-            "enum": [
-              "queued",
-              "running",
-              "passed",
-              "failed",
-              "blocked",
-              "error",
-              "cancelled"
+          "lifecycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowTestRunLifecycle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowTestRunTiming"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Status"
+            "title": "Verdict"
           },
           "workflow_id": {
             "type": "string",
@@ -56857,34 +57650,6 @@
             "type": "string",
             "title": "Block Config Fingerprint",
             "default": ""
-          },
-          "started_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Started At"
-          },
-          "completed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Completed At"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
           },
           "source": {
             "oneOf": [
@@ -56978,13 +57743,149 @@
         "required": [
           "id",
           "test_id",
-          "status",
           "workflow_id",
           "target",
-          "started_at",
           "source"
         ],
         "title": "WorkflowTestRunRecord"
+      },
+      "WorkflowTestRunStatus": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow": {
+            "$ref": "#/components/schemas/WorkflowSnapshotRef"
+          },
+          "trigger": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ManualTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/ApiTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/ScheduleTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/WebhookTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/EmailTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/RestartTrigger"
+              }
+            ],
+            "title": "Trigger",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "api": "#/components/schemas/ApiTrigger",
+                "email": "#/components/schemas/EmailTrigger",
+                "manual": "#/components/schemas/ManualTrigger",
+                "restart": "#/components/schemas/RestartTrigger",
+                "schedule": "#/components/schemas/ScheduleTrigger",
+                "webhook": "#/components/schemas/WebhookTrigger"
+              }
+            }
+          },
+          "lifecycle": {
+            "$ref": "#/components/schemas/WorkflowTestRunLifecycle"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/WorkflowTestRunTiming"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowTestBlockTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "test_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Id"
+          },
+          "total_tests": {
+            "type": "integer",
+            "title": "Total Tests"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/BlockTestBatchExecutionCounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflow",
+          "trigger",
+          "lifecycle",
+          "timing",
+          "total_tests"
+        ],
+        "title": "WorkflowTestRunStatus"
+      },
+      "WorkflowTestRunTiming": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at"
+        ],
+        "title": "WorkflowTestRunTiming"
       },
       "WorkflowWithEntitiesResponse": {
         "properties": {
@@ -57398,7 +58299,7 @@
           "sample_document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEData-Input"
               },
               {
                 "type": "null"
@@ -57438,7 +58339,7 @@
           "sample_document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEData-Input"
               },
               {
                 "type": "null"
@@ -57574,12 +58475,12 @@
           "width": {
             "type": "number",
             "title": "Width",
-            "description": "Width of the bounding box, relative to page width (0.0–1.0)."
+            "description": "Width of the bounding box, relative to page width (0.0\u20131.0)."
           },
           "height": {
             "type": "number",
             "title": "Height",
-            "description": "Height of the bounding box, relative to page height (0.0–1.0)."
+            "description": "Height of the bounding box, relative to page height (0.0\u20131.0)."
           },
           "page": {
             "type": "integer",
@@ -57656,12 +58557,12 @@
           "width": {
             "type": "number",
             "title": "Width",
-            "description": "Width of the bounding box, relative to page width (0.0–1.0)."
+            "description": "Width of the bounding box, relative to page width (0.0\u20131.0)."
           },
           "height": {
             "type": "number",
             "title": "Height",
-            "description": "Height of the bounding box, relative to page height (0.0–1.0)."
+            "description": "Height of the bounding box, relative to page height (0.0\u20131.0)."
           },
           "page": {
             "type": "integer",
@@ -57701,12 +58602,16 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
               },
               {
                 "type": "null"
               }
             ],
+            "title": "Document",
             "description": "Input document (PDF, DOCX, XLSX, or PPTX). Mutually exclusive with template_id."
           },
           "template_id": {
@@ -58091,7 +58996,15 @@
       "main_server__types__parses__ParseRequest": {
         "properties": {
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
             "description": "The document to parse"
           },
           "model": {
@@ -58242,7 +59155,7 @@
           "allow_multiple_instances": {
             "type": "boolean",
             "title": "Allow Multiple Instances",
-            "description": "When true, this subdocument type can appear more than once in the document — the split will identify each distinct instance (runs an extra vision-based refinement pass).",
+            "description": "When true, this subdocument type can appear more than once in the document \u2014 the split will identify each distinct instance (runs an extra vision-based refinement pass).",
             "default": false
           }
         },
@@ -58418,370 +59331,6 @@
           "reason"
         ],
         "title": "CancelledStepLifecycle"
-      },
-      "AgentHilReview": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Internal id (nanoid)."
-          },
-          "run_id": {
-            "type": "string",
-            "title": "Run Id",
-            "description": "Workflow run id the block belongs to."
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id",
-            "description": "HIL block id being reviewed."
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id",
-            "description": "Workflow id the run belongs to (denormalized for query convenience)."
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "pre_review",
-              "review",
-              "auto"
-            ],
-            "title": "Mode",
-            "description": "Configured agent_in_the_loop mode at spawn time."
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "queued",
-              "running",
-              "proposed",
-              "submitted",
-              "escalated",
-              "failed",
-              "superseded_by_human"
-            ],
-            "title": "Status",
-            "description": "Lifecycle status of this review attempt.",
-            "default": "queued"
-          },
-          "managed_agent_session_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Managed Agent Session Id",
-            "description": "Anthropic Managed Agents session id once spawned."
-          },
-          "managed_agent_vault_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Managed Agent Vault Id",
-            "description": "Anthropic vault id minted at spawn time for this session. Holds the per-org master_key impersonation token. Archived alongside the session at end-of-life."
-          },
-          "proposed_decision": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ProposedDecision"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Last proposal received from the agent. Updated on each custom-tool callback."
-          },
-          "submitted_hil_command_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Submitted Hil Command Id",
-            "description": "HIL command id used when the proposal was submitted via submit_hil_decision_service."
-          },
-          "failure_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Failure Reason",
-            "description": "Free-text reason when status='failed'. Populated by timeout, schema rejection, or session error."
-          },
-          "auto_threshold": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Auto Threshold",
-            "description": "Snapshot of agent_auto_confidence_threshold at spawn time. Frozen so config edits during the run don't change the gate."
-          },
-          "timeout_seconds": {
-            "type": "integer",
-            "maximum": 3600.0,
-            "minimum": 30.0,
-            "title": "Timeout Seconds",
-            "description": "Snapshot of agent_review_timeout_seconds at spawn time."
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "id",
-          "run_id",
-          "block_id",
-          "workflow_id",
-          "mode",
-          "auto_threshold",
-          "timeout_seconds",
-          "created_at",
-          "updated_at"
-        ],
-        "title": "AgentHilReview",
-        "description": "Sidecar persistence row tracking a managed-agent review attempt for one HIL block.\n\nIdentity is ``(tenant scope, run_id, block_id)`` and is enforced by a unique\nMongo index — that is the load-bearing primitive that keeps managed-agent\nspawning idempotent across Temporal activity retries and double-trigger races."
-      },
-      "ProposedDecision": {
-        "properties": {
-          "approved": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Approved",
-            "description": "True if the agent approves the data, False if it rejects, None when escalating. Defaulted to None (not required) so a stored proposal that was serialized with exclude_none — which drops `approved: null` on an escalation — still round-trips through model_validate. The real constraint (None iff escalate=True) is enforced by the _consistency validator below, not by requiredness."
-          },
-          "modified_data": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Modified Data",
-            "description": "Replacement payload for the HIL block. Only allowed when approved=True."
-          },
-          "confidence": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Confidence",
-            "description": "Self-reported confidence in the decision, in [0, 1]."
-          },
-          "evidence": {
-            "items": {
-              "$ref": "#/components/schemas/EvidenceItem"
-            },
-            "type": "array",
-            "minItems": 1,
-            "title": "Evidence",
-            "description": "One or more cited justifications. At least one item is required."
-          },
-          "changed_paths": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Changed Paths",
-            "description": "Field paths the agent modified. Must match modified_data structure."
-          },
-          "escalate": {
-            "type": "boolean",
-            "title": "Escalate",
-            "description": "If True, the agent declines to commit and asks for a human verification pass.",
-            "default": false
-          },
-          "escalation_reason": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 2000
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Escalation Reason",
-            "description": "Required when escalate=True. Short explanation surfaced to the human reviewer."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "confidence",
-          "evidence"
-        ],
-        "title": "ProposedDecision",
-        "description": "Structured proposal an agent submits via the ``retab_hil_review_proposal`` custom tool.\n\nThe proposal MUST be self-justifying: every changed path needs an evidence item,\nand approving without changes still requires evidence covering the triggered\nhighlights so a human can audit why the agent let the data through."
-      },
-      "EvidenceItem": {
-        "properties": {
-          "field_path": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Field Path",
-            "description": "Dotted path of the field this evidence justifies, e.g. 'invoice.total'."
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "approved_unchanged",
-              "modified",
-              "rejected"
-            ],
-            "title": "Action",
-            "description": "What the agent did with this field."
-          },
-          "quote": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Quote",
-            "description": "Exact quote from the source document supporting the action."
-          },
-          "source": {
-            "$ref": "#/components/schemas/EvidenceSource",
-            "description": "Pointer into the source document for the quote."
-          },
-          "from_value": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "title": "From Value",
-            "description": "Previous value (only when action='modified')."
-          },
-          "to_value": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "title": "To Value",
-            "description": "New value (only when action='modified')."
-          },
-          "reasoning_brief": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 1500
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reasoning Brief",
-            "description": "Short rationale (one or two sentences). Optional supplement to the cited quote. max_length is deliberately loose: Anthropic does not strictly enforce JSON-Schema maxLength on tool inputs, so a tight cap here means a single verbose evidence item rejects the WHOLE proposal at validation time (lost work, status=failed). 1500 chars comfortably absorbs an over-explained sentence; the prompt still asks for brevity."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "field_path",
-          "action",
-          "quote",
-          "source"
-        ],
-        "title": "EvidenceItem",
-        "description": "One field-level justification cited from a source document."
-      },
-      "EvidenceSource": {
-        "properties": {
-          "document_index": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Document Index",
-            "description": "Zero-indexed position of the source document in the agent's reading list."
-          },
-          "document_title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Title",
-            "description": "Human-readable title of the source document."
-          },
-          "page_number": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Page Number",
-            "description": "One-indexed page number for PDF or image sources."
-          },
-          "char_range": {
-            "anyOf": [
-              {
-                "prefixItems": [
-                  {
-                    "type": "integer"
-                  },
-                  {
-                    "type": "integer"
-                  }
-                ],
-                "type": "array",
-                "maxItems": 2,
-                "minItems": 2
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Char Range",
-            "description": "Zero-indexed half-open [start, end) character span in the source text."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "document_index"
-        ],
-        "title": "EvidenceSource",
-        "description": "Pointer into a source document for a single piece of evidence.\n\nShape mirrors the Anthropic Citations API output: ``page_number`` for PDFs,\n``char_range`` for plain text. Both may be set when the source is a PDF\nrendered as text."
       }
     },
     "securitySchemes": {
