@@ -1,0 +1,147 @@
+---
+title: 'Append Version'
+openapi: 'POST /v1/workflows/reviews/{run_id}/{block_id}/versions'
+---
+
+Append a corrective edit version to a review overlay.
+
+This records a new version of the gated block's output without submitting a verdict. The overlay's full version history is preserved — the model's original stays at sequence `0`, and your edit is appended as the next sequence. The newly appended version becomes the **effective output** that a subsequent `approved` decision will flow downstream.
+
+The request body carries:
+
+| Field | Notes |
+|---|---|
+| `snapshot` | The corrected output payload. Required. |
+| `version_stamp` | The overlay `rev` you last read. Required — see the conflict note below. |
+| `origin` | Provenance label for the version, e.g. `"human_edit"` (default). |
+| `note` | Optional free-text note explaining the correction. Recorded in the audit trail. |
+| `command_id` | Optional idempotency key — a retried call with the same `command_id` is deduplicated. |
+
+<Warning>
+`version_stamp` is a compare-and-swap token. Send the value you last read from [Get Review](/api-reference/workflows/reviews/get). If the overlay has advanced (another actor edited or decided in the meantime), the call returns **`409`** — re-read the overlay and retry with the fresh stamp. A stale stamp raises `retab.exceptions.ConflictError` in Python and surfaces as an `APIError` with `.status === 409` in JavaScript.
+</Warning>
+
+If you want to record a correction *and* approve it in one step, use [Submit Decision](/api-reference/workflows/reviews/submit-decision) with `edited_output` instead — the server appends the version and then approves it atomically.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+from retab.exceptions import ConflictError
+
+client = Retab()
+
+overlay = client.workflows.runs.reviews.get("run_abc123", "hil-1")
+
+try:
+    overlay = client.workflows.runs.reviews.edit(
+        "run_abc123",
+        "hil-1",
+        snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
+        version_stamp=overlay.version_stamp,
+        origin="human_edit",
+        note="Corrected total to match ATM + checks subtotal.",
+    )
+    print("new effective version:", overlay.versions[-1].seq)
+except ConflictError:
+    # Overlay moved on — re-read and retry with the fresh stamp.
+    overlay = client.workflows.runs.reviews.get("run_abc123", "hil-1")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+let overlay = await client.workflows.runs.reviews.get("run_abc123", "hil-1");
+
+try {
+  overlay = await client.workflows.runs.reviews.edit("run_abc123", "hil-1", {
+    snapshot: { total_amount: 325, vendor_name: "Acme Corp" },
+    versionStamp: overlay.rev,
+    origin: "human_edit",
+    note: "Corrected total to match ATM + checks subtotal.",
+  });
+  console.log("new effective version:", overlay.versions.at(-1).seq);
+} catch (err) {
+  if (err.status === 409) {
+    // Overlay moved on — re-read and retry with the fresh stamp.
+    overlay = await client.workflows.runs.reviews.get("run_abc123", "hil-1");
+  } else {
+    throw err;
+  }
+}
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/reviews/run_abc123/hil-1/versions' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "snapshot": { "total_amount": 325, "vendor_name": "Acme Corp" },
+    "version_stamp": 3,
+    "origin": "human_edit",
+    "note": "Corrected total to match ATM + checks subtotal."
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "_id": "run_abc123:hil-1",
+  "workflow_run_id": "run_abc123",
+  "block_run_id": "run_abc123:hil-1",
+  "block_id": "hil-1",
+  "workflow_id": "wf_1",
+  "status": "awaiting_review",
+  "rev": 4,
+  "claim": {
+    "holder": {
+      "kind": "human",
+      "id": "user_42",
+      "display_name": "Dana Rivera"
+    },
+    "claimed_at": "2026-05-13T08:55:00.000Z",
+    "expires_at": "2026-05-13T09:55:00.000Z"
+  },
+  "versions": [
+    {
+      "seq": 0,
+      "origin": "model_output",
+      "author": { "kind": "model", "id": "retab-small", "display_name": "Retab Small" },
+      "snapshot": { "total_amount": 505, "vendor_name": "Acme Corp" },
+      "note": null,
+      "created_at": "2026-05-13T08:14:02.341Z"
+    },
+    {
+      "seq": 1,
+      "origin": "human_edit",
+      "author": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
+      "snapshot": { "total_amount": 325, "vendor_name": "Acme Corp" },
+      "note": "Corrected total to match ATM + checks subtotal.",
+      "created_at": "2026-05-13T09:02:51.118Z"
+    }
+  ],
+  "decisions": [],
+  "audit": [
+    {
+      "event": "version_appended",
+      "actor": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
+      "at": "2026-05-13T09:02:51.118Z"
+    }
+  ]
+}
+```
+
+```json 409
+{
+  "detail": "Stale version_stamp: overlay is at rev 4, request sent rev 3. Re-read the overlay and retry."
+}
+```
+
+</ResponseExample>
+</content>

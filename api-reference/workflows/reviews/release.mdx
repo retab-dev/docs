@@ -1,0 +1,87 @@
+---
+title: 'Release Review'
+openapi: 'POST /v1/workflows/reviews/{run_id}/{block_id}/release'
+---
+
+Release the advisory review claim on an overlay.
+
+Use this when you step away from a review without submitting a verdict — it clears `claim` so the item returns to the unclaimed pool and another reviewer can pick it up. The overlay's status, versions, decisions, and audit trail are untouched; only the claim is dropped.
+
+The request body carries only the `version_stamp` you last read.
+
+<Warning>
+`version_stamp` is a compare-and-swap token. Send the value you last read from [Get Review](/api-reference/workflows/reviews/get). If the overlay has advanced, the call returns **`409`** — re-read the overlay and retry. A stale stamp raises `retab.exceptions.ConflictError` in Python and surfaces as an `APIError` with `.status === 409` in JavaScript.
+</Warning>
+
+<Note>
+Submitting an `approved` / `rejected` / `escalated` decision does not require releasing the claim first — a terminal decision settles the overlay regardless of who holds the claim.
+</Note>
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+overlay = client.workflows.runs.reviews.get("run_abc123", "hil-1")
+
+overlay = client.workflows.runs.reviews.release(
+    "run_abc123", "hil-1", version_stamp=overlay.version_stamp,
+)
+print("claim:", overlay.claim)  # None
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+let overlay = await client.workflows.runs.reviews.get("run_abc123", "hil-1");
+
+overlay = await client.workflows.runs.reviews.release("run_abc123", "hil-1", {
+  versionStamp: overlay.rev,
+});
+console.log("claim:", overlay.claim); // null
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/reviews/run_abc123/hil-1/release' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{ "version_stamp": 4 }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "_id": "run_abc123:hil-1",
+  "workflow_run_id": "run_abc123",
+  "block_run_id": "run_abc123:hil-1",
+  "block_id": "hil-1",
+  "workflow_id": "wf_1",
+  "status": "awaiting_review",
+  "rev": 5,
+  "claim": null,
+  "audit": [
+    {
+      "event": "released",
+      "actor": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
+      "at": "2026-05-13T09:30:00.000Z"
+    }
+  ]
+}
+```
+
+```json 409
+{
+  "detail": "Stale version_stamp: overlay is at rev 5, request sent rev 4. Re-read the overlay and retry."
+}
+```
+
+</ResponseExample>
+</content>
