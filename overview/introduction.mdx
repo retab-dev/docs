@@ -26,195 +26,51 @@ Categorize documents based on content and type.
 
 ## Quickstart
 
-The most basic workflow is extracting structured data from a document. The easiest way to access the API is through the Python, Node, or Go SDK.
+Start by installing the Retab CLI, SDKs, and MCP tools.
 
 <Tip>
   Find your API key in the [dashboard settings](https://retab.com/dashboard/settings).
 </Tip>
 
 <Steps>
-  <Step title="Install the SDK" stepNumber={1}>
-    <CodeGroup>
-      ```python Python
-      pip install retab
-      ```
+  <Step title="Install the CLI" stepNumber={1}>
+    The CLI is the fastest way to access Retab from your terminal, scripts, and CI.
 
-      ```javascript JavaScript
-      npm install @retab/node
-      ```
-
-      ```go Go
-      go get github.com/retab-dev/retab/clients/go
-      ```
-    </CodeGroup>
+    ```sh
+    curl -fsSL https://retab.com/install.sh | sh
+    ```
   </Step>
 
-  <Step title="Generate a Schema" stepNumber={2}>
-    <CodeGroup>
-      ```python Python
-      from retab import Retab
+  <Step title="Install the SDKs" stepNumber={2}>
+    Install the client library for the language you are building with.
 
-      client = Retab()
+    ```sh
+    # Python SDK
+    pip install retab
 
-      schema_response = client.schemas.generate(
-          documents=["Invoice.pdf"],
-          model="retab-small",
-      )
-      ```
+    # Node SDK
+    npm install @retab/node
 
-      ```javascript JavaScript
-      import { Retab } from '@retab/node';
-
-      const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
-
-      const schemaResponse = await client.schemas.generate({
-          documents: ["Invoice.pdf"],
-          model: "retab-small",
-      });
-      ```
-
-      ```go Go
-      package main
-
-      import (
-	"context"
-	"fmt"
-	"log"
-
-	retab "github.com/retab-dev/retab/clients/go"
-      )
-
-      func main() {
-	ctx := context.Background()
-
-	client, err := retab.NewClient("")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	schemaResponse, err := client.Schemas.Generate(ctx, retab.GenerateSchemaRequest{
-		Documents: []any{"Invoice.pdf"},
-		Model:     "retab-small",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(schemaResponse)
-      }
-      ```
-
-      ```curl cURL
-      curl https://api.retab.com/v1/schemas/generate \
-        -H "Api-Key: $RETAB_API_KEY" \
-        -H "Content-Type: application/json" \
-        -d '{
-          "documents": [
-            {
-              "filename": "Invoice.pdf",
-              "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMS..."
-            }
-          ],
-          "model": "retab-small"
-        }'
-      ```
-    </CodeGroup>
+    # Go SDK
+    go get github.com/retab-dev/retab/clients/go
+    ```
   </Step>
 
-  <Step title="Extract Data" stepNumber={3}>
-    <CodeGroup>
-      ```python Python
-      from retab import Retab
+  <Step title="Install MCP" stepNumber={3}>
+    Connect Retab to your AI agent so it can inspect files, build workflows, and run Retab tools.
 
-      client = Retab()
+    ```sh
+    # Preferred: install the Retab skill and MCP for supported agents
+    retab setup
 
-      extraction = client.extractions.create(
-          json_schema=schema_response.json_schema,
-          document="Invoice.pdf",
-          model="retab-micro",
-      )
+    # Claude MCP
+    claude mcp add --transport http retab https://mcp.retab.com/mcp
 
-      print(extraction.id)
-      print(extraction.output)
-      print(extraction.consensus.likelihoods)
-      ```
+    # Codex MCP
+    codex mcp add retab --url https://mcp.retab.com/mcp
+    ```
 
-      ```javascript JavaScript
-      import { Retab } from '@retab/node';
-
-      const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
-
-      const extraction = await client.extractions.create({
-          json_schema: schemaResponse.json_schema,
-          document: "Invoice.pdf",
-          model: "retab-micro",
-      });
-
-      console.log(extraction.id);
-      console.log(extraction.output);
-      console.log(extraction.consensus.likelihoods);
-      ```
-
-      ```go Go
-      package main
-
-      import (
-	"context"
-	"fmt"
-	"log"
-
-	retab "github.com/retab-dev/retab/clients/go"
-      )
-
-      func main() {
-	ctx := context.Background()
-
-	client, err := retab.NewClient("")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
-		JSONSchema: schemaResponse["json_schema"],
-		Document:   "Invoice.pdf",
-		Model:      "retab-micro",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println((*extraction)["id"])
-	fmt.Println((*extraction)["output"])
-	fmt.Println((*extraction)["consensus"])
-      }
-      ```
-
-      ```curl cURL
-      curl -X POST https://api.retab.com/v1/extractions \
-        -H "Api-Key: $RETAB_API_KEY" \
-        -H "Content-Type: application/json" \
-        -d '{
-          "document": {
-            "filename": "Invoice.pdf",
-            "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMS..."
-          },
-          "model": "retab-micro",
-          "json_schema": {
-            "title": "InvoiceSchema",
-            "type": "object",
-            "properties": {
-              "invoice_number": { "type": "string" },
-              "date_due": { "type": "string" },
-              "total": { "type": "number" }
-            },
-            "required": ["invoice_number", "date_due", "total"]
-          },
-          "n_consensus": 1,
-          "metadata": {
-            "source": "introduction_quickstart"
-          }
-        }'
-      ```
-    </CodeGroup>
+    See [MCP](./MCP) for the full MCP setup and tool reference.
   </Step>
 </Steps>
 
