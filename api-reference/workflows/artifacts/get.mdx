@@ -10,7 +10,7 @@ endpoint follows that pointer and returns the backing record flattened with
 `operation` and `id` at the top level.
 
 Use this when you need details that do not belong in the generic step payload:
-HIL condition evaluations, conditional branch matches, function output,
+conditional branch matches, function output,
 API-call attempts, while-loop termination data, or the full primitive result
 for extract/split/classify/parse/edit/partition blocks.
 
@@ -21,14 +21,13 @@ from retab import Retab
 
 client = Retab()
 
-step = client.workflows.runs.steps.get("run_abc123xyz", "hil-block-1")
+step = client.workflows.runs.steps.get("run_abc123xyz", "function-block-1")
 
 if step.artifact:
     artifact = client.workflows.artifacts.get(step.artifact)
     print(artifact.operation)
-    print(artifact.requires_human_review)
-    print(artifact.matched_condition_ids)
-    print(artifact.evaluations)
+    print(artifact.output)
+    print(artifact.error)
 ```
 
 ```javascript javascript
@@ -51,7 +50,7 @@ if (step.artifact) {
 
 ```bash curl
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/artifacts/hil_evaluation/heval_abc123' \
+  'https://api.retab.com/v1/workflows/artifacts/function_invocation/finv_abc123' \
   -H 'Api-Key: <your-api-key>'
 ```
 
@@ -61,28 +60,13 @@ curl -X 'GET' \
 
 ```json 200
 {
-  "operation": "hil_evaluation",
-  "id": "heval_abc123",
+  "operation": "function_invocation",
+  "id": "finv_abc123",
   "workflow_run_id": "run_abc123xyz",
-  "step_id": "hil-block-1",
-  "requires_human_review": true,
-  "selected_handles": ["wrong"],
-  "matched_branch_id": "branch_wrong",
-  "matched_condition_ids": ["condition_wrong_total"],
-  "evaluations": [
-    {
-      "condition_id": "condition_wrong_total",
-      "matched": true,
-      "output_handle_id": "wrong",
-      "left_value": 1200,
-      "operator": "greater_than",
-      "right_value": 1000
-    }
-  ],
-  "reviewer_id": null,
-  "review_decision": null,
-  "review_notes": null,
-  "reviewed_at": null,
+  "step_id": "function-block-1",
+  "inputs": {"invoice_number": "INV-100"},
+  "output": {"normalized_invoice_number": "INV-100"},
+  "error": null,
   "created_at": "2026-03-12T09:00:04Z"
 }
 ```
@@ -106,7 +90,7 @@ Artifact operations currently include:
 | `edit` | `edit` | edited document result |
 | `partition` | `for_each_sentinel_start` | partitioned loop inputs |
 | `conditional_evaluation` | `conditional` | `evaluations`, `selected_handles`, `matched_condition_ids` |
-| `hil_evaluation` | `hil` | evaluation details plus human-review state |
+| `hil_evaluation` | legacy standalone review step | legacy evaluation details plus human-review state |
 | `while_loop_termination` | `while_loop` | `termination_reason` and final evaluations |
 | `api_call_invocation` | `api_call` | retry `attempts`, response data, final `error` |
 | `function_invocation` | `function` | function `inputs`, `output`, `duration_ms`, final `error` |

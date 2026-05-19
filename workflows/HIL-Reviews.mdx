@@ -5,7 +5,7 @@ description: Review, correct, and decide on gated workflow block outputs with th
 
 ## Overview
 
-When a workflow reaches a **gated block** — a [Human in the Loop (HIL)](/workflows/Blocks#human-in-the-loop-hil) block, or any block whose conditions flagged its output for review — the run pauses and a **review overlay** is created.
+When a workflow reaches a **gated block** — a block with `config.hil` whose predicate flagged its output for review — the run pauses and a **review overlay** is created.
 
 The overlay is a versioned sidecar attached to one `(run_id, block_id)` pair. It is the single object you read and mutate to walk a review from "the model produced this" to "a human approved (or corrected, or rejected) it, and the run resumed." Everything is driven through `client.workflows.runs.reviews.*`.
 
@@ -43,7 +43,7 @@ This means `versions[].author`, `decisions[].decided_by`, `audit[].actor`, and `
 The overlay is mutated concurrently — a human in the dashboard, an agent reviewer, and your own integration can all touch the same overlay. To keep those writers from clobbering each other, **every mutating call is a compare-and-swap.**
 
 1. Read the overlay with `reviews.get(...)`. It carries a `rev` — the overlay's compare-and-swap token.
-2. Pass that `rev` back (as the `version_stamp` request parameter) on the next mutating call — `edit`, `approve`, `reject`, `escalate`, `claim`, `release`.
+2. Pass that `rev` back (as the `version_stamp` request parameter) on the next mutating call — `edit`, `approve`, `reject`, `claim`, `release`.
 3. If the overlay advanced since you read it, the stamp is stale and the call fails with **HTTP 409**. Re-read the overlay and retry with the fresh stamp.
 
 In Python a stale stamp raises `retab.exceptions.ConflictError`; in JavaScript it surfaces as an `APIError` with `.status === 409`.
@@ -66,9 +66,9 @@ def with_retry(run_id, block_id, mutate):
     # unreachable
 
 with_retry(
-    "run_abc123", "hil-1",
+    "run_abc123", "block_extract",
     lambda o: client.workflows.runs.reviews.approve(
-        "run_abc123", "hil-1", version_stamp=o.version_stamp,
+        "run_abc123", "block_extract", version_stamp=o.version_stamp,
     ),
 )
 ```
@@ -95,9 +95,9 @@ for item in queue.data:
 Claiming records you in `claim` so a shared inbox shows the item is being worked. It does **not** lock the overlay — the `version_stamp` CAS is the real concurrency guarantee. Submitting a decision does not require holding the claim.
 
 ```python
-overlay = client.workflows.runs.reviews.get("run_abc123", "hil-1")
+overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
 overlay = client.workflows.runs.reviews.claim(
-    "run_abc123", "hil-1", version_stamp=overlay.version_stamp,
+    "run_abc123", "block_extract", version_stamp=overlay.version_stamp,
 )
 ```
 
@@ -105,7 +105,7 @@ If you step away without deciding, release it so someone else can pick it up:
 
 ```python
 client.workflows.runs.reviews.release(
-    "run_abc123", "hil-1", version_stamp=overlay.version_stamp,
+    "run_abc123", "block_extract", version_stamp=overlay.version_stamp,
 )
 ```
 
@@ -114,7 +114,7 @@ client.workflows.runs.reviews.release(
 The effective output is the **latest** version. The model's original is always sequence `0`.
 
 ```python
-overlay = client.workflows.runs.reviews.get("run_abc123", "hil-1")
+overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
 
 original = overlay.versions[0]          # what the model produced
 effective = overlay.versions[-1]        # what an approve would flow downstream
@@ -123,35 +123,27 @@ print(effective.snapshot)
 
 ### 4. Decide
 
-There are three verdicts:
+There are two verdicts:
 
 | Verdict | Effect on the run |
 |---|---|
 | `approved` | The effective output flows downstream and the run **resumes**. |
 | `rejected` | The run is **cancelled**. A `reason` is required. |
-| `escalated` | **Non-terminal** — the review is re-routed to another reviewer or queue and stays `awaiting_review`. A `reason` and `escalate_to` are required. |
 
 ```python
-overlay = client.workflows.runs.reviews.get("run_abc123", "hil-1")
+overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
 stamp = overlay.version_stamp
 
 # Approve — the latest version flows downstream, the run resumes
-client.workflows.runs.reviews.approve("run_abc123", "hil-1", version_stamp=stamp)
+client.workflows.runs.reviews.approve("run_abc123", "block_extract", version_stamp=stamp)
 
 # Reject — the run is cancelled
 client.workflows.runs.reviews.reject(
-    "run_abc123", "hil-1",
+    "run_abc123", "block_extract",
     version_stamp=stamp,
     reason="Source document is illegible; cannot verify totals.",
 )
 
-# Escalate — non-terminal, re-routed, still awaiting review
-client.workflows.runs.reviews.escalate(
-    "run_abc123", "hil-1",
-    version_stamp=stamp,
-    reason="Amount exceeds my approval limit.",
-    escalate_to="queue:finance-leads",
-)
 ```
 
 ### Approve with edits
@@ -159,10 +151,10 @@ client.workflows.runs.reviews.escalate(
 When the model's output is close but wrong, you don't reject — you **correct and approve**. Pass `edited_output` to `approve` and the server appends a corrective version *and then approves it* in one atomic step. The model's original is preserved as version `0`; your corrected payload becomes the new effective version.
 
 ```python
-overlay = client.workflows.runs.reviews.get("run_abc123", "hil-1")
+overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
 
 client.workflows.runs.reviews.approve(
-    "run_abc123", "hil-1",
+    "run_abc123", "block_extract",
     version_stamp=overlay.version_stamp,
     edited_output={"total_amount": 325, "vendor_name": "Acme Corp"},
 )
@@ -172,7 +164,7 @@ If you want to record a correction *without* deciding yet — for example, to ha
 
 ```python
 overlay = client.workflows.runs.reviews.edit(
-    "run_abc123", "hil-1",
+    "run_abc123", "block_extract",
     snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
     version_stamp=overlay.version_stamp,
     origin="human_edit",
@@ -188,9 +180,9 @@ Every mutating method accepts an optional `command_id`. A retried call carrying 
 
 ```python
 client.workflows.runs.reviews.approve(
-    "run_abc123", "hil-1",
+    "run_abc123", "block_extract",
     version_stamp=overlay.version_stamp,
-    command_id="approve-run_abc123-hil-1-attempt-1",
+    command_id="approve-run_abc123-block_extract-attempt-1",
 )
 ```
 
@@ -201,9 +193,9 @@ If your integration *submits* a gated run and needs to block until a human (or a
 ```python
 run = client.workflows.runs.create(workflow_id="wf_abc123", ...)
 
-# Block until the gated block at hil-1 is approved or rejected
+# Block until the gated block at block_extract is approved or rejected
 overlay = client.workflows.runs.reviews.wait_for(
-    run.id, "hil-1",
+    run.id, "block_extract",
     timeout=120.0,        # seconds — raises on expiry
     poll_interval=2.0,
 )
@@ -215,10 +207,6 @@ else:
     print("review ended as:", overlay.status)
 ```
 
-<Note>
-`escalated` is non-terminal — `wait_for` keeps polling after an escalation, because the overlay is still `awaiting_review`. It returns only when the overlay reaches `approved` or `rejected`, or the `timeout` elapses.
-</Note>
-
 ## API reference
 
 | Endpoint | Method |
@@ -226,6 +214,6 @@ else:
 | [List Reviews](/api-reference/workflows/reviews/list) | `reviews.list(...)` |
 | [Get Review](/api-reference/workflows/reviews/get) | `reviews.get(run_id, block_id)` |
 | [Append Version](/api-reference/workflows/reviews/append-version) | `reviews.edit(...)` |
-| [Submit Decision](/api-reference/workflows/reviews/submit-decision) | `reviews.approve / reject / escalate(...)` |
+| [Submit Decision](/api-reference/workflows/reviews/submit-decision) | `reviews.approve / reject(...)` |
 | [Claim Review](/api-reference/workflows/reviews/claim) | `reviews.claim(...)` |
 | [Release Review](/api-reference/workflows/reviews/release) | `reviews.release(...)` |

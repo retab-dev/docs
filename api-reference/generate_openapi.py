@@ -4,6 +4,7 @@ from pathlib import Path
 
 
 LEGACY_DOCUMENT_PATH_PREFIX = "/v1/documents/"
+LEGACY_HIL_DECISION_PATH_PREFIX = "/v1/workflows/runs/{run_id}/hil-decisions"
 PRIVATE_PATH_PREFIXES: tuple[str, ...] = (
     "/internal/",
     "/custom/",
@@ -30,6 +31,9 @@ LEGACY_EDIT_PATHS: set[str] = {
 LEGACY_SCHEMA_NAMES: set[str] = {
     "ClassifyRequest",
     "ClassifyResponse",
+    "HILDecisionResource",
+    "SubmitHILDecisionRequest",
+    "SubmitHILDecisionResponse",
 }
 
 
@@ -353,6 +357,7 @@ def generate_openapi() -> None:
     for path in list(spec["paths"].keys()):
         if (
             path.startswith(LEGACY_DOCUMENT_PATH_PREFIX)
+            or path.startswith(LEGACY_HIL_DECISION_PATH_PREFIX)
             or path.startswith(PRIVATE_PATH_PREFIXES)
             or path in LEGACY_EDIT_PATHS
         ):

@@ -11747,18 +11747,18 @@
         }
       }
     },
-    "/v1/splits/test": {
+    "/v1/splits/benchmark": {
       "post": {
         "tags": [
           "Splits"
         ],
-        "summary": "Create Split Test",
-        "operationId": "create_split_test_v1_splits_test_post",
+        "summary": "Create Split Benchmark",
+        "operationId": "create_split_benchmark_v1_splits_benchmark_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSplitTestRequest"
+                "$ref": "#/components/schemas/CreateSplitBenchmarkRequest"
               }
             }
           },
@@ -11770,7 +11770,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Split"
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Split Benchmark V1 Splits Benchmark Post"
                 }
               }
             }
@@ -21213,7 +21215,7 @@
           "Workflow Runs"
         ],
         "summary": "List Workflow Run Steps",
-        "description": "List steps for a workflow run with status and artifact summaries.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. ID pagination is not yet implemented for this\nendpoint \u2014 ``list_metadata`` is always ``{before: null, after: null}``.",
+        "description": "List steps for a workflow run with status and artifact summaries.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. Cursor pagination is not yet implemented for this\nendpoint \u2014 ``list_metadata`` is always ``{before: null, after: null}``.",
         "operationId": "list_workflow_run_steps_v1_workflows_runs__run_id__steps_get",
         "security": [
           {
@@ -21812,7 +21814,7 @@
           "Workflow Runs"
         ],
         "summary": "List Block Simulations",
-        "description": "List recent simulation results for a block in a workflow run.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. ID pagination is not yet implemented for this\nendpoint \u2014 ``list_metadata`` is always ``{before: null, after: null}``.",
+        "description": "List recent simulation results for a block in a workflow run.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. Cursor pagination is not yet implemented for this\nendpoint \u2014 ``list_metadata`` is always ``{before: null, after: null}``.",
         "operationId": "list_block_simulations_v1_workflows_runs__run_id__steps__block_id__simulations_get",
         "security": [
           {
@@ -21943,14 +21945,15 @@
         }
       }
     },
-    "/v1/workflows/runs/{run_id}/hil-decisions": {
-      "post": {
+    "/v1/workflows/reviews": {
+      "get": {
         "tags": [
           "Workflows",
-          "Workflow Runs"
+          "Workflow HIL Reviews"
         ],
-        "summary": "Submit Hil Decision Route",
-        "operationId": "submit_hil_decision_route_v1_workflows_runs__run_id__hil_decisions_post",
+        "summary": "List Reviews Route",
+        "description": "The review queue: gated block runs awaiting review, hottest first.",
+        "operationId": "list_reviews_route_v1_workflows_reviews_get",
         "security": [
           {
             "HTTPBearer": []
@@ -21964,32 +21967,68 @@
         ],
         "parameters": [
           {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
+            "name": "workflow_id",
+            "in": "query",
+            "required": false,
             "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "awaiting_review",
+                "approved",
+                "rejected"
+              ],
               "type": "string",
-              "title": "Run Id"
+              "default": "awaiting_review",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "mine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Only reviews claimed by the caller.",
+              "default": false,
+              "title": "Mine"
+            },
+            "description": "Only reviews claimed by the caller."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubmitHILDecisionRequest"
-              }
-            }
-          }
-        },
         "responses": {
-          "202": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubmitHILDecisionResponse"
+                  "$ref": "#/components/schemas/ReviewQueueResponse"
                 }
               }
             }
@@ -22007,14 +22046,15 @@
         }
       }
     },
-    "/v1/workflows/runs/{run_id}/hil-decisions/{block_id}": {
+    "/v1/workflows/reviews/{run_id}/{block_id}": {
       "get": {
         "tags": [
           "Workflows",
-          "Workflow Runs"
+          "Workflow HIL Reviews"
         ],
-        "summary": "Get Hil Decision Route",
-        "operationId": "get_hil_decision_route_v1_workflows_runs__run_id__hil_decisions__block_id__get",
+        "summary": "Get Review Route",
+        "description": "The full overlay for one gated (run, block): every version, every\ndecision, the audit trail, and the `rev` CAS token.",
+        "operationId": "get_review_route_v1_workflows_reviews__run_id___block_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -22052,7 +22092,303 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HILDecisionResource"
+                  "$ref": "#/components/schemas/ReviewOverlay"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/reviews/{run_id}/{block_id}/versions": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow HIL Reviews"
+        ],
+        "summary": "Append Version Route",
+        "description": "Append a corrective edit as a new immutable version, without deciding.",
+        "operationId": "append_version_route_v1_workflows_reviews__run_id___block_id__versions_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendVersionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewOverlay"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/reviews/{run_id}/{block_id}/decision": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow HIL Reviews"
+        ],
+        "summary": "Submit Decision Route",
+        "description": "Approve / approve-with-edits / reject a gated block run.",
+        "operationId": "submit_decision_route_v1_workflows_reviews__run_id___block_id__decision_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmitDecisionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/reviews/{run_id}/{block_id}/claim": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow HIL Reviews"
+        ],
+        "summary": "Claim Review Route",
+        "description": "Take the advisory review claim ('Dana is reviewing this').",
+        "operationId": "claim_review_route_v1_workflows_reviews__run_id___block_id__claim_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewOverlay"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/reviews/{run_id}/{block_id}/release": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow HIL Reviews"
+        ],
+        "summary": "Release Review Route",
+        "description": "Release the advisory review claim.",
+        "operationId": "release_review_route_v1_workflows_reviews__run_id___block_id__release_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewOverlay"
                 }
               }
             }
@@ -25465,6 +25801,22 @@
             }
           },
           {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fields"
+            }
+          },
+          {
             "name": "before",
             "in": "query",
             "required": false,
@@ -27465,7 +27817,7 @@
           "Workflows"
         ],
         "summary": "Apply Computations Endpoint",
-        "description": "Apply computations to the provided data using the overlay computation engine.\n\nThis endpoint accepts a computation spec and data, and returns the data with\ncomputed fields applied. Useful for HIL blocks to preview computed values\nwhen editing extraction data.",
+        "description": "Apply computations to the provided data using the overlay computation engine.\n\nThis endpoint accepts a computation spec and data, and returns the data with\ncomputed fields applied. Useful for HIL-gated review overlays to preview computed values\nwhen editing extraction data.",
         "operationId": "apply_computations_endpoint_v1_workflows_apply_computations_post",
         "requestBody": {
           "content": {
@@ -32026,6 +32378,40 @@
         ],
         "title": "AccuracyMetric"
       },
+      "Actor": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "model",
+              "agent",
+              "human"
+            ],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id",
+            "description": "user id | agent deployment id | model slug"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Display Name",
+            "description": "Denormalized so the audit trail renders without a join and survives the principal's deletion."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "display_name"
+        ],
+        "title": "Actor",
+        "description": "Who authored a version or made a decision.\n\nModel, agent, and human are the SAME shape \u2014 `kind` is a tag, never\nbranched on outside presentation. A frozen value object: embedded\neverywhere, never its own collection."
+      },
       "AddBuilderDocumentRequest": {
         "properties": {
           "mime_data": {
@@ -32689,6 +33075,64 @@
         "title": "ApiTrigger",
         "description": "Run started programmatically via the public API."
       },
+      "AppendVersionRequest": {
+        "properties": {
+          "snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Snapshot",
+            "description": "The FULL corrected output JSON \u2014 a complete replacement object, not a partial diff."
+          },
+          "version_stamp": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version Stamp",
+            "description": "CAS token: the overlay `rev` the client last read. The server returns 409 on mismatch so the client can re-read and rebase."
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "agent_edit",
+              "human_edit"
+            ],
+            "title": "Origin",
+            "description": "Who-shaped origin of this edit. seq=0 / 'model_output' / 'revert' are not valid here.",
+            "default": "human_edit"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "Free-text rationale from the author."
+          },
+          "command_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command Id",
+            "description": "Optional idempotency key \u2014 a retried append with the same command_id is deduplicated."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot",
+          "version_stamp"
+        ],
+        "title": "AppendVersionRequest",
+        "description": "Append an edit (a new `OutputVersion`) without deciding."
+      },
       "ApplyComputationsRequest": {
         "properties": {
           "data": {
@@ -33278,6 +33722,68 @@
         },
         "type": "object",
         "title": "AttachmentMetadata"
+      },
+      "AuditEntry": {
+        "properties": {
+          "entry_id": {
+            "type": "string",
+            "title": "Entry Id"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "gate_fired",
+              "version_added",
+              "claimed",
+              "released",
+              "decision_made",
+              "reopened",
+              "stale_write_rejected"
+            ],
+            "title": "Action"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "rev_observed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Rev Observed",
+            "description": "The overlay `rev` the actor read before acting."
+          },
+          "rev_result": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rev Result",
+            "description": "`rev` after a successful write; None when the attempt was rejected as stale."
+          },
+          "detail": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Detail",
+            "description": "Action-specific payload."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action",
+          "actor",
+          "rev_observed"
+        ],
+        "title": "AuditEntry",
+        "description": "Append-only. Records every act on the overlay \u2014 crucially including\nREJECTED stale writes, which leave no trace in `versions`/`decisions` but\nare exactly what an audit of a contested review must show."
       },
       "AutomationConfig": {
         "properties": {
@@ -36271,6 +36777,31 @@
         "title": "ChoiceLogprobs",
         "description": "Log probability information for the choice."
       },
+      "ClaimRequest": {
+        "properties": {
+          "version_stamp": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version Stamp",
+            "description": "CAS token (overlay `rev`)."
+          },
+          "ttl_seconds": {
+            "type": "integer",
+            "maximum": 86400.0,
+            "minimum": 30.0,
+            "title": "Ttl Seconds",
+            "description": "How long the advisory claim holds before it expires.",
+            "default": 900
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version_stamp"
+        ],
+        "title": "ClaimRequest",
+        "description": "Take or release the advisory review claim."
+      },
       "Classification": {
         "properties": {
           "id": {
@@ -37224,7 +37755,6 @@
               "split",
               "classifier",
               "conditional",
-              "hil",
               "api_call",
               "function",
               "while_loop",
@@ -37593,8 +38123,7 @@
                 "$ref": "#/components/schemas/FileRef"
               }
             ],
-            "title": "Document",
-            "description": "The document to extract from"
+            "title": "Document"
           },
           "json_schema": {
             "additionalProperties": true,
@@ -37837,6 +38366,113 @@
         ],
         "title": "CreateProjectRequest"
       },
+      "CreateSplitBenchmarkRequest": {
+        "properties": {
+          "document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MIMEData-Input"
+              },
+              {
+                "$ref": "#/components/schemas/FileRef"
+              }
+            ],
+            "title": "Document",
+            "description": "The document to split"
+          },
+          "subdocuments": {
+            "items": {
+              "$ref": "#/components/schemas/main_server__types__splits__Subdocument"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Subdocuments",
+            "description": "The subdocuments to split the document into"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "The model to use to split the document",
+            "default": "retab-small"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions",
+            "description": "Free-form instructions appended to the system prompt to steer the split."
+          },
+          "n_consensus": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "N Consensus",
+            "description": "Number of consensus split runs to perform. Uses deterministic single-pass when set to 1.",
+            "default": 1
+          },
+          "bust_cache": {
+            "type": "boolean",
+            "title": "Bust Cache",
+            "description": "If true, skip the LLM cache and force a fresh completion",
+            "default": false
+          },
+          "methods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Methods"
+          },
+          "reasoning_effort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Effort"
+          },
+          "candidate_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Scope"
+          },
+          "capacity_retry_owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Retry Owner"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "document",
+          "subdocuments",
+          "methods"
+        ],
+        "title": "CreateSplitBenchmarkRequest",
+        "description": "Internal non-persisted benchmark request with explicit split methods."
+      },
       "CreateSplitRequest": {
         "properties": {
           "document": {
@@ -37901,82 +38537,6 @@
         ],
         "title": "CreateSplitRequest",
         "description": "Canonical split request."
-      },
-      "CreateSplitTestRequest": {
-        "properties": {
-          "document": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/MIMEData-Input"
-              },
-              {
-                "$ref": "#/components/schemas/FileRef"
-              }
-            ],
-            "title": "Document",
-            "description": "The document to split"
-          },
-          "subdocuments": {
-            "items": {
-              "$ref": "#/components/schemas/main_server__types__splits__Subdocument"
-            },
-            "type": "array",
-            "minItems": 1,
-            "title": "Subdocuments",
-            "description": "The subdocuments to split the document into"
-          },
-          "model": {
-            "type": "string",
-            "title": "Model",
-            "description": "The model to use to split the document",
-            "default": "retab-small"
-          },
-          "instructions": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Instructions",
-            "description": "Free-form instructions appended to the system prompt to steer the split."
-          },
-          "n_consensus": {
-            "type": "integer",
-            "maximum": 8.0,
-            "minimum": 1.0,
-            "title": "N Consensus",
-            "description": "Number of consensus split runs to perform. Uses deterministic single-pass when set to 1.",
-            "default": 1
-          },
-          "bust_cache": {
-            "type": "boolean",
-            "title": "Bust Cache",
-            "description": "If true, skip the LLM cache and force a fresh completion",
-            "default": false
-          },
-          "partition_method": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Partition Method"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "document",
-          "subdocuments"
-        ],
-        "title": "CreateSplitTestRequest",
-        "description": "Internal benchmark split request with service-only experimental controls."
       },
       "CreateUploadResponse": {
         "properties": {
@@ -42781,113 +43341,6 @@
         ],
         "title": "GetSourcesResponse"
       },
-      "HILDecisionResource": {
-        "properties": {
-          "run_id": {
-            "type": "string",
-            "title": "Run Id",
-            "description": "Workflow run ID"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id",
-            "description": "HIL block ID"
-          },
-          "block_status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Block Status",
-            "description": "Current workflow block status"
-          },
-          "decision_received": {
-            "type": "boolean",
-            "title": "Decision Received",
-            "description": "Whether a HIL decision has been received for this block",
-            "default": false
-          },
-          "decision_applied": {
-            "type": "boolean",
-            "title": "Decision Applied",
-            "description": "Whether the workflow loop has applied the received decision",
-            "default": false
-          },
-          "approved": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Approved",
-            "description": "Approved/rejected decision value"
-          },
-          "modified_data": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Modified Data",
-            "description": "Modified data retained for an approved decision"
-          },
-          "payload_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payload Hash",
-            "description": "Stable identity hash for the latest decision payload"
-          },
-          "received_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Received At",
-            "description": "When the decision was received"
-          },
-          "applied_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Applied At",
-            "description": "When the workflow loop applied the decision"
-          }
-        },
-        "type": "object",
-        "required": [
-          "run_id",
-          "block_id"
-        ],
-        "title": "HILDecisionResource"
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -42961,6 +43414,408 @@
         ],
         "title": "HandlePayload",
         "description": "Payload for a single block output handle."
+      },
+      "HilAllOf": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "all_of",
+            "title": "Kind",
+            "default": "all_of"
+          },
+          "predicates": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/HilAlways"
+                },
+                {
+                  "$ref": "#/components/schemas/HilValidationFailed"
+                },
+                {
+                  "$ref": "#/components/schemas/HilConfidenceLt"
+                },
+                {
+                  "$ref": "#/components/schemas/HilCategoryIn"
+                },
+                {
+                  "$ref": "#/components/schemas/HilTopMarginLt"
+                },
+                {
+                  "$ref": "#/components/schemas/HilSplitCountNeq"
+                },
+                {
+                  "$ref": "#/components/schemas/HilAnySplitPagesLt"
+                },
+                {
+                  "$ref": "#/components/schemas/HilBoundaryConfidenceLt"
+                },
+                {
+                  "$ref": "#/components/schemas/HilAnyRequiredFieldNull"
+                },
+                {
+                  "$ref": "#/components/schemas/HilFieldConfidenceLt"
+                },
+                {
+                  "$ref": "#/components/schemas/HilBranchIn"
+                },
+                {
+                  "$ref": "#/components/schemas/HilAnyOf"
+                },
+                {
+                  "$ref": "#/components/schemas/HilAllOf"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "kind",
+                "mapping": {
+                  "all_of": "#/components/schemas/HilAllOf",
+                  "always": "#/components/schemas/HilAlways",
+                  "any_of": "#/components/schemas/HilAnyOf",
+                  "any_required_field_null": "#/components/schemas/HilAnyRequiredFieldNull",
+                  "any_split_pages_lt": "#/components/schemas/HilAnySplitPagesLt",
+                  "boundary_confidence_lt": "#/components/schemas/HilBoundaryConfidenceLt",
+                  "branch_in": "#/components/schemas/HilBranchIn",
+                  "category_in": "#/components/schemas/HilCategoryIn",
+                  "confidence_lt": "#/components/schemas/HilConfidenceLt",
+                  "field_confidence_lt": "#/components/schemas/HilFieldConfidenceLt",
+                  "split_count_neq": "#/components/schemas/HilSplitCountNeq",
+                  "top_margin_lt": "#/components/schemas/HilTopMarginLt",
+                  "validation_failed": "#/components/schemas/HilValidationFailed"
+                }
+              }
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Predicates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "predicates"
+        ],
+        "title": "HilAllOf",
+        "description": "Gate fires only if ALL child predicates fire."
+      },
+      "HilAlways": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "always",
+            "title": "Kind",
+            "default": "always"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HilAlways",
+        "description": "Gate every run."
+      },
+      "HilAnyOf": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "any_of",
+            "title": "Kind",
+            "default": "any_of"
+          },
+          "predicates": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/HilAlways"
+                },
+                {
+                  "$ref": "#/components/schemas/HilValidationFailed"
+                },
+                {
+                  "$ref": "#/components/schemas/HilConfidenceLt"
+                },
+                {
+                  "$ref": "#/components/schemas/HilCategoryIn"
+                },
+                {
+                  "$ref": "#/components/schemas/HilTopMarginLt"
+                },
+                {
+                  "$ref": "#/components/schemas/HilSplitCountNeq"
+                },
+                {
+                  "$ref": "#/components/schemas/HilAnySplitPagesLt"
+                },
+                {
+                  "$ref": "#/components/schemas/HilBoundaryConfidenceLt"
+                },
+                {
+                  "$ref": "#/components/schemas/HilAnyRequiredFieldNull"
+                },
+                {
+                  "$ref": "#/components/schemas/HilFieldConfidenceLt"
+                },
+                {
+                  "$ref": "#/components/schemas/HilBranchIn"
+                },
+                {
+                  "$ref": "#/components/schemas/HilAnyOf"
+                },
+                {
+                  "$ref": "#/components/schemas/HilAllOf"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "kind",
+                "mapping": {
+                  "all_of": "#/components/schemas/HilAllOf",
+                  "always": "#/components/schemas/HilAlways",
+                  "any_of": "#/components/schemas/HilAnyOf",
+                  "any_required_field_null": "#/components/schemas/HilAnyRequiredFieldNull",
+                  "any_split_pages_lt": "#/components/schemas/HilAnySplitPagesLt",
+                  "boundary_confidence_lt": "#/components/schemas/HilBoundaryConfidenceLt",
+                  "branch_in": "#/components/schemas/HilBranchIn",
+                  "category_in": "#/components/schemas/HilCategoryIn",
+                  "confidence_lt": "#/components/schemas/HilConfidenceLt",
+                  "field_confidence_lt": "#/components/schemas/HilFieldConfidenceLt",
+                  "split_count_neq": "#/components/schemas/HilSplitCountNeq",
+                  "top_margin_lt": "#/components/schemas/HilTopMarginLt",
+                  "validation_failed": "#/components/schemas/HilValidationFailed"
+                }
+              }
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Predicates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "predicates"
+        ],
+        "title": "HilAnyOf",
+        "description": "Gate fires if ANY child predicate fires. Evaluated in list order;\n`triggered_by` reports the first match (decision: first-match wins)."
+      },
+      "HilAnyRequiredFieldNull": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "any_required_field_null",
+            "title": "Kind",
+            "default": "any_required_field_null"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HilAnyRequiredFieldNull",
+        "description": "Gate when any required field in the extract schema is null/missing.\n\nFirst-class predicate because this is the most common real-world driver\nfor structured-extraction HIL."
+      },
+      "HilAnySplitPagesLt": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "any_split_pages_lt",
+            "title": "Kind",
+            "default": "any_split_pages_lt"
+          },
+          "min_pages": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Min Pages"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "min_pages"
+        ],
+        "title": "HilAnySplitPagesLt",
+        "description": "Gate when any resulting split has fewer than `min_pages` pages."
+      },
+      "HilBoundaryConfidenceLt": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "boundary_confidence_lt",
+            "title": "Kind",
+            "default": "boundary_confidence_lt"
+          },
+          "threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Threshold"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "threshold"
+        ],
+        "title": "HilBoundaryConfidenceLt",
+        "description": "Gate when any split boundary's confidence is below `threshold`."
+      },
+      "HilBranchIn": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "branch_in",
+            "title": "Kind",
+            "default": "branch_in"
+          },
+          "branches": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Branches"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "branches"
+        ],
+        "title": "HilBranchIn",
+        "description": "Gate when the conditional block chose a branch in `branches`."
+      },
+      "HilCategoryIn": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "category_in",
+            "title": "Kind",
+            "default": "category_in"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Categories"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "categories"
+        ],
+        "title": "HilCategoryIn",
+        "description": "Gate when the predicted category is in `categories` (e.g., review fraud alerts)."
+      },
+      "HilConfidenceLt": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "confidence_lt",
+            "title": "Kind",
+            "default": "confidence_lt"
+          },
+          "threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Threshold",
+            "description": "Gate fires when confidence < threshold"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "threshold"
+        ],
+        "title": "HilConfidenceLt",
+        "description": "Gate if the overall block confidence is below `threshold`.\n\nNote: LLM confidences are poorly calibrated; per-field confidence\n(HilFieldConfidenceLt) tends to behave better."
+      },
+      "HilFieldConfidenceLt": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "field_confidence_lt",
+            "title": "Kind",
+            "default": "field_confidence_lt"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Path",
+            "description": "JSONPath-style path, e.g. '$.invoice.total' or 'invoice.total'"
+          },
+          "threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Threshold"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "threshold"
+        ],
+        "title": "HilFieldConfidenceLt",
+        "description": "Gate when the field at `path` has confidence below `threshold`."
+      },
+      "HilSplitCountNeq": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "split_count_neq",
+            "title": "Kind",
+            "default": "split_count_neq"
+          },
+          "expected": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected"
+        ],
+        "title": "HilSplitCountNeq",
+        "description": "Gate when the number of resulting splits != `expected`."
+      },
+      "HilTopMarginLt": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "top_margin_lt",
+            "title": "Kind",
+            "default": "top_margin_lt"
+          },
+          "margin": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Margin"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "margin"
+        ],
+        "title": "HilTopMarginLt",
+        "description": "Gate when (top1_prob - top2_prob) < `margin` \u2014 model was torn."
+      },
+      "HilValidationFailed": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "validation_failed",
+            "title": "Kind",
+            "default": "validation_failed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HilValidationFailed",
+        "description": "Gate if the block output fails its declared schema validation."
       },
       "HistoryPreviewResponse": {
         "properties": {
@@ -43619,7 +44474,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-05-18T17:12:07.271680Z",
+              "updated_at": "2026-05-19T15:41:20.922341Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -44950,7 +45805,8 @@
           "before",
           "after"
         ],
-        "title": "ListMetadata"
+        "title": "ListMetadata",
+        "description": "Boundary resource IDs for page navigation."
       },
       "ListProjectTemplates": {
         "properties": {
@@ -46396,6 +47252,81 @@
         "title": "OutputTarget",
         "description": "Structured block-test assertion target."
       },
+      "OutputVersion": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seq",
+            "description": "Dense, gapless, per-overlay. seq=0 is the model output. IS the identity, the lineage index, and the CAS coordinate."
+          },
+          "parent_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Seq",
+            "description": "The seq this version was authored from. None iff seq==0. Normally seq-1; a 'revert' may point further back. Stored explicitly so a future branching (DAG) model is a non-breaking change."
+          },
+          "author": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "model_output",
+              "agent_edit",
+              "human_edit",
+              "revert"
+            ],
+            "title": "Origin"
+          },
+          "snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Snapshot",
+            "description": "FULL output JSON. Immutable. Never a delta."
+          },
+          "content_sha256": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Content Sha256",
+            "description": "sha256 of canonical-JSON(snapshot). For dedup and integrity ONLY \u2014 not identity, not lineage."
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "Free-text rationale from the author."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seq",
+          "author",
+          "origin",
+          "snapshot",
+          "content_sha256"
+        ],
+        "title": "OutputVersion",
+        "description": "One immutable, full JSON snapshot of the block output.\n\nNever a delta; never mutated after append. Identified within its overlay\nby `seq`."
+      },
       "OverviewUsageSeriesPoint": {
         "properties": {
           "date": {
@@ -47196,11 +48127,29 @@
             "description": "If true, skip the LLM cache and force a fresh completion",
             "default": false
           },
-          "no_fallback_on_5xx": {
-            "type": "boolean",
-            "title": "No Fallback On 5Xx",
-            "description": "If true, skip LLM fallback when the selected provider returns a 5xx-style error",
-            "default": false
+          "candidate_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Scope",
+            "description": "LLM candidate policy: any_candidate, same_provider, or exact_model"
+          },
+          "capacity_retry_owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Retry Owner",
+            "description": "Who retries provider capacity errors: llm_server, orchestrator, or caller"
           }
         },
         "type": "object",
@@ -49931,6 +50880,22 @@
         ],
         "title": "ReadPagesRequest"
       },
+      "ReleaseRequest": {
+        "properties": {
+          "version_stamp": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version Stamp",
+            "description": "CAS token (overlay `rev`)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version_stamp"
+        ],
+        "title": "ReleaseRequest"
+      },
       "RenameProjectRequest": {
         "properties": {
           "name": {
@@ -50624,6 +51589,518 @@
         ],
         "title": "RetabUsage",
         "description": "Usage information for document processing."
+      },
+      "ReviewClaim": {
+        "properties": {
+          "holder": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "claimed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Claimed At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "holder",
+          "expires_at"
+        ],
+        "title": "ReviewClaim",
+        "description": "A soft lease so the UI can show 'Dana is reviewing this'. NOT a lock \u2014\ncorrectness rests entirely on the `rev` CAS. Claims expire."
+      },
+      "ReviewDecision": {
+        "properties": {
+          "decision_id": {
+            "type": "string",
+            "title": "Decision Id"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Verdict"
+          },
+          "decided_by": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "decided_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Decided At"
+          },
+          "on_seq": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "On Seq",
+            "description": "The version seq the reviewer actually saw and ruled on. Pins the verdict to an exact snapshot."
+          },
+          "effective_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Seq",
+            "description": "The seq chosen as the effective output. REQUIRED for 'approved' (usually == on_seq, but an approver may bless an earlier seq). None for 'rejected'."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Required by API policy for 'rejected'."
+          },
+          "supersedes_decision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Decision Id",
+            "description": "The prior decision this one overrides."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "verdict",
+          "decided_by",
+          "on_seq"
+        ],
+        "title": "ReviewDecision",
+        "description": "A verdict cast against one specific version.\n\nAppend-only: any later correction writes a NEW decision; the prior one is retained and pointed at by `supersedes_decision_id`."
+      },
+      "ReviewOverlay": {
+        "properties": {
+          "_id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Equals block_run_id \u2014 1:1 with the gated run."
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "workflow_version_id": {
+            "type": "string",
+            "title": "Workflow Version Id",
+            "description": "Pinned at gate-fire; resume runs THIS version."
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "block_run_id": {
+            "type": "string",
+            "title": "Block Run Id"
+          },
+          "block_type": {
+            "type": "string",
+            "enum": [
+              "extract",
+              "classifier",
+              "split",
+              "conditional"
+            ],
+            "title": "Block Type"
+          },
+          "triggered_by": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/HilAlways"
+              },
+              {
+                "$ref": "#/components/schemas/HilValidationFailed"
+              },
+              {
+                "$ref": "#/components/schemas/HilConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilCategoryIn"
+              },
+              {
+                "$ref": "#/components/schemas/HilTopMarginLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilSplitCountNeq"
+              },
+              {
+                "$ref": "#/components/schemas/HilAnySplitPagesLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilBoundaryConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilAnyRequiredFieldNull"
+              },
+              {
+                "$ref": "#/components/schemas/HilFieldConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilBranchIn"
+              },
+              {
+                "$ref": "#/components/schemas/HilAnyOf"
+              },
+              {
+                "$ref": "#/components/schemas/HilAllOf"
+              }
+            ],
+            "title": "Triggered By",
+            "description": "The leaf predicate that fired the gate.",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "all_of": "#/components/schemas/HilAllOf",
+                "always": "#/components/schemas/HilAlways",
+                "any_of": "#/components/schemas/HilAnyOf",
+                "any_required_field_null": "#/components/schemas/HilAnyRequiredFieldNull",
+                "any_split_pages_lt": "#/components/schemas/HilAnySplitPagesLt",
+                "boundary_confidence_lt": "#/components/schemas/HilBoundaryConfidenceLt",
+                "branch_in": "#/components/schemas/HilBranchIn",
+                "category_in": "#/components/schemas/HilCategoryIn",
+                "confidence_lt": "#/components/schemas/HilConfidenceLt",
+                "field_confidence_lt": "#/components/schemas/HilFieldConfidenceLt",
+                "split_count_neq": "#/components/schemas/HilSplitCountNeq",
+                "top_margin_lt": "#/components/schemas/HilTopMarginLt",
+                "validation_failed": "#/components/schemas/HilValidationFailed"
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_review",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "default": "awaiting_review"
+          },
+          "awaiting_since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Awaiting Since"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority",
+            "description": "Higher sorts first in the queue.",
+            "default": 0
+          },
+          "rev": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Rev",
+            "description": "Whole-document CAS token. +1 on every mutating write.",
+            "default": 0
+          },
+          "claim": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewClaim"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/OutputVersion"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Versions",
+            "description": "Ascending seq. versions[0] is always the model's seq=0 output."
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewDecision"
+            },
+            "type": "array",
+            "title": "Decisions",
+            "description": "Append-only. Empty while awaiting. len>1 means reopened."
+          },
+          "audit": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntry"
+            },
+            "type": "array",
+            "title": "Audit"
+          },
+          "head_seq": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Head Seq",
+            "description": "seq of the newest version (== versions[-1].seq)."
+          },
+          "effective_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Seq",
+            "description": "seq of the version downstream consumes. Set ONLY by an 'approved' decision. None while awaiting / rejected."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "_id",
+          "workflow_id",
+          "workflow_version_id",
+          "workflow_run_id",
+          "block_id",
+          "block_run_id",
+          "block_type",
+          "triggered_by",
+          "versions",
+          "head_seq"
+        ],
+        "title": "ReviewOverlay",
+        "description": "The HIL review sidecar for one gated block run. Replaces v1 `HilRunState`.\n\nStored 1:1 in `hil_overlays` with `_id == block_run_id`."
+      },
+      "ReviewQueueItem": {
+        "properties": {
+          "_id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "workflow_version_id": {
+            "type": "string",
+            "title": "Workflow Version Id"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "block_run_id": {
+            "type": "string",
+            "title": "Block Run Id"
+          },
+          "block_type": {
+            "type": "string",
+            "enum": [
+              "extract",
+              "classifier",
+              "split",
+              "conditional"
+            ],
+            "title": "Block Type"
+          },
+          "triggered_by": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/HilAlways"
+              },
+              {
+                "$ref": "#/components/schemas/HilValidationFailed"
+              },
+              {
+                "$ref": "#/components/schemas/HilConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilCategoryIn"
+              },
+              {
+                "$ref": "#/components/schemas/HilTopMarginLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilSplitCountNeq"
+              },
+              {
+                "$ref": "#/components/schemas/HilAnySplitPagesLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilBoundaryConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilAnyRequiredFieldNull"
+              },
+              {
+                "$ref": "#/components/schemas/HilFieldConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilBranchIn"
+              },
+              {
+                "$ref": "#/components/schemas/HilAnyOf"
+              },
+              {
+                "$ref": "#/components/schemas/HilAllOf"
+              }
+            ],
+            "title": "Triggered By",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "all_of": "#/components/schemas/HilAllOf",
+                "always": "#/components/schemas/HilAlways",
+                "any_of": "#/components/schemas/HilAnyOf",
+                "any_required_field_null": "#/components/schemas/HilAnyRequiredFieldNull",
+                "any_split_pages_lt": "#/components/schemas/HilAnySplitPagesLt",
+                "boundary_confidence_lt": "#/components/schemas/HilBoundaryConfidenceLt",
+                "branch_in": "#/components/schemas/HilBranchIn",
+                "category_in": "#/components/schemas/HilCategoryIn",
+                "confidence_lt": "#/components/schemas/HilConfidenceLt",
+                "field_confidence_lt": "#/components/schemas/HilFieldConfidenceLt",
+                "split_count_neq": "#/components/schemas/HilSplitCountNeq",
+                "top_margin_lt": "#/components/schemas/HilTopMarginLt",
+                "validation_failed": "#/components/schemas/HilValidationFailed"
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_review",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status"
+          },
+          "awaiting_since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Awaiting Since"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority",
+            "default": 0
+          },
+          "rev": {
+            "type": "integer",
+            "title": "Rev",
+            "default": 0
+          },
+          "claim": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewClaim"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "head_seq": {
+            "type": "integer",
+            "title": "Head Seq",
+            "default": 0
+          },
+          "effective_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Seq"
+          }
+        },
+        "type": "object",
+        "required": [
+          "_id",
+          "workflow_id",
+          "workflow_version_id",
+          "workflow_run_id",
+          "block_id",
+          "block_run_id",
+          "block_type",
+          "triggered_by",
+          "status",
+          "awaiting_since"
+        ],
+        "title": "ReviewQueueItem",
+        "description": "One row of the review queue (\u00a77).\n\nDeliberately omits the three heavy append-only logs (`versions`,\n`decisions`, `audit`) \u2014 the queue page only needs scoping + lifecycle\nfields. The full `ReviewOverlay` is fetched on a single `_id` lookup when\na reviewer opens one item."
+      },
+      "ReviewQueueResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewQueueItem"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "description": "True when the queue has more rows than this page returned.",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ReviewQueueResponse",
+        "description": "The paginated review-queue list (\u00a77)."
       },
       "RunExperimentRequest": {
         "properties": {},
@@ -51748,7 +53225,6 @@
               "split",
               "classifier",
               "conditional",
-              "hil",
               "api_call",
               "function",
               "while_loop",
@@ -52649,11 +54125,29 @@
             "description": "If true, skip the LLM cache and force a fresh completion",
             "default": false
           },
-          "no_fallback_on_5xx": {
-            "type": "boolean",
-            "title": "No Fallback On 5Xx",
-            "description": "If true, skip LLM fallback when the selected provider returns a 5xx-style error",
-            "default": false
+          "candidate_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Scope",
+            "description": "LLM candidate policy: any_candidate, same_provider, or exact_model"
+          },
+          "capacity_retry_owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Retry Owner",
+            "description": "Who retries provider capacity errors: llm_server, orchestrator, or caller"
           },
           "simulated_llm_latency_ms": {
             "type": "integer",
@@ -52782,8 +54276,72 @@
         "title": "StressTestSplitRequest",
         "description": "Load-test request \u2014 runs the full pipeline but replaces the LLM call with a fake sleep.\n\nInherits every field of CreateSplitRequest (extra='forbid') and adds two\nknobs to tune how much LLM latency to simulate. Stress-test runs are NOT\npersisted to the splits collection."
       },
-      "SubmitHILDecisionRequest": {
+      "SubmitDecisionRequest": {
         "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Verdict",
+            "description": "The reviewer's verdict."
+          },
+          "version_stamp": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version Stamp",
+            "description": "CAS token: the overlay `rev` the client last read. 409 on mismatch \u2014 re-read and re-decide, never blindly retry the same stamp."
+          },
+          "edited_output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited Output",
+            "description": "Optional FULL corrected output. Valid only with verdict='approved': the server appends it as a human_edit version, then approves that version."
+          },
+          "on_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On Seq",
+            "description": "The version seq the reviewer ruled on. Defaults to the overlay head."
+          },
+          "effective_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Seq",
+            "description": "The seq to ship downstream. Valid only with verdict='approved'; defaults to on_seq."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Required for 'rejected'; ignored for 'approved'."
+          },
           "command_id": {
             "anyOf": [
               {
@@ -52794,41 +54352,19 @@
               }
             ],
             "title": "Command Id",
-            "description": "Optional idempotency key for deduplicating HIL decision commands"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id",
-            "description": "ID of the HIL block being approved/rejected"
-          },
-          "approved": {
-            "type": "boolean",
-            "title": "Approved",
-            "description": "Whether the human approved the data"
-          },
-          "modified_data": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Modified Data",
-            "description": "Optional modified data supplied by the human reviewer"
+            "description": "Optional idempotency key \u2014 a retried submit with the same command_id is deduplicated instead of double-applied."
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "block_id",
-          "approved"
+          "verdict",
+          "version_stamp"
         ],
-        "title": "SubmitHILDecisionRequest"
+        "title": "SubmitDecisionRequest",
+        "description": "Submit a verdict against a gated block run.\n\n`approved` with `edited_output` appends a corrective version first, then\napproves it. `rejected` cancels the workflow run."
       },
-      "SubmitHILDecisionResponse": {
+      "SubmitDecisionResponse": {
         "properties": {
           "submission_status": {
             "type": "string",
@@ -52838,19 +54374,21 @@
               "already_applied"
             ],
             "title": "Submission Status",
-            "description": "Decision submission lifecycle status: accepted for a newly accepted decision, already_received for a duplicate in-flight decision, or already_applied for a matching decision that has already been applied"
+            "description": "accepted for a fresh decision; already_received / already_applied for an idempotent retry."
           },
-          "decision": {
-            "$ref": "#/components/schemas/HILDecisionResource",
-            "description": "HIL decision state for the block"
+          "overlay": {
+            "$ref": "#/components/schemas/ReviewOverlay",
+            "description": "The overlay after the decision was applied."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "submission_status",
-          "decision"
+          "overlay"
         ],
-        "title": "SubmitHILDecisionResponse"
+        "title": "SubmitDecisionResponse",
+        "description": "The result of a decision submission."
       },
       "TemplateBuilderDocumentPreviewsResponse": {
         "properties": {
@@ -54378,7 +55916,7 @@
         },
         "type": "object",
         "title": "WaitingForHumanRun",
-        "description": "The run is paused on at least one HIL block."
+        "description": "The run is paused on at least one gated block."
       },
       "WebhookListResponse": {
         "properties": {
@@ -54713,7 +56251,6 @@
               "split",
               "classifier",
               "conditional",
-              "hil",
               "api_call",
               "function",
               "while_loop",
@@ -55414,7 +56951,6 @@
               "split",
               "classifier",
               "conditional",
-              "hil",
               "api_call",
               "function",
               "while_loop",
