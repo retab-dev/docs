@@ -23,7 +23,7 @@ The binary is available for **macOS**, **Linux**, and **Windows** on both **amd6
     curl -fsSL https://retab.com/install.sh | sh
     ```
 
-    The installer detects your OS and architecture, downloads the matching release from [`github.com/retab-dev/retab/releases`](https://github.com/retab-dev/retab/releases), verifies the SHA-256 checksum, drops the binary at `~/.retab/bin/retab`, and appends a `PATH` entry to your shell's rc file (`.zshrc`, `.bashrc`, `.bash_profile`, or `~/.config/fish/config.fish`).
+    The installer detects your OS and architecture, downloads the matching release from [`github.com/retab-dev/retab/releases`](https://github.com/retab-dev/retab/releases), verifies the SHA-256 checksum, drops the binary at `~/.retab/bin/retab`, appends a `PATH` entry to your shell's rc file (`.zshrc`, `.bashrc`, `.bash_profile`, or `~/.config/fish/config.fish`), and runs `retab setup` to install Retab skills and MCP config.
   </Step>
 
   <Step title="Reload your shell" stepNumber={2}>
@@ -58,11 +58,15 @@ The installer honors a few environment variables:
 | `RETAB_VERSION` | latest | Pin a specific CLI version (e.g. `0.1.0`). |
 | `RETAB_INSTALL_DIR` | `$HOME/.retab/bin` | Where the binary is dropped. |
 | `RETAB_NO_MODIFY_PATH` | unset | Set to `1` to skip the rc-file `PATH` edit. |
+| `RETAB_SKIP_SETUP` | unset | Set to `1` to skip automatic `retab setup`. |
 
 ```sh
 # pin a version, install to a custom dir, leave PATH alone
 curl -fsSL https://retab.com/install.sh \
   | RETAB_VERSION=0.1.0 RETAB_INSTALL_DIR=/usr/local/bin RETAB_NO_MODIFY_PATH=1 sh
+
+# install the binary only; run `retab setup` yourself later
+curl -fsSL https://retab.com/install.sh | sh -s -- --no-setup
 ```
 
 ### Upgrade
@@ -196,10 +200,25 @@ retab files download-link <file-id>
 retab workflows list
 retab workflows get <workflow-id>
 retab workflows runs create <workflow-id> --input-file payload.json
+
+# Workflow tests are run-id-first: create a run, poll it, then inspect results.
 retab workflows tests runs create <workflow-id> --test-id <test-id>
+retab workflows tests runs get <run-id>
+retab workflows tests runs results list <run-id>
+
+# Experiments follow the same run shape; metrics live under the experiment run.
+retab workflows experiments runs create <workflow-id> <experiment-id>
+retab workflows experiments runs get <run-id>
+retab workflows experiments runs results list <run-id>
+retab workflows experiments runs metrics get <run-id> --view summary
 ```
 
 The full surface — `classifications`, `splits`, `partitions`, `edits`, `jobs`, `webhooks`, and the workflow sub-trees (`blocks`, `edges`, `runs`, `artifacts`, `tests`, `experiments`) — follows the same `retab <noun> <verb>` shape. Run `retab <noun> --help` to enumerate verbs, then `retab <noun> <verb> --help` for the flags.
+
+Workflow tests and experiments do not use public `job_id` or `batch_id`
+handles. Store the returned run `id`, poll the corresponding `runs get`
+command, and read child records from the `runs results` or `runs metrics`
+subcommands.
 
 ---
 

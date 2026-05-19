@@ -1,6 +1,6 @@
 ---
 title: Workflow Tests
-description: Reusable per-block checks with discriminated target/source shapes, async batch execution, and a 7-status run record
+description: Reusable per-block checks with discriminated target/source shapes, async test runs, and per-test result records
 ---
 
 Workflow tests let you freeze the inputs to a single workflow block and assert
@@ -126,7 +126,8 @@ The outcome of evaluating ONE assertion against the block's output.
 
 The status of a TEST RUN — aggregates the assertion result with execution-side
 state. This is what appears on `WorkflowTestRunRecord.status`,
-`latest_run_summary.status`, and `WorkflowTestBatchExecutionItem.status`.
+`latest_run_summary.status`, and per-test result rows returned from
+`/v1/workflows/tests/runs/{run_id}/results`.
 
 | Status | Meaning |
 |---|---|
@@ -142,6 +143,10 @@ After [Create Workflow Test Run](/api-reference/workflows/tests/runs/create),
 poll the returned workflow-test run `id`. Expect transient `pending` /
 `running` parent-run lifecycle states before terminal counts and per-test
 results are available.
+
+Workflow-test execution is a hard cutover to this run model. There is no public
+test `job_id` or `batch_id`; use the returned run `id` for polling,
+cancellation, and result inspection.
 
 ## Run records
 
