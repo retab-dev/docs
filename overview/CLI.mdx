@@ -199,7 +199,19 @@ retab files download-link <file-id>
 ```sh
 retab workflows list
 retab workflows get <workflow-id>
-retab workflows runs create <workflow-id> --input-file payload.json
+retab workflows runs create <workflow-id> --document start=./invoice.pdf
+
+# Human review is a gate on a block config, not a separate block.
+printf '%s\n' '{"hil":{"predicate":{"kind":"any_required_field_null"},"skip_in_test_mode":false}}' \
+  > extract-hil.json
+retab workflows blocks update <workflow-id> blk_extract_1 \
+  --merge-config-file ./extract-hil.json
+
+# Runs paused by a gate use waiting_for_human.
+retab workflows runs list --status waiting_for_human
+retab workflows reviews list
+retab workflows reviews get <run-id> <block-id>
+retab workflows reviews approve <run-id> <block-id> --version-stamp 0
 
 # Workflow tests are run-id-first: create a run, poll it, then inspect results.
 retab workflows tests runs create <workflow-id> --test-id <test-id>

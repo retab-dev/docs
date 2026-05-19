@@ -5,13 +5,12 @@ openapi: 'POST /v1/workflows/reviews/{run_id}/{block_id}/decision'
 
 Submit a verdict against a review overlay.
 
-A decision resolves — or re-routes — a gated block run. There are three verdicts:
+A decision resolves a gated block run. There are two verdicts:
 
 | Verdict | Effect |
 |---|---|
 | `approved` | The effective output (latest version) flows downstream and the run resumes. |
 | `rejected` | The run is cancelled. `reason` is required. |
-| `escalated` | **Non-terminal** — the review is re-routed to `escalate_to` and stays `awaiting_review`. `reason` is required. |
 
 **Approve with edits.** Pass `edited_output` to an `approve` call and the server appends a corrective version *and then approves it* in one atomic step. The model's original output is preserved as version `0`; the edited payload becomes the new effective version that flows downstream.
 
@@ -19,18 +18,17 @@ The request body carries:
 
 | Field | Notes |
 |---|---|
-| `verdict` | `approved` / `rejected` / `escalated`. |
+| `verdict` | `approved` / `rejected`. |
 | `version_stamp` | The overlay `rev` you last read. Required — see the conflict note below. |
 | `edited_output` | Optional, `approved` only. Appends a corrective version, then approves it. |
-| `reason` | Required for `rejected` and `escalated`. |
-| `escalate_to` | Required for `escalated` — the target reviewer or queue. |
+| `reason` | Required for `rejected`. |
 | `command_id` | Optional idempotency key — a retried call with the same `command_id` is deduplicated. |
 
 <Warning>
 `version_stamp` is a compare-and-swap token. Send the value you last read from [Get Review](/api-reference/workflows/reviews/get). If the overlay has advanced since (another actor edited or decided), the call returns **`409`** — re-read the overlay and retry with the fresh stamp. A stale stamp raises `retab.exceptions.ConflictError` in Python and surfaces as an `APIError` with `.status === 409` in JavaScript.
 </Warning>
 
-The SDK exposes one method per verdict — `approve`, `reject`, and `escalate` — all of which post to this endpoint.
+The SDK exposes one method per verdict — `approve` and `reject` — both of which post to this endpoint.
 
 <RequestExample>
 
@@ -39,36 +37,29 @@ from retab import Retab
 
 client = Retab()
 
-overlay = client.workflows.runs.reviews.get("run_abc123", "hil-1")
+overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
 stamp = overlay.version_stamp
 
 # Plain approve — the latest version flows downstream, the run resumes
 result = client.workflows.runs.reviews.approve(
-    "run_abc123", "hil-1", version_stamp=stamp,
+    "run_abc123", "block_extract", version_stamp=stamp,
 )
 print(result.submission_status)
 
 # Approve with edits — server appends a corrective version, then approves it
 result = client.workflows.runs.reviews.approve(
-    "run_abc123", "hil-1",
+    "run_abc123", "block_extract",
     version_stamp=stamp,
     edited_output={"total_amount": 325, "vendor_name": "Acme Corp"},
 )
 
 # Reject — the run is cancelled
 client.workflows.runs.reviews.reject(
-    "run_abc123", "hil-1",
+    "run_abc123", "block_extract",
     version_stamp=stamp,
     reason="Source document is illegible; cannot verify totals.",
 )
 
-# Escalate — non-terminal, re-routed and still awaiting review
-client.workflows.runs.reviews.escalate(
-    "run_abc123", "hil-1",
-    version_stamp=stamp,
-    reason="Amount exceeds my approval limit.",
-    escalate_to="queue:finance-leads",
-)
 ```
 
 ```javascript javascript
@@ -76,39 +67,33 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-const overlay = await client.workflows.runs.reviews.get("run_abc123", "hil-1");
+const overlay = await client.workflows.runs.reviews.get("run_abc123", "block_extract");
 const versionStamp = overlay.rev;
 
 // Plain approve — the latest version flows downstream, the run resumes
-const result = await client.workflows.runs.reviews.approve("run_abc123", "hil-1", {
+const result = await client.workflows.runs.reviews.approve("run_abc123", "block_extract", {
   versionStamp,
 });
 console.log(result.submission_status);
 
 // Approve with edits — server appends a corrective version, then approves it
-await client.workflows.runs.reviews.approve("run_abc123", "hil-1", {
+await client.workflows.runs.reviews.approve("run_abc123", "block_extract", {
   versionStamp,
   editedOutput: { total_amount: 325, vendor_name: "Acme Corp" },
 });
 
 // Reject — the run is cancelled
-await client.workflows.runs.reviews.reject("run_abc123", "hil-1", {
+await client.workflows.runs.reviews.reject("run_abc123", "block_extract", {
   versionStamp,
   reason: "Source document is illegible; cannot verify totals.",
 });
 
-// Escalate — non-terminal, re-routed and still awaiting review
-await client.workflows.runs.reviews.escalate("run_abc123", "hil-1", {
-  versionStamp,
-  reason: "Amount exceeds my approval limit.",
-  escalateTo: "queue:finance-leads",
-});
 ```
 
 ```bash curl
 # Approve with edits
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/reviews/run_abc123/hil-1/decision' \
+  'https://api.retab.com/v1/workflows/reviews/run_abc123/block_extract/decision' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
@@ -126,10 +111,10 @@ curl -X 'POST' \
 {
   "submission_status": "accepted",
   "overlay": {
-    "_id": "run_abc123:hil-1",
+    "_id": "run_abc123:block_extract",
     "workflow_run_id": "run_abc123",
-    "block_run_id": "run_abc123:hil-1",
-    "block_id": "hil-1",
+    "block_run_id": "run_abc123:block_extract",
+    "block_id": "block_extract",
     "workflow_id": "wf_1",
     "status": "approved",
     "rev": 5,
@@ -141,33 +126,6 @@ curl -X 'POST' \
         "on_seq": 1,
         "effective_seq": 1,
         "reason": null,
-        "decided_at": "2026-05-13T09:10:00.000Z"
-      }
-    ]
-  }
-}
-```
-
-```json 200 (escalated)
-{
-  "submission_status": "accepted",
-  "overlay": {
-    "_id": "run_abc123:hil-1",
-    "workflow_run_id": "run_abc123",
-    "block_run_id": "run_abc123:hil-1",
-    "block_id": "hil-1",
-    "workflow_id": "wf_1",
-    "status": "awaiting_review",
-    "rev": 5,
-    "decisions": [
-      {
-        "decision_id": "dec_9b1c52",
-        "verdict": "escalated",
-        "decided_by": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
-        "on_seq": 1,
-        "effective_seq": null,
-        "reason": "Amount exceeds my approval limit.",
-        "escalate_to": "queue:finance-leads",
         "decided_at": "2026-05-13T09:10:00.000Z"
       }
     ]

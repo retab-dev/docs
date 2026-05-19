@@ -10,7 +10,7 @@ The overlay is a versioned sidecar attached to a single `(run_id, block_id)` pai
 | Field | Notes |
 |---|---|
 | `versions[]` | Every version of the gated block's output. Sequence `0` is the model's original; later sequences are corrective edits. |
-| `decisions[]` | Every verdict submitted against the overlay (`approved` / `rejected` / `escalated`). |
+| `decisions[]` | Every verdict submitted against the overlay (`approved` / `rejected`). |
 | `audit[]` | The append-only audit trail — every claim, release, edit, and decision, with the acting `Actor`. |
 | `rev` | The overlay's compare-and-swap token. Read it here, pass it back (as the `version_stamp` request parameter) on every mutating call. |
 | `claim` | The `ReviewClaim` currently held on the overlay (`{holder, claimed_at, expires_at}`), or `null`. |
@@ -28,7 +28,7 @@ from retab import Retab
 
 client = Retab()
 
-overlay = client.workflows.runs.reviews.get("run_abc123", "hil-1")
+overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
 
 print(overlay.status, overlay.rev)
 
@@ -46,7 +46,7 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-const overlay = await client.workflows.runs.reviews.get("run_abc123", "hil-1");
+const overlay = await client.workflows.runs.reviews.get("run_abc123", "block_extract");
 
 console.log(overlay.status, overlay.rev);
 
@@ -61,7 +61,7 @@ console.log(latest.snapshot);
 
 ```bash curl
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/reviews/run_abc123/hil-1' \
+  'https://api.retab.com/v1/workflows/reviews/run_abc123/block_extract' \
   -H 'Api-Key: <your-api-key>'
 ```
 
@@ -71,10 +71,10 @@ curl -X 'GET' \
 
 ```json 200
 {
-  "_id": "run_abc123:hil-1",
+  "_id": "run_abc123:block_extract",
   "workflow_run_id": "run_abc123",
-  "block_run_id": "run_abc123:hil-1",
-  "block_id": "hil-1",
+  "block_run_id": "run_abc123:block_extract",
+  "block_id": "block_extract",
   "workflow_id": "wf_1",
   "status": "awaiting_review",
   "rev": 3,
@@ -130,7 +130,7 @@ curl -X 'GET' \
 
 ```json 404
 {
-  "detail": "No review overlay found for run_id='run_abc123' block_id='hil-1'"
+  "detail": "No review overlay found for run_id='run_abc123' block_id='block_extract'"
 }
 ```
 
