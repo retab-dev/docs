@@ -2,3 +2,204 @@
 title: 'Create Job'
 openapi: 'POST /v1/jobs'
 ---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Create an async extraction job
+job = client.jobs.create(
+    endpoint="/v1/extractions",
+    request={
+        "document": {
+            "filename": "invoice.pdf",
+            "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+        },
+        "json_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_number": {"type": "string"},
+                "total": {"type": "number"}
+            },
+            "required": ["invoice_number", "total"]
+        },
+        "model": "retab-small"
+    },
+    metadata={"batch_id": "batch_001", "source": "api"}
+)
+
+print(f"Job ID: {job.id}")
+print(f"Status: {job.status}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// Create an async extraction job
+const job = await client.jobs.create({
+    endpoint: "/v1/extractions",
+    request: {
+        document: {
+            filename: "invoice.pdf",
+            url: "data:application/pdf;base64,JVBERi0xLjQK..."
+        },
+        json_schema: {
+            type: "object",
+            properties: {
+                invoice_number: { type: "string" },
+                total: { type: "number" }
+            },
+            required: ["invoice_number", "total"]
+        },
+        model: "retab-small"
+    },
+    metadata: { batch_id: "batch_001", source: "api" }
+});
+
+console.log(`Job ID: ${job.id}`);
+console.log(`Status: ${job.status}`);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create an async extraction job
+	job, err := client.Jobs.Create(ctx, retab.JobCreateRequest{
+		Endpoint: "/v1/extractions",
+		Request: retab.Resource{
+			"document": map[string]any{
+				"filename": "invoice.pdf",
+				"url":      "data:application/pdf;base64,JVBERi0xLjQK...",
+			},
+			"json_schema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"invoice_number": map[string]any{"type": "string"},
+					"total":          map[string]any{"type": "number"},
+				},
+				"required": []string{"invoice_number", "total"},
+			},
+			"model": "retab-small",
+		},
+		Metadata: map[string]string{"batch_id": "batch_001", "source": "api"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Job ID: %s\n", (*job)["id"])
+	fmt.Printf("Status: %s\n", (*job)["status"])
+}
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/jobs' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "endpoint": "/v1/extractions",
+    "request": {
+      "document": {
+        "filename": "invoice.pdf",
+        "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+      },
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "invoice_number": {"type": "string"},
+          "total": {"type": "number"}
+        },
+        "required": ["invoice_number", "total"]
+      },
+      "model": "retab-small"
+    },
+    "metadata": {
+      "batch_id": "batch_001",
+      "source": "api"
+    }
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "job_V1StGXR8_Z5jdHi6B-myT",
+  "object": "job",
+  "status": "queued",
+  "endpoint": "/v1/extractions",
+  "request": {
+    "document": {
+      "filename": "invoice.pdf",
+      "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    },
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "total": {"type": "number"}
+      },
+      "required": ["invoice_number", "total"]
+    },
+    "model": "retab-small"
+  },
+  "response": null,
+  "error": null,
+  "created_at": 1705420800,
+  "started_at": null,
+  "completed_at": null,
+  "expires_at": 1706025600,
+  "metadata": {
+    "batch_id": "batch_001",
+    "source": "api"
+  }
+}
+```
+
+```json 400
+{
+  "detail": "Invalid request body for /v1/extractions: validation error..."
+}
+```
+
+```json 422
+{
+  "detail": [
+    {
+      "loc": ["body", "endpoint"],
+      "msg": "Input should be '/v1/extractions', '/v1/parses', '/v1/splits', '/v1/classifications', '/v1/edits', ...",
+      "type": "literal_error"
+    }
+  ]
+}
+```
+
+</ResponseExample>
+
+## Dispatch Behavior
+
+Most successful creates return `200` with a `queued` job. If the job record is stored successfully but task dispatch is temporarily delayed, Retab returns `202 Accepted` with the job already created and a warning like `dispatch_delayed`. In that case, poll the returned `job.id` instead of creating a duplicate job.

@@ -2,3 +2,91 @@
 title: 'Claim Review'
 openapi: 'POST /v1/workflows/reviews/{run_id}/{block_id}/claim'
 ---
+
+Take the advisory review claim on an overlay.
+
+The claim records, in `claim`, a `ReviewClaim` (`{holder, claimed_at, expires_at}`) naming the `Actor` currently working a review. It is **advisory** — it does not lock the overlay or prevent another actor from editing or deciding. It exists so a review inbox can show "Dana is reviewing this" and avoid two people picking up the same item. The hard concurrency guarantee comes from the `version_stamp` compare-and-swap on every mutating call, not from the claim.
+
+The request body carries only the `version_stamp` you last read.
+
+<Warning>
+`version_stamp` is a compare-and-swap token. Send the value you last read from [Get Review](/api-reference/workflows/reviews/get). If the overlay has advanced, the call returns **`409`** — re-read the overlay and retry. A stale stamp raises `retab.exceptions.ConflictError` in Python and surfaces as an `APIError` with `.status === 409` in JavaScript.
+</Warning>
+
+Release the claim with [Release Review](/api-reference/workflows/reviews/release) when you step away without deciding. Submitting a decision does not require holding the claim.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+overlay = client.workflows.reviews.get("run_abc123", "block_extract")
+
+overlay = client.workflows.reviews.claim(
+    "run_abc123", "block_extract", version_stamp=overlay.version_stamp,
+)
+print("claimed by:", overlay.claim.holder.display_name)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+let overlay = await client.workflows.reviews.get("run_abc123", "block_extract");
+
+overlay = await client.workflows.reviews.claim("run_abc123", "block_extract", {
+  versionStamp: overlay.rev,
+});
+console.log("claimed by:", overlay.claim?.holder?.display_name);
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/reviews/run_abc123/block_extract/claim' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{ "version_stamp": 3 }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "_id": "run_abc123:block_extract",
+  "workflow_run_id": "run_abc123",
+  "block_run_id": "run_abc123:block_extract",
+  "block_id": "block_extract",
+  "workflow_id": "wf_1",
+  "status": "awaiting_review",
+  "rev": 4,
+  "claim": {
+    "holder": {
+      "kind": "human",
+      "id": "user_42",
+      "display_name": "Dana Rivera"
+    },
+    "claimed_at": "2026-05-13T08:55:00.000Z",
+    "expires_at": "2026-05-13T09:55:00.000Z"
+  },
+  "audit": [
+    {
+      "event": "claimed",
+      "actor": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
+      "at": "2026-05-13T08:55:00.000Z"
+    }
+  ]
+}
+```
+
+```json 409
+{
+  "detail": "Stale version_stamp: overlay is at rev 4, request sent rev 3. Re-read the overlay and retry."
+}
+```
+
+</ResponseExample>

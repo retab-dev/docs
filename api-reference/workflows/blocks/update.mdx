@@ -2,3 +2,145 @@
 title: 'Update Block'
 openapi: 'PATCH /v1/workflows/{workflow_id}/blocks/{block_id}'
 ---
+
+Patch a block with partial data. Only the fields you supply are touched; everything else is left as-is.
+
+Common reasons to call this:
+
+- **Reposition** on the canvas — `position_x` / `position_y` / `width` / `height`
+- **Rename** the block — `label`
+- **Reconfigure** the block — `config` (replaces the existing config; merge it client-side first if you want a partial change)
+- **Reparent** into or out of a container — `parent_id`
+
+`type` is intentionally not patchable. To change a block's type, delete it and create a new one with the same `id`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Move + rename
+block = client.workflows.blocks.update(
+    workflow_id="wf_abc123xyz",
+    block_id="extract-1",
+    label="Extract Invoice Fields v2",
+    position_x=480,
+    position_y=160,
+)
+
+# Replace the config (e.g. tighten the schema, switch model)
+block = client.workflows.blocks.update(
+    workflow_id="wf_abc123xyz",
+    block_id="extract-1",
+    config={
+        "model": "gpt-5-mini",
+        "json_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_number": {"type": "string"},
+                "total": {"type": "number"},
+                "vendor": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}}
+                }
+            },
+        },
+    },
+)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const block = await client.workflows.blocks.update("wf_abc123xyz", "extract-1", {
+  label: "Extract Invoice Fields v2",
+  positionX: 480,
+  positionY: 160,
+});
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	label := "Extract Invoice Fields v2"
+	positionX := 480.0
+	positionY := 160.0
+
+	block, err := client.Workflows.Blocks.Update(ctx, "wf_abc123xyz", "extract-1", retab.WorkflowBlockUpdateRequest{
+		Label:     &label,
+		PositionX: &positionX,
+		PositionY: &positionY,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(block.ID, block.Label)
+}
+```
+
+```bash curl
+curl -X 'PATCH' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/blocks/extract-1' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "label": "Extract Invoice Fields v2",
+    "position_x": 480,
+    "position_y": 160
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "extract-1",
+  "workflow_id": "wf_abc123xyz",
+  "type": "extract",
+  "label": "Extract Invoice Fields v2",
+  "position_x": 480,
+  "position_y": 160,
+  "width": null,
+  "height": null,
+  "config": {
+    "model": "gpt-5",
+    "json_schema": {
+      "type": "object",
+      "properties": {"total": {"type": "number"}}
+    }
+  },
+  "parent_id": null,
+  "updated_at": "2026-05-01T14:30:00Z"
+}
+```
+
+```json 404
+{
+  "detail": "Block not found"
+}
+```
+
+</ResponseExample>

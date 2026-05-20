@@ -2,3 +2,317 @@
 title: 'Retrieve Job'
 openapi: 'GET /v1/jobs/{job_id}'
 ---
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Retrieve a job by ID
+job = client.jobs.retrieve_full("job_V1StGXR8_Z5jdHi6B-myT")
+
+print(f"Status: {job.status}")
+
+if job.status == "completed":
+    print(f"Result: {job.response.body}")
+elif job.status == "failed":
+    print(f"Error: {job.error.message}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+// Retrieve a job by ID
+const job = await client.jobs.retrieveFull("job_V1StGXR8_Z5jdHi6B-myT");
+
+console.log(`Status: ${job.status}`);
+
+if (job.status === "completed") {
+    console.log("Result:", job.response.body);
+} else if (job.status === "failed") {
+    console.log("Error:", job.error.message);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Retrieve a job by ID
+	job, err := client.Jobs.RetrieveFull(ctx, "job_V1StGXR8_Z5jdHi6B-myT")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	status, _ := (*job)["status"].(string)
+	fmt.Printf("Status: %s\n", status)
+
+	switch status {
+	case "completed":
+		if response, ok := (*job)["response"].(map[string]any); ok {
+			fmt.Println("Result:", response["body"])
+		}
+	case "failed":
+		if jobErr, ok := (*job)["error"].(map[string]any); ok {
+			fmt.Println("Error:", jobErr["message"])
+		}
+	}
+}
+```
+
+```bash curl
+curl -X GET \
+  'https://api.retab.com/v1/jobs/job_V1StGXR8_Z5jdHi6B-myT?include_request=true&include_response=true' \
+  -H "Api-Key: $RETAB_API_KEY"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 (queued)
+{
+  "id": "job_V1StGXR8_Z5jdHi6B-myT",
+  "object": "job",
+  "status": "queued",
+  "endpoint": "/v1/extractions",
+  "request": {
+    "document": {
+      "filename": "invoice.pdf",
+      "url": "data:application/pdf;base64,..."
+    },
+    "json_schema": { ... },
+    "model": "retab-small"
+  },
+  "response": null,
+  "error": null,
+  "created_at": 1705420800,
+  "started_at": null,
+  "completed_at": null,
+  "expires_at": 1706025600,
+  "metadata": {"batch_id": "batch_001"}
+}
+```
+
+```json 200 (completed)
+{
+  "id": "job_V1StGXR8_Z5jdHi6B-myT",
+  "object": "job",
+  "status": "completed",
+  "endpoint": "/v1/extractions",
+  "request": { ... },
+  "response": {
+    "status_code": 200,
+    "body": {
+      "content": {
+        "id": "chatcmpl-abc123",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "{\"invoice_number\": \"INV-2024-001\", \"total\": 1250.00}",
+              "role": "assistant",
+              "parsed": {
+                "invoice_number": "INV-2024-001",
+                "total": 1250.00
+              }
+            }
+          }
+        ],
+        "model": "retab-small",
+        "usage": {
+          "prompt_tokens": 1500,
+          "completion_tokens": 25,
+          "total_tokens": 1525
+        },
+        "likelihoods": {
+          "invoice_number": 0.95,
+          "total": 0.92
+        }
+      }
+    }
+  },
+  "error": null,
+  "created_at": 1705420800,
+  "started_at": 1705420802,
+  "completed_at": 1705420810,
+  "expires_at": 1706025600,
+  "metadata": {"batch_id": "batch_001"}
+}
+```
+
+```json 200 (failed)
+{
+  "id": "job_V1StGXR8_Z5jdHi6B-myT",
+  "object": "job",
+  "status": "failed",
+  "endpoint": "/v1/extractions",
+  "request": { ... },
+  "response": null,
+  "error": {
+    "code": "extraction_error",
+    "message": "Failed to extract data from document: unsupported format",
+    "details": {
+      "document_type": "unknown"
+    }
+  },
+  "created_at": 1705420800,
+  "started_at": 1705420802,
+  "completed_at": 1705420805,
+  "expires_at": 1706025600,
+  "metadata": null
+}
+```
+
+```json 404
+{
+  "detail": "Job not found"
+}
+```
+
+</ResponseExample>
+
+## SDK Convenience Methods
+
+- Python: `client.jobs.retrieve(job_id)` defaults to lightweight polling.
+- Python: `client.jobs.retrieve_full(job_id)` fetches full request/response payloads.
+- JavaScript: `client.jobs.retrieve(jobId)` defaults to lightweight polling.
+- JavaScript: `client.jobs.retrieveFull(jobId)` fetches full request/response payloads.
+
+## Payload Restoration
+
+`include_request=true` restores any request-side file artifacts that were offloaded during job creation.
+
+`include_response=true` restores response payloads or document artifacts for completed jobs.
+
+If restoration fails for a specific artifact, the job is still returned and Retab may attach a warning describing the degraded restore.
+
+## Polling for Completion
+
+Use polling to wait for a job to complete:
+
+<CodeGroup>
+```python Python
+import time
+
+job = client.jobs.retrieve(job_id)
+terminal_statuses = ("completed", "failed", "cancelled", "expired")
+
+while job.status not in terminal_statuses:
+    time.sleep(2)  # Wait 2 seconds between polls
+    job = client.jobs.retrieve(job_id)
+
+# Fetch full payload only once the job is terminal
+if job.status == "completed":
+    job = client.jobs.retrieve_full(job_id)
+
+# Or use the helper method
+job = client.jobs.wait_for_completion(
+    job_id,
+    poll_interval_seconds=2.0,
+    timeout_seconds=300,
+)
+```
+
+```javascript JavaScript
+const terminalStatuses = ["completed", "failed", "cancelled", "expired"];
+
+while (!terminalStatuses.includes(job.status)) {
+    await new Promise(r => setTimeout(r, 2000));  // Wait 2 seconds
+    job = await client.jobs.retrieve(jobId);
+}
+
+// Fetch full payload only once the job is terminal
+if (job.status === "completed") {
+    job = await client.jobs.retrieveFull(jobId);
+}
+
+// Or use the helper method
+job = await client.jobs.waitForCompletion(jobId, {
+    poll_interval_ms: 2000,
+    timeout_ms: 300_000,
+});
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	jobID := "job_V1StGXR8_Z5jdHi6B-myT"
+
+	// Manual polling
+	terminal := map[string]bool{"completed": true, "failed": true, "cancelled": true, "expired": true}
+	job, err := client.Jobs.Retrieve(ctx, jobID, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for {
+		status, _ := (*job)["status"].(string)
+		if terminal[status] {
+			break
+		}
+		time.Sleep(2 * time.Second)
+		job, err = client.Jobs.Retrieve(ctx, jobID, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if status, _ := (*job)["status"].(string); status == "completed" {
+		job, err = client.Jobs.RetrieveFull(ctx, jobID)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// Or use the helper method
+	job, err = client.Jobs.WaitForCompletion(ctx, jobID, &retab.JobWaitForCompletionParams{
+		PollInterval:    2 * time.Second,
+		Timeout:         5 * time.Minute,
+		IncludeResponse: true,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println((*job)["status"])
+}
+```
+</CodeGroup>
+
+By default, `wait_for_completion`/`waitForCompletion` polls with lightweight retrieves and returns a final job with `include_response=true` and `include_request=false`. Override these with options when needed.

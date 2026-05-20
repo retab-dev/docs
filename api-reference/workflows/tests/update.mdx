@@ -2,3 +2,179 @@
 title: 'Update Workflow Test'
 openapi: 'PATCH /v1/workflows/{workflow_id}/tests/{test_id}'
 ---
+
+Patch the name, assertion, and/or source of a workflow test. Every field is
+optional in the request body — fields you omit are left untouched. Setting
+`assertion: null` is rejected explicitly (use [Delete Workflow Test](./delete) if
+you want to remove the test entirely).
+
+Updating `source` rebinds where the inputs come from:
+
+- `{ type: "manual", handle_inputs: ... }` — switch to hand-written inputs.
+- `{ type: "run_step", run_id: ..., step_id: ... }` — re-capture inputs from
+  a different workflow run / step.
+
+The response is the full updated `WorkflowTest`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Rename only.
+test = client.workflows.tests.update(
+    workflow_id="wf_abc123xyz",
+    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+    name="Q1 invoice — vendor name check",
+)
+
+# Replace the assertion.
+test = client.workflows.tests.update(
+    workflow_id="wf_abc123xyz",
+    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+    assertion={
+        "target": {"output_handle_id": "output-json-0", "path": "vendor.name"},
+        "condition": {"kind": "matches_regex", "expected": r"^Acme.*"},
+    },
+)
+
+# Re-capture inputs from a different run.
+test = client.workflows.tests.update(
+    workflow_id="wf_abc123xyz",
+    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+    source={
+        "type": "run_step",
+        "run_id": "wfrun_new789",
+        "step_id": "block_extract_invoice",
+    },
+)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const renamed = await client.workflows.tests.update({
+  workflowId: "wf_abc123xyz",
+  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  name: "Q1 invoice — vendor name check",
+});
+
+const reAsserted = await client.workflows.tests.update({
+  workflowId: "wf_abc123xyz",
+  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  assertion: {
+    target: { output_handle_id: "output-json-0", path: "vendor.name" },
+    condition: { kind: "matches_regex", expected: "^Acme.*" },
+  },
+});
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	workflowID := "wf_abc123xyz"
+	testID := "wfnodetest_hsLEQiM61ez9Piv147MWk"
+
+	// Rename only.
+	if _, err := client.Workflows.Tests.Update(ctx, workflowID, testID, retab.WorkflowTestUpdateRequest{
+		Name: "Q1 invoice — vendor name check",
+	}); err != nil {
+		log.Fatal(err)
+	}
+
+	// Replace the assertion.
+	if _, err := client.Workflows.Tests.Update(ctx, workflowID, testID, retab.WorkflowTestUpdateRequest{
+		Assertion: retab.Resource{
+			"target":    map[string]any{"output_handle_id": "output-json-0", "path": "vendor.name"},
+			"condition": map[string]any{"kind": "matches_regex", "expected": "^Acme.*"},
+		},
+	}); err != nil {
+		log.Fatal(err)
+	}
+
+	// Re-capture inputs from a different run.
+	if _, err := client.Workflows.Tests.Update(ctx, workflowID, testID, retab.WorkflowTestUpdateRequest{
+		Source: retab.Resource{
+			"type":    "run_step",
+			"run_id":  "wfrun_new789",
+			"step_id": "block_extract_invoice",
+		},
+	}); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+```bash curl
+# Rename only
+curl -X 'PATCH' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/tests/wfnodetest_hsLEQiM61ez9Piv147MWk' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{ "name": "Q1 invoice — vendor name check" }'
+
+# Replace the assertion
+curl -X 'PATCH' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/tests/wfnodetest_hsLEQiM61ez9Piv147MWk' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "assertion": {
+      "target": { "output_handle_id": "output-json-0", "path": "vendor.name" },
+      "condition": { "kind": "matches_regex", "expected": "^Acme.*" }
+    }
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  "workflow_id": "wf_abc123xyz",
+  "target": { "type": "block", "block_id": "block_extract_invoice" },
+  "source": { "type": "manual", "handle_inputs": { "...": "..." } },
+  "name": "Q1 invoice — vendor name check",
+  "assertion": { "...": "the new assertion" },
+  "schema_drift": "fresh",
+  "validation_status": "valid",
+  "latest_run_summary": null,
+  "created_at": "2026-04-08T14:22:26Z",
+  "updated_at": "2026-05-01T14:35:00Z"
+}
+```
+
+```json 400
+{
+  "detail": "assertion cannot be null"
+}
+```
+
+```json 404
+{
+  "detail": "Workflow test not found: wfnodetest_hsLEQiM61ez9Piv147MWk"
+}
+```
+
+</ResponseExample>

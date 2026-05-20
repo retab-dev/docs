@@ -2,3 +2,128 @@
 title: 'Get Workflow Test'
 openapi: 'GET /v1/workflows/{workflow_id}/tests/{test_id}'
 ---
+
+Fetch a single workflow test by id. The response refreshes the test's
+`validation_status` and schema-drift state against the current workflow draft
+before returning, so the caller always sees the latest staleness.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+test = client.workflows.tests.get(
+    workflow_id="wf_abc123xyz",
+    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+)
+
+print(test.assertion.condition)
+print(test.schema_drift)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const test = await client.workflows.tests.get({
+  workflowId: "wf_abc123xyz",
+  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+});
+
+console.log(test.assertion.condition);
+console.log(test.schema_drift);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	test, err := client.Workflows.Tests.Get(ctx, "wf_abc123xyz", "wfnodetest_hsLEQiM61ez9Piv147MWk")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if assertion, ok := (*test)["assertion"].(map[string]any); ok {
+		fmt.Println(assertion["condition"])
+	}
+	fmt.Println((*test)["schema_drift"])
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/tests/wfnodetest_hsLEQiM61ez9Piv147MWk' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  "workflow_id": "wf_abc123xyz",
+  "target": { "type": "block", "block_id": "block_extract_invoice" },
+  "source": {
+    "type": "manual",
+    "handle_inputs": {
+      "input-document-0": { "type": "file", "file_id": "file_invoice_q1" }
+    }
+  },
+  "name": "Q1 invoice total",
+  "assertion": {
+    "id": "assert_xyz",
+    "target": { "output_handle_id": "output-json-0", "path": "total" },
+    "condition": { "kind": "equals", "expected": 1234.56 },
+    "label": null
+  },
+  "schema_drift": "fresh",
+  "schema_drift_detail": null,
+  "validation_status": "valid",
+  "validation_issues": [],
+  "latest_run_summary": {
+    "run_record_id": "wfnodetestrun_abc123",
+    "status": "passed",
+    "started_at": "2026-05-01T13:55:00Z",
+    "completed_at": "2026-05-01T13:55:18Z",
+    "duration_ms": 18221,
+    "workflow_draft_fingerprint": "ddd95baadce6045f",
+    "block_config_fingerprint": "0ff93ddc7cefcb42",
+    "assertions_passed": 1,
+    "assertions_failed": 0,
+    "blocked_assertions": 0
+  },
+  "latest_passing_run_summary": { "...": "as above" },
+  "latest_failing_run_summary": null,
+  "created_at": "2026-04-08T14:22:26Z",
+  "updated_at": "2026-04-08T14:27:52Z"
+}
+```
+
+```json 404
+{
+  "detail": "Workflow test not found: wfnodetest_hsLEQiM61ez9Piv147MWk"
+}
+```
+
+</ResponseExample>

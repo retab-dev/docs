@@ -2,3 +2,161 @@
 title: 'Create Partitions'
 openapi: 'POST /v1/partitions'
 ---
+
+Partition a document into repeated chunks keyed by a value such as `invoice_number`, `policy_id`, or `claim_number`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+response = client.partitions.create(
+    document="invoice_batch.pdf",
+    key="invoice_number",
+    instructions="Return one chunk per invoice number and keep all pages for the same invoice together.",
+    model="retab-small",
+    n_consensus=3,
+    allow_overlap=False,
+    bust_cache=False,
+)
+
+for chunk in response.output:
+    print(chunk.key, chunk.pages)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const response = await client.partitions.create({
+  document: "invoice_batch.pdf",
+  key: "invoice_number",
+  instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
+  model: "retab-small",
+  n_consensus: 3,
+  allow_overlap: false,
+  bust_cache: false,
+});
+
+for (const chunk of response.output) {
+  console.log(chunk.key, chunk.pages);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("invoice_batch.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	response, err := client.Partitions.Create(ctx, retab.PartitionCreateRequest{
+		Document:     document,
+		Key:          "invoice_number",
+		Instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
+		Model:        "retab-small",
+		NConsensus:   3,
+		AllowOverlap: false,
+		BustCache:    false,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if output, ok := (*response)["output"].([]any); ok {
+		for _, chunk := range output {
+			c, _ := chunk.(map[string]any)
+			fmt.Println(c["key"], c["pages"])
+		}
+	}
+}
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/partitions' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "invoice_batch.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  },
+  "key": "invoice_number",
+  "instructions": "Return one chunk per invoice number and keep all pages for the same invoice together.",
+  "model": "retab-small",
+  "n_consensus": 3,
+  "allow_overlap": false,
+  "bust_cache": false
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "output": [
+    {
+      "key": "INV-001",
+      "pages": [1, 2]
+    },
+    {
+      "key": "INV-002",
+      "pages": [3, 4]
+    }
+  ],
+  "consensus": {
+    "likelihoods": [
+      {
+        "key": 0.99,
+        "pages": [0.99, 0.98]
+      },
+      {
+        "key": 0.96,
+        "pages": [0.95, 0.95]
+      }
+    ],
+    "choices": [
+      [
+        {"key": "INV-001", "pages": [1, 2]},
+        {"key": "INV-002", "pages": [3, 4]}
+      ],
+      [
+        {"key": "INV-001", "pages": [1, 2]},
+        {"key": "INV-002", "pages": [3, 4]}
+      ],
+      [
+        {"key": "INV-001", "pages": [1, 2]},
+        {"key": "INV-002", "pages": [3, 4]}
+      ]
+    ]
+  },
+  "usage": {
+    "credits": 3.0
+  }
+}
+```
+
+</ResponseExample>

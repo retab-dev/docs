@@ -2,3 +2,133 @@
 title: 'Create Edges (batch)'
 openapi: 'POST /v1/workflows/{workflow_id}/edges/batch'
 ---
+
+Create multiple edges in a single request. Pair this with [Create Blocks (batch)](/api-reference/workflows/blocks/create-batch) to scaffold a whole workflow graph in two calls.
+
+Each entry has the same shape as the body of [Create Edge](/api-reference/workflows/edges/create). The whole batch is rejected if any entry is invalid (duplicate edge ID, missing source/target block, …).
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+edges = client.workflows.edges.create_batch(
+    workflow_id="wf_abc123xyz",
+    edges=[
+        {
+            "id": "edge-start-to-extract",
+            "source_block": "start-1",
+            "target_block": "extract-1",
+            "source_handle": "output-file-0",
+            "target_handle": "input-file-0",
+        },
+    ],
+)
+
+for edge in edges:
+    print(edge.id)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const edges = await client.workflows.edges.createBatch("wf_abc123xyz", [
+    {
+      id: "edge-start-to-extract",
+      sourceBlock: "start-1",
+      targetBlock: "extract-1",
+      sourceHandle: "output-file-0",
+      targetHandle: "input-file-0",
+    },
+]);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	edges, err := client.Workflows.Edges.CreateBatch(ctx, "wf_abc123xyz", []retab.WorkflowEdgeCreateRequest{
+		{
+			ID:           "edge-start-to-extract",
+			SourceBlock:  "start-1",
+			TargetBlock:  "extract-1",
+			SourceHandle: "output-file-0",
+			TargetHandle: "input-file-0",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, edge := range edges {
+		fmt.Println(edge.ID)
+	}
+}
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/edges/batch' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '[
+    {
+      "id": "edge-start-to-extract",
+      "source_block": "start-1",
+      "target_block": "extract-1",
+      "source_handle": "output-file-0",
+      "target_handle": "input-file-0"
+    }
+  ]'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 201
+[
+    {
+      "id": "edge-start-to-extract",
+      "workflow_id": "wf_abc123xyz",
+      "source_block": "start-1",
+      "target_block": "extract-1",
+    "source_handle": "output-file-0",
+    "target_handle": "input-file-0",
+    "updated_at": "2026-05-01T14:30:00Z"
+  }
+]
+```
+
+```json 400
+{
+  "detail": "Duplicate edge id in batch: edge-start-to-extract"
+}
+```
+
+```json 404
+{
+  "detail": "Workflow not found"
+}
+```
+
+</ResponseExample>

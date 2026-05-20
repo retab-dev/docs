@@ -2,3 +2,161 @@
 title: 'Create Classification'
 openapi: 'POST /v1/classifications'
 ---
+
+Classify a document into one of the provided categories and persist the result as a `Classification` resource that can later be retrieved via `GET /v1/classifications/{classification_id}` or listed via `GET /v1/classifications`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+classification = client.classifications.create(
+    document="invoice.pdf",
+    model="retab-small",
+    categories=[
+        {"name": "invoice", "description": "Invoice documents with billing information"},
+        {"name": "receipt", "description": "Receipt documents for payments"},
+        {"name": "contract", "description": "Legal contract documents"},
+    ],
+    first_n_pages=3,
+    instructions="Processing batch from Q4 2024 vendor submissions",
+    n_consensus=1,
+)
+
+print(f"Classification ID: {classification.id}")
+print(f"Category: {classification.output.category}")
+print(f"Reasoning: {classification.output.reasoning}")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const classification = await client.classifications.create({
+    document: "invoice.pdf",
+    model: "retab-small",
+    categories: [
+        { name: "invoice", description: "Invoice documents with billing information" },
+        { name: "receipt", description: "Receipt documents for payments" },
+        { name: "contract", description: "Legal contract documents" },
+    ],
+    first_n_pages: 3,
+    instructions: "Processing batch from Q4 2024 vendor submissions",
+    n_consensus: 1,
+});
+
+console.log(`Classification ID: ${classification.id}`);
+console.log(`Category: ${classification.output.category}`);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	classification, err := client.Classifications.Create(ctx, retab.ClassificationCreateRequest{
+		Document: document,
+		Model:    "retab-small",
+		Categories: []retab.ClassificationCategory{
+			{Name: "invoice", Description: "Invoice documents with billing information"},
+			{Name: "receipt", Description: "Receipt documents for payments"},
+			{Name: "contract", Description: "Legal contract documents"},
+		},
+		FirstNPages:  3,
+		Instructions: "Processing batch from Q4 2024 vendor submissions",
+		NConsensus:   1,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Classification ID: %v\n", (*classification)["id"])
+	if output, ok := (*classification)["output"].(map[string]any); ok {
+		fmt.Printf("Category: %v\n", output["category"])
+	}
+}
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/classifications' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "invoice.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  },
+  "model": "retab-small",
+  "categories": [
+    {"name": "invoice", "description": "Invoice documents with billing information"},
+    {"name": "receipt", "description": "Receipt documents for payments"},
+    {"name": "contract", "description": "Legal contract documents"}
+  ],
+  "first_n_pages": 3,
+  "instructions": "Processing batch from Q4 2024 vendor submissions",
+  "n_consensus": 1
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "cls_01G34H8J2K",
+  "file": {
+    "id": "file_6dd6eb00688ad8d1",
+    "filename": "invoice.pdf",
+    "mime_type": "application/pdf"
+  },
+  "model": "retab-small",
+  "categories": [
+    {"name": "invoice", "description": "Invoice documents with billing information"},
+    {"name": "receipt", "description": "Receipt documents for payments"},
+    {"name": "contract", "description": "Legal contract documents"}
+  ],
+  "n_consensus": 1,
+  "instructions": "Processing batch from Q4 2024 vendor submissions",
+  "output": {
+    "reasoning": "The document contains billing details including line items, unit prices, quantities, and a total amount due.",
+    "category": "invoice"
+  },
+  "consensus": {
+    "choices": [],
+    "likelihood": null
+  },
+  "usage": {
+    "prompt_tokens": 1500,
+    "completion_tokens": 40,
+    "total_tokens": 1540
+  },
+  "created_at": "2024-03-15T10:30:00Z",
+  "updated_at": "2024-03-15T10:30:00Z"
+}
+```
+
+</ResponseExample>

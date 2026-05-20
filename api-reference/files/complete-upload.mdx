@@ -2,3 +2,112 @@
 title: 'Complete File Upload'
 openapi: 'POST /v1/files/upload/{file_id}/complete'
 ---
+
+Complete a direct-to-storage upload after the file bytes have been written to the signed `uploadUrl`.
+
+Retab verifies that the object exists, matches the expected size from the upload session, and belongs to the authenticated organization. The response is a `MIMEData` object that can be passed directly to later document requests.
+
+<Note>
+Most callers use the SDK's high-level `client.files.upload(...)` instead of
+calling this endpoint directly. `files.upload` runs the entire three-step
+direct-upload flow (request signed URL → PUT bytes to storage → complete
+session) end-to-end and returns the same `MIMEData` you'd get back here.
+
+Reach for this endpoint when you want to drive the PUT yourself (e.g. browser-side
+upload that bypasses your backend) and need to call `complete` from your server
+once the bytes have landed.
+</Note>
+
+<RequestExample>
+
+```python python
+from retab import Retab
+from pathlib import Path
+
+client = Retab()
+
+# Recommended — SDK runs the full upload + complete flow.
+mime = client.files.upload(Path("invoice.pdf"))
+print(mime.url)  # https://storage.retab.com/...
+
+# Lower-level — only when you've handled the PUT yourself.
+# The SDK exposes the request builder so you can dispatch it via the
+# transport without rebuilding the URL/body by hand:
+request = client.files.prepare_complete_upload(
+    file_id="file_a1b2c3d4e5f6",
+    sha256=None,  # required only if the upload session was created with sha256
+)
+response = client._prepared_request(request)
+```
+
+```javascript javascript
+import Retab from 'retab';
+
+const client = new Retab();
+
+// Recommended — SDK runs the full upload + complete flow.
+const mime = await client.files.upload("./invoice.pdf");
+console.log(mime.url);  // https://storage.retab.com/...
+
+// Lower-level — only when you've handled the PUT yourself.
+// `prepare_complete_upload` returns the request shape; dispatch it
+// through the transport for the actual call.
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Recommended — SDK runs the full upload + complete flow.
+	mime, err := client.Files.Upload(ctx, "invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(mime.URL) // https://storage.retab.com/...
+
+	// Lower-level — only when you've handled the PUT yourself.
+	// CompleteUpload finalizes a direct-to-storage upload after the
+	// bytes have already been written to the signed uploadUrl.
+	completed, err := client.Files.CompleteUpload(ctx, "file_a1b2c3d4e5f6", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(completed.URL)
+}
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/files/upload/file_a1b2c3d4e5f6/complete' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "filename": "invoice.pdf",
+  "url": "https://storage.retab.com/file_a1b2c3d4e5f6"
+}
+```
+
+</ResponseExample>

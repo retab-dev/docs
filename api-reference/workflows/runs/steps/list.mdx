@@ -2,3 +2,160 @@
 title: 'List Steps'
 openapi: 'GET /v1/workflows/runs/{run_id}/steps'
 ---
+
+Retrieve the persisted step list for a workflow run. Use this when you want the complete set of step documents for a run, including lifecycle states, handle inputs/outputs, and loop metadata.
+
+Returns the canonical `{ "data": [...], "list_metadata": { "before": null, "after": null } }` pagination envelope shared with all Retab list endpoints. Cursor pagination is not yet implemented for this endpoint — `list_metadata` is always `{ before: null, after: null }`.
+
+Steps include an `artifact` ref when the block produced a persisted record.
+Use [Get Artifact](/api-reference/workflows/artifacts/get) to dereference one
+ref, or [List Artifacts](/api-reference/workflows/artifacts/list) to fetch all
+artifact records for the run.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+steps = client.workflows.runs.steps.list("run_abc123xyz")
+
+for step in steps.data:
+    print(step.block_id, step.lifecycle.status, step.artifact)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const steps = await client.workflows.runs.steps.list("run_abc123xyz");
+
+for (const step of steps.data) {
+    console.log(step.block_id, step.lifecycle.status, step.artifact);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	steps, err := client.Workflows.Runs.Steps.List(ctx, "run_abc123xyz")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, step := range steps.Data {
+		fmt.Println(step.BlockID, step.Lifecycle["status"])
+	}
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/runs/run_abc123xyz/steps' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "run_id": "run_abc123xyz",
+      "block_id": "extract-block-1",
+      "step_id": "extract-block-1",
+      "block_type": "extract",
+      "block_label": "Extract Invoice",
+      "lifecycle": { "status": "completed" },
+      "artifact": { "operation": "extraction", "id": "ext_abc123" },
+      "started_at": "2026-03-12T09:00:00Z",
+      "completed_at": "2026-03-12T09:00:03Z",
+      "handle_outputs": {
+        "output-json-0": {
+          "type": "json",
+          "data": {
+            "invoice_number": "INV-2024-001",
+            "total_amount": 1234.56
+          }
+        }
+      },
+      "handle_inputs": {
+        "input-file-0": {
+          "type": "file",
+          "document": {
+            "id": "file_123",
+            "filename": "invoice.pdf",
+            "mime_type": "application/pdf"
+          }
+        }
+      },
+      "created_at": "2026-03-12T09:00:00Z"
+    },
+    {
+      "run_id": "run_abc123xyz",
+      "block_id": "split-block-1",
+      "step_id": "split-block-1",
+      "block_type": "split",
+      "block_label": "Split Documents",
+      "lifecycle": { "status": "completed" },
+      "artifact": { "operation": "split", "id": "spl_def456" },
+      "started_at": "2026-03-12T09:00:03Z",
+      "completed_at": "2026-03-12T09:00:04Z",
+      "handle_outputs": {
+        "output-file-invoice": {
+          "type": "file",
+          "document": {
+            "id": "file_456",
+            "filename": "invoice_page_1.pdf",
+            "mime_type": "application/pdf"
+          }
+        }
+      },
+      "handle_inputs": {
+        "input-file-0": {
+          "type": "file",
+          "document": {
+            "id": "file_123",
+            "filename": "invoice.pdf",
+            "mime_type": "application/pdf"
+          }
+        }
+      },
+      "created_at": "2026-03-12T09:00:03Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": null
+  }
+}
+```
+
+```json 404
+{
+  "detail": "Workflow run not found"
+}
+```
+
+</ResponseExample>

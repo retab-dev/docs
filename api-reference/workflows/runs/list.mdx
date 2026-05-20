@@ -2,3 +2,225 @@
 title: 'List Runs'
 openapi: 'GET /v1/workflows/runs'
 ---
+
+List workflow runs across one or more workflows. The endpoint supports id pagination plus a rich set of filters: by workflow, by status, by trigger type, by date range, by cost / duration, and by free-text run-ID search.
+
+Pagination uses `before` / `after` cursors:
+
+- Pass the **last** `id` from a page as `after` to get the next page.
+- Pass the **first** `id` from a page as `before` to get the previous page.
+
+Filter tips:
+
+- `status` is single-valued; `statuses` accepts a comma-separated string or a list (e.g. `"completed,error"`).
+- Same pattern for `trigger_type` (single) vs. `trigger_types` (multiple).
+- `from_date` / `to_date` accept either `YYYY-MM-DD` strings or Python `date` objects (the SDK serializes them).
+- `fields` lets you slim the response down to just the keys you need (e.g. `"id,lifecycle,timing"`).
+
+<RequestExample>
+
+```python python
+from datetime import date
+from retab import Retab
+
+client = Retab()
+
+# All recent runs of a single workflow
+runs = client.workflows.runs.list(
+    workflow_id="wf_abc123xyz",
+    limit=20,
+    order="desc",
+    sort_by="created_at",
+)
+
+# Failed and pending runs in the last 7 days
+recent_failures = client.workflows.runs.list(
+    workflow_id="wf_abc123xyz",
+    statuses=["error", "pending"],
+    from_date=date(2026, 4, 24),
+    to_date=date(2026, 5, 1),
+    limit=50,
+)
+
+# ID pagination — second page
+next_page = client.workflows.runs.list(
+    workflow_id="wf_abc123xyz",
+    after=runs.list_metadata.after,
+    limit=20,
+)
+
+# Slim payload — IDs and statuses only
+slim = client.workflows.runs.list(
+    workflow_id="wf_abc123xyz",
+    fields="id,lifecycle,timing",
+    limit=100,
+)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const runs = await client.workflows.runs.list({
+  workflowId: "wf_abc123xyz",
+  limit: 20,
+  order: "desc",
+  sortBy: "created_at",
+});
+
+const recentFailures = await client.workflows.runs.list({
+  workflowId: "wf_abc123xyz",
+  statuses: "error,pending",
+  fromDate: "2026-04-24",
+  toDate: "2026-05-01",
+  limit: 50,
+});
+
+const nextPage = await client.workflows.runs.list({
+  workflowId: "wf_abc123xyz",
+  after: runs.list_metadata.after,
+  limit: 20,
+});
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	runs, err := client.Workflows.Runs.List(ctx, &retab.ListWorkflowRunsParams{
+		WorkflowID: "wf_abc123xyz",
+		Limit:      20,
+		Order:      "desc",
+		SortBy:     "created_at",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	recentFailures, err := client.Workflows.Runs.List(ctx, &retab.ListWorkflowRunsParams{
+		WorkflowID: "wf_abc123xyz",
+		Statuses:   []string{"error", "pending"},
+		FromDate:   "2026-04-24",
+		ToDate:     "2026-05-01",
+		Limit:      50,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	nextPage, err := client.Workflows.Runs.List(ctx, &retab.ListWorkflowRunsParams{
+		WorkflowID: "wf_abc123xyz",
+		After:      runs.ListMetadata.After,
+		Limit:      20,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(len(runs.Data), len(recentFailures.Data), len(nextPage.Data))
+}
+```
+
+```bash curl
+# All recent runs of one workflow
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/runs?workflow_id=wf_abc123xyz&limit=20&order=desc&sort_by=created_at' \
+  -H 'Api-Key: <your-api-key>'
+
+# Multi-status filter + date range
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/runs?workflow_id=wf_abc123xyz&statuses=error%2Cpending&from_date=2026-04-24&to_date=2026-05-01&limit=50' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "id": "run_abc123",
+      "workflow": {
+        "workflow_id": "wf_abc123xyz",
+        "name_at_run_time": "Invoice Processing"
+      },
+      "trigger": { "type": "api" },
+      "lifecycle": { "status": "completed" },
+      "timing": {
+        "created_at": "2026-05-01T14:30:00Z",
+        "started_at": "2026-05-01T14:30:00Z",
+        "completed_at": "2026-05-01T14:30:15Z",
+        "human_waiting_started_at": null,
+        "accumulated_human_waiting_ms": 0
+      },
+      "inputs": {
+        "documents": {
+          "start-1": {
+            "id": "file_123",
+            "filename": "invoice.pdf",
+            "mime_type": "application/pdf"
+          }
+        },
+        "json_data": {}
+      }
+    },
+    {
+      "id": "run_def456",
+      "workflow": {
+        "workflow_id": "wf_abc123xyz",
+        "name_at_run_time": "Invoice Processing"
+      },
+      "trigger": { "type": "api" },
+      "lifecycle": {
+        "status": "error",
+        "message": "Extract block failed: schema validation",
+        "stage": "execution",
+        "category": null,
+        "details": null,
+        "failing_step_id": "extract-block-1"
+      },
+      "timing": {
+        "created_at": "2026-05-01T13:55:00Z",
+        "started_at": "2026-05-01T13:55:00Z",
+        "completed_at": "2026-05-01T13:55:08Z",
+        "human_waiting_started_at": null,
+        "accumulated_human_waiting_ms": 0
+      },
+      "inputs": {
+        "documents": {
+          "start-1": {
+            "id": "file_456",
+            "filename": "scan_blurry.pdf",
+            "mime_type": "application/pdf"
+          }
+        },
+        "json_data": {}
+      }
+    }
+  ],
+  "list_metadata": {
+    "before": "run_abc123",
+    "after": "run_def456"
+  }
+}
+```
+
+</ResponseExample>
