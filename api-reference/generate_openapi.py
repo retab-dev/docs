@@ -9,6 +9,10 @@ PRIVATE_PATH_PREFIXES: tuple[str, ...] = (
     "/internal/",
     "/custom/",
 )
+DIAGNOSTIC_PATH_SUFFIXES: tuple[str, ...] = (
+    "/stress-test",
+    "/benchmark",
+)
 
 LEGACY_EDIT_PATHS: set[str] = {
     "/v1/edit/agent/fill",
@@ -359,6 +363,7 @@ def generate_openapi() -> None:
             path.startswith(LEGACY_DOCUMENT_PATH_PREFIX)
             or path.startswith(LEGACY_HIL_DECISION_PATH_PREFIX)
             or path.startswith(PRIVATE_PATH_PREFIXES)
+            or any(suffix in path for suffix in DIAGNOSTIC_PATH_SUFFIXES)
             or path in LEGACY_EDIT_PATHS
         ):
             spec["paths"].pop(path, None)
