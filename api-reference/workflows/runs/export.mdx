@@ -2,3 +2,148 @@
 title: 'Export Runs'
 openapi: 'POST /v1/workflows/runs/export_payload'
 ---
+
+Export run results for one block as structured CSV. Useful for pulling extract or classify outputs out of Retab in bulk for downstream analytics, BI tools, or spreadsheets.
+
+You pick:
+
+- **Which workflow + which block** to export (`workflow_id`, `block_id`).
+- **What to export** for that block (`export_source`):
+  - `"outputs"` (default) — what the block produced.
+  - `"inputs"` — what the block received.
+- **Which runs** to include — either a fixed list (`selected_run_ids`) or all runs that match the filters (`status`, `exclude_status`, `from_date`, `to_date`, `trigger_types`).
+- **Column ordering** via `preferred_columns`. Columns you don't list still appear, in the order the block emits them.
+
+The response carries the CSV as a string plus the row / column counts. Write it directly to a file or hand it to your CSV reader of choice.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# Export every successful run's extract output
+export = client.workflows.runs.export(
+    workflow_id="wf_abc123xyz",
+    block_id="extract-1",
+    export_source="outputs",
+    status="completed",
+    from_date="2026-04-01",
+    to_date="2026-04-30",
+    preferred_columns=["invoice_number", "total", "vendor.name"],
+)
+
+print(f"{export.rows} rows, {export.columns} columns")
+with open("invoices.csv", "w") as f:
+    f.write(export.csv_data)
+
+# Export a hand-picked set of runs
+export = client.workflows.runs.export(
+    workflow_id="wf_abc123xyz",
+    block_id="extract-1",
+    selected_run_ids=["run_abc123", "run_def456"],
+)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+import { writeFileSync } from 'node:fs';
+
+const client = new Retab();
+
+const exportResult = await client.workflows.runs.export({
+  workflowId: "wf_abc123xyz",
+  blockId: "extract-1",
+  exportSource: "outputs",
+  status: "completed",
+  fromDate: "2026-04-01",
+  toDate: "2026-04-30",
+  preferredColumns: ["invoice_number", "total", "vendor.name"],
+});
+
+console.log(`${exportResult.rows} rows, ${exportResult.columns} columns`);
+writeFileSync("invoices.csv", exportResult.csv_data);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	exportResult, err := client.Workflows.Runs.Export(ctx, retab.ExportWorkflowRunsRequest{
+		WorkflowID:       "wf_abc123xyz",
+		BlockID:          "extract-1",
+		ExportSource:     "outputs",
+		Status:           "completed",
+		FromDate:         "2026-04-01",
+		ToDate:           "2026-04-30",
+		PreferredColumns: []string{"invoice_number", "total", "vendor.name"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%d rows, %d columns\n", exportResult.Rows, exportResult.Columns)
+	if err := os.WriteFile("invoices.csv", []byte(exportResult.CSVData), 0o644); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/runs/export_payload' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "workflow_id": "wf_abc123xyz",
+    "block_id": "extract-1",
+    "export_source": "outputs",
+    "status": "completed",
+    "from_date": "2026-04-01",
+    "to_date": "2026-04-30",
+    "preferred_columns": ["invoice_number", "total", "vendor.name"]
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "csv_data": "run_id,invoice_number,total,vendor.name\nrun_abc123,INV-2026-001,1234.56,Acme Corp\nrun_def456,INV-2026-002,987.00,Globex\n",
+  "rows": 2,
+  "columns": 4
+}
+```
+
+```json 400
+{
+  "detail": "Block extract-1 has no exportable outputs"
+}
+```
+
+```json 404
+{
+  "detail": "Workflow not found"
+}
+```
+
+</ResponseExample>

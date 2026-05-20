@@ -2,3 +2,172 @@
 title: 'List Workflow Tests'
 openapi: 'GET /v1/workflows/{workflow_id}/tests'
 ---
+
+List all workflow tests for a workflow. Optionally filter by `target_block_id` to
+get only the tests that target a specific block.
+
+Each entry in `data` is a full `WorkflowTest` (target, source, assertion,
+schema-drift state, latest run summaries). Use this to populate a Tests page or
+to check whether a workflow has any tests before offering to run them.
+
+The response uses the canonical Retab list envelope:
+`{ "data": [...], "list_metadata": { "before": null, "after": null } }`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# All tests for a workflow.
+tests = client.workflows.tests.list(
+    workflow_id="wf_abc123xyz",
+    limit=50,
+)
+
+# Only tests for one specific block.
+tests_for_block = client.workflows.tests.list(
+    workflow_id="wf_abc123xyz",
+    target_block_id="block_extract_invoice",
+    limit=20,
+)
+
+print(f"Workflow has {len(tests.data)} tests")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const tests = await client.workflows.tests.list({
+  workflowId: "wf_abc123xyz",
+  limit: 50,
+});
+
+const testsForBlock = await client.workflows.tests.list({
+  workflowId: "wf_abc123xyz",
+  targetBlockId: "block_extract_invoice",
+  limit: 20,
+});
+
+console.log(`Workflow has ${tests.data.length} tests`);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// All tests for a workflow.
+	tests, err := client.Workflows.Tests.List(ctx, retab.ListWorkflowTestsRequest{
+		WorkflowID: "wf_abc123xyz",
+		Limit:      50,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Only tests for one specific block.
+	testsForBlock, err := client.Workflows.Tests.List(ctx, retab.ListWorkflowTestsRequest{
+		WorkflowID:    "wf_abc123xyz",
+		TargetBlockID: "block_extract_invoice",
+		Limit:         20,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Workflow has %d tests\n", len(tests.Data))
+	_ = testsForBlock
+}
+```
+
+```bash curl
+# All tests
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/tests?limit=50' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+
+# Filtered by target block
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/tests?target_block_id=block_extract_invoice&limit=20' \
+  -H 'accept: application/json' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
+      "workflow_id": "wf_abc123xyz",
+      "target": { "type": "block", "block_id": "block_extract_invoice" },
+      "source": {
+        "type": "run_step",
+        "run_id": "wfrun_def456",
+        "step_id": "block_extract_invoice"
+      },
+      "name": "Q1 invoice total",
+      "assertion": {
+        "id": "assert_xyz",
+        "target": { "output_handle_id": "output-json-0", "path": "total" },
+        "condition": { "kind": "equals", "expected": 1234.56 },
+        "label": null
+      },
+      "assertion_schema_dep": {
+        "schema_path": "total",
+        "subtree_hash": "7d79dd764ab6548d",
+        "depends_on_root": false
+      },
+      "assertion_drift_status": null,
+      "schema_drift": "fresh",
+      "schema_drift_detail": null,
+      "validation_status": "valid",
+      "validation_issues": [],
+      "latest_run_summary": {
+        "run_record_id": "wfnodetestrun_abc123",
+        "status": "passed",
+        "started_at": "2026-05-01T13:55:00Z",
+        "completed_at": "2026-05-01T13:55:18Z",
+        "duration_ms": 18221,
+        "workflow_draft_fingerprint": "ddd95baadce6045f",
+        "block_config_fingerprint": "0ff93ddc7cefcb42",
+        "assertions_passed": 1,
+        "assertions_failed": 0,
+        "blocked_assertions": 0
+      },
+      "latest_passing_run_summary": { "...": "as above" },
+      "latest_failing_run_summary": null,
+      "created_at": "2026-04-08T14:22:26Z",
+      "updated_at": "2026-04-08T14:27:52Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": null
+  }
+}
+```
+
+</ResponseExample>

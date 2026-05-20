@@ -2,3 +2,106 @@
 title: 'Get Block'
 openapi: 'GET /v1/workflows/{workflow_id}/blocks/{block_id}'
 ---
+
+Get a single authored block from the workflow's current draft.
+
+Use [Get Block Resolved Schemas](/api-reference/workflows/blocks/get-resolved-schemas) when you need graph-derived input/output schemas for this block.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+block = client.workflows.blocks.get(
+    workflow_id="wf_abc123xyz",
+    block_id="extract-1",
+)
+
+print(block.type, block.label)
+print(block.config)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const block = await client.workflows.blocks.get("wf_abc123xyz", "extract-1");
+
+console.log(block.type, block.label);
+console.log(block.config);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	block, err := client.Workflows.Blocks.Get(ctx, "wf_abc123xyz", "extract-1")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(block.Type, block.Label)
+	fmt.Println(block.Config)
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/blocks/extract-1' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "extract-1",
+  "workflow_id": "wf_abc123xyz",
+  "type": "extract",
+  "label": "Extract Invoice Fields",
+  "position_x": 320,
+  "position_y": 0,
+  "width": 240,
+  "height": 120,
+  "config": {
+    "model": "gpt-5",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "total": {"type": "number"}
+      }
+    }
+  },
+  "parent_id": null,
+  "updated_at": "2026-05-01T14:30:00Z"
+}
+```
+
+```json 404
+{
+  "detail": "Block not found"
+}
+```
+
+</ResponseExample>

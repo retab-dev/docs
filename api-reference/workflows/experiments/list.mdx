@@ -2,3 +2,101 @@
 title: 'List Experiments'
 openapi: 'GET /v1/workflows/{workflow_id}/experiments'
 ---
+
+List all experiments attached to a workflow, with the latest run's
+status, score, staleness flag, and schema-drift state.
+
+The response uses the canonical Retab list envelope:
+`{ "data": [...], "list_metadata": { "before": null, "after": null } }`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+page = client.workflows.experiments.list(workflow_id="wf_abc123")
+for exp in page.data:
+    print(exp.id, exp.name, exp.status, exp.score)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const page = await client.workflows.experiments.list("wf_abc123");
+for (const exp of page.data) {
+  console.log(exp.id, exp.name, exp.status, exp.score);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	page, err := client.Workflows.Experiments.List(ctx, "wf_abc123")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, exp := range page.Data {
+		fmt.Println(exp.ID, exp.Name, exp.Status, exp.Score)
+	}
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123/experiments' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "id": "exp_abc",
+      "workflow_id": "wf_abc123",
+      "block_id": "extract-invoice",
+      "block_kind": "extract",
+      "n_consensus": 5,
+      "document_count": 12,
+      "name": "Q1 invoices",
+      "last_run_id": "exprun_1",
+      "status": "completed",
+      "score": 0.87,
+      "is_stale": false,
+      "schema_drift": "none",
+      "schema_drift_detail": null,
+      "created_at": "2026-05-01T14:30:00Z",
+      "updated_at": "2026-05-02T09:00:00Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": null
+  }
+}
+```
+
+</ResponseExample>

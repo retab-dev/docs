@@ -2,3 +2,94 @@
 title: 'List Templates'
 openapi: 'GET /v1/edits/templates'
 ---
+
+List templates registered for your organization. `form_fields` is omitted from the list response for performance — fetch a single template with `GET /v1/edits/templates/{template_id}` to see the full field list.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+templates = client.edits.templates.list(limit=20, order="desc")
+for template in templates.data:
+    print(f"{template.id}: {template.name} ({template.field_count} fields)")
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+const templates = await client.edits.templates.list({ limit: 20, order: "desc" });
+for (const template of templates.data) {
+    console.log(`${template.id}: ${template.name}`);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	templates, err := client.Edits.Templates.List(ctx, &retab.ListEditTemplatesParams{
+		ListParams: retab.ListParams{Limit: 20, Order: "desc"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, template := range templates.Data {
+		fmt.Printf("%v: %v (%v fields)\n", template["id"], template["name"], template["field_count"])
+	}
+}
+```
+
+```bash curl
+curl -X GET \
+  'https://api.retab.com/v1/edits/templates?limit=20&order=desc' \
+  -H "Api-Key: $RETAB_API_KEY"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "id": "edittplt_abc123",
+      "name": "W-9 Form",
+      "file": {
+        "id": "file_6dd6eb00688ad8d1",
+        "filename": "w9_empty.pdf",
+        "mime_type": "application/pdf"
+      },
+      "form_fields": [],
+      "field_count": 7,
+      "created_at": "2024-03-15T10:30:00Z",
+      "updated_at": "2024-03-15T10:30:00Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": "edittplt_abc123",
+    "total_count": 3
+  }
+}
+```
+
+</ResponseExample>

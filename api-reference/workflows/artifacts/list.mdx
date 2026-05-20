@@ -2,3 +2,118 @@
 title: 'List Artifacts'
 openapi: 'GET /v1/workflows/artifacts'
 ---
+
+List the dereferenced artifact records produced by one workflow run.
+
+Returns the canonical `{ "data": [...], "list_metadata": { "before": null, "after": null } }` pagination envelope shared with all Retab list endpoints. Each `data` item is a flattened workflow artifact record (operation-tagged dereferenced artifact); arbitrary operation-specific fields are preserved verbatim. Cursor pagination is not yet implemented for this endpoint — `list_metadata` is always `{ before: null, after: null }`.
+
+Use this when an integration needs to inspect all persisted records for a run,
+or when an MCP tool needs to answer questions such as why a conditional block
+selected a specific handle. The endpoint walks the run's steps, follows each
+`artifact` ref, and returns the flattened records.
+
+Filters:
+
+- `run_id` is required.
+- `operation` limits results to one artifact operation, such as
+  `conditional_evaluation` or `function_invocation`.
+- `block_id` limits results to one producing block or step id.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+artifacts = client.workflows.artifacts.list(
+    "run_abc123xyz",
+    operation="conditional_evaluation",
+)
+
+for artifact in artifacts.data:
+    print(artifact.step_id)
+    print(artifact.matched_condition_ids)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const artifacts = await client.workflows.artifacts.list({
+  runId: "run_abc123xyz",
+  operation: "api_call_invocation",
+});
+
+for (const artifact of artifacts.data) {
+  console.log(artifact.step_id);
+  console.log(artifact.attempts);
+  console.log(artifact.error);
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/artifacts?run_id=run_abc123xyz&operation=conditional_evaluation' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "operation": "conditional_evaluation",
+      "id": "ceval_abc123",
+      "workflow_run_id": "run_abc123xyz",
+      "step_id": "conditional-block-1",
+      "selected_handles": ["wrong"],
+      "matched_branch_id": "branch_wrong",
+      "matched_condition_ids": ["condition_wrong_total"],
+      "evaluations": [
+        {
+          "condition_id": "condition_wrong_total",
+          "matched": true,
+          "output_handle_id": "wrong",
+          "left_value": 1200,
+          "operator": "greater_than",
+          "right_value": 1000
+        }
+      ],
+      "created_at": "2026-03-12T09:00:04Z"
+    },
+    {
+      "operation": "function_invocation",
+      "id": "fninv_def456",
+      "workflow_run_id": "run_abc123xyz",
+      "step_id": "function-block-1",
+      "inputs": {
+        "total": 1200
+      },
+      "output": {
+        "approved": false,
+        "reason": "total exceeds review threshold"
+      },
+      "duration_ms": 248,
+      "error": null,
+      "created_at": "2026-03-12T09:00:05Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": null
+  }
+}
+```
+
+```json 404
+{
+  "detail": "workflow run not found"
+}
+```
+
+</ResponseExample>

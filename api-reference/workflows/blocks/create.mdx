@@ -2,3 +2,189 @@
 title: 'Create Block'
 openapi: 'POST /v1/workflows/{workflow_id}/blocks'
 ---
+
+Add a new block to a workflow's draft graph.
+
+You provide the block ID — it must be unique within the workflow. Pick something descriptive (e.g. `extract-invoice`, `classifier-language`) so edges and assertions stay readable.
+
+The `config` shape depends on `type`. See [Workflow Blocks](/workflows/Blocks) for the per-type config reference.
+
+A few invariants the API enforces:
+
+- Input blocks (`start`, `start_json`) cannot be placed inside containers — `parent_id` must be `null` for them.
+- `parent_id` is reserved for placing blocks inside container blocks (`while_loop`, `for_each`).
+
+To insert many blocks in one round-trip, use [Create Blocks (batch)](/api-reference/workflows/blocks/create-batch).
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+# A typical extract block with a JSON schema config
+block = client.workflows.blocks.create(
+    workflow_id="wf_abc123xyz",
+    id="extract-1",
+    type="extract",
+    label="Extract Invoice Fields",
+    position_x=320,
+    position_y=0,
+    config={
+        "model": "gpt-5",
+        "json_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_number": {"type": "string"},
+                "total": {"type": "number"},
+            },
+        },
+    },
+)
+
+print(block.id)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const block = await client.workflows.blocks.create("wf_abc123xyz", {
+  id: "extract-1",
+  type: "extract",
+  label: "Extract Invoice Fields",
+  positionX: 320,
+  positionY: 0,
+  config: {
+    model: "retab-small",
+    json_schema: {
+      type: "object",
+      properties: {
+        invoice_number: { type: "string" },
+        total: { type: "number" },
+      },
+    },
+  },
+});
+
+console.log(block.id);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	block, err := client.Workflows.Blocks.Create(ctx, "wf_abc123xyz", retab.WorkflowBlockCreateRequest{
+		ID:        "extract-1",
+		Type:      "extract",
+		Label:     "Extract Invoice Fields",
+		PositionX: 320,
+		PositionY: 0,
+		Config: map[string]any{
+			"model": "gpt-5",
+			"json_schema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"invoice_number": map[string]any{"type": "string"},
+					"total":          map[string]any{"type": "number"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(block.ID)
+}
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/blocks' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "id": "extract-1",
+    "type": "extract",
+    "label": "Extract Invoice Fields",
+    "position_x": 320,
+    "position_y": 0,
+    "config": {
+      "model": "gpt-5",
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "invoice_number": {"type": "string"},
+          "total": {"type": "number"}
+        }
+      }
+    }
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 201
+{
+  "id": "extract-1",
+  "workflow_id": "wf_abc123xyz",
+  "type": "extract",
+  "label": "Extract Invoice Fields",
+  "position_x": 320,
+  "position_y": 0,
+  "width": null,
+  "height": null,
+  "config": {
+    "model": "gpt-5",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "total": {"type": "number"}
+      }
+    }
+  },
+  "parent_id": null,
+  "updated_at": "2026-05-01T14:30:00Z"
+}
+```
+
+```json 400
+{
+  "detail": "Input blocks (start, start_json) cannot be placed inside containers"
+}
+```
+
+```json 404
+{
+  "detail": "Workflow not found"
+}
+```
+
+```json 409
+{
+  "detail": "Block ID already exists in this workflow"
+}
+```
+
+</ResponseExample>

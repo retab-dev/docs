@@ -2,3 +2,96 @@
 title: 'List Eligible Blocks'
 openapi: 'GET /v1/workflows/{workflow_id}/experiments/eligible-blocks'
 ---
+
+List blocks in the current draft that can host experiments — `extract`,
+`split`, `classifier`, and `for_each` blocks configured with
+`map_method="split_by_key"`. Each row also carries roll-ups for the
+experiments already attached to that block (counts, mean score, latest run).
+
+Useful for building a dashboard "add experiment" picker without separately
+listing blocks and then filtering client-side.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+result = client.workflows.experiments.list_eligible_blocks(
+    workflow_id="wf_abc123",
+)
+for block in result.blocks:
+    print(block.block_id, block.block_type, block.experiment_count)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const result = await client.workflows.experiments.listEligibleBlocks("wf_abc123");
+
+for (const block of result.blocks) {
+  console.log(block.block_id, block.block_type, block.experiment_count);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Workflows.Experiments.ListEligibleBlocks(ctx, "wf_abc123")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, block := range result.Blocks {
+		fmt.Println(block.BlockID, block.BlockType, block.ExperimentCount)
+	}
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/wf_abc123/experiments/eligible-blocks' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "blocks": [
+    {
+      "block_id": "extract-invoice",
+      "block_label": "Extract Invoice Fields",
+      "block_type": "extract",
+      "experiment_count": 2,
+      "drifted_experiment_count": 0,
+      "stale_experiment_count": 1,
+      "latest_run_at": "2026-05-02T09:00:00Z",
+      "mean_score": 0.84
+    }
+  ]
+}
+```
+
+</ResponseExample>

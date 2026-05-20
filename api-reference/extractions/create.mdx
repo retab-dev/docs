@@ -2,3 +2,162 @@
 title: 'Create Extraction'
 openapi: 'POST /v1/extractions'
 ---
+
+Extract structured data from a document against a JSON schema and persist the result as an `Extraction` resource that can later be retrieved via `GET /v1/extractions/{extraction_id}` or listed via `GET /v1/extractions`.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+extraction = client.extractions.create(
+    document="Invoice.pdf",
+    json_schema="Invoice_schema.json",
+    model="retab-small",
+    n_consensus=1,
+    metadata={"source": "docs"},
+)
+
+print(f"Extraction ID: {extraction.id}")
+print(f"Filename: {extraction.file.filename}")
+print(extraction.output)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const extraction = await client.extractions.create({
+    document: "Invoice.pdf",
+    json_schema: "Invoice_schema.json",
+    model: "retab-small",
+    n_consensus: 1,
+    metadata: { source: "docs" },
+});
+
+console.log(`Extraction ID: ${extraction.id}`);
+console.log(extraction.output);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document, err := retab.InferMIMEData("Invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		Document: document,
+		JSONSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"invoice_number": map[string]any{"type": "string"},
+				"total":          map[string]any{"type": "number"},
+			},
+			"required": []string{"invoice_number", "total"},
+		},
+		Model:      "retab-small",
+		NConsensus: 1,
+		Metadata:   map[string]string{"source": "docs"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Extraction ID: %v\n", (*extraction)["id"])
+	fmt.Println((*extraction)["output"])
+}
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/extractions' \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "document": {
+    "filename": "Invoice.pdf",
+    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+  },
+  "model": "retab-small",
+  "image_resolution_dpi": 192,
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "invoice_number": {"type": "string"},
+      "total": {"type": "number"}
+    },
+    "required": ["invoice_number", "total"]
+  },
+  "n_consensus": 1,
+  "metadata": {"source": "docs"}
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "extr_01G34H8J2K",
+  "file": {
+    "id": "file_6dd6eb00688ad8d1",
+    "filename": "Invoice.pdf",
+    "mime_type": "application/pdf"
+  },
+  "model": "retab-small",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "invoice_number": {"type": "string"},
+      "total": {"type": "number"}
+    }
+  },
+  "n_consensus": 1,
+  "image_resolution_dpi": 192,
+  "output": {
+    "invoice_number": "INV-2024-0042",
+    "total": 1234.56
+  },
+  "consensus": {
+    "choices": [],
+    "likelihoods": {
+      "invoice_number": 0.98,
+      "total": 0.97
+    }
+  },
+  "metadata": {
+    "source": "docs"
+  },
+  "usage": {
+    "prompt_tokens": 2760,
+    "completion_tokens": 20,
+    "total_tokens": 2780
+  },
+  "created_at": "2024-03-15T10:30:00Z",
+  "updated_at": "2024-03-15T10:30:00Z"
+}
+```
+
+</ResponseExample>

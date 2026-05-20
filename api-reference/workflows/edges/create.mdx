@@ -2,3 +2,138 @@
 title: 'Create Edge'
 openapi: 'POST /v1/workflows/{workflow_id}/edges'
 ---
+
+Connect two blocks by creating an edge.
+
+You provide the edge ID — it must be unique within the workflow. Use a readable convention (e.g. `edge-start-to-extract`) so the graph stays inspectable.
+
+`source_handle` and `target_handle` reference handles declared by each block. The handle naming convention is direction + slot:
+
+- `output-file-0`, `output-json-0`, `output-file-booking-confirmation`, `output-json-needs-review`, …
+- `input-file-0`, `input-json-0`, …
+
+Dynamic split/classifier/conditional outputs use the route `handle_key`, not
+the display label. Inspect the source block before wiring those edges.
+
+Use [Get Workflow Resolved Schemas](/api-reference/workflows/get-resolved-schemas) to inspect the graph-derived input/output schemas for each block.
+
+To insert many edges in one round-trip, use [Create Edges (batch)](/api-reference/workflows/edges/create-batch).
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+edge = client.workflows.edges.create(
+    workflow_id="wf_abc123xyz",
+    id="edge-start-to-extract",
+    source_block="start-1",
+    target_block="extract-1",
+    source_handle="output-file-0",
+    target_handle="input-file-0",
+)
+
+print(edge.id)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const edge = await client.workflows.edges.create("wf_abc123xyz", {
+  id: "edge-start-to-extract",
+  sourceBlock: "start-1",
+  targetBlock: "extract-1",
+  sourceHandle: "output-file-0",
+  targetHandle: "input-file-0",
+});
+
+console.log(edge.id);
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	edge, err := client.Workflows.Edges.Create(ctx, "wf_abc123xyz", retab.WorkflowEdgeCreateRequest{
+		ID:           "edge-start-to-extract",
+		SourceBlock:  "start-1",
+		TargetBlock:  "extract-1",
+		SourceHandle: "output-file-0",
+		TargetHandle: "input-file-0",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(edge.ID)
+}
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/edges' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "id": "edge-start-to-extract",
+    "source_block": "start-1",
+    "target_block": "extract-1",
+    "source_handle": "output-file-0",
+    "target_handle": "input-file-0"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 201
+{
+  "id": "edge-start-to-extract",
+  "workflow_id": "wf_abc123xyz",
+  "source_block": "start-1",
+  "target_block": "extract-1",
+  "source_handle": "output-file-0",
+  "target_handle": "input-file-0",
+  "updated_at": "2026-05-01T14:30:00Z"
+}
+```
+
+```json 400
+{
+  "detail": "Source or target block does not exist in this workflow"
+}
+```
+
+```json 404
+{
+  "detail": "Workflow not found"
+}
+```
+
+```json 409
+{
+  "detail": "Edge ID already exists in this workflow"
+}
+```
+
+</ResponseExample>
