@@ -28451,7 +28451,7 @@
           "Workflows"
         ],
         "summary": "Create Workflow From Template",
-        "description": "Create a new workflow from a predefined template.\n\nAvailable templates: extract, parse, edit, split, classify.\nEach creates a workflow with a start block connected to the corresponding processing block.",
+        "description": "Create a new workflow from a predefined template.\n\nAvailable templates: extract, parse, edit, split, classify.\nEach creates a workflow with a start-document block connected to the corresponding processing block.",
         "operationId": "create_workflow_from_template_v1_workflows_from_template__template_type__post",
         "security": [
           {
@@ -29016,7 +29016,7 @@
           "Workflows"
         ],
         "summary": "Run Workflow",
-        "description": "Run a workflow with the provided input documents.\n\nThis endpoint creates a workflow run and starts execution in the background:\n1. Resolving the requested workflow version (production, draft, or pinned version id)\n2. Validating that all start blocks have corresponding input documents\n3. Creating the run record and returning immediately\n4. Executing blocks in topological order in the background",
+        "description": "Run a workflow with the provided input documents.\n\nThis endpoint creates a workflow run and starts execution in the background:\n1. Resolving the requested workflow version (production, draft, or pinned version id)\n2. Validating that all start-document blocks have corresponding input documents\n3. Creating the run record and returning immediately\n4. Executing blocks in topological order in the background",
         "operationId": "run_workflow_v1_workflows__workflow_id__run_post",
         "security": [
           {
@@ -36704,7 +36704,7 @@
               "type": "string"
             },
             "type": "array",
-            "title": "Start Block Ids"
+            "title": "start-document block Ids"
           },
           "body_dag_configs": {
             "additionalProperties": {
@@ -37202,7 +37202,7 @@
           "type": {
             "type": "string",
             "enum": [
-              "start",
+              "start-document",
               "start_json",
               "note",
               "parse",
@@ -43433,7 +43433,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-05-20T16:49:11.413246Z",
+              "updated_at": "2026-05-20T17:16:23.971852Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -47084,7 +47084,7 @@
             "type": "boolean",
             "title": "Allow Overlap",
             "description": "If true, allow a page to appear in more than one partition chunk",
-            "default": false
+            "default": true
           },
           "bust_cache": {
             "type": "boolean",
@@ -48608,7 +48608,7 @@
           "allow_overlap": {
             "type": "boolean",
             "title": "Allow Overlap",
-            "default": false
+            "default": true
           },
           "partition_id": {
             "anyOf": [
@@ -51466,13 +51466,13 @@
             },
             "type": "object",
             "title": "Documents",
-            "description": "Start block ID -> input document reference"
+            "description": "start-document block ID -> input document reference"
           },
           "json_data": {
             "additionalProperties": true,
             "type": "object",
             "title": "Json Data",
-            "description": "Start_json block ID -> input JSON data"
+            "description": "start-json block ID -> input JSON data"
           }
         },
         "type": "object",
@@ -51584,13 +51584,13 @@
             },
             "type": "object",
             "title": "Documents",
-            "description": "Mapping of start block IDs to their input documents"
+            "description": "Mapping of start-document block IDs to their input documents"
           },
           "json_inputs": {
             "additionalProperties": true,
             "type": "object",
             "title": "Json Inputs",
-            "description": "Mapping of start_json block IDs to their input JSON data"
+            "description": "Mapping of start-json block IDs to their input JSON data"
           },
           "version": {
             "type": "string",
@@ -51606,7 +51606,7 @@
         },
         "type": "object",
         "title": "RunWorkflowRequest",
-        "description": "Request to run a workflow with input documents and/or JSON.\n\nDocuments are provided as a dict mapping start block IDs to document inputs.\nJSON inputs are provided as a dict mapping start_json block IDs to JSON data."
+        "description": "Request to run a workflow with input documents and/or JSON.\n\nDocuments are provided as a dict mapping start-document block IDs to document inputs.\nJSON inputs are provided as a dict mapping start-json block IDs to JSON data."
       },
       "RunningRun": {
         "properties": {
@@ -52160,7 +52160,7 @@
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "Unique identifier of the split"
+            "description": "Unique identifier of the split result"
           },
           "file": {
             "$ref": "#/components/schemas/FileRef",
@@ -52238,28 +52238,17 @@
               }
             ],
             "title": "Created At"
-          },
-          "normalized_pdf_ref": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/StoredDocumentRef"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Stored normalized PDF source used by the orchestrator split pipeline."
           }
         },
         "type": "object",
         "required": [
+          "id",
           "file",
           "model",
           "subdocuments",
           "output"
         ],
-        "title": "Split",
-        "description": "Stored split result."
+        "title": "Split"
       },
       "SplitIOUCondition": {
         "properties": {
@@ -52543,7 +52532,7 @@
           "block_type": {
             "type": "string",
             "enum": [
-              "start",
+              "start-document",
               "start_json",
               "note",
               "parse",
@@ -52723,45 +52712,6 @@
         ],
         "title": "StepStatusObject",
         "description": "Public step lifecycle object."
-      },
-      "StoredDocumentRef": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "ID of the file"
-          },
-          "filename": {
-            "type": "string",
-            "title": "Filename",
-            "description": "Filename of the file"
-          },
-          "mime_type": {
-            "type": "string",
-            "title": "Mime Type",
-            "description": "MIME type of the file"
-          },
-          "gcs_path_override": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Gcs Path Override",
-            "description": "Explicit GCS blob path when the file is not stored at the canonical {tenant scope}/file/{id}.{extension} location."
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "filename",
-          "mime_type"
-        ],
-        "title": "StoredDocumentRef",
-        "description": "Internal service transport for stored files that may live at a non-canonical GCS path."
       },
       "StoredFileRecord": {
         "properties": {
@@ -54995,7 +54945,7 @@
           "type": {
             "type": "string",
             "enum": [
-              "start",
+              "start-document",
               "start_json",
               "note",
               "parse",
@@ -55696,7 +55646,7 @@
           "type": {
             "type": "string",
             "enum": [
-              "start",
+              "start-document",
               "start_json",
               "note",
               "parse",
@@ -55946,10 +55896,10 @@
             "title": "Block Types",
             "description": "Counts by block type"
           },
-          "start_blocks": {
+          "start_document_blocks": {
             "type": "integer",
-            "title": "Start Blocks",
-            "description": "Number of start blocks",
+            "title": "Start Document Blocks",
+            "description": "Number of start-document blocks",
             "default": 0
           }
         },
@@ -58248,7 +58198,7 @@
             "type": "boolean",
             "title": "Allow Overlap",
             "description": "Whether pages were allowed to appear in more than one partition chunk",
-            "default": false
+            "default": true
           },
           "output": {
             "items": {
