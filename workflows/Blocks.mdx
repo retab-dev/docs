@@ -751,6 +751,7 @@ Process items in parallel and combine results.
 | Setting | Description | Default |
 |---------|-------------|---------|
 | **Map Method** | How to split input into items | `split_by_page` |
+| **Allow Overlap** | For `split_by_key`, whether keyed chunks may share pages | `false` |
 | **Max Iterations** | Maximum items to process | `100` |
 | **Reduce Strategy** | How to combine iteration outputs | `concat_array` |
 
@@ -805,10 +806,14 @@ Split a document containing multiple invoices by invoice number:
   "map_method": "split_by_key",
   "key": "invoice_number",
   "instructions": "Invoice number found at the top of each invoice",
+  "allow_overlap": false,
   "reduce_strategy": "concat_array",
   "reduce_concat_item_key": "invoice_id"
 }
 ```
+
+Use `"allow_overlap": true` only when multiple keyed partitions can legitimately
+include the same page. The default `false` uses exclusive split-like chunks.
 
 Add map-phase review to inspect the proposed split boundaries before the
 for-each body runs:
