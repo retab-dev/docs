@@ -15,6 +15,8 @@ The check covers:
 - Unreachable blocks
 - Type mismatches between source/target handles
 - Missing required block configuration
+- Incomplete authored config such as blank categories, subdocuments, or map keys
+- Embedded human-review gate predicates and unavailable review signals
 - Cycles in the directed graph
 
 Severities:
@@ -38,9 +40,8 @@ from retab import Retab
 client = Retab()
 
 diagnosis = client.workflows.diagnose("wf_abc123")
-if not diagnosis.is_valid:
-    for issue in diagnosis.issues:
-        print(f"[{issue.severity}] {issue.code}: {issue.message}")
+for issue in diagnosis.issues:
+    print(f"[{issue.severity}] {issue.code}: {issue.message}")
 ```
 
 ```javascript javascript
@@ -49,10 +50,8 @@ import { Retab } from '@retab/node';
 const client = new Retab();
 
 const diagnosis = await client.workflows.diagnose("wf_abc123");
-if (!diagnosis.is_valid) {
-  for (const issue of diagnosis.issues) {
-    console.log(`[${issue.severity}] ${issue.code}: ${issue.message}`);
-  }
+for (const issue of diagnosis.issues) {
+  console.log(`[${issue.severity}] ${issue.code}: ${issue.message}`);
 }
 ```
 
@@ -80,10 +79,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if !diagnosis.IsValid {
-		for _, issue := range diagnosis.Issues {
-			fmt.Printf("[%s] %s: %s\n", issue.Severity, issue.Code, issue.Message)
-		}
+	for _, issue := range diagnosis.Issues {
+		fmt.Printf("[%s] %s: %s\n", issue.Severity, issue.Code, issue.Message)
 	}
 }
 ```
@@ -122,6 +119,27 @@ curl -X 'POST' \
     "total_blocks": 5,
     "total_edges": 4,
     "block_types": { "start": 1, "extract": 2, "classifier": 1, "split": 1 },
+    "start_blocks": 1
+  }
+}
+```
+
+```json 200 (valid with warnings)
+{
+  "is_valid": true,
+  "issues": [
+    {
+      "severity": "warning",
+      "code": "MISSING_HIL_PREDICATE",
+      "message": "Extract block 'Extract' has human review enabled but no predicate configured.",
+      "block_id": "extract-1"
+    }
+  ],
+  "suggestions": [],
+  "stats": {
+    "total_blocks": 2,
+    "total_edges": 1,
+    "block_types": { "start": 1, "extract": 1 },
     "start_blocks": 1
   }
 }
