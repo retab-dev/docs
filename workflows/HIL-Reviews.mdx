@@ -7,7 +7,7 @@ description: Review, correct, and decide on gated workflow block outputs with th
 
 When a workflow reaches a **gated block** — a block with `config.hil` whose predicate flagged its output for review — the run pauses and a **review overlay** is created.
 
-The overlay is a versioned sidecar attached to one `(run_id, block_id)` pair. It is the single object you read and mutate to walk a review from "the model produced this" to "a human approved (or corrected, or rejected) it, and the run resumed." Everything is driven through `client.workflows.runs.reviews.*`.
+The overlay is a versioned sidecar attached to one `(run_id, block_id)` pair. It is the single object you read and mutate to walk a review from "the model produced this" to "a human approved (or corrected, or rejected) it, and the run resumed." Everything is driven through `client.workflows.reviews.*`.
 
 <Note>
 The overlay replaces the legacy v1 HIL decision endpoints (`/v1/workflows/runs/{run_id}/hil-decisions` and the agent-review endpoint). Those have been removed — the review overlay is the only HIL surface.
@@ -57,7 +57,7 @@ client = Retab()
 def with_retry(run_id, block_id, mutate):
     """Re-read and retry once on a stale version_stamp."""
     for attempt in range(2):
-        overlay = client.workflows.runs.reviews.get(run_id, block_id)
+        overlay = client.workflows.reviews.get(run_id, block_id)
         try:
             return mutate(overlay)
         except ConflictError:
@@ -67,7 +67,7 @@ def with_retry(run_id, block_id, mutate):
 
 with_retry(
     "run_abc123", "block_extract",
-    lambda o: client.workflows.runs.reviews.approve(
+    lambda o: client.workflows.reviews.approve(
         "run_abc123", "block_extract", version_stamp=o.version_stamp,
     ),
 )
@@ -84,7 +84,7 @@ A 409 is **expected**, not exceptional — it just means another reviewer or the
 List the queue to find overlays awaiting a decision. Filter by `workflow_id`, `status`, or `mine` (overlays you hold the claim on).
 
 ```python
-queue = client.workflows.runs.reviews.list(status="awaiting_review", limit=50)
+queue = client.workflows.reviews.list(status="awaiting_review", limit=50)
 
 for item in queue.data:
     print(item.workflow_run_id, item.block_id, item.claim)
@@ -95,8 +95,8 @@ for item in queue.data:
 Claiming records you in `claim` so a shared inbox shows the item is being worked. It does **not** lock the overlay — the `version_stamp` CAS is the real concurrency guarantee. Submitting a decision does not require holding the claim.
 
 ```python
-overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
-overlay = client.workflows.runs.reviews.claim(
+overlay = client.workflows.reviews.get("run_abc123", "block_extract")
+overlay = client.workflows.reviews.claim(
     "run_abc123", "block_extract", version_stamp=overlay.version_stamp,
 )
 ```
@@ -104,7 +104,7 @@ overlay = client.workflows.runs.reviews.claim(
 If you step away without deciding, release it so someone else can pick it up:
 
 ```python
-client.workflows.runs.reviews.release(
+client.workflows.reviews.release(
     "run_abc123", "block_extract", version_stamp=overlay.version_stamp,
 )
 ```
@@ -114,7 +114,7 @@ client.workflows.runs.reviews.release(
 The effective output is the **latest** version. The model's original is always sequence `0`.
 
 ```python
-overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
+overlay = client.workflows.reviews.get("run_abc123", "block_extract")
 
 original = overlay.versions[0]          # what the model produced
 effective = overlay.versions[-1]        # what an approve would flow downstream
@@ -131,14 +131,14 @@ There are two verdicts:
 | `rejected` | The run is **cancelled**. A `reason` is required. |
 
 ```python
-overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
+overlay = client.workflows.reviews.get("run_abc123", "block_extract")
 stamp = overlay.version_stamp
 
 # Approve — the latest version flows downstream, the run resumes
-client.workflows.runs.reviews.approve("run_abc123", "block_extract", version_stamp=stamp)
+client.workflows.reviews.approve("run_abc123", "block_extract", version_stamp=stamp)
 
 # Reject — the run is cancelled
-client.workflows.runs.reviews.reject(
+client.workflows.reviews.reject(
     "run_abc123", "block_extract",
     version_stamp=stamp,
     reason="Source document is illegible; cannot verify totals.",
@@ -150,10 +150,14 @@ client.workflows.runs.reviews.reject(
 
 When the model's output is close but wrong, you don't reject — you **correct and approve**. Pass `edited_output` to `approve` and the server appends a corrective version *and then approves it* in one atomic step. The model's original is preserved as version `0`; your corrected payload becomes the new effective version.
 
-```python
-overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
+Typed review surfaces can send `reviewable_value` instead of the full output
+envelope — for example a split manifest or a split-by-key `for_each` partition
+map. `edited_output` and `reviewable_value` are mutually exclusive.
 
-client.workflows.runs.reviews.approve(
+```python
+overlay = client.workflows.reviews.get("run_abc123", "block_extract")
+
+client.workflows.reviews.approve(
     "run_abc123", "block_extract",
     version_stamp=overlay.version_stamp,
     edited_output={"total_amount": 325, "vendor_name": "Acme Corp"},
@@ -163,7 +167,7 @@ client.workflows.runs.reviews.approve(
 If you want to record a correction *without* deciding yet — for example, to hand a half-corrected overlay to a senior reviewer — append the version on its own with `edit`:
 
 ```python
-overlay = client.workflows.runs.reviews.edit(
+overlay = client.workflows.reviews.edit(
     "run_abc123", "block_extract",
     snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
     version_stamp=overlay.version_stamp,
@@ -179,7 +183,7 @@ Both paths preserve the full history — every version, with its author, is quer
 Every mutating method accepts an optional `command_id`. A retried call carrying the same `command_id` is deduplicated server-side — safe to use when a network blip leaves you unsure whether your decision landed.
 
 ```python
-client.workflows.runs.reviews.approve(
+client.workflows.reviews.approve(
     "run_abc123", "block_extract",
     version_stamp=overlay.version_stamp,
     command_id="approve-run_abc123-block_extract-attempt-1",
@@ -194,7 +198,7 @@ If your integration *submits* a gated run and needs to block until a human (or a
 run = client.workflows.runs.create(workflow_id="wf_abc123", ...)
 
 # Block until the gated block at block_extract is approved or rejected
-overlay = client.workflows.runs.reviews.wait_for(
+overlay = client.workflows.reviews.wait_for(
     run.id, "block_extract",
     timeout=120.0,        # seconds — raises on expiry
     poll_interval=2.0,

@@ -11,7 +11,8 @@ The request body carries:
 
 | Field | Notes |
 |---|---|
-| `snapshot` | The corrected output payload. Required. |
+| `snapshot` | The corrected output payload. Required unless `reviewable_value` is provided. |
+| `reviewable_value` | Primitive-specific reviewed value, such as a split manifest or split-by-key `for_each` partition map. Mutually exclusive with `snapshot`. |
 | `version_stamp` | The overlay `rev` you last read. Required — see the conflict note below. |
 | `origin` | Provenance label for the version, e.g. `"human_edit"` (default). |
 | `note` | Optional free-text note explaining the correction. Recorded in the audit trail. |
@@ -31,10 +32,10 @@ from retab.exceptions import ConflictError
 
 client = Retab()
 
-overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
+overlay = client.workflows.reviews.get("run_abc123", "block_extract")
 
 try:
-    overlay = client.workflows.runs.reviews.edit(
+    overlay = client.workflows.reviews.edit(
         "run_abc123",
         "block_extract",
         snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
@@ -45,7 +46,7 @@ try:
     print("new effective version:", overlay.versions[-1].seq)
 except ConflictError:
     # Overlay moved on — re-read and retry with the fresh stamp.
-    overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
+    overlay = client.workflows.reviews.get("run_abc123", "block_extract")
 ```
 
 ```javascript javascript
@@ -53,10 +54,10 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-let overlay = await client.workflows.runs.reviews.get("run_abc123", "block_extract");
+let overlay = await client.workflows.reviews.get("run_abc123", "block_extract");
 
 try {
-  overlay = await client.workflows.runs.reviews.edit("run_abc123", "block_extract", {
+  overlay = await client.workflows.reviews.edit("run_abc123", "block_extract", {
     snapshot: { total_amount: 325, vendor_name: "Acme Corp" },
     versionStamp: overlay.rev,
     origin: "human_edit",
@@ -66,7 +67,7 @@ try {
 } catch (err) {
   if (err.status === 409) {
     // Overlay moved on — re-read and retry with the fresh stamp.
-    overlay = await client.workflows.runs.reviews.get("run_abc123", "block_extract");
+    overlay = await client.workflows.reviews.get("run_abc123", "block_extract");
   } else {
     throw err;
   }
