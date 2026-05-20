@@ -72,7 +72,7 @@ metadata:
 
 spec:
   blocks:
-    start-node:
+    start-document-node:
       type: start
       label: Input Document
 
@@ -90,7 +90,7 @@ spec:
 
   edges:
     - from:
-        block: start-node
+        block: start-document-node
         handle: output-file-0
       to:
         block: extract-node
@@ -177,7 +177,7 @@ The Python, Node, and Go SDKs expose workflow metadata, graph authoring, run exe
 
 #### Discover input block IDs
 
-Workflow run inputs are keyed by the IDs of your `start` and `start_json` blocks. `get_entities()` is the easiest way to discover them.
+Workflow run inputs are keyed by the IDs of your `start-document` and `start_json` blocks. `get_entities()` is the easiest way to discover them.
 
 <CodeGroup>
 ```python Python
@@ -187,7 +187,7 @@ client = Retab()
 
 workflow = client.workflows.get_entities("wf_abc123")
 
-document_start_id = workflow.start_blocks[0].id
+document_start_id = workflow.start_document_blocks[0].id
 json_start_id = workflow.start_json_blocks[0].id
 ```
 
@@ -198,7 +198,7 @@ const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const workflow = await client.workflows.getEntities("wf_abc123");
 
-const documentStartId = workflow.blocks.find((block) => block.type === "start")?.id;
+const documentStartId = workflow.blocks.find((block) => block.type === "start-document")?.id;
 const jsonStartId = workflow.blocks.find((block) => block.type === "start_json")?.id;
 
 if (!documentStartId || !jsonStartId) {
@@ -251,7 +251,7 @@ func main() {
 
 Workflows support two input maps:
 
-- `documents` for Document (`start`) blocks
+- `documents` for Document (`start-document`) blocks
 - `json_inputs` for JSON Input (`start_json`) blocks
 
 <CodeGroup>
@@ -264,7 +264,7 @@ from retab import Retab
 client = Retab()
 
 workflow = client.workflows.get_entities("wf_abc123")
-document_start_id = workflow.start_blocks[0].id
+document_start_id = workflow.start_document_blocks[0].id
 json_start_id = workflow.start_json_blocks[0].id
 
 run = client.workflows.runs.create(
@@ -302,7 +302,7 @@ import { Retab } from "@retab/node";
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const workflow = await client.workflows.getEntities("wf_abc123");
-const documentStartId = workflow.blocks.find((block) => block.type === "start")?.id;
+const documentStartId = workflow.blocks.find((block) => block.type === "start-document")?.id;
 const jsonStartId = workflow.blocks.find((block) => block.type === "start_json")?.id;
 
 if (!documentStartId || !jsonStartId) {
@@ -577,7 +577,7 @@ The same SDK can create and publish workflow graphs:
 ```python Python
 workflow = client.workflows.create(name="Invoice Pipeline")
 entities = client.workflows.get_entities(workflow.id)
-start_block = entities.start_blocks[0]
+start_document_block = entities.start_document_blocks[0]
 
 extract_block = client.workflows.blocks.create(
     workflow.id,
@@ -600,7 +600,7 @@ extract_block = client.workflows.blocks.create(
 client.workflows.edges.create(
     workflow.id,
     id="edge-start-to-extract",
-    source_block=start_block.id,
+    source_block=start_document_block.id,
     target_block=extract_block.id,
     source_handle="output-file-0",
     target_handle="input-file-0",
@@ -612,10 +612,10 @@ client.workflows.publish(workflow.id, description="Initial version")
 ```javascript JavaScript
 const workflow = await client.workflows.create({ name: "Invoice Pipeline" });
 const entities = await client.workflows.getEntities(workflow.id);
-const startBlock = entities.blocks.find((block) => block.type === "start");
+const startDocumentBlock = entities.blocks.find((block) => block.type === "start-document");
 
-if (!startBlock) {
-  throw new Error("Workflow is missing a start block");
+if (!startDocumentBlock) {
+  throw new Error("Workflow is missing a start-document block");
 }
 
 const extractBlock = await client.workflows.blocks.create(workflow.id, {
@@ -637,7 +637,7 @@ const extractBlock = await client.workflows.blocks.create(workflow.id, {
 
 await client.workflows.edges.create(workflow.id, {
   id: "edge-start-to-extract",
-  sourceBlock: startBlock.id,
+  sourceBlock: startDocumentBlock.id,
   targetBlock: extractBlock.id,
   sourceHandle: "output-file-0",
   targetHandle: "input-file-0",
@@ -659,10 +659,10 @@ if err != nil {
 	log.Fatal(err)
 }
 
-var startBlock retab.WorkflowBlock
+var startDocumentBlock retab.WorkflowBlock
 for _, block := range entities.Blocks {
 	if block.Type == "start" {
-		startBlock = block
+		startDocumentBlock = block
 		break
 	}
 }
@@ -689,7 +689,7 @@ if err != nil {
 
 _, err = client.Workflows.Edges.Create(ctx, workflow.ID, retab.WorkflowEdgeCreateRequest{
 	ID:           "edge-start-to-extract",
-	SourceBlock:  startBlock.ID,
+	SourceBlock:  startDocumentBlock.ID,
 	TargetBlock:  extractBlock.ID,
 	SourceHandle: "output-file-0",
 	TargetHandle: "input-file-0",

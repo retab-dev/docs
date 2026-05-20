@@ -1,0 +1,145 @@
+---
+title: 'List Partitions'
+openapi: 'GET /v1/partitions'
+---
+
+List persisted partitions for your organization, with id-based pagination and optional filename / date filtering.
+
+<RequestExample>
+
+```python python
+from datetime import datetime
+from retab import Retab
+
+client = Retab()
+
+partitions = client.partitions.list(limit=20, order="desc")
+for partition in partitions.data:
+    print(f"{partition.id}: {partition.file.filename}")
+
+partitions = client.partitions.list(
+    from_date=datetime(2024, 1, 1),
+    to_date=datetime(2024, 12, 31),
+    limit=50,
+)
+```
+
+```javascript javascript
+import { Retab } from '@retab/node';
+
+const client = new Retab();
+
+const partitions = await client.partitions.list({ limit: 20, order: "desc" });
+for (const partition of partitions.data) {
+  console.log(`${partition.id}: ${partition.file.filename}`);
+}
+
+const ranged = await client.partitions.list({
+  from_date: new Date("2024-01-01"),
+  to_date: new Date("2024-12-31"),
+  limit: 50,
+});
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	partitions, err := client.Partitions.List(ctx, &retab.ListParams{Limit: 20, Order: "desc"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, partition := range partitions.Data {
+		fmt.Printf("%v: %v\n", partition["id"], partition["file"])
+	}
+
+	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
+	ranged, err := client.Partitions.List(ctx, &retab.ListParams{
+		FromDate: &from,
+		ToDate:   &to,
+		Limit:    50,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(ranged)
+}
+```
+
+```bash curl
+curl -X GET \
+  'https://api.retab.com/v1/partitions?limit=20&order=desc' \
+  -H "Api-Key: $RETAB_API_KEY"
+
+curl -X GET \
+  'https://api.retab.com/v1/partitions?filename=invoice&from_date=2024-01-01&to_date=2024-12-31&limit=50' \
+  -H "Api-Key: $RETAB_API_KEY"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "id": "part_01G34H8J2K",
+      "file": {
+        "id": "file_6dd6eb00688ad8d1",
+        "filename": "invoice_batch.pdf",
+        "mime_type": "application/pdf"
+      },
+      "model": "retab-small",
+      "key": "invoice_number",
+      "instructions": "Return one chunk per invoice number and keep all pages for the same invoice together.",
+      "n_consensus": 3,
+      "allow_overlap": false,
+      "output": [
+        {"key": "INV-001", "pages": [1, 2]},
+        {"key": "INV-002", "pages": [3, 4]}
+      ],
+      "consensus": {
+        "likelihoods": [
+          {"key": 0.99, "pages": [0.99, 0.98]},
+          {"key": 0.96, "pages": [0.95, 0.95]}
+        ],
+        "choices": [
+          [
+            {"key": "INV-001", "pages": [1, 2]},
+            {"key": "INV-002", "pages": [3, 4]}
+          ]
+        ]
+      },
+      "usage": {
+        "credits": 3.0
+      },
+      "created_at": "2024-03-15T10:30:00Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": "part_01G34H8J2K",
+    "total_count": 12
+  }
+}
+```
+
+</ResponseExample>
