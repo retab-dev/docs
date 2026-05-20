@@ -367,9 +367,9 @@ Pause a gated block for human review and approval.
 
 Human-in-the-loop is no longer a separate workflow block. Configure a `hil`
 gate on a block that supports review, such as `extract`, `split`,
-`classifier`, or `conditional`. When the gate predicate fires, that same block
-enters `waiting_for_human` and a [review overlay](/workflows/HIL-Reviews) is
-created for the block run.
+`classifier`, or `for_each` with `map_method: "split_by_key"`. When the gate
+predicate fires, that same block enters `waiting_for_human` and a
+[review overlay](/workflows/HIL-Reviews) is created for the block run.
 
 **Configuration:** `config.hil`
 
@@ -411,6 +411,8 @@ created for the block run.
 
 Common extract predicates include `always`, `validation_failed`,
 `confidence_lt`, `any_required_field_null`, and `field_confidence_lt`.
+For `split` and split-by-key `for_each` gates, use split-style predicates such
+as `split_count_neq`, `any_split_pages_lt`, and `boundary_confidence_lt`.
 
 #### AI Agent reviewer (optional)
 
@@ -456,7 +458,7 @@ The UI's review panel surfaces the agent's proposal alongside the document: evid
 The agent flow is dormant when `agent_in_the_loop="disabled"` (the default). You can enable it block‑by‑block — there is no global switch.
 </Note>
 
-The agent's proposal lands on the gated block's [review overlay](/workflows/HIL-Reviews) like any other actor's — an agent-authored edit or decision is the same shape as a human's, distinguished only by `Actor.kind`. Read and act on it through `client.workflows.runs.reviews.*`.
+The agent's proposal lands on the gated block's [review overlay](/workflows/HIL-Reviews) like any other actor's — an agent-authored edit or decision is the same shape as a human's, distinguished only by `Actor.kind`. Read and act on it through `client.workflows.reviews.*`.
 
 ---
 
@@ -807,6 +809,24 @@ Split a document containing multiple invoices by invoice number:
   "instructions": "Invoice number found at the top of each invoice",
   "reduce_strategy": "concat_array",
   "reduce_concat_item_key": "invoice_id"
+}
+```
+
+Add map-phase review to inspect the proposed split boundaries before the
+for-each body runs:
+
+```json
+{
+  "map_method": "split_by_key",
+  "key": "invoice_number",
+  "instructions": "Invoice number found at the top of each invoice",
+  "hil": {
+    "predicate": {
+      "kind": "boundary_confidence_lt",
+      "threshold": 0.8
+    },
+    "skip_in_test_mode": false
+  }
 }
 ```
 

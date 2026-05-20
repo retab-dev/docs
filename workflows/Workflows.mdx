@@ -508,7 +508,7 @@ Some blocks persist a durable artifact record. `step.artifact` is only the stabl
 pointer:
 
 ```json
-{ "operation": "hil_evaluation", "id": "heval_abc123" }
+{ "operation": "conditional_evaluation", "id": "ceval_abc123" }
 ```
 
 Use `client.workflows.artifacts.get(step.artifact)` to dereference that pointer.
@@ -518,11 +518,10 @@ wrapper.
 
 <CodeGroup>
 ```python Python
-step = client.workflows.runs.steps.get(run.id, "gated-block-id")
+step = client.workflows.runs.steps.get(run.id, "conditional-block-id")
 if step.artifact:
     artifact = client.workflows.artifacts.get(step.artifact)
     print(artifact.operation)
-    print(artifact.requires_human_review)
     print(artifact.matched_condition_ids)
     print(artifact.evaluations)
 ```
@@ -543,16 +542,16 @@ run. Pass `operation=` or `block_id=` when you only need a subset.
 
 <CodeGroup>
 ```python Python
-hil_records = client.workflows.artifacts.list(
+condition_records = client.workflows.artifacts.list(
     run.id,
-    operation="hil_evaluation",
+    operation="conditional_evaluation",
 )
 ```
 
 ```javascript JavaScript
-const hilRecords = await client.workflows.artifacts.list({
+const conditionRecords = await client.workflows.artifacts.list({
   runId: run.id,
-  operation: "hil_evaluation",
+  operation: "conditional_evaluation",
 });
 ```
 </CodeGroup>
@@ -566,7 +565,6 @@ const hilRecords = await client.workflows.artifacts.list({
 | `edit` | `edit` | edited document result |
 | `partition` | `for_each_sentinel_start` | partitioned items for the loop |
 | `conditional_evaluation` | `conditional` | `evaluations`, `selected_handles`, `matched_condition_ids` |
-| `hil_evaluation` | legacy standalone review step | legacy condition evaluations plus review state |
 | `while_loop_termination` | `while_loop` | termination reason and final condition evaluations |
 | `api_call_invocation` | `api_call` | request/response attempts, retry trace, and final error |
 | `function_invocation` | `function` | function inputs, output, duration, and final error |

@@ -8,15 +8,15 @@ List the dereferenced artifact records produced by one workflow run.
 Returns the canonical `{ "data": [...], "list_metadata": { "before": null, "after": null } }` pagination envelope shared with all Retab list endpoints. Each `data` item is a flattened workflow artifact record (operation-tagged dereferenced artifact); arbitrary operation-specific fields are preserved verbatim. Cursor pagination is not yet implemented for this endpoint — `list_metadata` is always `{ before: null, after: null }`.
 
 Use this when an integration needs to inspect all persisted records for a run,
-or when an MCP tool needs to answer questions such as why a conditional/HIL
-block selected a specific handle. The endpoint walks the run's steps, follows
-each `artifact` ref, and returns the flattened records.
+or when an MCP tool needs to answer questions such as why a conditional block
+selected a specific handle. The endpoint walks the run's steps, follows each
+`artifact` ref, and returns the flattened records.
 
 Filters:
 
 - `run_id` is required.
 - `operation` limits results to one artifact operation, such as
-  `hil_evaluation` or `function_invocation`.
+  `conditional_evaluation` or `function_invocation`.
 - `block_id` limits results to one producing block or step id.
 
 <RequestExample>
@@ -28,12 +28,11 @@ client = Retab()
 
 artifacts = client.workflows.artifacts.list(
     "run_abc123xyz",
-    operation="hil_evaluation",
+    operation="conditional_evaluation",
 )
 
 for artifact in artifacts.data:
     print(artifact.step_id)
-    print(artifact.requires_human_review)
     print(artifact.matched_condition_ids)
 ```
 
@@ -56,7 +55,7 @@ for (const artifact of artifacts.data) {
 
 ```bash curl
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/artifacts?run_id=run_abc123xyz&operation=hil_evaluation' \
+  'https://api.retab.com/v1/workflows/artifacts?run_id=run_abc123xyz&operation=conditional_evaluation' \
   -H 'Api-Key: <your-api-key>'
 ```
 

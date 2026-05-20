@@ -22092,7 +22092,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewOverlay"
+                  "$ref": "#/components/schemas/ReviewOverlayResponse"
                 }
               }
             }
@@ -22166,7 +22166,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewOverlay"
+                  "$ref": "#/components/schemas/ReviewOverlayResponse"
                 }
               }
             }
@@ -22314,7 +22314,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewOverlay"
+                  "$ref": "#/components/schemas/ReviewOverlayResponse"
                 }
               }
             }
@@ -22388,7 +22388,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewOverlay"
+                  "$ref": "#/components/schemas/ReviewOverlayResponse"
                 }
               }
             }
@@ -33078,10 +33078,30 @@
       "AppendVersionRequest": {
         "properties": {
           "snapshot": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Snapshot",
             "description": "The FULL corrected output JSON \u2014 a complete replacement object, not a partial diff."
+          },
+          "reviewable_value": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewable Value",
+            "description": "Optional primitive-specific value edited by the reviewer. The server validates and compiles it into a full output snapshot before appending the version. Mutually exclusive with snapshot."
           },
           "version_stamp": {
             "type": "integer",
@@ -33098,6 +33118,19 @@
             "title": "Origin",
             "description": "Who-shaped origin of this edit. seq=0 / 'model_output' / 'revert' are not valid here.",
             "default": "human_edit"
+          },
+          "parent_seq": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Seq",
+            "description": "Version seq this edit was authored from. Defaults to the overlay head."
           },
           "note": {
             "anyOf": [
@@ -33127,7 +33160,6 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "snapshot",
           "version_stamp"
         ],
         "title": "AppendVersionRequest",
@@ -38382,17 +38414,15 @@
           },
           "subdocuments": {
             "items": {
-              "$ref": "#/components/schemas/main_server__types__splits__Subdocument"
+              "$ref": "#/components/schemas/CreateSplitSubdocument"
             },
             "type": "array",
             "minItems": 1,
-            "title": "Subdocuments",
-            "description": "The subdocuments to split the document into"
+            "title": "Subdocuments"
           },
           "model": {
             "type": "string",
             "title": "Model",
-            "description": "The model to use to split the document",
             "default": "retab-small"
           },
           "instructions": {
@@ -38404,22 +38434,14 @@
                 "type": "null"
               }
             ],
-            "title": "Instructions",
-            "description": "Free-form instructions appended to the system prompt to steer the split."
+            "title": "Instructions"
           },
           "n_consensus": {
             "type": "integer",
             "maximum": 8.0,
             "minimum": 1.0,
             "title": "N Consensus",
-            "description": "Number of consensus split runs to perform. Uses deterministic single-pass when set to 1.",
             "default": 1
-          },
-          "bust_cache": {
-            "type": "boolean",
-            "title": "Bust Cache",
-            "description": "If true, skip the LLM cache and force a fresh completion",
-            "default": false
           },
           "methods": {
             "items": {
@@ -38537,6 +38559,33 @@
         ],
         "title": "CreateSplitRequest",
         "description": "Canonical split request."
+      },
+      "CreateSplitSubdocument": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "The name of the subdocument"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "The description of the subdocument",
+            "default": ""
+          },
+          "allow_multiple_instances": {
+            "type": "boolean",
+            "title": "Allow Multiple Instances",
+            "description": "When true, this subdocument type can appear more than once in the document \u2014 the split will identify each distinct instance (runs an extra vision-based refinement pass).",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CreateSplitSubdocument"
       },
       "CreateUploadResponse": {
         "properties": {
@@ -43457,6 +43506,9 @@
                   "$ref": "#/components/schemas/HilFieldConfidenceLt"
                 },
                 {
+                  "$ref": "#/components/schemas/HilJsonCondition"
+                },
+                {
                   "$ref": "#/components/schemas/HilBranchIn"
                 },
                 {
@@ -43479,6 +43531,7 @@
                   "category_in": "#/components/schemas/HilCategoryIn",
                   "confidence_lt": "#/components/schemas/HilConfidenceLt",
                   "field_confidence_lt": "#/components/schemas/HilFieldConfidenceLt",
+                  "json_condition": "#/components/schemas/HilJsonCondition",
                   "split_count_neq": "#/components/schemas/HilSplitCountNeq",
                   "top_margin_lt": "#/components/schemas/HilTopMarginLt",
                   "validation_failed": "#/components/schemas/HilValidationFailed"
@@ -43554,6 +43607,9 @@
                   "$ref": "#/components/schemas/HilFieldConfidenceLt"
                 },
                 {
+                  "$ref": "#/components/schemas/HilJsonCondition"
+                },
+                {
                   "$ref": "#/components/schemas/HilBranchIn"
                 },
                 {
@@ -43576,6 +43632,7 @@
                   "category_in": "#/components/schemas/HilCategoryIn",
                   "confidence_lt": "#/components/schemas/HilConfidenceLt",
                   "field_confidence_lt": "#/components/schemas/HilFieldConfidenceLt",
+                  "json_condition": "#/components/schemas/HilJsonCondition",
                   "split_count_neq": "#/components/schemas/HilSplitCountNeq",
                   "top_margin_lt": "#/components/schemas/HilTopMarginLt",
                   "validation_failed": "#/components/schemas/HilValidationFailed"
@@ -43677,7 +43734,7 @@
           "branches"
         ],
         "title": "HilBranchIn",
-        "description": "Gate when the conditional block chose a branch in `branches`."
+        "description": "Gate when a conditional-style result chose a branch in `branches`.\n\nConditional blocks are intentionally not gatable. The predicate remains in\nthe global union so old review/evaluator payloads can still be parsed."
       },
       "HilCategoryIn": {
         "properties": {
@@ -43757,6 +43814,29 @@
         ],
         "title": "HilFieldConfidenceLt",
         "description": "Gate when the field at `path` has confidence below `threshold`."
+      },
+      "HilJsonCondition": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "json_condition",
+            "title": "Kind",
+            "default": "json_condition"
+          },
+          "condition": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Condition",
+            "description": "Conditional-block Condition payload."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "condition"
+        ],
+        "title": "HilJsonCondition",
+        "description": "Gate when a conditional-block-style JSON condition matches.\n\nThe `condition` payload uses the same shape as workflow conditional blocks:\none condition group with `sub_conditions` and a `logical_operator`. Paths are\nevaluated against a handle-prefixed root, for example `data.invoice_total`\nor `likelihoods.invoice_total`."
       },
       "HilSplitCountNeq": {
         "properties": {
@@ -44474,7 +44554,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-05-19T15:41:20.922341Z",
+              "updated_at": "2026-05-20T09:45:08.991570Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -51688,220 +51768,9 @@
           "on_seq"
         ],
         "title": "ReviewDecision",
-        "description": "A verdict cast against one specific version.\n\nAppend-only: any later correction writes a NEW decision; the prior one is retained and pointed at by `supersedes_decision_id`."
+        "description": "A verdict cast against one specific version.\n\nAppend-only: any later correction writes a NEW decision; the prior one is\nretained and pointed at by `supersedes_decision_id`."
       },
-      "ReviewOverlay": {
-        "properties": {
-          "_id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Equals block_run_id \u2014 1:1 with the gated run."
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "workflow_version_id": {
-            "type": "string",
-            "title": "Workflow Version Id",
-            "description": "Pinned at gate-fire; resume runs THIS version."
-          },
-          "workflow_run_id": {
-            "type": "string",
-            "title": "Workflow Run Id"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          },
-          "block_run_id": {
-            "type": "string",
-            "title": "Block Run Id"
-          },
-          "block_type": {
-            "type": "string",
-            "enum": [
-              "extract",
-              "classifier",
-              "split",
-              "conditional"
-            ],
-            "title": "Block Type"
-          },
-          "triggered_by": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/HilAlways"
-              },
-              {
-                "$ref": "#/components/schemas/HilValidationFailed"
-              },
-              {
-                "$ref": "#/components/schemas/HilConfidenceLt"
-              },
-              {
-                "$ref": "#/components/schemas/HilCategoryIn"
-              },
-              {
-                "$ref": "#/components/schemas/HilTopMarginLt"
-              },
-              {
-                "$ref": "#/components/schemas/HilSplitCountNeq"
-              },
-              {
-                "$ref": "#/components/schemas/HilAnySplitPagesLt"
-              },
-              {
-                "$ref": "#/components/schemas/HilBoundaryConfidenceLt"
-              },
-              {
-                "$ref": "#/components/schemas/HilAnyRequiredFieldNull"
-              },
-              {
-                "$ref": "#/components/schemas/HilFieldConfidenceLt"
-              },
-              {
-                "$ref": "#/components/schemas/HilBranchIn"
-              },
-              {
-                "$ref": "#/components/schemas/HilAnyOf"
-              },
-              {
-                "$ref": "#/components/schemas/HilAllOf"
-              }
-            ],
-            "title": "Triggered By",
-            "description": "The leaf predicate that fired the gate.",
-            "discriminator": {
-              "propertyName": "kind",
-              "mapping": {
-                "all_of": "#/components/schemas/HilAllOf",
-                "always": "#/components/schemas/HilAlways",
-                "any_of": "#/components/schemas/HilAnyOf",
-                "any_required_field_null": "#/components/schemas/HilAnyRequiredFieldNull",
-                "any_split_pages_lt": "#/components/schemas/HilAnySplitPagesLt",
-                "boundary_confidence_lt": "#/components/schemas/HilBoundaryConfidenceLt",
-                "branch_in": "#/components/schemas/HilBranchIn",
-                "category_in": "#/components/schemas/HilCategoryIn",
-                "confidence_lt": "#/components/schemas/HilConfidenceLt",
-                "field_confidence_lt": "#/components/schemas/HilFieldConfidenceLt",
-                "split_count_neq": "#/components/schemas/HilSplitCountNeq",
-                "top_margin_lt": "#/components/schemas/HilTopMarginLt",
-                "validation_failed": "#/components/schemas/HilValidationFailed"
-              }
-            }
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "awaiting_review",
-              "approved",
-              "rejected"
-            ],
-            "title": "Status",
-            "default": "awaiting_review"
-          },
-          "awaiting_since": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Awaiting Since"
-          },
-          "decided_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Decided At"
-          },
-          "priority": {
-            "type": "integer",
-            "title": "Priority",
-            "description": "Higher sorts first in the queue.",
-            "default": 0
-          },
-          "rev": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Rev",
-            "description": "Whole-document CAS token. +1 on every mutating write.",
-            "default": 0
-          },
-          "claim": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ReviewClaim"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "versions": {
-            "items": {
-              "$ref": "#/components/schemas/OutputVersion"
-            },
-            "type": "array",
-            "minItems": 1,
-            "title": "Versions",
-            "description": "Ascending seq. versions[0] is always the model's seq=0 output."
-          },
-          "decisions": {
-            "items": {
-              "$ref": "#/components/schemas/ReviewDecision"
-            },
-            "type": "array",
-            "title": "Decisions",
-            "description": "Append-only. Empty while awaiting. len>1 means reopened."
-          },
-          "audit": {
-            "items": {
-              "$ref": "#/components/schemas/AuditEntry"
-            },
-            "type": "array",
-            "title": "Audit"
-          },
-          "head_seq": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Head Seq",
-            "description": "seq of the newest version (== versions[-1].seq)."
-          },
-          "effective_seq": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Effective Seq",
-            "description": "seq of the version downstream consumes. Set ONLY by an 'approved' decision. None while awaiting / rejected."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "_id",
-          "workflow_id",
-          "workflow_version_id",
-          "workflow_run_id",
-          "block_id",
-          "block_run_id",
-          "block_type",
-          "triggered_by",
-          "versions",
-          "head_seq"
-        ],
-        "title": "ReviewOverlay",
-        "description": "The HIL review sidecar for one gated block run. Replaces v1 `HilRunState`.\n\nStored 1:1 in `hil_overlays` with `_id == block_run_id`."
-      },
-      "ReviewQueueItem": {
+      "ReviewOverlayResponse": {
         "properties": {
           "_id": {
             "type": "string",
@@ -51933,7 +51802,7 @@
               "extract",
               "classifier",
               "split",
-              "conditional"
+              "for_each"
             ],
             "title": "Block Type"
           },
@@ -51970,6 +51839,9 @@
                 "$ref": "#/components/schemas/HilFieldConfidenceLt"
               },
               {
+                "$ref": "#/components/schemas/HilJsonCondition"
+              },
+              {
                 "$ref": "#/components/schemas/HilBranchIn"
               },
               {
@@ -51993,6 +51865,211 @@
                 "category_in": "#/components/schemas/HilCategoryIn",
                 "confidence_lt": "#/components/schemas/HilConfidenceLt",
                 "field_confidence_lt": "#/components/schemas/HilFieldConfidenceLt",
+                "json_condition": "#/components/schemas/HilJsonCondition",
+                "split_count_neq": "#/components/schemas/HilSplitCountNeq",
+                "top_margin_lt": "#/components/schemas/HilTopMarginLt",
+                "validation_failed": "#/components/schemas/HilValidationFailed"
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_review",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status"
+          },
+          "awaiting_since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Awaiting Since"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority",
+            "default": 0
+          },
+          "rev": {
+            "type": "integer",
+            "title": "Rev",
+            "default": 0
+          },
+          "claim": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewClaim"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/OutputVersion"
+            },
+            "type": "array",
+            "title": "Versions"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewDecision"
+            },
+            "type": "array",
+            "title": "Decisions"
+          },
+          "audit": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntry"
+            },
+            "type": "array",
+            "title": "Audit"
+          },
+          "head_seq": {
+            "type": "integer",
+            "title": "Head Seq",
+            "default": 0
+          },
+          "effective_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Seq"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "_id",
+          "workflow_id",
+          "workflow_version_id",
+          "workflow_run_id",
+          "block_id",
+          "block_run_id",
+          "block_type",
+          "triggered_by",
+          "status",
+          "awaiting_since",
+          "versions"
+        ],
+        "title": "ReviewOverlayResponse",
+        "description": "Public API shape for the full review overlay.\n\nThe persisted overlay carries runtime-only execution fields. They stay in\nstorage for resume/reconcile, but are not part of the API contract."
+      },
+      "ReviewQueueItemResponse": {
+        "properties": {
+          "_id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "workflow_version_id": {
+            "type": "string",
+            "title": "Workflow Version Id"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "block_run_id": {
+            "type": "string",
+            "title": "Block Run Id"
+          },
+          "block_type": {
+            "type": "string",
+            "enum": [
+              "extract",
+              "classifier",
+              "split",
+              "for_each"
+            ],
+            "title": "Block Type"
+          },
+          "triggered_by": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/HilAlways"
+              },
+              {
+                "$ref": "#/components/schemas/HilValidationFailed"
+              },
+              {
+                "$ref": "#/components/schemas/HilConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilCategoryIn"
+              },
+              {
+                "$ref": "#/components/schemas/HilTopMarginLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilSplitCountNeq"
+              },
+              {
+                "$ref": "#/components/schemas/HilAnySplitPagesLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilBoundaryConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilAnyRequiredFieldNull"
+              },
+              {
+                "$ref": "#/components/schemas/HilFieldConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/HilJsonCondition"
+              },
+              {
+                "$ref": "#/components/schemas/HilBranchIn"
+              },
+              {
+                "$ref": "#/components/schemas/HilAnyOf"
+              },
+              {
+                "$ref": "#/components/schemas/HilAllOf"
+              }
+            ],
+            "title": "Triggered By",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "all_of": "#/components/schemas/HilAllOf",
+                "always": "#/components/schemas/HilAlways",
+                "any_of": "#/components/schemas/HilAnyOf",
+                "any_required_field_null": "#/components/schemas/HilAnyRequiredFieldNull",
+                "any_split_pages_lt": "#/components/schemas/HilAnySplitPagesLt",
+                "boundary_confidence_lt": "#/components/schemas/HilBoundaryConfidenceLt",
+                "branch_in": "#/components/schemas/HilBranchIn",
+                "category_in": "#/components/schemas/HilCategoryIn",
+                "confidence_lt": "#/components/schemas/HilConfidenceLt",
+                "field_confidence_lt": "#/components/schemas/HilFieldConfidenceLt",
+                "json_condition": "#/components/schemas/HilJsonCondition",
                 "split_count_neq": "#/components/schemas/HilSplitCountNeq",
                 "top_margin_lt": "#/components/schemas/HilTopMarginLt",
                 "validation_failed": "#/components/schemas/HilValidationFailed"
@@ -52062,6 +52139,7 @@
             "title": "Effective Seq"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "_id",
@@ -52075,14 +52153,14 @@
           "status",
           "awaiting_since"
         ],
-        "title": "ReviewQueueItem",
-        "description": "One row of the review queue (\u00a77).\n\nDeliberately omits the three heavy append-only logs (`versions`,\n`decisions`, `audit`) \u2014 the queue page only needs scoping + lifecycle\nfields. The full `ReviewOverlay` is fetched on a single `_id` lookup when\na reviewer opens one item."
+        "title": "ReviewQueueItemResponse",
+        "description": "Public API shape for one review queue row."
       },
       "ReviewQueueResponse": {
         "properties": {
           "data": {
             "items": {
-              "$ref": "#/components/schemas/ReviewQueueItem"
+              "$ref": "#/components/schemas/ReviewQueueItemResponse"
             },
             "type": "array",
             "title": "Data"
@@ -52958,7 +53036,7 @@
           "expected"
         ],
         "title": "SplitIOUCondition",
-        "description": "Intersection-over-Union for split page assignments.\n\n``expected`` is stored in the canonical split-eval payload shape:\n``{\"output\": [{\"name\", \"pages\", \"partitions\"}]}``"
+        "description": "Intersection-over-Union for split page assignments.\n\n``expected`` is stored in the canonical split-eval payload shape:\n``{\"splits\": [{\"name\", \"pages\"}]}``"
       },
       "SplitOutputEnvelope": {
         "properties": {
@@ -54306,6 +54384,19 @@
             "title": "Edited Output",
             "description": "Optional FULL corrected output. Valid only with verdict='approved': the server appends it as a human_edit version, then approves that version."
           },
+          "reviewable_value": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewable Value",
+            "description": "Optional primitive-specific reviewed value. Valid only with verdict='approved': the server validates and compiles it into an effective output version before approval. Mutually exclusive with edited_output."
+          },
           "on_seq": {
             "anyOf": [
               {
@@ -54377,7 +54468,7 @@
             "description": "accepted for a fresh decision; already_received / already_applied for an idempotent retry."
           },
           "overlay": {
-            "$ref": "#/components/schemas/ReviewOverlay",
+            "$ref": "#/components/schemas/ReviewOverlayResponse",
             "description": "The overlay after the decision was applied."
           }
         },
@@ -58347,7 +58438,7 @@
           },
           "workflow": {
             "$ref": "#/components/schemas/WorkflowSnapshotRef",
-            "description": "Workflow + snapshot reference"
+            "description": "Workflow + version reference"
           },
           "trigger": {
             "oneOf": [

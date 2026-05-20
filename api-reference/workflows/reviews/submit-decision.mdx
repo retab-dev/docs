@@ -21,6 +21,7 @@ The request body carries:
 | `verdict` | `approved` / `rejected`. |
 | `version_stamp` | The overlay `rev` you last read. Required — see the conflict note below. |
 | `edited_output` | Optional, `approved` only. Appends a corrective version, then approves it. |
+| `reviewable_value` | Optional, `approved` only. Primitive-specific reviewed value, such as a split manifest or split-by-key `for_each` partition map. Mutually exclusive with `edited_output`. |
 | `reason` | Required for `rejected`. |
 | `command_id` | Optional idempotency key — a retried call with the same `command_id` is deduplicated. |
 
@@ -37,24 +38,24 @@ from retab import Retab
 
 client = Retab()
 
-overlay = client.workflows.runs.reviews.get("run_abc123", "block_extract")
+overlay = client.workflows.reviews.get("run_abc123", "block_extract")
 stamp = overlay.version_stamp
 
 # Plain approve — the latest version flows downstream, the run resumes
-result = client.workflows.runs.reviews.approve(
+result = client.workflows.reviews.approve(
     "run_abc123", "block_extract", version_stamp=stamp,
 )
 print(result.submission_status)
 
 # Approve with edits — server appends a corrective version, then approves it
-result = client.workflows.runs.reviews.approve(
+result = client.workflows.reviews.approve(
     "run_abc123", "block_extract",
     version_stamp=stamp,
     edited_output={"total_amount": 325, "vendor_name": "Acme Corp"},
 )
 
 # Reject — the run is cancelled
-client.workflows.runs.reviews.reject(
+client.workflows.reviews.reject(
     "run_abc123", "block_extract",
     version_stamp=stamp,
     reason="Source document is illegible; cannot verify totals.",
@@ -67,23 +68,23 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-const overlay = await client.workflows.runs.reviews.get("run_abc123", "block_extract");
+const overlay = await client.workflows.reviews.get("run_abc123", "block_extract");
 const versionStamp = overlay.rev;
 
 // Plain approve — the latest version flows downstream, the run resumes
-const result = await client.workflows.runs.reviews.approve("run_abc123", "block_extract", {
+const result = await client.workflows.reviews.approve("run_abc123", "block_extract", {
   versionStamp,
 });
 console.log(result.submission_status);
 
 // Approve with edits — server appends a corrective version, then approves it
-await client.workflows.runs.reviews.approve("run_abc123", "block_extract", {
+await client.workflows.reviews.approve("run_abc123", "block_extract", {
   versionStamp,
   editedOutput: { total_amount: 325, vendor_name: "Acme Corp" },
 });
 
 // Reject — the run is cancelled
-await client.workflows.runs.reviews.reject("run_abc123", "block_extract", {
+await client.workflows.reviews.reject("run_abc123", "block_extract", {
   versionStamp,
   reason: "Source document is illegible; cannot verify totals.",
 });
