@@ -41,6 +41,7 @@ LEGACY_SCHEMA_NAMES: set[str] = {
     "Submit" + "H" + "IL" + "DecisionRequest",
     "Submit" + "H" + "IL" + "DecisionResponse",
 }
+REVIEW_DECISION_STATUS_VALUES = ["pending", "approved", "rejected", "decided", "all"]
 
 
 def _collect_schema_refs(node: object, refs: set[str]) -> None:
@@ -366,6 +367,94 @@ def _replace_schema_ref(
             _replace_schema_ref(item, old_schema_name, new_schema_name)
 
 
+def _rename_schema(
+    spec: dict[str, object], old_schema_name: str, new_schema_name: str
+) -> None:
+    """Rename a schema component and update all public refs to it."""
+    schemas = (
+        spec.get("components", {}).get("schemas")
+        if isinstance(spec.get("components"), dict)
+        else None
+    )
+    if not isinstance(schemas, dict):
+        return
+
+    schema = schemas.pop(old_schema_name, None)
+    if not isinstance(schema, dict):
+        return
+
+    schema["title"] = new_schema_name
+    schemas[new_schema_name] = schema
+    _replace_schema_ref(spec, old_schema_name, new_schema_name)
+
+
+def _hard_cutover_review_overlay_docs(spec: dict[str, object]) -> None:
+    """Normalize review overlay docs to the public hard-cutover contract."""
+    schemas = (
+        spec.get("components", {}).get("schemas")
+        if isinstance(spec.get("components"), dict)
+        else None
+    )
+    if not isinstance(schemas, dict):
+        return
+
+    _rename_schema(spec, "Submit" + "DecisionResponse", "ReviewDecisionResponse")
+
+    output_version_schema = schemas.get("OutputVersion")
+    if isinstance(output_version_schema, dict):
+        description = output_version_schema.get("description")
+        if isinstance(description, str):
+            output_version_schema["description"] = description.replace(
+                "ReviewOverlay.versions", "ReviewResponse.versions"
+            )
+
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return
+
+    reviews_list_path = paths.get("/v1/workflows/reviews")
+    if isinstance(reviews_list_path, dict):
+        get_operation = reviews_list_path.get("get")
+        if isinstance(get_operation, dict):
+            parameters = get_operation.get("parameters")
+            if isinstance(parameters, list):
+                for parameter in parameters:
+                    if (
+                        isinstance(parameter, dict)
+                        and parameter.get("name") == "decision_status"
+                    ):
+                        schema = parameter.get("schema")
+                        if isinstance(schema, dict):
+                            schema.pop("pattern", None)
+                            schema["enum"] = REVIEW_DECISION_STATUS_VALUES
+                            schema["description"] = (
+                                "Filter by decision state: pending, approved, "
+                                "rejected, decided, or all."
+                            )
+                        parameter["description"] = (
+                            "Filter by decision state: pending, approved, "
+                            "rejected, decided, or all."
+                        )
+
+    for path, operations in paths.items():
+        if not isinstance(path, str) or not path.startswith("/v1/workflows/reviews"):
+            continue
+        if not isinstance(operations, dict):
+            continue
+        for operation in operations.values():
+            if not isinstance(operation, dict):
+                continue
+            parameters = operation.get("parameters")
+            if not isinstance(parameters, list):
+                continue
+            for parameter in parameters:
+                if isinstance(parameter, dict) and parameter.get("name") == "id":
+                    parameter["description"] = "Opaque review id."
+                    schema = parameter.get("schema")
+                    if isinstance(schema, dict):
+                        schema["description"] = "Opaque review id."
+
+
 def generate_openapi() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     backend_main_server = repo_root / "backend" / "main_server"
@@ -401,6 +490,7 @@ def generate_openapi() -> None:
     _strip_public_workflow_internal_fields(spec)
     _strip_update_workflow_email_trigger_docs(spec)
     _hard_cutover_workflow_step_lifecycle(spec)
+    _hard_cutover_review_overlay_docs(spec)
 
     # Strip unused legacy request/response schemas that only belonged to the
     # document-scoped classification API.
