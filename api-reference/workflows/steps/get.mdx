@@ -3,9 +3,9 @@ title: "Get Step"
 openapi: "GET /v1/workflows/steps/{step_id}"
 ---
 
-Get one joined step row by `step_id`. The response matches a single row from
-[Query Steps](/api-reference/workflows/steps/query), including status, handle
-data, and fingerprint metadata.
+Get one persisted step object by `step_id`. The response uses the same step
+shape as [List Steps](/api-reference/workflows/steps/list): lifecycle, handle
+payloads, artifact ref, and timing fields.
 
 <RequestExample>
 
@@ -16,7 +16,7 @@ client = Retab()
 
 step = client.workflows.steps.get("step_extract_1")
 
-print(step.status)
+print(step.lifecycle.status)
 print(step.handle_outputs)
 
 if step.handle_outputs:
@@ -32,7 +32,7 @@ const client = new Retab();
 
 const step = await client.workflows.steps.get("step_extract_1");
 
-console.log(`Step status: ${step.status}`);
+console.log(`Step status: ${step.lifecycle.status}`);
 const payload = step.handle_outputs["output-json-0"];
 if (payload?.type === "json") {
   console.log(payload.data);
@@ -63,7 +63,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Step status: %s\n", step.Status)
+	fmt.Printf("Step status: %s\n", step.Lifecycle["status"])
 	if payload, ok := step.HandleOutputs["output-json-0"]; ok {
 		fmt.Println(payload.Type)
 		fmt.Println(payload.Data)
@@ -85,15 +85,16 @@ curl -X 'GET' \
 {
   "step_id": "step_extract_1",
   "run_id": "run_abc123xyz",
-  "workflow_id": "wf_abc123xyz",
   "block_id": "extract-block-1",
   "block_type": "extract",
-  "status": "completed",
+  "block_label": "Extract Invoice",
+  "lifecycle": { "status": "completed" },
   "started_at": "2026-05-18T10:00:00Z",
   "completed_at": "2026-05-18T10:00:04Z",
-  "duration_ms": 4210,
-  "iteration": null,
-  "is_iteration": false,
+  "loop_containers": [],
+  "artifact": { "operation": "extraction", "id": "ext_abc123" },
+  "retry_count": 0,
+  "created_at": "2026-05-18T10:00:00Z",
   "handle_outputs": {
     "output-json-0": {
       "type": "json",
@@ -114,19 +115,7 @@ curl -X 'GET' \
       }
     }
   },
-  "fingerprint": {
-    "input_fingerprint": "6d1f8c8a",
-    "schema_fingerprint": "b44b1c28",
-    "definition_fingerprint": "0ff93ddc",
-    "resolved_definition_fingerprint": "42d114aa",
-    "effective_execution_fingerprint": "ca8f2b04",
-    "handle_inputs_fingerprint": "7b03fa21",
-    "effective_config": {},
-    "runtime_overrides": {},
-    "cohort_id": null,
-    "source_file_id": "file_123",
-    "source_filename": "invoice.pdf"
-  }
+  "model": null
 }
 ```
 
@@ -134,18 +123,19 @@ curl -X 'GET' \
 {
   "step_id": "step_extract_1",
   "run_id": "run_abc123xyz",
-  "workflow_id": "wf_abc123xyz",
   "block_id": "extract-block-1",
   "block_type": "extract",
-  "status": "error",
+  "block_label": "Extract Invoice",
+  "lifecycle": { "status": "error", "message": "Model request failed" },
   "started_at": "2026-05-18T10:00:00Z",
   "completed_at": "2026-05-18T10:00:04Z",
-  "duration_ms": 4210,
-  "iteration": null,
-  "is_iteration": false,
+  "loop_containers": [],
+  "artifact": null,
+  "retry_count": 0,
+  "created_at": "2026-05-18T10:00:00Z",
   "handle_outputs": {},
   "handle_inputs": {},
-  "fingerprint": null
+  "model": null
 }
 ```
 

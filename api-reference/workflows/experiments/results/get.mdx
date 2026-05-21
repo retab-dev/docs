@@ -1,0 +1,127 @@
+---
+title: "Get Experiment Run Result"
+openapi: "GET /v1/workflows/experiments/results/{result_id}"
+---
+
+Fetch one experiment result by its opaque `result_id`. Use this to refresh a
+single document result without re-listing every result for the parent
+experiment run.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+
+client = Retab()
+
+result = client.workflows.experiments.runs.results.get("expresult_1")
+
+print(result.document_id)
+print(result.lifecycle.status)
+print(result.artifact)
+```
+
+```javascript javascript
+const resultId = "expresult_1";
+
+const response = await fetch(
+  `https://api.retab.com/v1/workflows/experiments/results/${resultId}`,
+  {
+    headers: {
+      "Api-Key": process.env.RETAB_API_KEY,
+    },
+  },
+);
+
+if (!response.ok) {
+  throw new Error(`Retab request failed: ${response.status}`);
+}
+
+const result = await response.json();
+console.log(result.document_id);
+console.log(result.lifecycle.status);
+console.log(result.artifact);
+```
+
+```go go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	resultID := "expresult_1"
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"https://api.retab.com/v1/workflows/experiments/results/"+resultID,
+		nil,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		log.Fatalf("Retab request failed: %s", resp.Status)
+	}
+
+	var result map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(result["document_id"])
+	fmt.Println(result["lifecycle"])
+	fmt.Println(result["artifact"])
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/experiments/results/expresult_1' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "expresult_1",
+  "run_id": "exprun_2",
+  "experiment_id": "exp_abc",
+  "document_id": "expdoc_xyz",
+  "block_kind": "extract",
+  "lifecycle": { "status": "completed" },
+  "timing": {
+    "started_at": "2026-05-02T11:00:01Z",
+    "completed_at": "2026-05-02T11:00:05Z",
+    "duration_ms": 4120
+  },
+  "handle_inputs": {
+    "input-document-0": { "type": "file", "filename": "invoice_q1.pdf" }
+  },
+  "artifact": { "operation": "extraction", "id": "ext_xyz" },
+  "attempt": 0
+}
+```
+
+```json 404
+{
+  "detail": "Experiment result not found: expresult_1"
+}
+```
+
+</ResponseExample>
