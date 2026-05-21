@@ -24,6 +24,7 @@ The binary is available for **macOS**, **Linux**, and **Windows** on both **amd6
     ```
 
     The installer detects your OS and architecture, downloads the matching release from [`github.com/retab-dev/retab/releases`](https://github.com/retab-dev/retab/releases), verifies the SHA-256 checksum, drops the binary at `~/.retab/bin/retab`, appends a `PATH` entry to your shell's rc file (`.zshrc`, `.bashrc`, `.bash_profile`, or `~/.config/fish/config.fish`), and runs `retab setup` to install Retab skills and MCP config.
+
   </Step>
 
   <Step title="Reload your shell" stepNumber={2}>
@@ -32,6 +33,7 @@ The binary is available for **macOS**, **Linux**, and **Windows** on both **amd6
     ```sh
     retab version
     ```
+
   </Step>
 
   <Step title="Authenticate" stepNumber={3}>
@@ -42,23 +44,27 @@ The binary is available for **macOS**, **Linux**, and **Windows** on both **amd6
     Opens your browser for an OAuth login through WorkOS (the same identity provider as the dashboard — SSO, Google, email, all work). The CLI captures the callback on a local loopback port, exchanges it for OAuth tokens, and stores them at `~/.retab/config.json` (mode `0600`). Tokens refresh transparently.
 
     For headless setups (CI, servers, no browser), use an API key directly — see [Authentication](#authentication) below.
+
   </Step>
 </Steps>
 
 <Tip>
-  Prefer not to run a script piped from the internet? Each release also publishes raw binaries on the [GitHub releases page](https://github.com/retab-dev/retab/releases). Download, `chmod +x`, and put it anywhere on your `PATH`.
+  Prefer not to run a script piped from the internet? Each release also
+  publishes raw binaries on the [GitHub releases
+  page](https://github.com/retab-dev/retab/releases). Download, `chmod +x`, and
+  put it anywhere on your `PATH`.
 </Tip>
 
 ### Install options
 
 The installer honors a few environment variables:
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `RETAB_VERSION` | latest | Pin a specific CLI version (e.g. `0.1.0`). |
-| `RETAB_INSTALL_DIR` | `$HOME/.retab/bin` | Where the binary is dropped. |
-| `RETAB_NO_MODIFY_PATH` | unset | Set to `1` to skip the rc-file `PATH` edit. |
-| `RETAB_SKIP_SETUP` | unset | Set to `1` to skip automatic `retab setup`. |
+| Variable               | Default            | Purpose                                     |
+| ---------------------- | ------------------ | ------------------------------------------- |
+| `RETAB_VERSION`        | latest             | Pin a specific CLI version (e.g. `0.1.0`).  |
+| `RETAB_INSTALL_DIR`    | `$HOME/.retab/bin` | Where the binary is dropped.                |
+| `RETAB_NO_MODIFY_PATH` | unset              | Set to `1` to skip the rc-file `PATH` edit. |
+| `RETAB_SKIP_SETUP`     | unset              | Set to `1` to skip automatic `retab setup`. |
 
 ```sh
 # pin a version, install to a custom dir, leave PATH alone
@@ -122,13 +128,13 @@ Get a key from the [dashboard settings](https://retab.com/dashboard/settings).
 
 The CLI picks credentials in this strict order. **The flag and env paths always win** so an `RETAB_API_KEY` in your environment overrides any logged-in OAuth session — useful when you want to scope a single command to a different identity.
 
-| # | Source | Header sent |
-|---|---|---|
-| 1 | `--api-key` flag | `Api-Key` |
-| 2 | `RETAB_API_KEY` env var | `Api-Key` |
-| 3 | OAuth tokens in `~/.retab/config.json` | `Authorization: Bearer …` (refreshed automatically) |
-| 4 | `api_key` field in `~/.retab/config.json` | `Api-Key` |
-| 5 | nothing → error | — |
+| #   | Source                                    | Header sent                                         |
+| --- | ----------------------------------------- | --------------------------------------------------- |
+| 1   | `--api-key` flag                          | `Api-Key`                                           |
+| 2   | `RETAB_API_KEY` env var                   | `Api-Key`                                           |
+| 3   | OAuth tokens in `~/.retab/config.json`    | `Authorization: Bearer …` (refreshed automatically) |
+| 4   | `api_key` field in `~/.retab/config.json` | `Api-Key`                                           |
+| 5   | nothing → error                           | —                                                   |
 
 ### Inspecting the active credential
 
@@ -183,6 +189,7 @@ retab extractions stream \
   --model retab-small
 # emits one JSON object per line as tokens stream in
 ```
+
 </CodeGroup>
 
 ### Files
@@ -254,21 +261,23 @@ The CLI is a tree of commands. Two shortcuts you'll want:
 - **Shell completion.** Generate a completion script once and source it from your shell rc:
 
   <CodeGroup>
-  ```sh zsh
-  retab completion zsh > "${fpath[1]}/_retab"
-  ```
 
-  ```sh bash
-  retab completion bash > /usr/local/etc/bash_completion.d/retab
-  ```
+```sh zsh
+retab completion zsh > "${fpath[1]}/_retab"
+```
 
-  ```sh fish
-  retab completion fish > ~/.config/fish/completions/retab.fish
-  ```
+```sh bash
+retab completion bash > /usr/local/etc/bash_completion.d/retab
+```
 
-  ```powershell PowerShell
-  retab completion powershell | Out-String | Invoke-Expression
-  ```
+```sh fish
+retab completion fish > ~/.config/fish/completions/retab.fish
+```
+
+```powershell PowerShell
+retab completion powershell | Out-String | Invoke-Expression
+```
+
   </CodeGroup>
 
 ---
@@ -280,13 +289,15 @@ The CLI is a tree of commands. Two shortcuts you'll want:
     `~/.retab/config.json` — written by `retab auth login`, mode `0600`. Holds either an `oauth` block (tokens, expiry, WorkOS domain) or an `api_key`, plus optional `base_url`.
   </Card>
 
-  <Card title="Environment" icon="terminal">
-    `RETAB_API_KEY`, `RETAB_BASE_URL` — override anything stored on disk. The right choice in CI.
-  </Card>
+<Card title="Environment" icon="terminal">
+  `RETAB_API_KEY`, `RETAB_BASE_URL` — override anything stored on disk. The
+  right choice in CI.
+</Card>
 
-  <Card title="Flags" icon="flag">
-    `--api-key`, `--base-url`, `--debug` — persistent flags on every command. Override env vars.
-  </Card>
+<Card title="Flags" icon="flag">
+  `--api-key`, `--base-url`, `--debug` — persistent flags on every command.
+  Override env vars.
+</Card>
 
   <Card title="Binary" icon="microchip">
     Installed at `~/.retab/bin/retab` by default. Single static binary, no runtime dependencies.
@@ -304,17 +315,25 @@ The `--debug` flag turns on verbose output (request URLs, response codes, raw bo
     The installer added `~/.retab/bin` to your shell rc, but the current shell hasn't reloaded it. Either open a new terminal or run `source ~/.zshrc` (or your shell's rc file). On `fish`, run `source ~/.config/fish/config.fish`.
   </Accordion>
 
-  <Accordion title="`401 Unauthorized`">
-    Run `retab auth status` — it shows which credential source the CLI is reading from and pings the API to verify. If the source is `~/.retab/config.json (oauth)` and the access token has expired, the CLI will refresh on its own; if the refresh token itself has expired, you'll see `invalid_grant` — run `retab auth login` to re-authenticate. If the source is an API key but still 401s, double-check the key in the [dashboard settings](https://retab.com/dashboard/settings).
-  </Accordion>
+<Accordion title="`401 Unauthorized`">
+  Run `retab auth status` — it shows which credential source the CLI is reading
+  from and pings the API to verify. If the source is `~/.retab/config.json
+  (oauth)` and the access token has expired, the CLI will refresh on its own; if
+  the refresh token itself has expired, you'll see `invalid_grant` — run `retab
+  auth login` to re-authenticate. If the source is an API key but still 401s,
+  double-check the key in the [dashboard
+  settings](https://retab.com/dashboard/settings).
+</Accordion>
 
   <Accordion title="Browser didn't open during `retab auth login`">
     The CLI uses `open` (macOS), `xdg-open` (Linux), or `rundll32 url.dll` (Windows). If none of those are wired up — typical on minimal Docker images or remote SSH — the CLI prints the authorize URL to stderr instead. Copy it into a browser on a machine that can talk to your identity provider; the callback still lands on `127.0.0.1:<port>` of the box where the CLI is running, so port-forward or use `RETAB_API_KEY` instead.
   </Accordion>
 
-  <Accordion title="`unsupported architecture` during install">
-    The installer supports `x86_64` and `arm64` only. On other architectures, build from source: `git clone https://github.com/retab-dev/retab && cd retab/cli && go build -o retab .`
-  </Accordion>
+<Accordion title="`unsupported architecture` during install">
+  The installer supports `x86_64` and `arm64` only. On other architectures,
+  build from source: `git clone https://github.com/retab-dev/retab && cd
+  retab/cli && go build -o retab .`
+</Accordion>
 
   <Accordion title="Checksum mismatch during install">
     A checksum mismatch means the downloaded archive doesn't match the SHA-256 published in `checksums.txt`. Don't bypass the check — re-run the installer (it's idempotent). If it persists, file an issue at [github.com/retab-dev/retab](https://github.com/retab-dev/retab/issues).

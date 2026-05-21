@@ -1,7 +1,7 @@
 ```mermaid
 graph LR
     A["Trigger"] --> B["Processor"] --> C["Destination"]
-    
+
     A1["Email"] -.-> A
     A2["Link"] -.-> A
     A3["Outlook Plugin"] -.-> A
@@ -18,7 +18,6 @@ An **automation** is a way to automatically send data to your processor when tri
 
 Retab uses HTTPS to send webhook events to your app as a JSON payload representing a `WebhookRequest` object.
 You will need a server with a webhook endpoint that will receive the `webhook_request` payload, allowing you to process them as you want after that.
-
 
 <ResponseField name="webhook_request" type="WebhookRequest Object">
   <Expandable title="properties">
@@ -47,9 +46,9 @@ You will need a server with a webhook endpoint that will receive the `webhook_re
     <ResponseField name="metadata" type="dict[str, Any]">
       Some additional metadata.
     </ResponseField>
+
   </Expandable>
 </ResponseField>
-
 
 To start receiving webhook events in your app:
 
@@ -58,8 +57,6 @@ To start receiving webhook events in your app:
 - Create a new automation sending data to your webhook endpoint.
 - Test your webhook endpoint handler locally using the Retab SDK.
 - Secure your webhook endpoint.
-
-
 
 ## Create your processor
 
@@ -72,24 +69,25 @@ import requests
 
 api_key = os.environ["RETAB_API_KEY"]
 schema = {
-    "type": "object",
-    "properties": {
-        "invoice_number": {"type": "string"},
-    },
+"type": "object",
+"properties": {
+"invoice_number": {"type": "string"},
+},
 }
 
 response = requests.post(
-    "https://api.retab.com/v1/processors",
-    headers={"Api-Key": api_key},
-    json={
-        "name": "Invoice Processor",
-        "model": "retab-small",
-        "json_schema": schema,
-    },
+"https://api.retab.com/v1/processors",
+headers={"Api-Key": api_key},
+json={
+"name": "Invoice Processor",
+"model": "retab-small",
+"json_schema": schema,
+},
 )
 response.raise_for_status()
 processor = response.json()
-```
+
+````
 
 ```go Go
 // The Go SDK does not yet model the processors API. Call /v1/processors directly.
@@ -141,7 +139,8 @@ func main() {
 	payload, _ := io.ReadAll(resp.Body)
 	fmt.Println(string(payload))
 }
-```
+````
+
 </CodeGroup>
 
 ## Create your FastAPI server with a webhook
@@ -157,19 +156,22 @@ app = FastAPI()
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    webhook_request = await request.json()
-    invoice_object = json.loads(
-        webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
-    )
-    print("📬 Webhook received:", invoice_object)
-    return {"status": "success", "data": invoice_object}
+webhook_request = await request.json()
+invoice_object = json.loads(
+webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
+)
+print("📬 Webhook received:", invoice_object)
+return {"status": "success", "data": invoice_object}
 
 # To run the FastAPI app locally, use the command:
+
 # uvicorn your_module_name:app --reload
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-```
+
+if **name** == "**main**":
+import uvicorn
+uvicorn.run(app, host="0.0.0.0", port=8000)
+
+````
 
 You can test the webhook endpoint locally with a tool like curl or Postman. For example, using curl:
 
@@ -177,9 +179,9 @@ You can test the webhook endpoint locally with a tool like curl or Postman. For 
 curl -X POST http://localhost:8000/webhook \
      -H "Content-Type: application/json" \
      -d '{"completion":{"id":"id","choices":[{"index":0,"message":{"content":"{\"name\" : \"Team Meeting!\", \"date\" : \"2023-12-31\" }","role":"assistant"}}],"created":0,"model":"gpt-5-nano","object":"chat.completion","likelihoods":{}},"file_payload":{"filename":"example.pdf","url":"data:application/pdf;base64,the_content_of_the_pdf_file"}}'
-```
-</CodeGroup>
+````
 
+</CodeGroup>
 
 ## Secure your webhook endpoint
 
@@ -202,7 +204,7 @@ app = FastAPI()
 
 @app.post("/webhook")
 async def webhook_handler(request: Request):
-    payload = await request.body()
+payload = await request.body()
 
     # Signature verification
     try:
@@ -219,13 +221,14 @@ async def webhook_handler(request: Request):
         return Response(status_code=400, content=f"Webhook error: {str(e)}")
 
     webhook_request = json.loads(payload.decode('utf-8'))
-    
+
     invoice_object = json.loads(
         webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
     )
     print("📬 Webhook received:", invoice_object)
     return {"status": "success", "data": invoice_object}
-```
+
+````
 
 ```go Go
 // retab.VerifyEvent validates the X-Retab-Signature HMAC and decodes the
@@ -279,18 +282,13 @@ func main() {
 	http.HandleFunc("/webhook", handler)
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
-```
+````
+
 </CodeGroup>
-
-
-
-
-
 
 ## Exposing local server to the internet using ngrok
 
 <Warning>To continue, you need to deploy your FastAPI app to a server to make your webhook endpoint publicly accessible. We recommend using [Replit](https://replit.com/) to get started quickly if you don't have a server yet. An alternative is to use [ngrok](https://ngrok.com/) to expose your local server to the internet.</Warning>
-
 
 We have a very simple Dockerfile that fastapi+ngrok to get you started.
 Check out the [webhook_server](https://github.com/retab-dev/retab/tree/main/examples/automations/webhook_server) folder for more details.
@@ -316,10 +314,10 @@ INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
+
 </CodeGroup>
 
 Take note of the `webhook URL`, you will need it on the next steps.
-
 
 ## Create an automation
 
@@ -334,7 +332,7 @@ You can see the processor and automation you just created on your [dashboard](ht
 
 ### Test your automation
 
-Finally, you can test the processor and automation rapidly with the test functions of the SDK: 
+Finally, you can test the processor and automation rapidly with the test functions of the SDK:
 
 <CodeGroup>
 ```python Python
@@ -345,21 +343,24 @@ api_key = os.environ["RETAB_API_KEY"]
 automation_id = "auto_abc"
 
 # If you just want to send a test request to your webhook
+
 webhook_log = requests.post(
-    f"https://api.retab.com/v1/processors/automations/tests/webhook/{automation_id}",
-    headers={"Api-Key": api_key},
+f"https://api.retab.com/v1/processors/automations/tests/webhook/{automation_id}",
+headers={"Api-Key": api_key},
 )
 webhook_log.raise_for_status()
 
-# If you want to test the file processing logic: 
+# If you want to test the file processing logic:
+
 with open("your_invoice_email.eml", "rb") as document:
-    upload_log = requests.post(
-        f"https://api.retab.com/v1/processors/automations/tests/upload/{automation_id}",
-        headers={"Api-Key": api_key},
-        files={"file": ("your_invoice_email.eml", document, "message/rfc822")},
-    )
+upload_log = requests.post(
+f"https://api.retab.com/v1/processors/automations/tests/upload/{automation_id}",
+headers={"Api-Key": api_key},
+files={"file": ("your_invoice_email.eml", document, "message/rfc822")},
+)
 upload_log.raise_for_status()
-```
+
+````
 
 ```go Go
 // The Go SDK does not yet model the automations test API. Call the test
@@ -429,14 +430,12 @@ func main() {
 	}
 
 }
-```
+````
+
 </CodeGroup>
 
 You can also test your automation directly from the [dashboard](https://www.retab.com/dashboard/processors).
 
-
-
 ---
 
-
-That's it! You can start processing documents at scale. 
+That's it! You can start processing documents at scale.

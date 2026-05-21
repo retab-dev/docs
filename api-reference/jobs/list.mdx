@@ -1,6 +1,6 @@
 ---
-title: 'List Jobs'
-openapi: 'GET /v1/jobs'
+title: "List Jobs"
+openapi: "GET /v1/jobs"
 ---
 
 <RequestExample>
@@ -30,28 +30,28 @@ if jobs_response.has_more:
 ```
 
 ```javascript javascript
-import { Retab } from '@retab/node';
+import { Retab } from "@retab/node";
 
 const client = new Retab();
 
 // List all jobs
 const jobsResponse = await client.jobs.list();
 for (const job of jobsResponse.data) {
-    console.log(`${job.id}: ${job.status} - ${job.endpoint}`);
+  console.log(`${job.id}: ${job.status} - ${job.endpoint}`);
 }
 
 // List with filters and pagination
 const filteredJobs = await client.jobs.list({
-    status: "completed",
-    limit: 10
+  status: "completed",
+  limit: 10,
 });
 
 // Paginate through results
 if (filteredJobs.has_more) {
-    const nextPage = await client.jobs.list({
-        after: filteredJobs.last_id,
-        limit: 10
-    });
+  const nextPage = await client.jobs.list({
+    after: filteredJobs.last_id,
+    limit: 10,
+  });
 }
 ```
 
@@ -191,15 +191,16 @@ all_jobs = []
 after = None
 
 while True:
-    response = client.jobs.list(after=after, limit=100)
-    all_jobs.extend(response.data)
+response = client.jobs.list(after=after, limit=100)
+all_jobs.extend(response.data)
 
     if not response.has_more:
         break
     after = response.last_id
 
 print(f"Total jobs: {len(all_jobs)}")
-```
+
+````
 
 ```javascript JavaScript
 const allJobs = [];
@@ -216,7 +217,7 @@ while (true) {
 }
 
 console.log(`Total jobs: ${allJobs.length}`);
-```
+````
 
 ```go Go
 package main
@@ -259,6 +260,7 @@ func main() {
 	fmt.Printf("Total jobs: %d\n", len(allJobs))
 }
 ```
+
 </CodeGroup>
 
 ## Filtering Examples
@@ -273,7 +275,8 @@ queued = client.jobs.list(status="queued")
 
 print(f"In progress: {len(in_progress.data)}")
 print(f"Queued: {len(queued.data)}")
-```
+
+````
 
 ```javascript JavaScript
 // Get all jobs currently processing
@@ -282,7 +285,7 @@ const queued = await client.jobs.list({ status: "queued" });
 
 console.log(`In progress: ${inProgress.data.length}`);
 console.log(`Queued: ${queued.data.length}`);
-```
+````
 
 ```go Go
 ctx := context.Background()
@@ -301,6 +304,7 @@ if err != nil {
 fmt.Printf("In progress: %d\n", len(inProgress.Data))
 fmt.Printf("Queued: %d\n", len(queued.Data))
 ```
+
 </CodeGroup>
 
 ### Find Failed Jobs
@@ -311,8 +315,9 @@ fmt.Printf("Queued: %d\n", len(queued.Data))
 failed_jobs = client.jobs.list(status="failed", limit=50)
 
 for job in failed_jobs.data:
-    print(f"{job.id}: {job.error.code} - {job.error.message}")
-```
+print(f"{job.id}: {job.error.code} - {job.error.message}")
+
+````
 
 ```javascript JavaScript
 // List failed jobs to investigate errors
@@ -321,7 +326,7 @@ const failedJobs = await client.jobs.list({ status: "failed", limit: 50 });
 for (const job of failedJobs.data) {
     console.log(`${job.id}: ${job.error.code} - ${job.error.message}`);
 }
-```
+````
 
 ```go Go
 ctx := context.Background()
@@ -342,6 +347,7 @@ for _, job := range failedJobs.Data {
 	}
 }
 ```
+
 </CodeGroup>
 
 ### Filter by Metadata
@@ -356,11 +362,12 @@ batch_jobs = []
 
 response = client.jobs.list(limit=100)
 for job in response.data:
-    if job.metadata and job.metadata.get("batch_id") == batch_id:
-        batch_jobs.append(job)
+if job.metadata and job.metadata.get("batch_id") == batch_id:
+batch_jobs.append(job)
 
 print(f"Jobs in {batch_id}: {len(batch_jobs)}")
-```
+
+````
 
 ```javascript JavaScript
 // Find jobs from a specific batch
@@ -375,7 +382,7 @@ for (const job of response.data) {
 }
 
 console.log(`Jobs in ${batchId}: ${batchJobs.length}`);
-```
+````
 
 ```go Go
 ctx := context.Background()
@@ -401,4 +408,5 @@ for _, job := range response.Data {
 
 fmt.Printf("Jobs in %s: %d\n", batchID, len(batchJobs))
 ```
+
 </CodeGroup>

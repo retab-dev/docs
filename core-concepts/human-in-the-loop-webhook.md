@@ -1,4 +1,3 @@
-
 --- 
 
 ## Webhooks
@@ -226,5 +225,3 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 That's it! You can start processing documents at scale. 
 
 ---
-
-

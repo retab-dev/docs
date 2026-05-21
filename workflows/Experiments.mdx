@@ -27,10 +27,10 @@ field, category, subdocument type, or split-by-key partition.
 Tests and experiments both help you keep workflow changes under control, but
 they answer different questions.
 
-| Tool | Best for | Signal |
-|---|---|---|
-| **Tests** | Checking a specific expected output | Pass, fail, or error against an assertion |
-| **Experiments** | Measuring output stability across documents | Consensus score and disagreement details |
+| Tool            | Best for                                    | Signal                                    |
+| --------------- | ------------------------------------------- | ----------------------------------------- |
+| **Tests**       | Checking a specific expected output         | Pass, fail, or error against an assertion |
+| **Experiments** | Measuring output stability across documents | Consensus score and disagreement details  |
 
 Use a test when you know what the output should be. Use an experiment when you
 want to find weak spots, compare block configurations, or inspect whether a
@@ -40,12 +40,12 @@ block is internally consistent before you write stricter assertions.
 
 Experiments are currently supported for:
 
-| Block | What Retab measures |
-|---|---|
-| **Extract** | Field-level agreement for extracted JSON values |
-| **Split** | Agreement on subdocument/page assignments |
-| **Classifier** | Agreement on routing category decisions |
-| **For Each** | Key-level agreement when the block is configured as split-by-key |
+| Block          | What Retab measures                                              |
+| -------------- | ---------------------------------------------------------------- |
+| **Extract**    | Field-level agreement for extracted JSON values                  |
+| **Split**      | Agreement on subdocument/page assignments                        |
+| **Classifier** | Agreement on routing category decisions                          |
+| **For Each**   | Key-level agreement when the block is configured as split-by-key |
 
 Other workflow blocks can still be tested with workflow tests, but they do not
 currently produce experiment metrics.
@@ -64,12 +64,12 @@ replays the selected block for each document. Each document execution becomes an
 experiment result under the parent experiment run. The result stores the
 canonical artifact produced by the block:
 
-| Block | Artifact |
-|---|---|
-| **Extract** | Extraction |
-| **Split** | Split |
-| **Classifier** | Classification |
-| **For Each split-by-key** | Partition |
+| Block                     | Artifact       |
+| ------------------------- | -------------- |
+| **Extract**               | Extraction     |
+| **Split**                 | Split          |
+| **Classifier**            | Classification |
+| **For Each split-by-key** | Partition      |
 
 Metrics are normalized across the same shape for every supported block:
 
@@ -79,12 +79,12 @@ document x target x voter
 
 The target depends on the block type:
 
-| Block | Target |
-|---|---|
-| **Extract** | Field |
-| **Split** | Subdocument |
-| **Classifier** | Category |
-| **For Each split-by-key** | Key |
+| Block                     | Target      |
+| ------------------------- | ----------- |
+| **Extract**               | Field       |
+| **Split**                 | Subdocument |
+| **Classifier**            | Category    |
+| **For Each split-by-key** | Key         |
 
 This lets the dashboard show the same core views for different block types:
 overall summary, by-document scores, by-target scores, and voter-level
@@ -110,10 +110,10 @@ running.
 
 The experiment detail page has three sections:
 
-| Section | Purpose |
-|---|---|
-| **Config** | Review or edit the block configuration being evaluated. |
-| **Data** | Inspect per-document outputs and the underlying artifacts. |
+| Section     | Purpose                                                                                   |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| **Config**  | Review or edit the block configuration being evaluated.                                   |
+| **Data**    | Inspect per-document outputs and the underlying artifacts.                                |
 | **Metrics** | Analyze consensus scores, weak targets, document-level failures, and voter disagreements. |
 
 The metrics views help you move from broad signal to specific evidence:
@@ -176,16 +176,17 @@ from retab import Retab
 client = Retab()
 
 experiment = client.workflows.experiments.create(
-    workflow_id="wf_abc123",
-    block_id="extract-invoice",
-    name="Q1 invoices",
-    document_captures=[
-        {"workflow_run_id": "wfrun_1"},
-        {"workflow_run_id": "wfrun_2", "step_id": "for_each-0"},
-    ],
-    n_consensus=5,
+workflow_id="wf_abc123",
+block_id="extract-invoice",
+name="Q1 invoices",
+document_captures=[
+{"workflow_run_id": "wfrun_1"},
+{"workflow_run_id": "wfrun_2", "step_id": "for_each-0"},
+],
+n_consensus=5,
 )
-```
+
+````
 
 ```go Go
 package main
@@ -221,7 +222,8 @@ func main() {
 
 	fmt.Println(experiment.ID)
 }
-```
+````
+
 </CodeGroup>
 
 Creating an experiment does NOT trigger a run — the document set is registered
@@ -240,7 +242,8 @@ run = client.workflows.experiments.runs.create(
 )
 
 print(run.id, run.lifecycle.status)
-```
+
+````
 
 ```go Go
 package main
@@ -270,7 +273,8 @@ func main() {
 
 	fmt.Println(run.ID, run.Lifecycle.Status)
 }
-```
+````
+
 </CodeGroup>
 
 Runs use the experiment's stored `n_consensus` and document set.
@@ -290,14 +294,15 @@ run = client.workflows.experiments.runs.get(run.id)
 
 results = client.workflows.experiments.runs.results.list(run.id)
 for result in results.data:
-    print(result.document_id, result.lifecycle.status)
+print(result.document_id, result.lifecycle.status)
 
 result = client.workflows.experiments.runs.results.get(
-    run.id,
-    document_id="expdoc_xyz",
+run.id,
+document_id="expdoc_xyz",
 )
 print(result.artifact)
-```
+
+````
 
 ```go Go
 package main
@@ -337,7 +342,8 @@ func main() {
 	}
 	fmt.Println(result.Artifact)
 }
-```
+````
+
 </CodeGroup>
 
 ### Read metrics
@@ -354,20 +360,23 @@ summary = client.workflows.experiments.runs.metrics.get(
 )
 
 # A weak field surfaces in summary.aggregate.likelihoods → drill in
+
 target_view = client.workflows.experiments.runs.metrics.get(
-    run.id,
-    view="by_target",
-    target_path="line_items.*.unit_price",
+run.id,
+view="by_target",
+target_path="line_items.\*.unit_price",
 )
 
 # To see what each voter said for one document/target cell
+
 votes = client.workflows.experiments.runs.metrics.get(
-    run.id,
-    view="votes",
-    document_id="expdoc_xyz",
-    target_path="line_items.*.unit_price",
+run.id,
+view="votes",
+document_id="expdoc_xyz",
+target_path="line_items.\*.unit_price",
 )
-```
+
+````
 
 ```go Go
 package main
@@ -425,7 +434,8 @@ func main() {
 	}
 	fmt.Println(votes)
 }
-```
+````
+
 </CodeGroup>
 
 If a run is stale relative to the current block config or document set,
@@ -444,16 +454,18 @@ client.workflows.experiments.update(
 )
 
 # Snapshot an experiment for a quick A/B against a config change
+
 copy = client.workflows.experiments.duplicate(
-    workflow_id="wf_abc123",
-    experiment_id=experiment.id,
+workflow_id="wf_abc123",
+experiment_id=experiment.id,
 )
 
 client.workflows.experiments.delete(
-    workflow_id="wf_abc123",
-    experiment_id=experiment.id,
+workflow_id="wf_abc123",
+experiment_id=experiment.id,
 )
-```
+
+````
 
 ```go Go
 package main
@@ -495,7 +507,8 @@ func main() {
 		log.Fatal(err)
 	}
 }
-```
+````
+
 </CodeGroup>
 
 For the full method reference (including async variants under

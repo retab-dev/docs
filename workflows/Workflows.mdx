@@ -8,6 +8,7 @@ description: Build visual document processing pipelines with drag-and-drop block
 Workflows are visual, block-based pipelines that let you chain together multiple document processing operations. Instead of writing code for each step, you can drag and drop blocks onto a canvas, connect them, and create powerful document automation flows.
 
 A workflow typically consists of:
+
 - **Input blocks** - Entry points for data:
   - **Document** - Upload files (PDF, images, Word, Excel)
   - **JSON Input** - Pass structured JSON data
@@ -45,10 +46,10 @@ Learn more in [Experiments](/workflows/Experiments).
 
 Blocks communicate through **handles** that define the type of data they accept or produce:
 
-| Handle Type | Icon | Description |
-|-------------|------|-------------|
-| **File** | 📎 | Document files (PDF, images, Word, Excel) |
-| **JSON** | `{ }` | Structured data extracted from documents |
+| Handle Type | Icon  | Description                               |
+| ----------- | ----- | ----------------------------------------- |
+| **File**    | 📎    | Document files (PDF, images, Word, Excel) |
+| **JSON**    | `{ }` | Structured data extracted from documents  |
 
 ### Connection Rules
 
@@ -113,6 +114,7 @@ const plan = await client.workflows.specs.plan(yamlDefinition);
 const result = await client.workflows.specs.apply(yamlDefinition);
 const exported = await client.workflows.specs.export(result.workflow_id);
 ```
+
 </CodeGroup>
 
 Use `validate()` for parse and handle checks, `plan()` to preview draft
@@ -124,6 +126,7 @@ Call `client.workflows.publish(workflow_id)` separately when the draft should
 become the live published workflow.
 
 For endpoint details, see:
+
 - [Validate Workflow Spec](/api-reference/workflows/specs/validate)
 - [Plan Workflow Spec](/api-reference/workflows/specs/plan)
 - [Apply Workflow Spec](/api-reference/workflows/specs/apply)
@@ -134,12 +137,14 @@ For endpoint details, see:
 Workflows have two operational modes:
 
 ### Edit Mode
+
 - Add, remove, and configure blocks
 - Create and delete connections
 - Rename the workflow
 - View generated Python code
 
 ### Run Mode
+
 - Upload documents to input blocks
 - Execute the workflow step-by-step
 - View results at each stage
@@ -152,6 +157,7 @@ Toggle between modes using the switch at the top of the canvas.
 A workflow is fundamentally an asynchronous job. When you start it, Retab creates a workflow run, executes each step on the server, and stores the results on that run. You can then poll the run until it finishes and inspect the stored step outputs.
 
 For the SDK and HTTP endpoint details, see the workflow API reference:
+
 - [List Workflows](/api-reference/workflows/list)
 - [Get Workflow](/api-reference/workflows/get)
 - [Run Workflow](/api-reference/workflows/runs/create)
@@ -189,7 +195,8 @@ workflow = client.workflows.get_entities("wf_abc123")
 
 document_start_id = workflow.start_document_blocks[0].id
 json_start_id = workflow.start_json_blocks[0].id
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from "@retab/node";
@@ -204,7 +211,7 @@ const jsonStartId = workflow.blocks.find((block) => block.type === "start_json")
 if (!documentStartId || !jsonStartId) {
   throw new Error("Workflow is missing a required input block");
 }
-```
+````
 
 ```go Go
 package main
@@ -245,6 +252,7 @@ func main() {
 	fmt.Println(jsonStartID)
 }
 ```
+
 </CodeGroup>
 
 #### Run and wait for completion
@@ -268,33 +276,34 @@ document_start_id = workflow.start_document_blocks[0].id
 json_start_id = workflow.start_json_blocks[0].id
 
 run = client.workflows.runs.create(
-    workflow_id=workflow.workflow.id,
-    documents={
-        document_start_id: Path("path/to/invoice.pdf"),
-    },
-    json_inputs={
-        json_start_id: {"customer_id": "cust_123", "priority": "high"},
-    },
+workflow_id=workflow.workflow.id,
+documents={
+document_start_id: Path("path/to/invoice.pdf"),
+},
+json_inputs={
+json_start_id: {"customer_id": "cust_123", "priority": "high"},
+},
 )
 
 terminal_statuses = {"completed", "error", "cancelled"}
 while run.lifecycle.status not in terminal_statuses and run.lifecycle.status != "awaiting_review":
-    time.sleep(1)
-    run = client.workflows.runs.get(run.id)
+time.sleep(1)
+run = client.workflows.runs.get(run.id)
 
 print(run.lifecycle.status)
 if run.lifecycle.status == "awaiting_review":
-    print(run.lifecycle.waiting_for_block_ids)
+print(run.lifecycle.waiting_for_block_ids)
 elif run.lifecycle.status == "error":
-    raise RuntimeError(run.lifecycle.message)
+raise RuntimeError(run.lifecycle.message)
 elif run.lifecycle.status == "cancelled":
-    raise RuntimeError(run.lifecycle.reason or "Workflow run was cancelled")
+raise RuntimeError(run.lifecycle.reason or "Workflow run was cancelled")
 else:
-    for step_summary in client.workflows.runs.steps.list(run.id):
-        step = client.workflows.runs.steps.get(run.id, step_summary.block_id)
-        if step.handle_outputs:
-            print(step.block_id, step.handle_outputs)
-```
+for step_summary in client.workflows.runs.steps.list(run.id):
+step = client.workflows.runs.steps.get(run.id, step_summary.block_id)
+if step.handle_outputs:
+print(step.block_id, step.handle_outputs)
+
+````
 
 ```javascript JavaScript
 import { Retab } from "@retab/node";
@@ -341,7 +350,7 @@ if (run.lifecycle.status === "awaiting_review") {
     }
   }
 }
-```
+````
 
 ```go Go
 package main
@@ -431,6 +440,7 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 `steps.list(run.id)` returns the step roster for a run. For the full execution record for one block, including typed inputs and outputs, use `steps.get(run.id, block_id)`.
@@ -450,11 +460,13 @@ for step in client.workflows.runs.steps.list(run.id):
         print(step.artifact.operation, step.artifact.id)
 
 # Full execution record for one step:
+
 step = client.workflows.runs.steps.get(run.id, "extract-block-id")
 print(step.lifecycle.status)
 if step.extracted_data:
-    print(step.extracted_data)
-```
+print(step.extracted_data)
+
+````
 
 ```javascript JavaScript
 // Step roster:
@@ -473,7 +485,7 @@ const extractedData = step.handle_outputs["output-json-0"]?.data;
 if (extractedData) {
   console.log(extractedData);
 }
-```
+````
 
 ```go Go
 // Step roster:
@@ -498,6 +510,7 @@ if extractedData := step.ExtractedData(); extractedData != nil {
 	fmt.Println(extractedData)
 }
 ```
+
 </CodeGroup>
 
 Use `steps.list(run.id, block_ids=[...])` when you only need a subset of step summaries. Use `steps.get(run.id, block_id)` when you need the normalized execution record for a single block.
@@ -535,6 +548,7 @@ if (step.artifact) {
   console.log(artifact.error);
 }
 ```
+
 </CodeGroup>
 
 `workflows.artifacts.list(run.id)` dereferences every artifact produced by a
@@ -554,20 +568,21 @@ const conditionRecords = await client.workflows.artifacts.list({
   operation: "conditional_evaluation",
 });
 ```
+
 </CodeGroup>
 
-| operation | produced by | record includes |
-|---|---|---|
-| `extraction` | `extract` | extraction result, choices, likelihoods, schema details |
-| `split` | `split` | split result and output document grouping |
-| `classification` | `classifier` | selected class and consensus details |
-| `parse` | `parse` | parsed document content |
-| `edit` | `edit` | edited document result |
-| `partition` | `for_each_sentinel_start` | partitioned items for the loop |
-| `conditional_evaluation` | `conditional` | `evaluations`, `selected_handles`, `matched_condition_ids` |
-| `while_loop_termination` | `while_loop` | termination reason and final condition evaluations |
-| `api_call_invocation` | `api_call` | request/response attempts, retry trace, and final error |
-| `function_invocation` | `function` | function inputs, output, duration, and final error |
+| operation                | produced by               | record includes                                            |
+| ------------------------ | ------------------------- | ---------------------------------------------------------- |
+| `extraction`             | `extract`                 | extraction result, choices, likelihoods, schema details    |
+| `split`                  | `split`                   | split result and output document grouping                  |
+| `classification`         | `classifier`              | selected class and consensus details                       |
+| `parse`                  | `parse`                   | parsed document content                                    |
+| `edit`                   | `edit`                    | edited document result                                     |
+| `partition`              | `for_each_sentinel_start` | partitioned items for the loop                             |
+| `conditional_evaluation` | `conditional`             | `evaluations`, `selected_handles`, `matched_condition_ids` |
+| `while_loop_termination` | `while_loop`              | termination reason and final condition evaluations         |
+| `api_call_invocation`    | `api_call`                | request/response attempts, retry trace, and final error    |
+| `function_invocation`    | `function`                | function inputs, output, duration, and final error         |
 
 #### Build workflows from code
 
@@ -580,34 +595,35 @@ entities = client.workflows.get_entities(workflow.id)
 start_document_block = entities.start_document_blocks[0]
 
 extract_block = client.workflows.blocks.create(
-    workflow.id,
-    id="extract-invoice",
-    type="extract",
-    label="Extract Invoice",
-    position_x=320,
-    position_y=0,
-    config={
-        "json_schema": {
-            "type": "object",
-            "properties": {
-                "invoice_number": {"type": "string"},
-                "total_amount": {"type": "number"},
-            },
-        },
-    },
+workflow.id,
+id="extract-invoice",
+type="extract",
+label="Extract Invoice",
+position_x=320,
+position_y=0,
+config={
+"json_schema": {
+"type": "object",
+"properties": {
+"invoice_number": {"type": "string"},
+"total_amount": {"type": "number"},
+},
+},
+},
 )
 
 client.workflows.edges.create(
-    workflow.id,
-    id="edge-start-to-extract",
-    source_block=start_document_block.id,
-    target_block=extract_block.id,
-    source_handle="output-file-0",
-    target_handle="input-file-0",
+workflow.id,
+id="edge-start-to-extract",
+source_block=start_document_block.id,
+target_block=extract_block.id,
+source_handle="output-file-0",
+target_handle="input-file-0",
 )
 
 client.workflows.publish(workflow.id, description="Initial version")
-```
+
+````
 
 ```javascript JavaScript
 const workflow = await client.workflows.create({ name: "Invoice Pipeline" });
@@ -644,7 +660,7 @@ await client.workflows.edges.create(workflow.id, {
 });
 
 await client.workflows.publish(workflow.id, { description: "Initial version" });
-```
+````
 
 ```go Go
 workflow, err := client.Workflows.Create(ctx, retab.CreateWorkflowRequest{
@@ -705,6 +721,7 @@ if err != nil {
 	log.Fatal(err)
 }
 ```
+
 </CodeGroup>
 
 Use `client.workflows.list()` or `client.workflows.get(workflow_id)` when you need to browse existing workflows before launching a run, and `client.workflows.duplicate(workflow_id)` when you want a draft copy of an existing flow.
@@ -750,27 +767,33 @@ Every workflow can be exported as Python code. Click **View Code** in the sideba
 
 <AccordionGroup>
   <Accordion title="Start simple">
-    Begin with a single Extract or Parse block, then gradually add complexity. Test each addition before moving on.
+    Begin with a single Extract or Parse block, then gradually add complexity.
+    Test each addition before moving on.
   </Accordion>
-  
-  <Accordion title="Use descriptive labels">
-    Rename blocks to describe their purpose (e.g., "Invoice Data" instead of "Extract 1"). This makes complex workflows easier to understand.
-  </Accordion>
-  
-  <Accordion title="Add notes for documentation">
-    Use Note blocks to document sections of your workflow. They don't affect execution but help explain the logic.
-  </Accordion>
-  
-  <Accordion title="Validate with review gates">
-    For critical data, add a review gate to the extraction block. This ensures a reviewer checks low-likelihood results before they proceed.
-  </Accordion>
-  
-  <Accordion title="Use Classifier for document routing">
-    When processing different document types, use a Classifier block to route each document to the appropriate extraction schema.
-  </Accordion>
-  
+
+<Accordion title="Use descriptive labels">
+  Rename blocks to describe their purpose (e.g., "Invoice Data" instead of
+  "Extract 1"). This makes complex workflows easier to understand.
+</Accordion>
+
+<Accordion title="Add notes for documentation">
+  Use Note blocks to document sections of your workflow. They don't affect
+  execution but help explain the logic.
+</Accordion>
+
+<Accordion title="Validate with review gates">
+  For critical data, add a review gate to the extraction block. This ensures a
+  reviewer checks low-likelihood results before they proceed.
+</Accordion>
+
+<Accordion title="Use Classifier for document routing">
+  When processing different document types, use a Classifier block to route each
+  document to the appropriate extraction schema.
+</Accordion>
+
   <Accordion title="Test with sample documents">
-    Before deploying, run your workflow with representative sample documents to catch edge cases.
+    Before deploying, run your workflow with representative sample documents to
+    catch edge cases.
   </Accordion>
 </AccordionGroup>
 
@@ -800,15 +823,15 @@ For workflows that process mixed document bundles:
 ```mermaid
 flowchart TD
     A[Start\nDocument Bundle] --> B{Classifier}
-    
+
     B -->|Invoice| C[Extract\nInvoice Schema]
     B -->|Contract| D[Extract\nContract Schema]
     B -->|Receipt| E[Extract\nReceipt Schema]
-    
+
     C --> F[Function\nCalculate Totals]
     D --> G[Function\nExtract Dates]
     E --> H[Function\nCategorize Items]
-    
+
     F --> I[Merge JSON]
     G --> I
     H --> I

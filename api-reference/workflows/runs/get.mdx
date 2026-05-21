@@ -1,6 +1,6 @@
 ---
-title: 'Get Run'
-openapi: 'GET /v1/workflows/runs/{run_id}'
+title: "Get Run"
+openapi: "GET /v1/workflows/runs/{run_id}"
 ---
 
 Get a single workflow run by ID. Use this endpoint to check `lifecycle.status` for a running workflow or retrieve the results of a completed workflow.
@@ -38,7 +38,7 @@ if run.lifecycle.status == "completed":
 ```
 
 ```javascript javascript
-import { Retab } from '@retab/node';
+import { Retab } from "@retab/node";
 
 const client = new Retab();
 
@@ -46,21 +46,26 @@ const run = await client.workflows.runs.get("run_abc123xyz");
 
 console.log(`Lifecycle: ${run.lifecycle.status}`);
 if (run.lifecycle.status === "completed") {
-    if (run.timing.started_at && run.timing.completed_at) {
-        const durationMs = new Date(run.timing.completed_at).getTime() - new Date(run.timing.started_at).getTime();
-        console.log(`Duration: ${durationMs}ms`);
+  if (run.timing.started_at && run.timing.completed_at) {
+    const durationMs =
+      new Date(run.timing.completed_at).getTime() -
+      new Date(run.timing.started_at).getTime();
+    console.log(`Duration: ${durationMs}ms`);
+  }
+  const stepSummaries = await client.workflows.runs.steps.list(run.id);
+  for (const stepSummary of stepSummaries) {
+    const step = await client.workflows.runs.steps.get(
+      run.id,
+      stepSummary.block_id,
+    );
+    if (Object.keys(step.handle_outputs).length > 0) {
+      console.log(`${step.block_id}:`, step.handle_outputs);
     }
-    const stepSummaries = await client.workflows.runs.steps.list(run.id);
-    for (const stepSummary of stepSummaries) {
-        const step = await client.workflows.runs.steps.get(run.id, stepSummary.block_id);
-        if (Object.keys(step.handle_outputs).length > 0) {
-            console.log(`${step.block_id}:`, step.handle_outputs);
-        }
-        if (step.artifact) {
-            const artifact = await client.workflows.artifacts.get(step.artifact);
-            console.log(`${step.block_id} artifact:`, artifact.operation);
-        }
+    if (step.artifact) {
+      const artifact = await client.workflows.artifacts.get(step.artifact);
+      console.log(`${step.block_id} artifact:`, artifact.operation);
     }
+  }
 }
 ```
 
@@ -114,7 +119,6 @@ curl -X 'GET' \
 ```
 
 </RequestExample>
-
 
 <ResponseExample>
 

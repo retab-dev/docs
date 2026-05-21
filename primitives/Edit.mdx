@@ -8,22 +8,24 @@ The `edit` API in Retab's document processing pipeline enables intelligent docum
 
 ### Supported Formats
 
-| Format | Extension | Processing Method |
-|--------|-----------|------------------|
-| **PDF** | `.pdf` | Computer vision + LLM form field detection |
-| **Word** | `.docx`, `.doc`, `.odt` | Native XML editing (preserves formatting) |
-| **Excel** | `.xlsx`, `.xls`, `.ods` | Native cell editing |
-| **PowerPoint** | `.pptx`, `.ppt`, `.odp` | Native shape/text editing |
+| Format         | Extension               | Processing Method                          |
+| -------------- | ----------------------- | ------------------------------------------ |
+| **PDF**        | `.pdf`                  | Computer vision + LLM form field detection |
+| **Word**       | `.docx`, `.doc`, `.odt` | Native XML editing (preserves formatting)  |
+| **Excel**      | `.xlsx`, `.xls`, `.ods` | Native cell editing                        |
+| **PowerPoint** | `.pptx`, `.ppt`, `.odp` | Native shape/text editing                  |
 
 ### How It Works
 
 **For PDF files:**
+
 1. **Computer Vision**: Detect form field bounding boxes with precise coordinates
 2. **LLM Inference**: Name and classify detected fields semantically
 3. **Intelligent Filling**: Match your instructions to the appropriate form fields
 4. **PDF Generation**: Create a new PDF with the filled values
 
 **For Office files (DOCX, XLSX, PPTX):**
+
 1. **Structure Extraction**: Parse the document's XML structure to identify all text elements
 2. **Element Detection**: LLM identifies fillable placeholders (empty cells, whitespace after labels, placeholder text)
 3. **Native Editing**: Apply edits directly to the XML, preserving all original formatting and styles
@@ -32,16 +34,17 @@ The `edit` API in Retab's document processing pipeline enables intelligent docum
 ```mermaid
 flowchart LR
     A[Document] --> B
-    
+
     subgraph Retab["Retab Edit API"]
         B[1. Structure Analysis] --> C[2. Element Detection]
         C --> D[3. Intelligent Filling]
     end
-    
+
     D --> E[Filled Document]
 ```
 
 Unlike manual form filling or template-based approaches, `edit` provides:
+
 - **Multi-Format Support**: PDF, Word, Excel, and PowerPoint files
 - **Zero Configuration**: No need to pre-define field positions or create templates
 - **Natural Language Instructions**: Describe what to fill in plain English or JSON
@@ -58,12 +61,14 @@ The edit SDK exposes the same workflow in both clients:
 - `client.edits.templates.fill(...)` to fill a saved template with new instructions
 
 <Note>
-In both SDKs, `color` is a top-level argument on `edits.create(...)` and `edits.templates.fill(...)`.
+  In both SDKs, `color` is a top-level argument on `edits.create(...)` and
+  `edits.templates.fill(...)`.
 </Note>
 
 ## Edit API
 
 The Edit API provides two main approaches:
+
 - **Direct Fill** (`edits.create` with `document=...`): AI-powered document filling that automatically detects and fills form fields
 - **Template Fill** (`edits.templates.fill`): Optimized filling using pre-defined templates (PDF only)
 
@@ -79,17 +84,20 @@ The main endpoint for filling documents with AI. Supports all document formats.
 </ParamField>
 
 <ParamField body="document" type="MIMEData" required>
-  The document to edit. Supports PDF, DOCX, XLSX, and PPTX files. Can be a file path, URL, or MIMEData object containing:
-  - `filename`: Name of the file (e.g., "form.pdf", "template.docx", "data.xlsx")
-  - `url`: Data URI with base64 content (e.g., "data:application/pdf;base64,...")
+  The document to edit. Supports PDF, DOCX, XLSX, and PPTX files. Can be a file
+  path, URL, or MIMEData object containing: - `filename`: Name of the file
+  (e.g., "form.pdf", "template.docx", "data.xlsx") - `url`: Data URI with base64
+  content (e.g., "data:application/pdf;base64,...")
 </ParamField>
 
 <ParamField body="model" type="LLMModel" default="retab-small">
-  The AI model to use for element detection and filling. Recommended: `retab-small` for accuracy.
+  The AI model to use for element detection and filling. Recommended:
+  `retab-small` for accuracy.
 </ParamField>
 
 <ParamField body="color" type="string" default="#000080">
-  Hex color code for filled text (e.g., "#FF0000" for red). Defaults to dark blue. Only applies to PDF form filling.
+  Hex color code for filled text (e.g., "#FF0000" for red). Defaults to dark
+  blue. Only applies to PDF form filling.
 </ParamField>
 
 </Expandable>
@@ -110,6 +118,7 @@ An `Edit` resource with the filled document and form data.
     <ResponseField name="usage" type="RetabUsage">
       Usage information for the edit operation.
     </ResponseField>
+
   </Expandable>
 </ResponseField>
 
@@ -149,6 +158,7 @@ Register a reusable PDF form template with its empty PDF and a list of form fiel
     <ResponseField name="field_count" type="int">
       Number of form fields in the template.
     </ResponseField>
+
   </Expandable>
 </ResponseField>
 
@@ -164,39 +174,43 @@ import base64
 client = Retab()
 
 # Fill the form with natural language instructions
+
 # The SDK accepts file paths directly
+
 result = client.edits.create(
-    document="application-form.pdf",
-    instructions="""
-    Full Name: Jane Smith
-    Date of Birth: March 15, 1985
-    Email: jane.smith@example.com
-    Phone: (555) 123-4567
-    Address: 456 Oak Avenue, Suite 200
-    City: San Francisco
-    State: California
-    ZIP Code: 94102
-    I agree to the terms and conditions: checked
-    """,
-    model="retab-small",
-    color="#000080",  # Dark blue text (default)
+document="application-form.pdf",
+instructions="""
+Full Name: Jane Smith
+Date of Birth: March 15, 1985
+Email: jane.smith@example.com
+Phone: (555) 123-4567
+Address: 456 Oak Avenue, Suite 200
+City: San Francisco
+State: California
+ZIP Code: 94102
+I agree to the terms and conditions: checked
+""",
+model="retab-small",
+color="#000080", # Dark blue text (default)
 )
 
 # Save the filled PDF
-if result.data.filled_document:
-    # Extract base64 content from data URI
-    base64_content = result.data.filled_document.url.split(",")[1]
-    filled_bytes = base64.b64decode(base64_content)
-    with open("filled-application.pdf", "wb") as f:
-        f.write(filled_bytes)
-    print("Filled form saved!")
+
+if result.data.filled_document: # Extract base64 content from data URI
+base64_content = result.data.filled_document.url.split(",")[1]
+filled_bytes = base64.b64decode(base64_content)
+with open("filled-application.pdf", "wb") as f:
+f.write(filled_bytes)
+print("Filled form saved!")
 
 # Review what was filled
+
 print(f"Filled {len(result.data.form_data)} form fields:")
 for field in result.data.form_data:
-    if field.value:
-        print(f"  - {field.key}: {field.value}")
-```
+if field.value:
+print(f" - {field.key}: {field.value}")
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -244,7 +258,7 @@ result.data.form_data.forEach(field => {
         console.log(`  - ${field.key}: ${field.value}`);
     }
 });
-```
+````
 
 ```go Go
 package main
@@ -323,21 +337,21 @@ func main() {
 ```
 
 ```typescript TypeScript
-import { Retab, type EditRequest, type Edit } from '@retab/node';
-import { readFileSync, writeFileSync } from 'fs';
+import { Retab, type EditRequest, type Edit } from "@retab/node";
+import { readFileSync, writeFileSync } from "fs";
 
 const client = new Retab();
 
 // Read the PDF form
 const pdfBuffer = readFileSync("application-form.pdf");
-const pdfBase64 = pdfBuffer.toString('base64');
+const pdfBase64 = pdfBuffer.toString("base64");
 
 const editRequest: EditRequest = {
-    document: {
-        filename: "application-form.pdf",
-        url: `data:application/pdf;base64,${pdfBase64}`
-    },
-    instructions: `
+  document: {
+    filename: "application-form.pdf",
+    url: `data:application/pdf;base64,${pdfBase64}`,
+  },
+  instructions: `
         Full Name: Jane Smith
         Date of Birth: March 15, 1985
         Email: jane.smith@example.com
@@ -348,28 +362,29 @@ const editRequest: EditRequest = {
         ZIP Code: 94102
         I agree to the terms and conditions: checked
     `,
-    model: "retab-small",
-    color: "#000080",  // Dark blue text (default)
+  model: "retab-small",
+  color: "#000080", // Dark blue text (default)
 };
 
 const result: Edit = await client.edits.create(editRequest);
 
 // Save the filled PDF
 if (result.data.filled_document) {
-    const base64Content = result.data.filled_document.url.split(",")[1];
-    const filledBuffer = Buffer.from(base64Content, 'base64');
-    writeFileSync("filled-application.pdf", filledBuffer);
-    console.log("Filled form saved!");
+  const base64Content = result.data.filled_document.url.split(",")[1];
+  const filledBuffer = Buffer.from(base64Content, "base64");
+  writeFileSync("filled-application.pdf", filledBuffer);
+  console.log("Filled form saved!");
 }
 
 // Review what was filled
 console.log(`Filled ${result.data.form_data.length} form fields:`);
-result.data.form_data.forEach(field => {
-    if (field.value) {
-        console.log(`  - ${field.key}: ${field.value}`);
-    }
+result.data.form_data.forEach((field) => {
+  if (field.value) {
+    console.log(`  - ${field.key}: ${field.value}`);
+  }
 });
 ```
+
 </CodeGroup>
 
 ## Use Case: Create a Template
@@ -383,27 +398,29 @@ from retab import Retab
 client = Retab()
 
 # Register a reusable template (document + form_fields)
+
 template = client.edits.templates.create(
-    name="Application Form",
-    document="blank-form.pdf",
-    form_fields=[
-        {
-            "key": "full_name",
-            "description": "Applicant's full legal name",
-            "type": "text",
-            "bbox": {"left": 0.15, "top": 0.12, "width": 0.35, "height": 0.03, "page": 1},
-        },
-        {
-            "key": "date_of_birth",
-            "description": "Date of birth, ISO 8601",
-            "type": "text",
-            "bbox": {"left": 0.15, "top": 0.18, "width": 0.25, "height": 0.03, "page": 1},
-        },
-    ],
+name="Application Form",
+document="blank-form.pdf",
+form_fields=[
+{
+"key": "full_name",
+"description": "Applicant's full legal name",
+"type": "text",
+"bbox": {"left": 0.15, "top": 0.12, "width": 0.35, "height": 0.03, "page": 1},
+},
+{
+"key": "date_of_birth",
+"description": "Date of birth, ISO 8601",
+"type": "text",
+"bbox": {"left": 0.15, "top": 0.18, "width": 0.25, "height": 0.03, "page": 1},
+},
+],
 )
 
 print(f"Template {template.id} with {template.field_count} fields ready for fill calls")
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -430,7 +447,7 @@ const template = await client.edits.templates.create({
 });
 
 console.log(`Template ${template.id} with ${template.field_count} fields ready for fill calls`);
-```
+````
 
 ```go Go
 package main
@@ -476,10 +493,13 @@ func main() {
 	fmt.Printf("Template %v with %v fields ready for fill calls\n", (*template)["id"], (*template)["field_count"])
 }
 ```
+
 </CodeGroup>
 
 <Note>
-You can discover field bounding boxes visually in the Retab dashboard editor, then pass the resulting `form_fields` list into `edits.templates.create(...)` to persist it.
+  You can discover field bounding boxes visually in the Retab dashboard editor,
+  then pass the resulting `form_fields` list into `edits.templates.create(...)`
+  to persist it.
 </Note>
 
 ## Use Case: Template-Based Form Filling
@@ -494,24 +514,27 @@ import base64
 client = Retab()
 
 # Use the template fill endpoint for fast, consistent filling
+
 result = client.edits.templates.fill(
-    template_id="edittplt_abc123",
-    instructions="""
-    Full Name: Jane Smith
-    Date of Birth: March 15, 1985
-    Email: jane.smith@example.com
-    """,
-    model="retab-small",
-    color="#000080",  # Dark blue text (default)
+template_id="edittplt_abc123",
+instructions="""
+Full Name: Jane Smith
+Date of Birth: March 15, 1985
+Email: jane.smith@example.com
+""",
+model="retab-small",
+color="#000080", # Dark blue text (default)
 )
 
 # Save the filled PDF
+
 if result.data.filled_document:
-    base64_content = result.data.filled_document.url.split(",")[1]
-    with open("filled-from-template.pdf", "wb") as f:
-        f.write(base64.b64decode(base64_content))
-    print("Template-based form filled and saved!")
-```
+base64_content = result.data.filled_document.url.split(",")[1]
+with open("filled-from-template.pdf", "wb") as f:
+f.write(base64.b64decode(base64_content))
+print("Template-based form filled and saved!")
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -537,7 +560,7 @@ if (result.data.filled_document) {
     writeFileSync("filled-from-template.pdf", Buffer.from(base64Content, 'base64'));
     console.log("Template-based form filled and saved!");
 }
-```
+````
 
 ```go Go
 package main
@@ -592,6 +615,7 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 <Note>
@@ -600,6 +624,7 @@ func main() {
 - Use `edits.create()` with `document=...` for one-off document filling or when you don't have a pre-defined template
 
 Templates skip the field detection step, making them faster and more consistent for repeated use.
+
 </Note>
 
 ## Use Case: Batch Form Processing
@@ -614,43 +639,46 @@ from retab import Retab
 client = Retab()
 
 # Sample data for multiple applicants
+
 applicants = [
-    {
-        "name": "John Doe",
-        "dob": "January 10, 1990",
-        "email": "john.doe@example.com",
-        "phone": "(555) 111-2222"
-    },
-    {
-        "name": "Alice Johnson", 
-        "dob": "July 22, 1988",
-        "email": "alice.j@example.com",
-        "phone": "(555) 333-4444"
-    },
-    {
-        "name": "Bob Williams",
-        "dob": "December 5, 1995",
-        "email": "bob.w@example.com", 
-        "phone": "(555) 555-6666"
-    }
+{
+"name": "John Doe",
+"dob": "January 10, 1990",
+"email": "john.doe@example.com",
+"phone": "(555) 111-2222"
+},
+{
+"name": "Alice Johnson",
+"dob": "July 22, 1988",
+"email": "alice.j@example.com",
+"phone": "(555) 333-4444"
+},
+{
+"name": "Bob Williams",
+"dob": "December 5, 1995",
+"email": "bob.w@example.com",
+"phone": "(555) 555-6666"
+}
 ]
 
 # For batch processing, use templates.fill() with a pre-created template
+
 # This skips field detection for each document, making it much faster
+
 for i, applicant in enumerate(applicants):
-    instructions = f"""
-    Full Name: {applicant['name']}
-    Date of Birth: {applicant['dob']}
-    Email Address: {applicant['email']}
-    Phone Number: {applicant['phone']}
-    """
-    
+instructions = f"""
+Full Name: {applicant['name']}
+Date of Birth: {applicant['dob']}
+Email Address: {applicant['email']}
+Phone Number: {applicant['phone']}
+"""
+
     result = client.edits.templates.fill(
         template_id="edittplt_your_template_id",
         instructions=instructions,
         model="retab-small"
     )
-    
+
     if result.data.filled_document:
         output_filename = f"filled-form-{i+1}-{applicant['name'].replace(' ', '-')}.pdf"
         base64_content = result.data.filled_document.url.split(",")[1]
@@ -659,7 +687,8 @@ for i, applicant in enumerate(applicants):
         print(f"Created: {output_filename}")
 
 print(f"Processed {len(applicants)} forms successfully!")
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -677,7 +706,7 @@ const applicants = [
     },
     {
         name: "Alice Johnson",
-        dob: "July 22, 1988", 
+        dob: "July 22, 1988",
         email: "alice.j@example.com",
         phone: "(555) 333-4444"
     },
@@ -699,13 +728,13 @@ for (let i = 0; i < applicants.length; i++) {
         Email Address: ${applicant.email}
         Phone Number: ${applicant.phone}
     `;
-    
+
     const result = await client.edits.templates.fill({
         template_id: "edittplt_your_template_id",
         instructions: instructions,
         model: "retab-small"
     });
-    
+
     if (result.data.filled_document) {
         const outputFilename = `filled-form-${i+1}-${applicant.name.replace(/ /g, '-')}.pdf`;
         const base64Content = result.data.filled_document.url.split(",")[1];
@@ -715,7 +744,7 @@ for (let i = 0; i < applicants.length; i++) {
 }
 
 console.log(`Processed ${applicants.length} forms successfully!`);
-```
+````
 
 ```go Go
 package main
@@ -792,6 +821,7 @@ func main() {
 	fmt.Printf("Processed %d forms successfully!\n", len(applicants))
 }
 ```
+
 </CodeGroup>
 
 ## Use Case: Word Document Filling
@@ -806,28 +836,31 @@ import base64
 client = Retab()
 
 # Fill a Word document with JSON data
+
 result = client.edits.create(
-    document="contract-template.docx",
-    instructions="""
-    {
-        "client_name": "Acme Corporation",
-        "contract_date": "January 15, 2025",
-        "project_description": "Website redesign and development",
-        "total_amount": "$25,000",
-        "payment_terms": "Net 30"
-    }
-    """,
-    model="retab-small",
+document="contract-template.docx",
+instructions="""
+{
+"client_name": "Acme Corporation",
+"contract_date": "January 15, 2025",
+"project_description": "Website redesign and development",
+"total_amount": "$25,000",
+"payment_terms": "Net 30"
+}
+""",
+model="retab-small",
 )
 
 # Save the filled DOCX (preserves original formatting)
+
 if result.data.filled_document:
-    base64_content = result.data.filled_document.url.split(",")[1]
-    filled_bytes = base64.b64decode(base64_content)
-    with open("filled-contract.docx", "wb") as f:
-        f.write(filled_bytes)
-    print("Filled Word document saved!")
-```
+base64_content = result.data.filled_document.url.split(",")[1]
+filled_bytes = base64.b64decode(base64_content)
+with open("filled-contract.docx", "wb") as f:
+f.write(filled_bytes)
+print("Filled Word document saved!")
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -858,7 +891,7 @@ if (result.data.filled_document) {
     writeFileSync("filled-contract.docx", Buffer.from(base64Content, 'base64'));
     console.log("Filled Word document saved!");
 }
-```
+````
 
 ```go Go
 package main
@@ -925,6 +958,7 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 ## Use Case: Excel Spreadsheet Filling
@@ -939,29 +973,31 @@ import base64
 client = Retab()
 
 # Fill an Excel spreadsheet
+
 result = client.edits.create(
-    document="invoice-template.xlsx",
-    instructions="""
-    {
-        "invoice_number": "INV-2025-001",
-        "customer_name": "Tech Solutions Inc.",
-        "invoice_date": "2025-01-15",
-        "items": [
-            {"description": "Consulting Services", "quantity": 10, "rate": 150},
-            {"description": "Software License", "quantity": 1, "rate": 500}
-        ],
-        "total": "$2,000"
-    }
-    """,
-    model="retab-small",
+document="invoice-template.xlsx",
+instructions="""
+{
+"invoice_number": "INV-2025-001",
+"customer_name": "Tech Solutions Inc.",
+"invoice_date": "2025-01-15",
+"items": [
+{"description": "Consulting Services", "quantity": 10, "rate": 150},
+{"description": "Software License", "quantity": 1, "rate": 500}
+],
+"total": "$2,000"
+}
+""",
+model="retab-small",
 )
 
 if result.data.filled_document:
-    base64_content = result.data.filled_document.url.split(",")[1]
-    with open("filled-invoice.xlsx", "wb") as f:
-        f.write(base64.b64decode(base64_content))
-    print("Filled Excel spreadsheet saved!")
-```
+base64_content = result.data.filled_document.url.split(",")[1]
+with open("filled-invoice.xlsx", "wb") as f:
+f.write(base64.b64decode(base64_content))
+print("Filled Excel spreadsheet saved!")
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -995,7 +1031,7 @@ if (result.data.filled_document) {
     writeFileSync("filled-invoice.xlsx", Buffer.from(base64Content, 'base64'));
     console.log("Filled Excel spreadsheet saved!");
 }
-```
+````
 
 ```go Go
 package main
@@ -1065,6 +1101,7 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 ## Use Case: PowerPoint Presentation Filling
@@ -1079,27 +1116,29 @@ import base64
 client = Retab()
 
 # Fill a PowerPoint presentation
+
 result = client.edits.create(
-    document="sales-deck-template.pptx",
-    instructions="""
-    {
-        "company_name": "Acme Corp",
-        "presenter_name": "Jane Smith",
-        "presentation_date": "Q1 2025",
-        "revenue_figure": "$1.2M",
-        "growth_percentage": "25%",
-        "key_highlights": ["Expanded to 3 new markets", "Launched 2 new products", "Increased team by 40%"]
-    }
-    """,
-    model="retab-small",
+document="sales-deck-template.pptx",
+instructions="""
+{
+"company_name": "Acme Corp",
+"presenter_name": "Jane Smith",
+"presentation_date": "Q1 2025",
+"revenue_figure": "$1.2M",
+"growth_percentage": "25%",
+"key_highlights": ["Expanded to 3 new markets", "Launched 2 new products", "Increased team by 40%"]
+}
+""",
+model="retab-small",
 )
 
 if result.data.filled_document:
-    base64_content = result.data.filled_document.url.split(",")[1]
-    with open("filled-sales-deck.pptx", "wb") as f:
-        f.write(base64.b64decode(base64_content))
-    print("Filled PowerPoint presentation saved!")
-```
+base64_content = result.data.filled_document.url.split(",")[1]
+with open("filled-sales-deck.pptx", "wb") as f:
+f.write(base64.b64decode(base64_content))
+print("Filled PowerPoint presentation saved!")
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -1131,7 +1170,7 @@ if (result.data.filled_document) {
     writeFileSync("filled-sales-deck.pptx", Buffer.from(base64Content, 'base64'));
     console.log("Filled PowerPoint presentation saved!");
 }
-```
+````
 
 ```go Go
 package main
@@ -1203,17 +1242,20 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 ## Best Practices
 
 ### Model Selection
+
 - **`retab-large`**: Most accurate for complex documents with many fields or ambiguous layouts. Recommended for production use.
 - **`retab-small`**: Faster and more cost-effective, suitable for simple documents with clear field labels.
 
 ### Format-Specific Tips
 
 **PDF Forms:**
+
 - Works best with forms that have clear field labels
 - Supports both text fields and checkboxes
 - For checkboxes, use "checked" or "unchecked" as the value
@@ -1221,27 +1263,32 @@ func main() {
 - Use the `color` parameter to customize the filled text color (e.g., `color="#FF0000"` for red)
 
 **Word Documents (DOCX):**
+
 - Best for documents with placeholders like `[Enter name]` or blank spaces after labels
 - All formatting (fonts, styles, colors) is preserved
 - Tables are fully supported
 
 **Excel Spreadsheets (XLSX):**
+
 - Ideal for templates with empty cells next to labels
 - Supports multiple sheets
 - Cell references use standard Excel notation (Sheet1!A1)
 
 **PowerPoint Presentations (PPTX):**
+
 - Works with text placeholders in shapes
 - Tables within slides are supported
 - Preserves all slide formatting and layouts
 
 ### Writing Effective Filling Instructions
+
 - **Use JSON for structured data**: `{"name": "John", "date": "2025-01-15"}` works great
 - **Be explicit**: Use field labels that match or closely resemble those in the document
 - **Use key-value pairs**: Format as "Field Name: Value" for best matching
 - **Include context**: If a document has multiple similar fields, add context like "Section A - Name: John"
 
 ### Working with MIMEData
+
 - The `filled_document` response is a MIMEData object with `filename` and `url` properties
 - The `url` is a data URI with format-appropriate MIME type
 - Extract base64 content by splitting on comma: `url.split(",")[1]`
@@ -1249,6 +1296,7 @@ func main() {
 - Output format matches input format (DOCX in → DOCX out, XLSX in → XLSX out)
 
 ### Template Workflow
+
 1. **Register**: Use `edits.templates.create()` with a blank PDF and the list of form fields (bounding boxes + descriptions)
 2. **Review**: Inspect `template.form_fields` to verify coverage
 3. **Fill**: Use `edits.templates.fill()` for fast batch processing against the saved template

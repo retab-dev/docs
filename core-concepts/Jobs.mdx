@@ -28,13 +28,15 @@ Before creating a job, prepare your document and any required parameters. Docume
 import base64
 
 # Load and encode your document
+
 with open("invoice.pdf", "rb") as f:
-    content = base64.b64encode(f.read()).decode()
-    document = {
-        "filename": "invoice.pdf",
-        "url": f"data:application/pdf;base64,{content}",
-    }
-```
+content = base64.b64encode(f.read()).decode()
+document = {
+"filename": "invoice.pdf",
+"url": f"data:application/pdf;base64,{content}",
+}
+
+````
 
 ```javascript JavaScript
 import fs from 'fs';
@@ -45,7 +47,7 @@ const document = {
     filename: 'invoice.pdf',
     url: `data:application/pdf;base64,${content}`,
 };
-```
+````
 
 ```go Go
 package main
@@ -73,6 +75,7 @@ func main() {
 	_ = document
 }
 ```
+
 </CodeGroup>
 
 ### 2. Create the Job
@@ -86,17 +89,18 @@ from retab import Retab
 client = Retab()
 
 job = client.jobs.create(
-    endpoint="/v1/extractions",
-    request={
-        "document": document,
-        "json_schema": schema,
-        "model": "retab-small",
-    },
+endpoint="/v1/extractions",
+request={
+"document": document,
+"json_schema": schema,
+"model": "retab-small",
+},
 )
 
 print(f"Job created: {job.id}")
-print(f"Status: {job.status}")  # "queued"
-```
+print(f"Status: {job.status}") # "queued"
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -114,7 +118,7 @@ const job = await client.jobs.create({
 
 console.log(`Job created: ${job.id}`);
 console.log(`Status: ${job.status}`);  // "queued"
-```
+````
 
 ```go Go
 package main
@@ -168,6 +172,7 @@ curl -X POST https://api.retab.com/v1/jobs \
     }
   }'
 ```
+
 </CodeGroup>
 
 ### 3. Check Job Status
@@ -179,10 +184,11 @@ Poll the job until it reaches a terminal status:
 import time
 
 while job.status not in ("completed", "failed", "cancelled", "expired"):
-    time.sleep(2)
-    job = client.jobs.retrieve(job.id)
-    print(f"Status: {job.status}")
-```
+time.sleep(2)
+job = client.jobs.retrieve(job.id)
+print(f"Status: {job.status}")
+
+````
 
 ```javascript JavaScript
 const terminalStatuses = ["completed", "failed", "cancelled", "expired"];
@@ -192,7 +198,7 @@ while (!terminalStatuses.includes(job.status)) {
     job = await client.jobs.retrieve(job.id);
     console.log(`Status: ${job.status}`);
 }
-```
+````
 
 ```go Go
 terminalStatuses := map[string]bool{
@@ -221,6 +227,7 @@ for {
 curl https://api.retab.com/v1/jobs/{job_id} \
   -H "Api-Key: $RETAB_API_KEY"
 ```
+
 </CodeGroup>
 
 SDK note: `jobs.retrieve(...)` is lightweight by default in both Python and JavaScript clients. Use `retrieve_full`/`retrieveFull` when you need `request` or `response` payloads.
@@ -238,8 +245,8 @@ completed_job = client.jobs.wait_for_completion(
 
 ```javascript JavaScript
 const completedJob = await client.jobs.waitForCompletion(job.id, {
-    poll_interval_ms: 2000,
-    timeout_ms: 300_000,
+  poll_interval_ms: 2000,
+  timeout_ms: 300_000,
 });
 ```
 
@@ -253,6 +260,7 @@ if err != nil {
 }
 _ = completedJob
 ```
+
 </CodeGroup>
 
 ### 4. Retrieve Results
@@ -271,11 +279,11 @@ elif job.status == "failed":
 
 ```javascript JavaScript
 if (job.status === "completed") {
-    job = await client.jobs.retrieveFull(job.id);
-    const result = job.response.body;
-    console.log(result);
+  job = await client.jobs.retrieveFull(job.id);
+  const result = job.response.body;
+  console.log(result);
 } else if (job.status === "failed") {
-    console.log(`Error: ${job.error.message}`);
+  console.log(`Error: ${job.error.message}`);
 }
 ```
 
@@ -295,6 +303,7 @@ if status == "completed" {
     }
 }
 ```
+
 </CodeGroup>
 
 ### 5. Cancel a Job (Optional)
@@ -309,7 +318,7 @@ print(f"Status: {cancelled_job.status}")  # "cancelled"
 
 ```javascript JavaScript
 const cancelledJob = await client.jobs.cancel(job.id);
-console.log(`Status: ${cancelledJob.status}`);  // "cancelled"
+console.log(`Status: ${cancelledJob.status}`); // "cancelled"
 ```
 
 ```go Go
@@ -324,6 +333,7 @@ fmt.Printf("Status: %s\n", (*cancelledJob)["status"]) // "cancelled"
 curl -X POST https://api.retab.com/v1/jobs/{job_id}/cancel \
   -H "Api-Key: $RETAB_API_KEY"
 ```
+
 </CodeGroup>
 
 ### 6. List Jobs
@@ -345,12 +355,15 @@ for job in jobs_response.data:
     print(f"{job.id}: {job.status}")
 
 # Filter by status
+
 queued_jobs = client.jobs.list(status="queued")
 
 # Paginate through results
+
 if jobs_response.has_more:
-    next_page = client.jobs.list(after=jobs_response.last_id)
-```
+next_page = client.jobs.list(after=jobs_response.last_id)
+
+````
 
 ```javascript JavaScript
 // List all jobs
@@ -366,7 +379,7 @@ const queuedJobs = await client.jobs.list({ status: "queued" });
 if (jobsResponse.has_more) {
     const nextPage = await client.jobs.list({ after: jobsResponse.last_id });
 }
-```
+````
 
 ```go Go
 // List all jobs
@@ -404,6 +417,7 @@ curl https://api.retab.com/v1/jobs?limit=20 \
 curl "https://api.retab.com/v1/jobs?limit=20&include_request=true&include_response=true" \
   -H "Api-Key: $RETAB_API_KEY"
 ```
+
 </CodeGroup>
 
 ## Complete Examples
@@ -422,51 +436,57 @@ from retab import Retab
 client = Retab()
 
 # Load document
+
 with open("invoice.pdf", "rb") as f:
-    content = base64.b64encode(f.read()).decode()
-    document = {
-        "filename": "invoice.pdf",
-        "url": f"data:application/pdf;base64,{content}",
-    }
+content = base64.b64encode(f.read()).decode()
+document = {
+"filename": "invoice.pdf",
+"url": f"data:application/pdf;base64,{content}",
+}
 
 # Define extraction schema
+
 schema = {
-    "type": "object",
-    "properties": {
-        "invoice_number": {"type": "string"},
-        "date": {"type": "string"},
-        "total_amount": {"type": "number"},
-        "vendor_name": {"type": "string"},
-    },
-    "required": ["invoice_number", "total_amount"],
+"type": "object",
+"properties": {
+"invoice_number": {"type": "string"},
+"date": {"type": "string"},
+"total_amount": {"type": "number"},
+"vendor_name": {"type": "string"},
+},
+"required": ["invoice_number", "total_amount"],
 }
 
 # Create extraction job
+
 job = client.jobs.create(
-    endpoint="/v1/extractions",
-    request={
-        "document": document,
-        "json_schema": schema,
-        "model": "retab-small",
-    },
+endpoint="/v1/extractions",
+request={
+"document": document,
+"json_schema": schema,
+"model": "retab-small",
+},
 )
 print(f"Job created: {job.id}")
 
 # Poll until complete
+
 while job.status not in ("completed", "failed", "cancelled", "expired"):
-    time.sleep(2)
-    job = client.jobs.retrieve(job.id)
-    print(f"Status: {job.status}")
+time.sleep(2)
+job = client.jobs.retrieve(job.id)
+print(f"Status: {job.status}")
 
 # Get extracted data
+
 if job.status == "completed":
-    job = client.jobs.retrieve_full(job.id)
-    extracted = job.response.body["output"]
-    print(f"Invoice: {extracted['invoice_number']}")
-    print(f"Total: ${extracted['total_amount']}")
+job = client.jobs.retrieve_full(job.id)
+extracted = job.response.body["output"]
+print(f"Invoice: {extracted['invoice_number']}")
+print(f"Total: ${extracted['total_amount']}")
 else:
-    print(f"Job failed: {job.error.message}")
-```
+print(f"Job failed: {job.error.message}")
+
+````
 
 ```javascript JavaScript
 import fs from 'fs';
@@ -521,7 +541,7 @@ if (job.status === "completed") {
 } else {
     console.log(`Job failed: ${job.error.message}`);
 }
-```
+````
 
 ```go Go
 package main
@@ -616,6 +636,7 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 ### Parse Document to Text
@@ -631,37 +652,42 @@ from retab import Retab
 client = Retab()
 
 # Load document
+
 with open("document.pdf", "rb") as f:
-    content = base64.b64encode(f.read()).decode()
-    document = {
-        "filename": "document.pdf",
-        "url": f"data:application/pdf;base64,{content}",
-    }
+content = base64.b64encode(f.read()).decode()
+document = {
+"filename": "document.pdf",
+"url": f"data:application/pdf;base64,{content}",
+}
 
 # Create parse job
+
 job = client.jobs.create(
-    endpoint="/v1/parses",
-    request={
-        "document": document,
-    },
+endpoint="/v1/parses",
+request={
+"document": document,
+},
 )
 print(f"Job created: {job.id}")
 
 # Poll until complete
+
 while job.status not in ("completed", "failed", "cancelled", "expired"):
-    time.sleep(2)
-    job = client.jobs.retrieve(job.id)
-    print(f"Status: {job.status}")
+time.sleep(2)
+job = client.jobs.retrieve(job.id)
+print(f"Status: {job.status}")
 
 # Get parsed content
+
 if job.status == "completed":
-    job = client.jobs.retrieve_full(job.id)
-    result = job.response.body
-    print(f"Parsed text:\n{result['output']['text']}")
-    print(f"Total pages: {len(result['output']['pages'])}")
+job = client.jobs.retrieve_full(job.id)
+result = job.response.body
+print(f"Parsed text:\n{result['output']['text']}")
+print(f"Total pages: {len(result['output']['pages'])}")
 else:
-    print(f"Job failed: {job.error.message}")
-```
+print(f"Job failed: {job.error.message}")
+
+````
 
 ```javascript JavaScript
 import fs from 'fs';
@@ -702,7 +728,7 @@ if (job.status === "completed") {
 } else {
     console.log(`Job failed: ${job.error.message}`);
 }
-```
+````
 
 ```go Go
 package main
@@ -784,6 +810,7 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 ### Classify Documents
@@ -799,49 +826,55 @@ from retab import Retab
 client = Retab()
 
 # Load document
+
 with open("document.pdf", "rb") as f:
-    content = base64.b64encode(f.read()).decode()
-    document = {
-        "filename": "document.pdf",
-        "url": f"data:application/pdf;base64,{content}",
-    }
+content = base64.b64encode(f.read()).decode()
+document = {
+"filename": "document.pdf",
+"url": f"data:application/pdf;base64,{content}",
+}
 
 # Define categories
+
 categories = [
-    {"name": "Invoice", "description": "Invoice or bill documents"},
-    {"name": "Bank Statement", "description": "Bank account statements"},
-    {"name": "Receipt", "description": "Payment receipts"},
-    {"name": "Contract", "description": "Legal contracts or agreements"},
-    {"name": "ID Document", "description": "Identity documents"},
-    {"name": "Other", "description": "Other document types"},
+{"name": "Invoice", "description": "Invoice or bill documents"},
+{"name": "Bank Statement", "description": "Bank account statements"},
+{"name": "Receipt", "description": "Payment receipts"},
+{"name": "Contract", "description": "Legal contracts or agreements"},
+{"name": "ID Document", "description": "Identity documents"},
+{"name": "Other", "description": "Other document types"},
 ]
 
 # Create classification job
+
 job = client.jobs.create(
-    endpoint="/v1/classifications",
-    request={
-        "document": document,
-        "model": "retab-small",
-        "categories": categories,
-    },
+endpoint="/v1/classifications",
+request={
+"document": document,
+"model": "retab-small",
+"categories": categories,
+},
 )
 print(f"Job created: {job.id}")
 
 # Poll until complete
+
 while job.status not in ("completed", "failed", "cancelled", "expired"):
-    time.sleep(2)
-    job = client.jobs.retrieve(job.id)
-    print(f"Status: {job.status}")
+time.sleep(2)
+job = client.jobs.retrieve(job.id)
+print(f"Status: {job.status}")
 
 # Get classification result
+
 if job.status == "completed":
-    job = client.jobs.retrieve_full(job.id)
-    result = job.response.body["output"]
-    print(f"Classification: {result['category']}")
-    print(f"Reasoning: {result['reasoning']}")
+job = client.jobs.retrieve_full(job.id)
+result = job.response.body["output"]
+print(f"Classification: {result['category']}")
+print(f"Reasoning: {result['reasoning']}")
 else:
-    print(f"Job failed: {job.error.message}")
-```
+print(f"Job failed: {job.error.message}")
+
+````
 
 ```javascript JavaScript
 import fs from 'fs';
@@ -894,7 +927,7 @@ if (job.status === "completed") {
 } else {
     console.log(`Job failed: ${job.error.message}`);
 }
-```
+````
 
 ```go Go
 package main
@@ -987,22 +1020,23 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 ## Supported Endpoints
 
 The Jobs API supports the following endpoints:
 
-| Endpoint | Description |
-|----------|-------------|
-| `/v1/extractions` | Extract structured data from documents |
-| `/v1/parses` | Parse documents to text/markdown |
-| `/v1/splits` | Split multi-page documents |
-| `/v1/classifications` | Create a classification resource |
-| `/v1/schemas/generate` | Generate JSON schemas from documents |
-| `/v1/edits` | Fill form fields with AI (direct document or template) |
-| `/v1/edits/templates/fill` | Fill a saved template with data |
-| `/v1/edits/templates` | Register a reusable PDF form template |
+| Endpoint                   | Description                                            |
+| -------------------------- | ------------------------------------------------------ |
+| `/v1/extractions`          | Extract structured data from documents                 |
+| `/v1/parses`               | Parse documents to text/markdown                       |
+| `/v1/splits`               | Split multi-page documents                             |
+| `/v1/classifications`      | Create a classification resource                       |
+| `/v1/schemas/generate`     | Generate JSON schemas from documents                   |
+| `/v1/edits`                | Fill form fields with AI (direct document or template) |
+| `/v1/edits/templates/fill` | Fill a saved template with data                        |
+| `/v1/edits/templates`      | Register a reusable PDF form template                  |
 
 ## Job Lifecycle
 
@@ -1012,15 +1046,15 @@ Jobs progress through the following statuses:
 validating → queued → in_progress → completed/failed/cancelled/expired
 ```
 
-| Status | Description |
-|--------|-------------|
-| `validating` | The request is being validated before the job can begin |
-| `queued` | Job is waiting in the processing queue |
-| `in_progress` | Job is currently being processed by the executor |
-| `completed` | Job finished successfully, results available in `response` |
-| `failed` | Job execution failed, see `error` field for details |
-| `cancelled` | Job was cancelled by user request |
-| `expired` | Job data expired (7 days after creation) |
+| Status        | Description                                                |
+| ------------- | ---------------------------------------------------------- |
+| `validating`  | The request is being validated before the job can begin    |
+| `queued`      | Job is waiting in the processing queue                     |
+| `in_progress` | Job is currently being processed by the executor           |
+| `completed`   | Job finished successfully, results available in `response` |
+| `failed`      | Job execution failed, see `error` field for details        |
+| `cancelled`   | Job was cancelled by user request                          |
+| `expired`     | Job data expired (7 days after creation)                   |
 
 ```mermaid
 sequenceDiagram
@@ -1046,12 +1080,12 @@ sequenceDiagram
 
 The Jobs API has the following limits:
 
-| Constraint | Limit |
-|------------|-------|
-| Metadata key-value pairs | 16 maximum |
-| Metadata key length | 64 characters |
-| Metadata value length | 512 characters |
-| Concurrent jobs | Unlimited |
+| Constraint               | Limit          |
+| ------------------------ | -------------- |
+| Metadata key-value pairs | 16 maximum     |
+| Metadata key length      | 64 characters  |
+| Metadata value length    | 512 characters |
+| Concurrent jobs          | Unlimited      |
 
 Jobs are processed in the order they are created. There is no limit on the number of concurrent jobs, but processing throughput depends on system capacity.
 
@@ -1111,11 +1145,12 @@ Handle errors in your code:
 job = client.jobs.wait_for_completion(job_id)
 
 if job.status == "failed":
-    print(f"Error code: {job.error.code}")
-    print(f"Error message: {job.error.message}")
-    if job.error.details:
-        print(f"Details: {job.error.details}")
-```
+print(f"Error code: {job.error.code}")
+print(f"Error message: {job.error.message}")
+if job.error.details:
+print(f"Details: {job.error.details}")
+
+````
 
 ```javascript JavaScript
 const job = await client.jobs.waitForCompletion(jobId);
@@ -1127,7 +1162,7 @@ if (job.status === "failed") {
         console.log("Details:", job.error.details);
     }
 }
-```
+````
 
 ```go Go
 job, err := client.Jobs.WaitForCompletion(ctx, jobID, nil)
@@ -1145,6 +1180,7 @@ if status, _ := (*job)["status"].(string); status == "failed" {
     }
 }
 ```
+
 </CodeGroup>
 
 ## Best Practices
@@ -1184,6 +1220,7 @@ job = client.jobs.create(
 ```
 
 Metadata is preserved throughout the job lifecycle and can help with:
+
 - Tracking jobs by batch or source system
 - Debugging failed jobs
 - Filtering jobs when listing
