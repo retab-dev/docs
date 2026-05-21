@@ -6621,7 +6621,7 @@
           "Workflows"
         ],
         "summary": "Diagnose Workflow Graph",
-        "description": "Diagnose a workflow graph payload for the given workflow.",
+        "description": "Diagnose a workflow graph payload for the given workflow.\n\nWhen the request omits ``blocks`` and ``edges`` (both ``None``) the route\nloads the persisted draft from MongoDB. When either is provided (including\nan explicit empty list) the request body is diagnosed as-is.",
         "operationId": "diagnose_workflow_graph_v1_workflows__workflow_id__diagnose_graph_post",
         "security": [
           {
@@ -10476,7 +10476,7 @@
         "additionalProperties": false,
         "type": "object",
         "title": "CreateWorkflowRunRequest",
-        "description": "Flat CRUD-style request body for ``POST /v1/workflows/runs``.\n\nHandles two creation flows by discriminating on ``restart_of``:\n\n- **Fresh run** (``restart_of is None``): requires ``workflow_id``; accepts\n  ``documents``, ``json_inputs``, and ``version`` like the legacy\n  ``POST /v1/workflows/{workflow_id}/run`` body.\n- **Restart** (``restart_of`` set): re-runs an existing run by inheriting\n  its inputs. ``workflow_id`` is optional (inferred from the source run);\n  ``documents``/``json_inputs``/``version`` are not accepted and the\n  caller must supply ``config_source`` (``draft`` or ``published``).\n\nShape-enforced invariants \u2014 fresh-vs-restart bodies are distinguishable\nvia the schema, not prose. Replaces:\n\n- ``POST /v1/workflows/{workflow_id}/run`` (deprecated)\n- ``POST /v1/workflows/runs/{run_id}/restart`` (deprecated)"
+        "description": "Flat CRUD-style request body for ``POST /v1/workflows/runs``.\n\nHandles two creation flows by discriminating on ``restart_of``:\n\n- **Fresh run** (``restart_of is None``): requires ``workflow_id``; accepts\n  ``documents``, ``json_inputs``, and ``version``.\n- **Restart** (``restart_of`` set): re-runs an existing run by inheriting\n  its inputs. ``workflow_id`` is optional (inferred from the source run);\n  ``documents``/``json_inputs``/``version`` are not accepted and the\n  caller must supply ``config_source`` (``draft`` or ``published``).\n\nShape-enforced invariants \u2014 fresh-vs-restart bodies are distinguishable\nvia the schema, not prose."
       },
       "CreateWorkflowTestRunRequest": {
         "properties": {
@@ -17790,20 +17790,34 @@
       "WorkflowGraphDiagnosisRequest": {
         "properties": {
           "blocks": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowConfigBlock"
-            },
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkflowConfigBlock"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Blocks",
-            "description": "The blocks in this workflow version"
+            "description": "Blocks to diagnose; if omitted, the persisted draft is loaded server-side"
           },
           "edges": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowConfigEdge"
-            },
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkflowConfigEdge"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Edges",
-            "description": "The edges in this workflow version"
+            "description": "Edges to diagnose; if omitted, the persisted draft is loaded server-side"
           },
           "re_propagate": {
             "type": "boolean",
@@ -17814,7 +17828,8 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "title": "WorkflowGraphDiagnosisRequest"
+        "title": "WorkflowGraphDiagnosisRequest",
+        "description": "Request payload for ``POST /workflows/{id}/diagnose-graph``.\n\n``blocks`` and ``edges`` are both nullable so the route can tell apart\ntwo intents:\n\n* ``blocks`` / ``edges`` omitted (``None``): diagnose the persisted draft\n  \u2014 the route loads blocks and edges from MongoDB.\n* ``blocks`` / ``edges`` provided (even as ``[]``): diagnose the in-memory\n  graph as-is \u2014 used by editor previews and ``workflows spec validate``\n  against a stub file.\n\nSending only one side (e.g. ``blocks=[]`` without ``edges``) is treated as\nexplicit-empty for the missing side too; the persisted-draft fallback only\nkicks in when both are omitted."
       },
       "WorkflowPublished": {
         "properties": {
