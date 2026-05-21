@@ -3,23 +3,18 @@ title: 'Get Review'
 openapi: 'GET /v1/workflows/reviews/{run_id}/{block_id}'
 ---
 
-Get the full review overlay for a gated block run.
+Get the full review for a gated block run.
 
-The overlay is a versioned sidecar attached to a single `(run_id, block_id)` pair. It records:
+The review is attached to a single `(run_id, block_id)` pair. It records immutable output snapshots in `versions_by_id`, keyed by content hash, and a single terminal `decision` once the review is resolved.
 
 | Field | Notes |
 |---|---|
-| `versions[]` | Every version of the gated block's output. Sequence `0` is the model's original; later sequences are corrective edits. |
-| `decisions[]` | Every verdict submitted against the overlay (`approved` / `rejected`). |
-| `audit[]` | The append-only audit trail — every claim, release, edit, and decision, with the acting `Actor`. |
-| `rev` | The overlay's compare-and-swap token. Read it here, pass it back (as the `version_stamp` request parameter) on every mutating call. |
-| `claim` | The `ReviewClaim` currently held on the overlay (`{holder, claimed_at, expires_at}`), or `null`. |
+| `versions_by_id` | Output snapshots keyed by `sha256(canonical_json(snapshot))`. |
+| `decision` | `null` while awaiting review; otherwise the terminal `approved` / `rejected` verdict. |
+| `triggered_by` | The review predicate that opened the gate. |
+| `awaiting_since` | When the block began waiting for review. |
 
 Every actor — model, agent, or human — is described by the same symmetric `Actor` shape: `{kind, id, display_name}`.
-
-<Note>
-The `rev` you read here is what every mutating call ([append version](/api-reference/workflows/reviews/append-version), [submit decision](/api-reference/workflows/reviews/submit-decision), [claim](/api-reference/workflows/reviews/claim), [release](/api-reference/workflows/reviews/release)) must echo back. If it has advanced since you read it, the mutating call returns `409` — re-read and retry.
-</Note>
 
 <RequestExample>
 
@@ -28,17 +23,12 @@ from retab import Retab
 
 client = Retab()
 
-overlay = client.workflows.reviews.get("run_abc123", "block_extract")
+review = client.workflows.reviews.get("run_abc123", "block_extract")
 
-print(overlay.status, overlay.rev)
+for version_id, version in review.versions_by_id.items():
+    print(version_id, version.origin, version.author.kind)
 
-# Version 0 is always the model's original output
-original = overlay.versions[0]
-print(original.origin, original.author.kind)
-
-# The effective output is the latest version
-latest = overlay.versions[-1]
-print(latest.snapshot)
+print("decision:", review.decision)
 ```
 
 ```javascript javascript
@@ -46,17 +36,13 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-const overlay = await client.workflows.reviews.get("run_abc123", "block_extract");
+const review = await client.workflows.reviews.get("run_abc123", "block_extract");
 
-console.log(overlay.status, overlay.rev);
+for (const [versionId, version] of Object.entries(review.versions_by_id)) {
+  console.log(versionId, version.origin, version.author.kind);
+}
 
-// Version 0 is always the model's original output
-const original = overlay.versions[0];
-console.log(original.origin, original.author.kind);
-
-// The effective output is the latest version
-const latest = overlay.versions[overlay.versions.length - 1];
-console.log(latest.snapshot);
+console.log("decision:", review.decision);
 ```
 
 ```bash curl
@@ -76,61 +62,28 @@ curl -X 'GET' \
   "block_run_id": "run_abc123:block_extract",
   "block_id": "block_extract",
   "workflow_id": "wf_1",
-  "status": "awaiting_review",
-  "rev": 3,
-  "claim": {
-    "holder": {
-      "kind": "human",
-      "id": "user_42",
-      "display_name": "Dana Rivera"
-    },
-    "claimed_at": "2026-05-13T08:55:00.000Z",
-    "expires_at": "2026-05-13T09:55:00.000Z"
-  },
-  "versions": [
-    {
-      "seq": 0,
+  "workflow_version_id": "wfv_1",
+  "block_type": "extract",
+  "triggered_by": { "kind": "always" },
+  "awaiting_since": "2026-05-13T08:14:02.341Z",
+  "priority": 0,
+  "versions_by_id": {
+    "a9f4d2e7f50b8b7bc84f4d96d2ad831a2a3bfead9b46f945baf2f8eb2f457a18": {
+      "parent_id": null,
       "origin": "model_output",
       "author": { "kind": "model", "id": "retab-small", "display_name": "Retab Small" },
       "snapshot": { "total_amount": 505, "vendor_name": "Acme Corp" },
       "note": null,
       "created_at": "2026-05-13T08:14:02.341Z"
-    },
-    {
-      "seq": 1,
-      "origin": "human_edit",
-      "author": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
-      "snapshot": { "total_amount": 325, "vendor_name": "Acme Corp" },
-      "note": "Corrected total to match ATM + checks subtotal.",
-      "created_at": "2026-05-13T09:02:51.118Z"
     }
-  ],
-  "decisions": [],
-  "audit": [
-    {
-      "event": "overlay_created",
-      "actor": { "kind": "model", "id": "retab-small", "display_name": "Retab Small" },
-      "at": "2026-05-13T08:14:02.341Z"
-    },
-    {
-      "event": "claimed",
-      "actor": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
-      "at": "2026-05-13T08:55:00.000Z"
-    },
-    {
-      "event": "version_appended",
-      "actor": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
-      "at": "2026-05-13T09:02:51.118Z"
-    }
-  ],
-  "created_at": "2026-05-13T08:14:02.341Z",
-  "updated_at": "2026-05-13T09:02:51.118Z"
+  },
+  "decision": null
 }
 ```
 
 ```json 404
 {
-  "detail": "No review overlay found for run_id='run_abc123' block_id='block_extract'"
+  "detail": "No review found for run_id='run_abc123' block_id='block_extract'"
 }
 ```
 

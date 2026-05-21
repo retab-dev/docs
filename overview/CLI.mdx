@@ -201,29 +201,29 @@ retab workflows list
 retab workflows get <workflow-id>
 retab workflows runs create <workflow-id> --document start=./invoice.pdf
 
-# Human review is a gate on a block config, not a separate block.
-printf '%s\n' '{"hil":{"predicate":{"kind":"any_required_field_null"},"skip_in_test_mode":false}}' \
-  > extract-hil.json
+# Review is configured on a block config, not as a separate block.
+printf '%s\n' '{"review":{"predicate":{"kind":"any_required_field_null"},"skip_in_test_mode":false}}' \
+  > extract-review.json
 retab workflows blocks update <workflow-id> blk_extract_1 \
-  --merge-config-file ./extract-hil.json
+  --merge-config-file ./extract-review.json
 
 # for_each map-phase review is available for split_by_key partitioning.
-printf '%s\n' '{"hil":{"predicate":{"kind":"boundary_confidence_lt","threshold":0.8},"skip_in_test_mode":false}}' \
-  > for-each-hil.json
+printf '%s\n' '{"review":{"predicate":{"kind":"boundary_confidence_lt","threshold":0.8},"skip_in_test_mode":false}}' \
+  > for-each-review.json
 retab workflows blocks update <workflow-id> blk_for_each_1 \
-  --merge-config-file ./for-each-hil.json
+  --merge-config-file ./for-each-review.json
 
-# Runs paused by a gate use waiting_for_human.
-retab workflows runs list --status waiting_for_human
+# Runs paused by review use awaiting_review.
+retab workflows runs list --status awaiting_review
 retab workflows reviews list
 retab workflows reviews get <run-id> <block-id>
-retab workflows reviews approve <run-id> <block-id> --version-stamp 0
+retab workflows reviews approve <run-id> <block-id> --version-id <version-id>
 
-# Approve a corrected split_by_key for_each partition map inline.
-retab workflows reviews for-each approve <run-id> blk_for_each_1 \
-  --version-stamp 0 \
-  --set "legal-mentions=1" \
-  --set "booking confirmation=2-3"
+# Append a corrected output snapshot, then approve its returned version id.
+retab workflows reviews edit <run-id> blk_for_each_1 \
+  --parent-id <version-id> \
+  --snapshot-file ./corrected-output.json
+retab workflows reviews approve <run-id> blk_for_each_1 --version-id <new-version-id>
 
 # Workflow tests are run-id-first: create a run, poll it, then inspect results.
 retab workflows tests runs create <workflow-id> --test-id <test-id>

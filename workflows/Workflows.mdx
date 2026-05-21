@@ -12,7 +12,7 @@ A workflow typically consists of:
   - **Document** - Upload files (PDF, images, Word, Excel)
   - **JSON Input** - Pass structured JSON data
 - **Processing blocks** - Operations like Extract, Parse, Split, Classifier
-- **Logic blocks** - Conditional flows like Human-in-the-Loop, Function, If/Else routing, and API Call
+- **Logic blocks** - Conditional flows like review gates, Function, If/Else routing, and API Call
 
 ### Tests
 
@@ -278,12 +278,12 @@ run = client.workflows.runs.create(
 )
 
 terminal_statuses = {"completed", "error", "cancelled"}
-while run.lifecycle.status not in terminal_statuses and run.lifecycle.status != "waiting_for_human":
+while run.lifecycle.status not in terminal_statuses and run.lifecycle.status != "awaiting_review":
     time.sleep(1)
     run = client.workflows.runs.get(run.id)
 
 print(run.lifecycle.status)
-if run.lifecycle.status == "waiting_for_human":
+if run.lifecycle.status == "awaiting_review":
     print(run.lifecycle.waiting_for_block_ids)
 elif run.lifecycle.status == "error":
     raise RuntimeError(run.lifecycle.message)
@@ -320,13 +320,13 @@ let run = await client.workflows.runs.create({
 });
 
 const terminalStatuses = new Set(["completed", "error", "cancelled"]);
-while (!terminalStatuses.has(run.lifecycle.status) && run.lifecycle.status !== "waiting_for_human") {
+while (!terminalStatuses.has(run.lifecycle.status) && run.lifecycle.status !== "awaiting_review") {
   await new Promise((resolve) => setTimeout(resolve, 1000));
   run = await client.workflows.runs.get(run.id);
 }
 
 console.log(run.lifecycle.status);
-if (run.lifecycle.status === "waiting_for_human") {
+if (run.lifecycle.status === "awaiting_review") {
   console.log(run.lifecycle.waiting_for_block_ids);
 } else if (run.lifecycle.status === "error") {
   throw new Error(run.lifecycle.message);
@@ -396,7 +396,7 @@ func main() {
 	}
 
 	deadline := time.Now().Add(10 * time.Minute)
-	for !run.Terminal() && run.Lifecycle.Status != "waiting_for_human" {
+	for !run.Terminal() && run.Lifecycle.Status != "awaiting_review" {
 		if time.Now().After(deadline) {
 			log.Fatalf("timed out waiting for workflow run %s", run.ID)
 		}
@@ -408,7 +408,7 @@ func main() {
 	}
 
 	fmt.Println(run.Lifecycle.Status)
-	if run.Lifecycle.Status == "waiting_for_human" {
+	if run.Lifecycle.Status == "awaiting_review" {
 		fmt.Println(run.Lifecycle.WaitingForBlockIDs)
 		return
 	}
@@ -713,7 +713,7 @@ Use `client.workflows.list()` or `client.workflows.get(workflow_id)` when you ne
 
 The standard production pattern is to run the workflow, keep the returned `run.id`,
 and poll the run until `lifecycle.status` reaches `completed`, `error`, `cancelled`,
-or `waiting_for_human`.
+or `awaiting_review`.
 
 1. Start the workflow from the SDK or API
 2. Receive a `run.id` and an initial lifecycle immediately
@@ -761,8 +761,8 @@ Every workflow can be exported as Python code. Click **View Code** in the sideba
     Use Note blocks to document sections of your workflow. They don't affect execution but help explain the logic.
   </Accordion>
   
-  <Accordion title="Validate with Human-in-the-Loop">
-    For critical data, add a HIL gate to the extraction block. This ensures a human reviews low-likelihood results before they proceed.
+  <Accordion title="Validate with review gates">
+    For critical data, add a review gate to the extraction block. This ensures a reviewer checks low-likelihood results before they proceed.
   </Accordion>
   
   <Accordion title="Use Classifier for document routing">
@@ -790,7 +790,7 @@ flowchart LR
 
 1. **Start** block accepts the invoice PDF
 2. **Extract** block pulls out vendor, amount, date, line items
-3. The extract block's **HIL gate** flags low-likelihood extractions for human review
+3. The extract block's **review gate** flags low-likelihood extractions for review
 4. Read the verified data from the completed workflow run
 
 ## Example: Multi-Document Classification Workflow
