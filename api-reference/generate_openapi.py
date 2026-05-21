@@ -758,6 +758,44 @@ def _rename_schema(
     _replace_schema_ref(spec, old_schema_name, new_schema_name)
 
 
+def _collapse_schema_refs(
+    spec: dict[str, object], old_schema_name: str, target_schema_name: str
+) -> None:
+    """Replace refs to a public schema and remove the old component."""
+    schemas = (
+        spec.get("components", {}).get("schemas")
+        if isinstance(spec.get("components"), dict)
+        else None
+    )
+    if isinstance(schemas, dict):
+        schemas.pop(old_schema_name, None)
+    _replace_schema_ref(spec, old_schema_name, target_schema_name)
+    _dedupe_schema_unions(spec)
+
+
+def _dedupe_schema_unions(node: object) -> None:
+    """Remove duplicate refs/items from generated anyOf/oneOf arrays."""
+    if isinstance(node, dict):
+        for key in ("anyOf", "oneOf"):
+            union = node.get(key)
+            if not isinstance(union, list):
+                continue
+            seen: set[str] = set()
+            deduped: list[object] = []
+            for item in union:
+                marker = json.dumps(item, sort_keys=True)
+                if marker in seen:
+                    continue
+                seen.add(marker)
+                deduped.append(item)
+            node[key] = deduped
+        for value in node.values():
+            _dedupe_schema_unions(value)
+    elif isinstance(node, list):
+        for item in node:
+            _dedupe_schema_unions(item)
+
+
 def _normalize_public_schema_names(spec: dict[str, object]) -> None:
     """Rename generated/internal component names to public API names.
 
@@ -766,6 +804,8 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
     Pydantic-generated input/output names, and storage DTO names from leaking
     into generated SDKs.
     """
+    _collapse_schema_refs(spec, "StoredJobResponse", "JobResponse")
+
     schema_renames = {
         "BBox-Input": "BoundingBoxInput",
         "Category-Output": "ClassificationCategoryOutput",
@@ -776,6 +816,7 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
         "EditTemplateRequest": "CreateEditTemplateRequest",
         "FileRecord": "File",
         "GetSourcesResponse": "ExtractionSources",
+        "JobResponse": "JobResult",
         "MIMEData-Input": "MIMEDataInput",
         "MIMEData-Output": "MIMEData",
         "BlockSimulationObject": "WorkflowSimulation",
