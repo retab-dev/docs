@@ -376,8 +376,8 @@ predicate fires, that same block enters `awaiting_review` and a
 2. Choose a predicate such as `always`, `any_required_field_null`, or `field_confidence_lt`.
 3. When the predicate fires, the block pauses at `awaiting_review`.
 4. A reviewer sees the block output alongside the source document.
-5. The reviewer can approve, modify, or reject through Reviews.
-6. After approval, the effective reviewed output continues through the workflow.
+5. The reviewer can approve, create a corrected output version, or reject through Reviews.
+6. After approval, the selected `versions_by_id[decision.version_id].snapshot` continues through the workflow.
 
 **Use Cases:**
 - Validate critical extractions before sending to downstream systems
@@ -401,8 +401,7 @@ predicate fires, that same block enters `awaiting_review` and a
   "review": {
     "predicate": {
       "kind": "any_required_field_null"
-    },
-    "skip_in_test_mode": false
+    }
   }
 }
 ```
@@ -412,51 +411,13 @@ Common extract predicates include `always`, `validation_failed`,
 For `split` and split-by-key `for_each` gates, use split-style predicates such
 as `split_count_neq`, `any_split_pages_lt`, and `boundary_confidence_lt`.
 
-#### AI Agent Reviewer (optional)
-
-An Anthropic managed agent can sit alongside the human flow, ground each flagged field against the source document, and emit a structured proposal (approve / approve‑with‑modifications / reject). The human always owns the final decision — the agent either pre‑fills it (so a verifier can accept in one click) or, in the higher‑trust modes, applies it directly when its confidence and evidence clear the bar.
-
-**Configuration keys** (on the gated block's review settings):
-
-| Key | Type | Default | Purpose |
-|---|---|---|---|
-| `agent_in_the_loop` | `"disabled"` \| `"pre_review"` \| `"review"` \| `"auto"` | `"disabled"` | Dispatch mode for the agent's proposal. |
-| `agent_auto_confidence_threshold` | float, 0.0–1.0 | `0.85` | Used only in `auto` mode — minimum confidence for the agent's decision to auto‑submit. |
-| `agent_review_timeout_seconds` | int, 30–3600 | `900` | Hard ceiling per review attempt. A review is also abandoned earlier if the agent's event stream goes silent ≥ ~4 min. |
-
-**Dispatch behaviour:**
-
-| Mode | If agent approves (high confidence) | If agent approves with corrections | If agent cannot decide |
-|---|---|---|---|
-| `pre_review` | Parked for human (`status=proposed`) — verifier sees pre‑filled proposal | Parked, with `modified_data` shown as a diff | Parked, with rationale |
-| `review` | Auto‑submitted (`status=submitted`), workflow resumes | Auto‑submitted with the corrected payload | Parked for human |
-| `auto` | Auto‑submitted if `confidence ≥ threshold`, else parked for human | Same threshold gate | Always parked for human |
-
-The agent inspects the document only — it cannot call arbitrary tools or external services. It uses Retab's MCP server to read provenance (`files_get_sources`), grep the document (`files_grep`), and inspect pages as images (`files_inspect`) when text is missing.
-
-**What the agent reviews** depends on `review_mode`:
-- `review_mode: "conditional"` → only the fields that triggered the conditions (fast, focused).
-- `review_mode: "always"` → every field in the data (thorough, slower).
-
-Example review settings with the agent in `auto` mode:
-
-```json
-{
-  "review_mode": "conditional",
-  "conditions": [ /* sub-conditions as above */ ],
-  "agent_in_the_loop": "auto",
-  "agent_auto_confidence_threshold": 0.9,
-  "agent_review_timeout_seconds": 900
-}
-```
-
-The UI's review panel surfaces the agent's proposal alongside the document: evidence with literal quotes + page anchors, a confidence chip, a diff for any modified fields, and one‑click **Accept & continue** / **Apply to form** actions for proposals that are actionable.
-
 <Note>
-The agent flow is dormant when `agent_in_the_loop="disabled"` (the default). You can enable it block‑by‑block — there is no global switch.
+The review object is actor-neutral: a model output, an agent-created correction,
+and a human-created correction all use the same `versions_by_id` and
+`decision.version_id` shape. There is no separate agent-review configuration on
+`config.review`; automated reviewers should append versions or submit decisions
+through `client.workflows.reviews.*`.
 </Note>
-
-The agent's proposal lands on the gated block's [review](/workflows/Reviews) like any other actor's — an agent-authored edit or decision is the same shape as a human's, distinguished only by `Actor.kind`. Read and act on it through `client.workflows.reviews.*`.
 
 ---
 
@@ -827,8 +788,7 @@ for-each body runs:
     "predicate": {
       "kind": "boundary_confidence_lt",
       "threshold": 0.8
-    },
-    "skip_in_test_mode": false
+    }
   }
 }
 ```

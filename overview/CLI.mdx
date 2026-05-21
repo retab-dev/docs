@@ -202,13 +202,13 @@ retab workflows get <workflow-id>
 retab workflows runs create <workflow-id> --document start=./invoice.pdf
 
 # Review is configured on a block config, not as a separate block.
-printf '%s\n' '{"review":{"predicate":{"kind":"any_required_field_null"},"skip_in_test_mode":false}}' \
+printf '%s\n' '{"review":{"predicate":{"kind":"any_required_field_null"}}}' \
   > extract-review.json
 retab workflows blocks update <workflow-id> blk_extract_1 \
   --merge-config-file ./extract-review.json
 
 # for_each map-phase review is available for split_by_key partitioning.
-printf '%s\n' '{"review":{"predicate":{"kind":"boundary_confidence_lt","threshold":0.8},"skip_in_test_mode":false}}' \
+printf '%s\n' '{"review":{"predicate":{"kind":"boundary_confidence_lt","threshold":0.8}}}' \
   > for-each-review.json
 retab workflows blocks update <workflow-id> blk_for_each_1 \
   --merge-config-file ./for-each-review.json
@@ -219,8 +219,8 @@ retab workflows reviews list
 retab workflows reviews get <run-id> <block-id>
 retab workflows reviews approve <run-id> <block-id> --version-id <version-id>
 
-# Append a corrected output snapshot, then approve its returned version id.
-retab workflows reviews edit <run-id> blk_for_each_1 \
+# Create a corrected output version, then approve its returned version id.
+retab workflows reviews versions create <run-id> blk_for_each_1 \
   --parent-id <version-id> \
   --snapshot-file ./corrected-output.json
 retab workflows reviews approve <run-id> blk_for_each_1 --version-id <new-version-id>
