@@ -234,7 +234,7 @@ def test_generated_openapi_uses_named_workflow_artifact_record_schema() -> None:
         "WorkflowArtifactRecord"
     ]
     assert artifact_schema["required"] == ["operation", "id"]
-    assert artifact_schema["properties"]["operation"]["anyOf"][0]["enum"]
+    assert artifact_schema["properties"]["operation"]["enum"]
     assert artifact_schema["additionalProperties"] is True
 
 
