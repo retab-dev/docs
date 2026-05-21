@@ -185,6 +185,14 @@ def _strip_routes_not_in_api_reference_markdown(
     allowed_routes = _collect_api_reference_openapi_routes(
         _list_api_reference_markdown_files(docs_json_path, docs_root)
     )
+    backend_allowed_routes = set(allowed_routes)
+    if (
+        "get",
+        "/v1/workflows/reviews/versions/{version_id}",
+    ) in backend_allowed_routes:
+        backend_allowed_routes.add(
+            ("get", "/v1/workflows/reviews/versions/{rvr_id}")
+        )
     if not allowed_routes:
         raise RuntimeError(
             f"No API reference OpenAPI routes found from docs navigation: {docs_json_path}"
@@ -200,7 +208,7 @@ def _strip_routes_not_in_api_reference_markdown(
         for method in list(path_item.keys()):
             if method not in OPENAPI_HTTP_METHODS:
                 continue
-            if (method, path) not in allowed_routes:
+            if (method, path) not in backend_allowed_routes:
                 path_item.pop(method, None)
         if not any(method in OPENAPI_HTTP_METHODS for method in path_item):
             paths.pop(path, None)
@@ -680,7 +688,10 @@ def _replace_schema_ref(
     if isinstance(node, dict):
         if node.get("$ref") == old_ref:
             node["$ref"] = new_ref
-        for value in node.values():
+        for key, value in list(node.items()):
+            if isinstance(value, str) and value == old_ref:
+                node[key] = new_ref
+                continue
             _replace_schema_ref(value, old_schema_name, new_schema_name)
     elif isinstance(node, list):
         for item in node:
@@ -775,6 +786,126 @@ def _hard_cutover_review_overlay_docs(spec: dict[str, object]) -> None:
                         schema["description"] = "Opaque review id."
 
 
+def _workflow_paginated_schema(
+    schemas: dict[str, object],
+    schema_name: str,
+    item_schema_name: str,
+) -> None:
+    if item_schema_name not in schemas or "ListMetadata" not in schemas:
+        return
+
+    schemas[schema_name] = {
+        "properties": {
+            "data": {
+                "items": {"$ref": f"#/components/schemas/{item_schema_name}"},
+                "type": "array",
+                "title": "Data",
+            },
+            "list_metadata": {"$ref": "#/components/schemas/ListMetadata"},
+        },
+        "type": "object",
+        "required": ["data", "list_metadata"],
+        "title": schema_name,
+    }
+
+
+def _set_get_response_schema(
+    paths: dict[str, object],
+    path: str,
+    schema_name: str,
+) -> None:
+    path_item = paths.get(path)
+    if not isinstance(path_item, dict):
+        return
+
+    get_operation = path_item.get("get")
+    if not isinstance(get_operation, dict):
+        return
+
+    try:
+        response = get_operation["responses"]["200"]["content"][
+            "application/json"
+        ]
+    except KeyError:
+        return
+    if isinstance(response, dict):
+        response["schema"] = {"$ref": f"#/components/schemas/{schema_name}"}
+
+
+def _normalize_workflow_read_docs(spec: dict[str, object]) -> None:
+    """Apply public workflow read-model documentation overlays."""
+    components = spec.get("components")
+    if not isinstance(components, dict):
+        return
+    schemas = components.get("schemas")
+    if not isinstance(schemas, dict):
+        return
+
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return
+
+    _workflow_paginated_schema(
+        schemas,
+        "PaginatedList_WorkflowResponse_",
+        "WorkflowResponse",
+    )
+    _workflow_paginated_schema(
+        schemas,
+        "PaginatedList_WorkflowRunObject_",
+        "WorkflowRunObject",
+    )
+    _set_get_response_schema(paths, "/v1/workflows", "PaginatedList_WorkflowResponse_")
+    _set_get_response_schema(
+        paths,
+        "/v1/workflows/runs",
+        "PaginatedList_WorkflowRunObject_",
+    )
+
+    review_version_schema = schemas.get("ReviewVersionResponse")
+    if isinstance(review_version_schema, dict):
+        properties = review_version_schema.get("properties")
+        if isinstance(properties, dict) and "Actor" in schemas:
+            properties["author"] = {
+                "$ref": "#/components/schemas/Actor",
+                "description": "Actor that created the version.",
+            }
+
+    rvr_path = paths.pop("/v1/workflows/reviews/versions/{rvr_id}", None)
+    if isinstance(rvr_path, dict):
+        paths["/v1/workflows/reviews/versions/{version_id}"] = rvr_path
+        get_operation = rvr_path.get("get")
+        if isinstance(get_operation, dict):
+            operation_id = get_operation.get("operationId")
+            if isinstance(operation_id, str):
+                get_operation["operationId"] = operation_id.replace(
+                    "rvr_id", "version_id"
+                )
+            parameters = get_operation.get("parameters")
+            if isinstance(parameters, list):
+                for parameter in parameters:
+                    if (
+                        isinstance(parameter, dict)
+                        and parameter.get("name") == "rvr_id"
+                    ):
+                        parameter["name"] = "version_id"
+                        parameter["description"] = "Opaque review version id."
+                        schema = parameter.get("schema")
+                        if isinstance(schema, dict):
+                            schema["title"] = "Version Id"
+                            schema["description"] = "Opaque review version id."
+
+    for old_schema_name, new_schema_name in (
+        ("AssertionSpec-Input", "AssertionSpecInput"),
+        ("AssertionSpec-Output", "AssertionSpecOutput"),
+        ("AllItemsMatchCondition-Input", "AllItemsMatchConditionInput"),
+        ("AllItemsMatchCondition-Output", "AllItemsMatchConditionOutput"),
+        ("AnyItemMatchesCondition-Input", "AnyItemMatchesConditionInput"),
+        ("AnyItemMatchesCondition-Output", "AnyItemMatchesConditionOutput"),
+    ):
+        _rename_schema(spec, old_schema_name, new_schema_name)
+
+
 def generate_openapi() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     backend_main_server = repo_root / "backend" / "main_server"
@@ -820,6 +951,7 @@ def generate_openapi() -> None:
     _hard_cutover_workflow_step_lifecycle(spec)
     _hard_cutover_workflow_create_request_shapes(spec)
     _hard_cutover_review_overlay_docs(spec)
+    _normalize_workflow_read_docs(spec)
 
     # Strip unused legacy request/response schemas that only belonged to the
     # document-scoped classification API.

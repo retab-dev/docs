@@ -230,7 +230,7 @@ curl https://api.retab.com/v1/jobs/{job_id} \
 
 </CodeGroup>
 
-SDK note: `jobs.retrieve(...)` is lightweight by default in both Python and JavaScript clients. Use `retrieve_full`/`retrieveFull` when you need `request` or `response` payloads.
+SDK note: `jobs.retrieve(...)` is lightweight by default. Pass `include_response` or `include_request` when you need payloads.
 
 Or use the SDK helper method:
 
@@ -265,12 +265,12 @@ _ = completedJob
 
 ### 4. Retrieve Results
 
-If you used lightweight polling with `jobs.retrieve(...)`, fetch full payloads before reading `response`:
+If you used lightweight polling with `jobs.retrieve(...)`, fetch response payloads before reading `response`:
 
 <CodeGroup>
 ```python Python
 if job.status == "completed":
-    job = client.jobs.retrieve_full(job.id)
+    job = client.jobs.retrieve(job.id, include_response=True)
     result = job.response.body
     print(result)
 elif job.status == "failed":
@@ -279,7 +279,7 @@ elif job.status == "failed":
 
 ```javascript JavaScript
 if (job.status === "completed") {
-  job = await client.jobs.retrieveFull(job.id);
+  job = await client.jobs.retrieve(job.id, { include_response: true });
   const result = job.response.body;
   console.log(result);
 } else if (job.status === "failed") {
@@ -290,7 +290,7 @@ if (job.status === "completed") {
 ```go Go
 status, _ := (*job)["status"].(string)
 if status == "completed" {
-    job, err = client.Jobs.RetrieveFull(ctx, jobID)
+    job, err = client.Jobs.Retrieve(ctx, jobID, &retab.JobRetrieveParams{IncludeResponse: true})
     if err != nil {
         log.Fatal(err)
     }
@@ -345,7 +345,7 @@ By default, `GET /v1/jobs` returns a lightweight list for fast polling:
 - `request` is omitted (`null`)
 - `response` is omitted (`null`)
 
-Use `GET /v1/jobs?include_request=true&include_response=true` if you need full payloads in list results. For most workflows, list for discovery and call `retrieve_full`/`retrieveFull` on specific job IDs for full details.
+Use `GET /v1/jobs?include_request=true&include_response=true` if you need full payloads in list results. For most workflows, list for discovery and call `retrieve` with `include_response` on specific job IDs for full details.
 
 <CodeGroup>
 ```python Python
@@ -479,7 +479,7 @@ print(f"Status: {job.status}")
 # Get extracted data
 
 if job.status == "completed":
-job = client.jobs.retrieve_full(job.id)
+job = client.jobs.retrieve(job.id, include_response=True)
 extracted = job.response.body["output"]
 print(f"Invoice: {extracted['invoice_number']}")
 print(f"Total: ${extracted['total_amount']}")
@@ -534,7 +534,7 @@ while (!terminalStatuses.includes(job.status)) {
 
 // Get extracted data
 if (job.status === "completed") {
-    job = await client.jobs.retrieveFull(job.id);
+    job = await client.jobs.retrieve(job.id, { include_response: true });
     const extracted = job.response.body.output;
     console.log(`Invoice: ${extracted.invoice_number}`);
     console.log(`Total: $${extracted.total_amount}`);
@@ -621,7 +621,7 @@ func main() {
 	// Get extracted data
 	status, _ := (*job)["status"].(string)
 	if status == "completed" {
-		job, err = client.Jobs.RetrieveFull(ctx, jobID)
+		job, err = client.Jobs.Retrieve(ctx, jobID, &retab.JobRetrieveParams{IncludeResponse: true})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -680,7 +680,7 @@ print(f"Status: {job.status}")
 # Get parsed content
 
 if job.status == "completed":
-job = client.jobs.retrieve_full(job.id)
+job = client.jobs.retrieve(job.id, include_response=True)
 result = job.response.body
 print(f"Parsed text:\n{result['output']['text']}")
 print(f"Total pages: {len(result['output']['pages'])}")
@@ -721,7 +721,7 @@ while (!terminalStatuses.includes(job.status)) {
 
 // Get parsed content
 if (job.status === "completed") {
-    job = await client.jobs.retrieveFull(job.id);
+    job = await client.jobs.retrieve(job.id, { include_response: true });
     const result = job.response.body;
     console.log(`Parsed text:\n${result.output.text}`);
     console.log(`Total pages: ${result.output.pages.length}`);
@@ -794,7 +794,7 @@ func main() {
 	// Get parsed content
 	status, _ := (*job)["status"].(string)
 	if status == "completed" {
-		job, err = client.Jobs.RetrieveFull(ctx, jobID)
+		job, err = client.Jobs.Retrieve(ctx, jobID, &retab.JobRetrieveParams{IncludeResponse: true})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -867,7 +867,7 @@ print(f"Status: {job.status}")
 # Get classification result
 
 if job.status == "completed":
-job = client.jobs.retrieve_full(job.id)
+job = client.jobs.retrieve(job.id, include_response=True)
 result = job.response.body["output"]
 print(f"Classification: {result['category']}")
 print(f"Reasoning: {result['reasoning']}")
@@ -920,7 +920,7 @@ while (!terminalStatuses.includes(job.status)) {
 
 // Get classification result
 if (job.status === "completed") {
-    job = await client.jobs.retrieveFull(job.id);
+    job = await client.jobs.retrieve(job.id, { include_response: true });
     const result = job.response.body.output;
     console.log(`Classification: ${result.category}`);
     console.log(`Reasoning: ${result.reasoning}`);
@@ -1005,7 +1005,7 @@ func main() {
 	// Get classification result
 	status, _ := (*job)["status"].(string)
 	if status == "completed" {
-		job, err = client.Jobs.RetrieveFull(ctx, jobID)
+		job, err = client.Jobs.Retrieve(ctx, jobID, &retab.JobRetrieveParams{IncludeResponse: true})
 		if err != nil {
 			log.Fatal(err)
 		}

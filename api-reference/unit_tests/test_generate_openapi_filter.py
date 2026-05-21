@@ -15,10 +15,11 @@ SPEC.loader.exec_module(generate_openapi)
 
 DOCS_ROOT = Path(__file__).resolve().parents[2]
 REAL_DOCS_JSON = DOCS_ROOT / "docs.json"
-SDK_SNIPPET_LANGUAGES = {
+REQUIRED_SNIPPET_LANGUAGES = {
     "python": {"python"},
     "javascript": {"javascript", "typescript", "js", "ts"},
     "go": {"go"},
+    "curl": {"bash", "curl", "sh", "shell"},
 }
 GENERATED_OPENAPI = DOCS_ROOT / "api-reference" / "openapi.json"
 
@@ -220,7 +221,7 @@ def test_workflow_create_request_docs_publish_shape_variants() -> None:
     assert schemas["CreateWorkflowTestRunAllRequest"]["required"] == ["workflow_id"]
 
 
-def test_generated_openapi_uses_named_workflow_artifact_record_schema() -> None:
+def test_generated_openapi_uses_dereferenced_workflow_artifact_schema() -> None:
     generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
     artifact_get = generated_openapi["paths"][
         "/v1/workflows/artifacts/{artifact_id}"
@@ -229,16 +230,127 @@ def test_generated_openapi_uses_named_workflow_artifact_record_schema() -> None:
         "application/json"
     ]["schema"]
 
-    assert response_schema == {"$ref": "#/components/schemas/WorkflowArtifactRecord"}
-    artifact_schema = generated_openapi["components"]["schemas"][
-        "WorkflowArtifactRecord"
+    assert response_schema["discriminator"]["propertyName"] == "operation"
+    assert {
+        "conditional_evaluation",
+        "function_invocation",
+        "extraction",
+    }.issubset(response_schema["discriminator"]["mapping"])
+    assert {"$ref": "#/components/schemas/ConditionalEvaluationWorkflowArtifact"} in (
+        response_schema["oneOf"]
+    )
+
+
+def test_workflow_list_get_responses_are_typed() -> None:
+    spec = {
+        "paths": {
+            "/v1/workflows": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "$ref": "#/components/schemas/PaginatedList"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/v1/workflows/runs": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "$ref": "#/components/schemas/PaginatedList"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        },
+        "components": {
+            "schemas": {
+                "ListMetadata": {},
+                "WorkflowResponse": {},
+                "WorkflowRunObject": {},
+            }
+        },
+    }
+
+    generate_openapi._normalize_workflow_read_docs(spec)
+
+    assert spec["paths"]["/v1/workflows"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"] == {"$ref": "#/components/schemas/PaginatedList_WorkflowResponse_"}
+    assert spec["components"]["schemas"]["PaginatedList_WorkflowResponse_"][
+        "properties"
+    ]["data"]["items"] == {"$ref": "#/components/schemas/WorkflowResponse"}
+    assert spec["paths"]["/v1/workflows/runs"]["get"]["responses"]["200"][
+        "content"
+    ]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/PaginatedList_WorkflowRunObject_"
+    }
+    assert spec["components"]["schemas"]["PaginatedList_WorkflowRunObject_"][
+        "properties"
+    ]["data"]["items"] == {"$ref": "#/components/schemas/WorkflowRunObject"}
+
+
+def test_review_version_route_uses_semantic_version_id_parameter() -> None:
+    spec = {
+        "paths": {
+            "/v1/workflows/reviews/versions/{rvr_id}": {
+                "get": {
+                    "operationId": (
+                        "get_review_version_route_v1_workflows_reviews_versions_"
+                        "_rvr_id__get"
+                    ),
+                    "parameters": [
+                        {
+                            "name": "rvr_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string", "title": "Rvr Id"},
+                        }
+                    ],
+                }
+            }
+        },
+        "components": {
+            "schemas": {
+                "ListMetadata": {},
+                "ReviewVersionResponse": {"properties": {}},
+            }
+        },
+    }
+
+    generate_openapi._normalize_workflow_read_docs(spec)
+
+    assert "/v1/workflows/reviews/versions/{rvr_id}" not in spec["paths"]
+    route = spec["paths"]["/v1/workflows/reviews/versions/{version_id}"]["get"]
+    assert "rvr_id" not in route["operationId"]
+    assert route["parameters"] == [
+        {
+            "name": "version_id",
+            "in": "path",
+            "required": True,
+            "description": "Opaque review version id.",
+            "schema": {
+                "type": "string",
+                "title": "Version Id",
+                "description": "Opaque review version id.",
+            },
+        }
     ]
-    assert artifact_schema["required"] == ["operation", "id"]
-    assert artifact_schema["properties"]["operation"]["enum"]
-    assert artifact_schema["additionalProperties"] is True
 
 
-def test_api_reference_pages_have_all_sdk_snippets() -> None:
+def test_api_reference_pages_have_all_code_snippets() -> None:
     missing_by_page: dict[str, list[str]] = {}
 
     for markdown_file in generate_openapi._list_api_reference_markdown_files(
@@ -251,8 +363,8 @@ def test_api_reference_pages_have_all_sdk_snippets() -> None:
 
         languages = _code_fence_languages(markdown)
         missing = [
-            sdk_name
-            for sdk_name, aliases in SDK_SNIPPET_LANGUAGES.items()
+            snippet_name
+            for snippet_name, aliases in REQUIRED_SNIPPET_LANGUAGES.items()
             if languages.isdisjoint(aliases)
         ]
         if missing:
@@ -297,3 +409,100 @@ def test_generated_openapi_routes_match_docs_json_markdown_openapi_fields() -> N
                 spec_routes.add((method, path))
 
     assert spec_routes == docs_routes
+
+
+def test_generated_workflow_lists_use_typed_paginated_schemas() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+
+    workflow_list = generated_openapi["paths"]["/v1/workflows"]["get"]
+    run_list = generated_openapi["paths"]["/v1/workflows/runs"]["get"]
+
+    assert workflow_list["responses"]["200"]["content"]["application/json"][
+        "schema"
+    ] == {"$ref": "#/components/schemas/PaginatedList_WorkflowResponse_"}
+    assert run_list["responses"]["200"]["content"]["application/json"][
+        "schema"
+    ] == {"$ref": "#/components/schemas/PaginatedList_WorkflowRunObject_"}
+    assert generated_openapi["components"]["schemas"][
+        "PaginatedList_WorkflowResponse_"
+    ]["properties"]["data"]["items"] == {"$ref": "#/components/schemas/WorkflowResponse"}
+    assert generated_openapi["components"]["schemas"][
+        "PaginatedList_WorkflowRunObject_"
+    ]["properties"]["data"]["items"] == {
+        "$ref": "#/components/schemas/WorkflowRunObject"
+    }
+
+
+def test_generated_review_version_docs_use_public_version_id_and_actor() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+
+    assert "/v1/workflows/reviews/versions/{rvr_id}" not in generated_openapi["paths"]
+    review_version_get = generated_openapi["paths"][
+        "/v1/workflows/reviews/versions/{version_id}"
+    ]["get"]
+    assert review_version_get["parameters"][0]["name"] == "version_id"
+    assert review_version_get["parameters"][0]["schema"]["title"] == "Version Id"
+    assert generated_openapi["components"]["schemas"]["ReviewVersionResponse"][
+        "properties"
+    ]["author"] == {
+        "$ref": "#/components/schemas/Actor",
+        "description": "Actor that created the version.",
+    }
+
+
+def test_generated_experiment_metrics_use_kind_discriminator_and_public_flows() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+
+    metrics_schema = generated_openapi["paths"][
+        "/v1/workflows/experiments/metrics"
+    ]["get"]["responses"]["200"]["content"]["application/json"]["schema"]
+
+    assert metrics_schema["discriminator"] == {
+        "propertyName": "kind",
+        "mapping": {
+            "summary": "#/components/schemas/ExperimentSummaryMetricsResponse",
+            "by_document": "#/components/schemas/ExperimentByDocumentMetricsResponse",
+            "by_target": "#/components/schemas/ExperimentByTargetMetricsResponse",
+            "votes": "#/components/schemas/ExperimentVotesMetricsResponse",
+            "stale_metrics": "#/components/schemas/ExperimentMetricsStaleError",
+            "no_metrics": "#/components/schemas/ExperimentMetricsMissingError",
+        },
+    }
+    schemas = generated_openapi["components"]["schemas"]
+    for schema_name, kind in {
+        "ExperimentSummaryMetricsResponse": "summary",
+        "ExperimentByDocumentMetricsResponse": "by_document",
+        "ExperimentByTargetMetricsResponse": "by_target",
+        "ExperimentVotesMetricsResponse": "votes",
+        "ExperimentMetricsStaleError": "stale_metrics",
+        "ExperimentMetricsMissingError": "no_metrics",
+    }.items():
+        assert schemas[schema_name]["properties"]["kind"]["const"] == kind
+
+    flow_schema = schemas["ExperimentConfusionFlowMetric"]
+    assert flow_schema["required"] == ["source", "target", "score"]
+    assert set(flow_schema["properties"]) == {"source", "target", "score"}
+
+
+def test_generated_workflow_assertion_component_names_are_language_neutral() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+    schemas = generated_openapi["components"]["schemas"]
+    serialized_spec = json.dumps(generated_openapi)
+
+    for schema_name in (
+        "AssertionSpec-Input",
+        "AssertionSpec-Output",
+        "AllItemsMatchCondition-Input",
+        "AllItemsMatchCondition-Output",
+        "AnyItemMatchesCondition-Input",
+        "AnyItemMatchesCondition-Output",
+    ):
+        assert schema_name not in schemas
+        assert f"#/components/schemas/{schema_name}" not in serialized_spec
+
+    for schema_name in (
+        "AssertionSpec",
+        "AllItemsMatchCondition",
+        "AnyItemMatchesCondition",
+    ):
+        assert schema_name in schemas
