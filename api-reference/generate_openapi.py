@@ -531,6 +531,16 @@ def _schema_property(
     return _without_null_variant(property_schema)
 
 
+def _schema_property_with_description(
+    properties: dict[str, object],
+    name: str,
+    description: str,
+) -> dict[str, object]:
+    property_schema = _schema_property(properties, name)
+    property_schema["description"] = description
+    return property_schema
+
+
 def _hard_cutover_workflow_create_request_shapes(spec: dict[str, object]) -> None:
     """Publish workflow create requests as shape-enforced public contracts."""
     schemas = (
@@ -547,7 +557,11 @@ def _hard_cutover_workflow_create_request_shapes(spec: dict[str, object]) -> Non
         if isinstance(properties, dict):
             schemas["CreateFreshWorkflowRunRequest"] = {
                 "properties": {
-                    "workflow_id": _schema_property(properties, "workflow_id"),
+                    "workflow_id": _schema_property_with_description(
+                        properties,
+                        "workflow_id",
+                        "Workflow id for the fresh run.",
+                    ),
                     "documents": _schema_property(
                         properties, "documents", nullable=True
                     ),
@@ -570,7 +584,14 @@ def _hard_cutover_workflow_create_request_shapes(spec: dict[str, object]) -> Non
                     "restart_of": _schema_property(properties, "restart_of"),
                     "config_source": _schema_property(properties, "config_source"),
                     "command_id": _schema_property(properties, "command_id"),
-                    "workflow_id": _schema_property(properties, "workflow_id"),
+                    "workflow_id": _schema_property_with_description(
+                        properties,
+                        "workflow_id",
+                        (
+                            "Optional workflow id when the client already has "
+                            "it; otherwise inferred from restart_of."
+                        ),
+                    ),
                 },
                 "type": "object",
                 "required": ["restart_of", "config_source"],
