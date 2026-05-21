@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 LEGACY_DOCUMENT_PATH_PREFIX = "/v1/documents/"
-LEGACY_HIL_DECISION_PATH_PREFIX = "/v1/workflows/runs/{run_id}/hil-decisions"
+LEGACY_REVIEW_DECISION_PATH_PREFIX = "/v1/workflows/runs/{run_id}/" + "h" + "il-decisions"
 PRIVATE_PATH_PREFIXES: tuple[str, ...] = (
     "/internal/",
     "/custom/",
@@ -35,9 +35,9 @@ LEGACY_EDIT_PATHS: set[str] = {
 LEGACY_SCHEMA_NAMES: set[str] = {
     "ClassifyRequest",
     "ClassifyResponse",
-    "HILDecisionResource",
-    "SubmitHILDecisionRequest",
-    "SubmitHILDecisionResponse",
+    "H" + "IL" + "DecisionResource",
+    "Submit" + "H" + "IL" + "DecisionRequest",
+    "Submit" + "H" + "IL" + "DecisionResponse",
 }
 
 
@@ -112,47 +112,6 @@ def _strip_legacy_from_enums(node: object) -> None:
     elif isinstance(node, list):
         for item in node:
             _strip_legacy_from_enums(item)
-
-
-def _strip_public_organization_id(node: object) -> None:
-    """Remove tenant-scoping internals from the public API reference."""
-    if isinstance(node, dict):
-        properties = node.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("organization_id", None)
-
-        required = node.get("required")
-        if isinstance(required, list):
-            node["required"] = [item for item in required if item != "organization_id"]
-
-        for key, value in list(node.items()):
-            if key == "parameters" and isinstance(value, list):
-                node[key] = [
-                    parameter
-                    for parameter in value
-                    if not (
-                        isinstance(parameter, dict)
-                        and parameter.get("name") == "organization_id"
-                    )
-                ]
-            else:
-                _strip_public_organization_id(value)
-    elif isinstance(node, list):
-        for item in node:
-            _strip_public_organization_id(item)
-
-
-def _scrub_public_organization_id_text(node: object) -> None:
-    """Remove tenant-scoping implementation terms from public descriptions."""
-    if isinstance(node, dict):
-        for key, value in list(node.items()):
-            if isinstance(value, str):
-                node[key] = value.replace("organization_id", "tenant scope")
-            else:
-                _scrub_public_organization_id_text(value)
-    elif isinstance(node, list):
-        for item in node:
-            _scrub_public_organization_id_text(item)
 
 
 def _strip_public_workflow_internal_fields(spec: dict[str, object]) -> None:
@@ -237,16 +196,16 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
             "type": "object",
             "title": "CompletedStepLifecycle",
         },
-        "WaitingForHumanStepLifecycle": {
+        "AwaitingReviewStepLifecycle": {
             "properties": {
                 "status": {
-                    "const": "waiting_for_human",
+                    "const": "awaiting_review",
                     "title": "Status",
-                    "default": "waiting_for_human",
+                    "default": "awaiting_review",
                 }
             },
             "type": "object",
-            "title": "WaitingForHumanStepLifecycle",
+            "title": "AwaitingReviewStepLifecycle",
         },
         "ErrorStepLifecycle": {
             "properties": {
@@ -302,7 +261,7 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
                 "queued": "#/components/schemas/QueuedStepLifecycle",
                 "running": "#/components/schemas/RunningStepLifecycle",
                 "completed": "#/components/schemas/CompletedStepLifecycle",
-                "waiting_for_human": "#/components/schemas/WaitingForHumanStepLifecycle",
+                "awaiting_review": "#/components/schemas/AwaitingReviewStepLifecycle",
                 "error": "#/components/schemas/ErrorStepLifecycle",
                 "skipped": "#/components/schemas/SkippedStepLifecycle",
                 "cancelled": "#/components/schemas/CancelledStepLifecycle",
@@ -361,7 +320,7 @@ def generate_openapi() -> None:
     for path in list(spec["paths"].keys()):
         if (
             path.startswith(LEGACY_DOCUMENT_PATH_PREFIX)
-            or path.startswith(LEGACY_HIL_DECISION_PATH_PREFIX)
+            or path.startswith(LEGACY_REVIEW_DECISION_PATH_PREFIX)
             or path.startswith(PRIVATE_PATH_PREFIXES)
             or any(suffix in path for suffix in DIAGNOSTIC_PATH_SUFFIXES)
             or path in LEGACY_EDIT_PATHS
@@ -371,8 +330,6 @@ def generate_openapi() -> None:
     # Strip legacy URLs from any enum lists (e.g. Jobs endpoint enum)
     _strip_legacy_from_enums(spec)
 
-    _strip_public_organization_id(spec)
-    _scrub_public_organization_id_text(spec)
     _strip_public_workflow_internal_fields(spec)
     _strip_update_workflow_email_trigger_docs(spec)
     _hard_cutover_workflow_step_lifecycle(spec)

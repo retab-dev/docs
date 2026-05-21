@@ -3,21 +3,20 @@ title: 'List Reviews'
 openapi: 'GET /v1/workflows/reviews'
 ---
 
-List the review queue — every gated block run that has an open review overlay, plus recently decided ones.
+List the review queue — every gated block run that has an open review.
 
-Each item is a `ReviewQueueItem` summary, not the full overlay. Use [Get Review](/api-reference/workflows/reviews/get) to fetch the complete overlay (versions, decisions, audit trail) for a given `(run_id, block_id)` pair.
+Each item is a `ReviewQueueItem` summary, not the full review. Use [Get Review](/api-reference/workflows/reviews/get) to fetch `versions_by_id` and `decision` for a given `(run_id, block_id)` pair.
 
 Filter the queue with the query parameters:
 
 | Parameter | Notes |
 |---|---|
 | `workflow_id` | Optional — restrict to a single workflow. |
-| `status` | `awaiting_review` / `approved` / `rejected`. Omit to return all. |
-| `mine` | `true` returns only overlays you currently hold the advisory claim on. |
-| `limit` | `1`–`200`. Defaults to a server-side page size; paginate with `has_more`. |
+| `decision` | Defaults to `none`, which lists only reviews still awaiting a decision. Omit it to list all reviews. |
+| `limit` | `1`–`200`. Defaults to a server-side page size. `has_more: true` means the result was truncated; narrow filters or raise `limit` to inspect more items. |
 
 <Note>
-This is the entry point for building a review inbox. For the end-to-end loop — claiming, editing, and submitting a verdict — see the [HIL Reviews guide](/workflows/HIL-Reviews).
+This is the entry point for building a review inbox. For the end-to-end loop — editing and submitting a verdict — see the [Reviews guide](/workflows/Reviews).
 </Note>
 
 <RequestExample>
@@ -27,15 +26,10 @@ from retab import Retab
 
 client = Retab()
 
-# Open reviews waiting on a human, across all workflows
-queue = client.workflows.reviews.list(status="awaiting_review", limit=50)
+queue = client.workflows.reviews.list(workflow_id="wf_1", limit=50)
 
 for item in queue.data:
-    print(item.workflow_run_id, item.block_id, item.status)
-
-# Only the reviews I've claimed
-mine = client.workflows.reviews.list(mine=True)
-print(len(mine.data), "claimed", mine.has_more)
+    print(item.workflow_run_id, item.block_id, item.awaiting_since)
 ```
 
 ```javascript javascript
@@ -43,24 +37,19 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-// Open reviews waiting on a human, across all workflows
 const queue = await client.workflows.reviews.list({
-  status: "awaiting_review",
+  workflowId: "wf_1",
   limit: 50,
 });
 
 for (const item of queue.data) {
-  console.log(item.workflow_run_id, item.block_id, item.status);
+  console.log(item.workflow_run_id, item.block_id, item.awaiting_since);
 }
-
-// Only the reviews I've claimed
-const mine = await client.workflows.reviews.list({ mine: true });
-console.log(mine.data.length, "claimed", mine.has_more);
 ```
 
 ```bash curl
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/reviews?status=awaiting_review&limit=50' \
+  'https://api.retab.com/v1/workflows/reviews?workflow_id=wf_1&limit=50' \
   -H 'Api-Key: <your-api-key>'
 ```
 
@@ -72,34 +61,16 @@ curl -X 'GET' \
 {
   "data": [
     {
+      "_id": "run_abc123:block_extract",
       "workflow_run_id": "run_abc123",
+      "block_run_id": "run_abc123:block_extract",
       "block_id": "block_extract",
       "workflow_id": "wf_1",
-      "status": "awaiting_review",
-      "rev": 3,
-      "latest_version_seq": 1,
-      "claim": {
-        "holder": {
-          "kind": "human",
-          "id": "user_42",
-          "display_name": "Dana Rivera"
-        },
-        "claimed_at": "2026-05-13T08:55:00.000Z",
-        "expires_at": "2026-05-13T09:55:00.000Z"
-      },
-      "created_at": "2026-05-13T08:14:02.341Z",
-      "updated_at": "2026-05-13T09:02:51.118Z"
-    },
-    {
-      "workflow_run_id": "run_def456",
-      "block_id": "hil-2",
-      "workflow_id": "wf_1",
-      "status": "awaiting_review",
-      "rev": 0,
-      "latest_version_seq": 0,
-      "claim": null,
-      "created_at": "2026-05-13T09:40:10.002Z",
-      "updated_at": "2026-05-13T09:40:10.002Z"
+      "workflow_version_id": "wfv_1",
+      "block_type": "extract",
+      "triggered_by": { "kind": "always" },
+      "awaiting_since": "2026-05-13T08:14:02.341Z",
+      "priority": 0
     }
   ],
   "has_more": false

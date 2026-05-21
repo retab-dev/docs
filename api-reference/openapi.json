@@ -13672,7 +13672,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ProcessorConfig"
+                "$ref": "#/components/schemas/ProcessorConfig-Input"
               }
             }
           }
@@ -13683,7 +13683,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StoredProcessor"
+                  "$ref": "#/components/schemas/ProcessorConfig-Output"
                 }
               }
             }
@@ -13747,7 +13747,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StoredProcessor"
+                  "$ref": "#/components/schemas/ProcessorConfig-Output"
                 }
               }
             }
@@ -13799,7 +13799,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StoredProcessor"
+                  "$ref": "#/components/schemas/ProcessorConfig-Output"
                 }
               }
             }
@@ -13909,7 +13909,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StoredProcessor"
+                  "$ref": "#/components/schemas/ProcessorConfig-Output"
                 }
               }
             }
@@ -21500,7 +21500,7 @@
       "get": {
         "tags": [
           "Workflows",
-          "Workflow review Reviews"
+          "Workflow Reviews"
         ],
         "summary": "List Reviews Route",
         "description": "The review queue: block runs awaiting review, hottest first.",
@@ -21534,31 +21534,23 @@
             }
           },
           {
-            "name": "status",
+            "name": "decision",
             "in": "query",
             "required": false,
             "schema": {
-              "enum": [
-                "awaiting_review",
-                "approved",
-                "rejected"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "type": "string",
-              "default": "awaiting_review",
-              "title": "Status"
-            }
-          },
-          {
-            "name": "mine",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "Only reviews claimed by the caller.",
-              "default": false,
-              "title": "Mine"
+              "description": "Use 'none' to list reviews awaiting a decision; omit to list all.",
+              "default": "none",
+              "title": "Decision"
             },
-            "description": "Only reviews claimed by the caller."
+            "description": "Use 'none' to list reviews awaiting a decision; omit to list all."
           },
           {
             "name": "limit",
@@ -21601,10 +21593,10 @@
       "get": {
         "tags": [
           "Workflows",
-          "Workflow review Reviews"
+          "Workflow Reviews"
         ],
         "summary": "Get Review Route",
-        "description": "The full overlay for one reviewed (run, block): every version, every\ndecision, the audit trail, and the `rev` CAS token.",
+        "description": "The full review for one reviewed (run, block).",
         "operationId": "get_review_route_v1_workflows_reviews__run_id___block_id__get",
         "security": [
           {
@@ -21643,7 +21635,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewOverlayResponse"
+                  "$ref": "#/components/schemas/ReviewResponse"
                 }
               }
             }
@@ -21665,10 +21657,10 @@
       "post": {
         "tags": [
           "Workflows",
-          "Workflow review Reviews"
+          "Workflow Reviews"
         ],
         "summary": "Append Version Route",
-        "description": "Append a corrective edit as a new immutable version, without deciding.",
+        "description": "Create a corrected immutable version, without deciding.",
         "operationId": "append_version_route_v1_workflows_reviews__run_id___block_id__versions_post",
         "security": [
           {
@@ -21717,7 +21709,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewOverlayResponse"
+                  "$ref": "#/components/schemas/ReviewResponse"
                 }
               }
             }
@@ -21739,10 +21731,10 @@
       "post": {
         "tags": [
           "Workflows",
-          "Workflow review Reviews"
+          "Workflow Reviews"
         ],
         "summary": "Submit Decision Route",
-        "description": "Approve / approve-with-edits / reject a reviewed block run.",
+        "description": "Approve or reject a reviewed block run by exact version id.",
         "operationId": "submit_decision_route_v1_workflows_reviews__run_id___block_id__decision_post",
         "security": [
           {
@@ -21792,154 +21784,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SubmitDecisionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/reviews/{run_id}/{block_id}/claim": {
-      "post": {
-        "tags": [
-          "Workflows",
-          "Workflow review Reviews"
-        ],
-        "summary": "Claim Review Route",
-        "description": "Take the advisory review claim ('Dana is reviewing this').",
-        "operationId": "claim_review_route_v1_workflows_reviews__run_id___block_id__claim_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "block_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Block Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ClaimRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReviewOverlayResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/reviews/{run_id}/{block_id}/release": {
-      "post": {
-        "tags": [
-          "Workflows",
-          "Workflow review Reviews"
-        ],
-        "summary": "Release Review Route",
-        "description": "Release the advisory review claim.",
-        "operationId": "release_review_route_v1_workflows_reviews__run_id___block_id__release_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "block_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Block Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReleaseRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReviewOverlayResponse"
                 }
               }
             }
@@ -27368,7 +27212,7 @@
           "Workflows"
         ],
         "summary": "Apply Computations Endpoint",
-        "description": "Apply computations to the provided data using the overlay computation engine.\n\nThis endpoint accepts a computation spec and data, and returns the data with\ncomputed fields applied. Useful for review-gated review overlays to preview computed values\nwhen editing extraction data.",
+        "description": "Apply computations to the provided data using the overlay computation engine.\n\nThis endpoint accepts a computation spec and data, and returns the data with\ncomputed fields applied. Useful for Reviews to preview computed values\nwhen editing extraction data.",
         "operationId": "apply_computations_endpoint_v1_workflows_apply_computations_post",
         "requestBody": {
           "content": {
@@ -31827,14 +31671,12 @@
           "id": {
             "type": "string",
             "minLength": 1,
-            "title": "Id",
-            "description": "user id | agent deployment id | model slug"
+            "title": "Id"
           },
           "display_name": {
             "type": "string",
             "minLength": 1,
-            "title": "Display Name",
-            "description": "Denormalized so the audit trail renders without a join and survives the principal's deletion."
+            "title": "Display Name"
           }
         },
         "additionalProperties": false,
@@ -31845,7 +31687,7 @@
           "display_name"
         ],
         "title": "Actor",
-        "description": "Who authored a version or made a decision.\n\nModel, agent, and human are the SAME shape \u2014 `kind` is a tag, never\nbranched on outside presentation. A frozen value object: embedded\neverywhere, never its own collection."
+        "description": "One actor shape for humans, agents, and models."
       },
       "AddBuilderDocumentRequest": {
         "properties": {
@@ -32513,59 +32355,25 @@
       "AppendVersionRequest": {
         "properties": {
           "snapshot": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "additionalProperties": true,
+            "type": "object",
             "title": "Snapshot",
-            "description": "The FULL corrected output JSON \u2014 a complete replacement object, not a partial diff."
+            "description": "The full reviewed snapshot to store as an immutable version. The object must match the gated block type: extract uses the raw output object; classifier uses {'category': string}; split uses {'documents': [{'name': string, 'pages': positive sorted int[]}]}; for_each uses {'partitions': [{'key': string, 'pages': positive sorted int[]}]}. The server validates the shape and stores the exact submitted object when valid."
           },
-          "reviewable_value": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reviewable Value",
-            "description": "Optional primitive-specific value edited by the reviewer. The server validates and compiles it into a full output snapshot before appending the version. Mutually exclusive with snapshot."
-          },
-          "version_stamp": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Version Stamp",
-            "description": "CAS token: the overlay `rev` the client last read. The server returns 409 on mismatch so the client can re-read and rebase."
+          "parent_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Parent Id",
+            "description": "The version id this snapshot was authored from."
           },
           "origin": {
             "type": "string",
             "enum": [
-              "agent_edit",
-              "human_edit"
+              "agent_created",
+              "human_created"
             ],
             "title": "Origin",
-            "description": "Who-shaped origin of this edit. seq=0 / 'model_output' / 'revert' are not valid here.",
-            "default": "human_edit"
-          },
-          "parent_seq": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Seq",
-            "description": "Version seq this edit was authored from. Defaults to the overlay head."
+            "default": "human_created"
           },
           "note": {
             "anyOf": [
@@ -32576,29 +32384,17 @@
                 "type": "null"
               }
             ],
-            "title": "Note",
-            "description": "Free-text rationale from the author."
-          },
-          "command_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Command Id",
-            "description": "Optional idempotency key \u2014 a retried append with the same command_id is deduplicated."
+            "title": "Note"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "version_stamp"
+          "snapshot",
+          "parent_id"
         ],
         "title": "AppendVersionRequest",
-        "description": "Append an edit (a new `OutputVersion`) without deciding."
+        "description": "Append a corrected snapshot without deciding."
       },
       "ApplyComputationsRequest": {
         "properties": {
@@ -33190,68 +32986,6 @@
         "type": "object",
         "title": "AttachmentMetadata"
       },
-      "AuditEntry": {
-        "properties": {
-          "entry_id": {
-            "type": "string",
-            "title": "Entry Id"
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "gate_fired",
-              "version_added",
-              "claimed",
-              "released",
-              "decision_made",
-              "reopened",
-              "stale_write_rejected"
-            ],
-            "title": "Action"
-          },
-          "actor": {
-            "$ref": "#/components/schemas/Actor"
-          },
-          "at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "At"
-          },
-          "rev_observed": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Rev Observed",
-            "description": "The overlay `rev` the actor read before acting."
-          },
-          "rev_result": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rev Result",
-            "description": "`rev` after a successful write; None when the attempt was rejected as stale."
-          },
-          "detail": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Detail",
-            "description": "Action-specific payload."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "action",
-          "actor",
-          "rev_observed"
-        ],
-        "title": "AuditEntry",
-        "description": "Append-only. Records every act on the overlay \u2014 crucially including\nREJECTED stale writes, which leave no trace in `versions`/`decisions` but\nare exactly what an audit of a contested review must show."
-      },
       "AutomationConfig": {
         "properties": {
           "id": {
@@ -33475,6 +33209,27 @@
           "external_request_log"
         ],
         "title": "AutomationLog"
+      },
+      "AwaitingReviewRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "awaiting_review",
+            "title": "Status",
+            "default": "awaiting_review"
+          },
+          "waiting_for_block_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Waiting For Block Ids",
+            "description": "Block IDs that are waiting for review"
+          }
+        },
+        "type": "object",
+        "title": "AwaitingReviewRun",
+        "description": "The run is paused on at least one gated block."
       },
       "BBox-Input": {
         "properties": {
@@ -36255,31 +36010,6 @@
         "type": "object",
         "title": "ChoiceLogprobs",
         "description": "Log probability information for the choice."
-      },
-      "ClaimRequest": {
-        "properties": {
-          "version_stamp": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Version Stamp",
-            "description": "CAS token (overlay `rev`)."
-          },
-          "ttl_seconds": {
-            "type": "integer",
-            "maximum": 86400.0,
-            "minimum": 30.0,
-            "title": "Ttl Seconds",
-            "description": "How long the advisory claim holds before it expires.",
-            "default": 900
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "version_stamp"
-        ],
-        "title": "ClaimRequest",
-        "description": "Take or release the advisory review claim."
       },
       "ClassificationConsensus": {
         "properties": {
@@ -43507,7 +43237,7 @@
             "description": "The drafted changes of the iteration",
             "default": {
               "schema_overrides": {},
-              "updated_at": "2026-05-20T18:06:17.285902Z",
+              "updated_at": "2026-05-21T09:30:11.444439Z",
               "inference_settings": {
                 "image_resolution_dpi": 192,
                 "model": "retab-small",
@@ -43791,9 +43521,13 @@
                 "$ref": "#/components/schemas/JobResponse"
               },
               {
+                "$ref": "#/components/schemas/StoredJobResponse"
+              },
+              {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Response"
           }
         },
         "type": "object",
@@ -43995,9 +43729,13 @@
                 "$ref": "#/components/schemas/JobResponse"
               },
               {
+                "$ref": "#/components/schemas/StoredJobResponse"
+              },
+              {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Response"
           }
         },
         "type": "object",
@@ -46242,23 +45980,17 @@
       },
       "OutputVersion": {
         "properties": {
-          "seq": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Seq",
-            "description": "Dense, gapless, per-overlay. seq=0 is the model output. IS the identity, the lineage index, and the CAS coordinate."
-          },
-          "parent_seq": {
+          "parent_id": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Parent Seq",
-            "description": "The seq this version was authored from. None iff seq==0. Normally seq-1; a 'revert' may point further back. Stored explicitly so a future branching (DAG) model is a non-breaking change."
+            "title": "Parent Id"
           },
           "author": {
             "$ref": "#/components/schemas/Actor"
@@ -46267,23 +45999,15 @@
             "type": "string",
             "enum": [
               "model_output",
-              "agent_edit",
-              "human_edit",
-              "revert"
+              "agent_created",
+              "human_created"
             ],
             "title": "Origin"
           },
           "snapshot": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Snapshot",
-            "description": "FULL output JSON. Immutable. Never a delta."
-          },
-          "content_sha256": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Content Sha256",
-            "description": "sha256 of canonical-JSON(snapshot). For dedup and integrity ONLY \u2014 not identity, not lineage."
+            "title": "Snapshot"
           },
           "note": {
             "anyOf": [
@@ -46294,8 +46018,7 @@
                 "type": "null"
               }
             ],
-            "title": "Note",
-            "description": "Free-text rationale from the author."
+            "title": "Note"
           },
           "created_at": {
             "type": "string",
@@ -46306,14 +46029,12 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "seq",
           "author",
           "origin",
-          "snapshot",
-          "content_sha256"
+          "snapshot"
         ],
         "title": "OutputVersion",
-        "description": "One immutable, full JSON snapshot of the block output.\n\nNever a delta; never mutated after append. Identified within its overlay\nby `seq`."
+        "description": "One immutable reviewed output state.\n\nThe version id is the key in ``ReviewOverlay.versions_by_id`` and is\ncomputed from ``snapshot``. It is deliberately not duplicated in the value."
       },
       "OverviewUsageSeriesPoint": {
         "properties": {
@@ -48909,7 +48630,7 @@
         ],
         "title": "ProcessingRequestOrigin"
       },
-      "ProcessorConfig": {
+      "ProcessorConfig-Input": {
         "properties": {
           "object": {
             "type": "string",
@@ -48995,6 +48716,109 @@
           "name",
           "model",
           "json_schema"
+        ],
+        "title": "ProcessorConfig"
+      },
+      "ProcessorConfig-Output": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "title": "Object",
+            "description": "Type of the object",
+            "default": "processor"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier for the processor"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the processor"
+          },
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "Resolution of the image sent to the LLM",
+            "default": 96
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model used for chat completion"
+          },
+          "json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Schema",
+            "description": "JSON schema format used to validate the output data."
+          },
+          "reasoning_effort": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "minimal",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Effort",
+            "description": "The effort level for the model to reason about the input data. If not provided, the default reasoning effort for the model will be used.",
+            "default": "minimal"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus",
+            "description": "Number of consensus required to validate the data",
+            "default": 1
+          },
+          "layout_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layout Schema",
+            "description": "Layout schema format used to display the data"
+          },
+          "schema_data_id": {
+            "type": "string",
+            "title": "Schema Data Id",
+            "description": "Schema data version ID.",
+            "readOnly": true
+          },
+          "schema_id": {
+            "type": "string",
+            "title": "Schema Id",
+            "description": "Schema version ID.",
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "model",
+          "json_schema",
+          "schema_data_id",
+          "schema_id"
         ],
         "title": "ProcessorConfig"
       },
@@ -49763,22 +49587,6 @@
           "page_indices"
         ],
         "title": "ReadPagesRequest"
-      },
-      "ReleaseRequest": {
-        "properties": {
-          "version_stamp": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Version Stamp",
-            "description": "CAS token (overlay `rev`)."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "version_stamp"
-        ],
-        "title": "ReleaseRequest"
       },
       "RenameProjectRequest": {
         "properties": {
@@ -50771,31 +50579,6 @@
         "title": "ReviewCategoryIn",
         "description": "Gate when the predicted category is in `categories` (e.g., review fraud alerts)."
       },
-      "ReviewClaim": {
-        "properties": {
-          "holder": {
-            "$ref": "#/components/schemas/Actor"
-          },
-          "claimed_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Claimed At"
-          },
-          "expires_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Expires At"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "holder",
-          "expires_at"
-        ],
-        "title": "ReviewClaim",
-        "description": "A soft lease so the UI can show 'Dana is reviewing this'. NOT a lock \u2014\ncorrectness rests entirely on the `rev` CAS. Claims expire."
-      },
       "ReviewConfidenceLt": {
         "properties": {
           "kind": {
@@ -50822,10 +50605,6 @@
       },
       "ReviewDecision": {
         "properties": {
-          "decision_id": {
-            "type": "string",
-            "title": "Decision Id"
-          },
           "verdict": {
             "type": "string",
             "enum": [
@@ -50834,6 +50613,11 @@
             ],
             "title": "Verdict"
           },
+          "version_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Version Id"
+          },
           "decided_by": {
             "$ref": "#/components/schemas/Actor"
           },
@@ -50841,24 +50625,6 @@
             "type": "string",
             "format": "date-time",
             "title": "Decided At"
-          },
-          "on_seq": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "On Seq",
-            "description": "The version seq the reviewer actually saw and ruled on. Pins the verdict to an exact snapshot."
-          },
-          "effective_seq": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Effective Seq",
-            "description": "The seq chosen as the effective output. REQUIRED for 'approved' (usually == on_seq, but an approver may bless an earlier seq). None for 'rejected'."
           },
           "reason": {
             "anyOf": [
@@ -50869,31 +50635,18 @@
                 "type": "null"
               }
             ],
-            "title": "Reason",
-            "description": "Required by API policy for 'rejected'."
-          },
-          "supersedes_decision_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Supersedes Decision Id",
-            "description": "The prior decision this one overrides."
+            "title": "Reason"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "verdict",
-          "decided_by",
-          "on_seq"
+          "version_id",
+          "decided_by"
         ],
         "title": "ReviewDecision",
-        "description": "A verdict cast against one specific version.\n\nAppend-only: any later correction writes a NEW decision; the prior one is\nretained and pointed at by `supersedes_decision_id`."
+        "description": "The one terminal decision over one exact output version."
       },
       "ReviewFieldConfidenceLt": {
         "properties": {
@@ -50948,221 +50701,6 @@
         "title": "ReviewJsonCondition",
         "description": "Gate when a conditional-block-style JSON condition matches.\n\nThe `condition` payload uses the same shape as workflow conditional blocks:\none condition group with `sub_conditions` and a `logical_operator`. Paths are\nevaluated against a review condition root, for example `data.invoice_total`\nor `likelihoods.invoice_total`."
       },
-      "ReviewOverlayResponse": {
-        "properties": {
-          "_id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "workflow_version_id": {
-            "type": "string",
-            "title": "Workflow Version Id"
-          },
-          "workflow_run_id": {
-            "type": "string",
-            "title": "Workflow Run Id"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          },
-          "block_run_id": {
-            "type": "string",
-            "title": "Block Run Id"
-          },
-          "block_type": {
-            "type": "string",
-            "enum": [
-              "extract",
-              "classifier",
-              "split",
-              "for_each"
-            ],
-            "title": "Block Type"
-          },
-          "triggered_by": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ReviewAlways"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewValidationFailed"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewConfidenceLt"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewCategoryIn"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewTopMarginLt"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewSplitCountNeq"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewAnySplitPagesLt"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewBoundaryConfidenceLt"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewAnyRequiredFieldNull"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewFieldConfidenceLt"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewJsonCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewBranchIn"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewAnyOf"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewAllOf"
-              }
-            ],
-            "title": "Triggered By",
-            "discriminator": {
-              "propertyName": "kind",
-              "mapping": {
-                "all_of": "#/components/schemas/ReviewAllOf",
-                "always": "#/components/schemas/ReviewAlways",
-                "any_of": "#/components/schemas/ReviewAnyOf",
-                "any_required_field_null": "#/components/schemas/ReviewAnyRequiredFieldNull",
-                "any_split_pages_lt": "#/components/schemas/ReviewAnySplitPagesLt",
-                "boundary_confidence_lt": "#/components/schemas/ReviewBoundaryConfidenceLt",
-                "branch_in": "#/components/schemas/ReviewBranchIn",
-                "category_in": "#/components/schemas/ReviewCategoryIn",
-                "confidence_lt": "#/components/schemas/ReviewConfidenceLt",
-                "field_confidence_lt": "#/components/schemas/ReviewFieldConfidenceLt",
-                "json_condition": "#/components/schemas/ReviewJsonCondition",
-                "split_count_neq": "#/components/schemas/ReviewSplitCountNeq",
-                "top_margin_lt": "#/components/schemas/ReviewTopMarginLt",
-                "validation_failed": "#/components/schemas/ReviewValidationFailed"
-              }
-            }
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "awaiting_review",
-              "approved",
-              "rejected"
-            ],
-            "title": "Status"
-          },
-          "awaiting_since": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Awaiting Since"
-          },
-          "decided_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Decided At"
-          },
-          "priority": {
-            "type": "integer",
-            "title": "Priority",
-            "default": 0
-          },
-          "rev": {
-            "type": "integer",
-            "title": "Rev",
-            "default": 0
-          },
-          "claim": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ReviewClaim"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "versions": {
-            "items": {
-              "$ref": "#/components/schemas/OutputVersion"
-            },
-            "type": "array",
-            "title": "Versions"
-          },
-          "decisions": {
-            "items": {
-              "$ref": "#/components/schemas/ReviewDecision"
-            },
-            "type": "array",
-            "title": "Decisions"
-          },
-          "audit": {
-            "items": {
-              "$ref": "#/components/schemas/AuditEntry"
-            },
-            "type": "array",
-            "title": "Audit"
-          },
-          "head_seq": {
-            "type": "integer",
-            "title": "Head Seq",
-            "default": 0
-          },
-          "effective_seq": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Effective Seq"
-          },
-          "reviewable_value": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ReviewableValueResponse"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Current block-specific value to review or edit."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "_id",
-          "workflow_id",
-          "workflow_version_id",
-          "workflow_run_id",
-          "block_id",
-          "block_run_id",
-          "block_type",
-          "triggered_by",
-          "status",
-          "awaiting_since",
-          "versions"
-        ],
-        "title": "ReviewOverlayResponse",
-        "description": "Public API shape for the full review overlay.\n\nThe persisted overlay carries runtime-only execution fields. They stay in\nstorage for resume/reconcile, but are not part of the API contract."
-      },
       "ReviewQueueItemResponse": {
         "properties": {
           "_id": {
@@ -51193,8 +50731,8 @@
             "type": "string",
             "enum": [
               "extract",
-              "classifier",
               "split",
+              "classifier",
               "for_each"
             ],
             "title": "Block Type"
@@ -51265,67 +50803,15 @@
               }
             }
           },
-          "status": {
-            "type": "string",
-            "enum": [
-              "awaiting_review",
-              "approved",
-              "rejected"
-            ],
-            "title": "Status"
-          },
           "awaiting_since": {
             "type": "string",
             "format": "date-time",
             "title": "Awaiting Since"
           },
-          "decided_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Decided At"
-          },
           "priority": {
             "type": "integer",
             "title": "Priority",
             "default": 0
-          },
-          "rev": {
-            "type": "integer",
-            "title": "Rev",
-            "default": 0
-          },
-          "claim": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ReviewClaim"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "head_seq": {
-            "type": "integer",
-            "title": "Head Seq",
-            "default": 0
-          },
-          "effective_seq": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Effective Seq"
           }
         },
         "additionalProperties": false,
@@ -51339,7 +50825,6 @@
           "block_run_id",
           "block_type",
           "triggered_by",
-          "status",
           "awaiting_since"
         ],
         "title": "ReviewQueueItemResponse",
@@ -51357,7 +50842,6 @@
           "has_more": {
             "type": "boolean",
             "title": "Has More",
-            "description": "True when the queue has more rows than this page returned.",
             "default": false
           }
         },
@@ -51366,8 +50850,156 @@
         "required": [
           "data"
         ],
-        "title": "ReviewQueueResponse",
-        "description": "The paginated review-queue list (\u00a77)."
+        "title": "ReviewQueueResponse"
+      },
+      "ReviewResponse": {
+        "properties": {
+          "_id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "workflow_version_id": {
+            "type": "string",
+            "title": "Workflow Version Id"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "block_run_id": {
+            "type": "string",
+            "title": "Block Run Id"
+          },
+          "block_type": {
+            "type": "string",
+            "enum": [
+              "extract",
+              "split",
+              "classifier",
+              "for_each"
+            ],
+            "title": "Block Type"
+          },
+          "triggered_by": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ReviewAlways"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewValidationFailed"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewCategoryIn"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewTopMarginLt"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewSplitCountNeq"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewAnySplitPagesLt"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewBoundaryConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewAnyRequiredFieldNull"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewFieldConfidenceLt"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewJsonCondition"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewBranchIn"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewAnyOf"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewAllOf"
+              }
+            ],
+            "title": "Triggered By",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "all_of": "#/components/schemas/ReviewAllOf",
+                "always": "#/components/schemas/ReviewAlways",
+                "any_of": "#/components/schemas/ReviewAnyOf",
+                "any_required_field_null": "#/components/schemas/ReviewAnyRequiredFieldNull",
+                "any_split_pages_lt": "#/components/schemas/ReviewAnySplitPagesLt",
+                "boundary_confidence_lt": "#/components/schemas/ReviewBoundaryConfidenceLt",
+                "branch_in": "#/components/schemas/ReviewBranchIn",
+                "category_in": "#/components/schemas/ReviewCategoryIn",
+                "confidence_lt": "#/components/schemas/ReviewConfidenceLt",
+                "field_confidence_lt": "#/components/schemas/ReviewFieldConfidenceLt",
+                "json_condition": "#/components/schemas/ReviewJsonCondition",
+                "split_count_neq": "#/components/schemas/ReviewSplitCountNeq",
+                "top_margin_lt": "#/components/schemas/ReviewTopMarginLt",
+                "validation_failed": "#/components/schemas/ReviewValidationFailed"
+              }
+            }
+          },
+          "awaiting_since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Awaiting Since"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority",
+            "default": 0
+          },
+          "versions_by_id": {
+            "patternProperties": {
+              "^[0-9a-f]{64}$": {
+                "$ref": "#/components/schemas/OutputVersion"
+              }
+            },
+            "type": "object",
+            "title": "Versions By Id"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "_id",
+          "workflow_id",
+          "workflow_version_id",
+          "workflow_run_id",
+          "block_id",
+          "block_run_id",
+          "block_type",
+          "triggered_by",
+          "awaiting_since",
+          "versions_by_id"
+        ],
+        "title": "ReviewResponse",
+        "description": "Public API shape for the full review."
       },
       "ReviewSplitCountNeq": {
         "properties": {
@@ -51427,59 +51059,6 @@
         "type": "object",
         "title": "ReviewValidationFailed",
         "description": "Gate if the block output fails its declared schema validation."
-      },
-      "ReviewableValueResponse": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "extract",
-              "split",
-              "classifier",
-              "for_each",
-              "partition"
-            ],
-            "title": "Kind",
-            "description": "Primitive-specific reviewable value kind."
-          },
-          "source_seq": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Source Seq",
-            "description": "Overlay version sequence this reviewable value was projected from."
-          },
-          "snapshot_path": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Snapshot Path",
-            "description": "Path in the full output snapshot that contains this value."
-          },
-          "value": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Value",
-            "description": "The JSON value to review or edit."
-          },
-          "effective_output": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Effective Output",
-            "description": "Full output snapshot compiled from this reviewable value."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "kind",
-          "source_seq",
-          "snapshot_path",
-          "value",
-          "effective_output"
-        ],
-        "title": "ReviewableValueResponse",
-        "description": "The block-specific value a reviewer edits, projected from a snapshot."
       },
       "RunExperimentRequest": {
         "properties": {},
@@ -52497,7 +52076,7 @@
                 "$ref": "#/components/schemas/CompletedStepLifecycle"
               },
               {
-                "$ref": "#/components/schemas/WaitingForHumanStepLifecycle"
+                "$ref": "#/components/schemas/AwaitingReviewStepLifecycle"
               },
               {
                 "$ref": "#/components/schemas/ErrorStepLifecycle"
@@ -52516,7 +52095,7 @@
                 "queued": "#/components/schemas/QueuedStepLifecycle",
                 "running": "#/components/schemas/RunningStepLifecycle",
                 "completed": "#/components/schemas/CompletedStepLifecycle",
-                "waiting_for_human": "#/components/schemas/WaitingForHumanStepLifecycle",
+                "awaiting_review": "#/components/schemas/AwaitingReviewStepLifecycle",
                 "error": "#/components/schemas/ErrorStepLifecycle",
                 "skipped": "#/components/schemas/SkippedStepLifecycle",
                 "cancelled": "#/components/schemas/CancelledStepLifecycle"
@@ -52618,7 +52197,7 @@
                 "$ref": "#/components/schemas/CompletedStepLifecycle"
               },
               {
-                "$ref": "#/components/schemas/WaitingForHumanStepLifecycle"
+                "$ref": "#/components/schemas/AwaitingReviewStepLifecycle"
               },
               {
                 "$ref": "#/components/schemas/ErrorStepLifecycle"
@@ -52637,7 +52216,7 @@
                 "queued": "#/components/schemas/QueuedStepLifecycle",
                 "running": "#/components/schemas/RunningStepLifecycle",
                 "completed": "#/components/schemas/CompletedStepLifecycle",
-                "waiting_for_human": "#/components/schemas/WaitingForHumanStepLifecycle",
+                "awaiting_review": "#/components/schemas/AwaitingReviewStepLifecycle",
                 "error": "#/components/schemas/ErrorStepLifecycle",
                 "skipped": "#/components/schemas/SkippedStepLifecycle",
                 "cancelled": "#/components/schemas/CancelledStepLifecycle"
@@ -52756,108 +52335,33 @@
         "title": "StepStatusObject",
         "description": "Public step lifecycle object."
       },
-      "StoredProcessor": {
+      "StoredJobResponse": {
         "properties": {
-          "object": {
-            "type": "string",
-            "title": "Object",
-            "description": "Type of the object",
-            "default": "processor"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Unique identifier for the processor"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Name of the processor"
-          },
-          "image_resolution_dpi": {
+          "status_code": {
             "type": "integer",
-            "title": "Image Resolution Dpi",
-            "description": "Resolution of the image sent to the LLM",
-            "default": 96
+            "title": "Status Code"
           },
-          "model": {
-            "type": "string",
-            "title": "Model",
-            "description": "Model used for chat completion"
-          },
-          "json_schema": {
+          "body": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Json Schema",
-            "description": "JSON schema format used to validate the output data."
+            "title": "Body"
           },
-          "reasoning_effort": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "none",
-                  "minimal",
-                  "low",
-                  "medium",
-                  "high",
-                  "xhigh"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reasoning Effort",
-            "description": "The effort level for the model to reason about the input data. If not provided, the default reasoning effort for the model will be used.",
-            "default": "minimal"
+          "gcs_paths": {
+            "type": "null",
+            "title": "Gcs Paths"
           },
-          "n_consensus": {
-            "type": "integer",
-            "title": "N Consensus",
-            "description": "Number of consensus required to validate the data",
-            "default": 1
-          },
-          "layout_schema": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Layout Schema",
-            "description": "Layout schema format used to display the data"
-          },
-          "schema_data_id": {
-            "type": "string",
-            "title": "Schema Data Id",
-            "description": "Schema data version ID.",
-            "readOnly": true
-          },
-          "schema_id": {
-            "type": "string",
-            "title": "Schema Id",
-            "description": "Schema version ID.",
-            "readOnly": true
+          "body_json_gcs_path": {
+            "type": "null",
+            "title": "Body Json Gcs Path"
           }
         },
         "type": "object",
         "required": [
-          "name",
-          "model",
-          "json_schema",
-          "schema_data_id",
-          "schema_id"
+          "status_code",
+          "body"
         ],
-        "title": "StoredProcessor"
+        "title": "StoredJobResponse",
+        "description": "Internal response shape stored in MongoDB."
       },
       "SubmitDecisionRequest": {
         "properties": {
@@ -52867,64 +52371,13 @@
               "approved",
               "rejected"
             ],
-            "title": "Verdict",
-            "description": "The reviewer's verdict."
+            "title": "Verdict"
           },
-          "version_stamp": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Version Stamp",
-            "description": "CAS token: the overlay `rev` the client last read. 409 on mismatch \u2014 re-read and re-decide, never blindly retry the same stamp."
-          },
-          "edited_output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Edited Output",
-            "description": "Optional FULL corrected output. Valid only with verdict='approved': the server appends it as a human_edit version, then approves that version."
-          },
-          "reviewable_value": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reviewable Value",
-            "description": "Optional primitive-specific reviewed value. Valid only with verdict='approved': the server validates and compiles it into an effective output version before approval. Mutually exclusive with edited_output."
-          },
-          "on_seq": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "On Seq",
-            "description": "The version seq the reviewer ruled on. Defaults to the overlay head."
-          },
-          "effective_seq": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Effective Seq",
-            "description": "The seq to ship downstream. Valid only with verdict='approved'; defaults to on_seq."
+          "version_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Version Id",
+            "description": "Exact content-addressed key from the review's versions_by_id."
           },
           "reason": {
             "anyOf": [
@@ -52936,9 +52389,44 @@
               }
             ],
             "title": "Reason",
-            "description": "Required for 'rejected'; ignored for 'approved'."
+            "description": "Required when verdict is 'rejected'."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "verdict",
+          "version_id"
+        ],
+        "title": "SubmitDecisionRequest",
+        "description": "Submit a terminal decision against one exact version."
+      },
+      "SubmitDecisionResponse": {
+        "properties": {
+          "submission_status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "already_applied",
+              "accepted_pending_resume"
+            ],
+            "title": "Submission Status",
+            "default": "accepted"
           },
-          "command_id": {
+          "review": {
+            "$ref": "#/components/schemas/ReviewResponse"
+          },
+          "resume_status": {
+            "type": "string",
+            "enum": [
+              "resumed",
+              "skipped",
+              "failed"
+            ],
+            "title": "Resume Status",
+            "default": "resumed"
+          },
+          "resume_error": {
             "anyOf": [
               {
                 "type": "string"
@@ -52947,44 +52435,15 @@
                 "type": "null"
               }
             ],
-            "title": "Command Id",
-            "description": "Optional idempotency key \u2014 a retried submit with the same command_id is deduplicated instead of double-applied."
+            "title": "Resume Error"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "verdict",
-          "version_stamp"
+          "review"
         ],
-        "title": "SubmitDecisionRequest",
-        "description": "Submit a verdict against a block run awaiting review.\n\n`approved` with `edited_output` appends a corrective version first, then\napproves it. `rejected` ends the workflow run with error lifecycle."
-      },
-      "SubmitDecisionResponse": {
-        "properties": {
-          "submission_status": {
-            "type": "string",
-            "enum": [
-              "accepted",
-              "already_received",
-              "already_applied"
-            ],
-            "title": "Submission Status",
-            "description": "accepted for a fresh decision; already_received / already_applied for an idempotent retry."
-          },
-          "overlay": {
-            "$ref": "#/components/schemas/ReviewOverlayResponse",
-            "description": "The overlay after the decision was applied."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "submission_status",
-          "overlay"
-        ],
-        "title": "SubmitDecisionResponse",
-        "description": "The result of a decision submission."
+        "title": "SubmitDecisionResponse"
       },
       "TemplateBuilderDocumentPreviewsResponse": {
         "properties": {
@@ -54492,27 +53951,6 @@
           "result"
         ],
         "title": "VerdictSummary"
-      },
-      "WaitingForHumanRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "awaiting_review",
-            "title": "Status",
-            "default": "awaiting_review"
-          },
-          "waiting_for_block_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Waiting For Block Ids",
-            "description": "Block IDs that are waiting for review"
-          }
-        },
-        "type": "object",
-        "title": "WaitingForHumanRun",
-        "description": "The run is paused on at least one gated block."
       },
       "WebhookListResponse": {
         "properties": {
@@ -56991,7 +56429,7 @@
                 "$ref": "#/components/schemas/RunningRun"
               },
               {
-                "$ref": "#/components/schemas/WaitingForHumanRun"
+                "$ref": "#/components/schemas/AwaitingReviewRun"
               },
               {
                 "$ref": "#/components/schemas/CompletedTerminal"
@@ -57008,7 +56446,7 @@
             "discriminator": {
               "propertyName": "status",
               "mapping": {
-                "awaiting_review": "#/components/schemas/WaitingForHumanRun",
+                "awaiting_review": "#/components/schemas/AwaitingReviewRun",
                 "cancelled": "#/components/schemas/CancelledTerminal",
                 "completed": "#/components/schemas/CompletedTerminal",
                 "error": "#/components/schemas/ErrorTerminal",
@@ -59068,16 +58506,16 @@
         "type": "object",
         "title": "CompletedStepLifecycle"
       },
-      "WaitingForHumanStepLifecycle": {
+      "AwaitingReviewStepLifecycle": {
         "properties": {
           "status": {
-            "const": "waiting_for_human",
+            "const": "awaiting_review",
             "title": "Status",
-            "default": "waiting_for_human"
+            "default": "awaiting_review"
           }
         },
         "type": "object",
-        "title": "WaitingForHumanStepLifecycle"
+        "title": "AwaitingReviewStepLifecycle"
       },
       "ErrorStepLifecycle": {
         "properties": {

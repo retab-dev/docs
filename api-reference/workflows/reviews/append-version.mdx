@@ -3,50 +3,51 @@ title: 'Append Version'
 openapi: 'POST /v1/workflows/reviews/{run_id}/{block_id}/versions'
 ---
 
-Append a corrective edit version to a review overlay.
+Append a corrective edit version to a review.
 
-This records a new version of the gated block's output without submitting a verdict. The overlay's full version history is preserved — the model's original stays at sequence `0`, and your edit is appended as the next sequence. The newly appended version becomes the **effective output** that a subsequent `approved` decision will flow downstream.
+This records a new immutable snapshot of the gated block's output without submitting a verdict. The new version is addressed by the content hash of its `snapshot`.
 
 The request body carries:
 
 | Field | Notes |
 |---|---|
-| `snapshot` | The corrected output payload. Required unless `reviewable_value` is provided. |
-| `reviewable_value` | Primitive-specific reviewed value, such as a split manifest or split-by-key `for_each` partition map. Mutually exclusive with `snapshot`. |
-| `version_stamp` | The overlay `rev` you last read. Required — see the conflict note below. |
+| `snapshot` | The full corrected output payload. It must match the gated block's canonical review snapshot shape. |
+| `parent_id` | The content-hash id of the version this snapshot was edited from. |
 | `origin` | Provenance label for the version, e.g. `"human_edit"` (default). |
-| `note` | Optional free-text note explaining the correction. Recorded in the audit trail. |
-| `command_id` | Optional idempotency key — a retried call with the same `command_id` is deduplicated. |
+| `note` | Optional free-text note explaining the correction. |
 
-<Warning>
-`version_stamp` is a compare-and-swap token. Send the value you last read from [Get Review](/api-reference/workflows/reviews/get). If the overlay has advanced (another actor edited or decided in the meantime), the call returns **`409`** — re-read the overlay and retry with the fresh stamp. A stale stamp raises `retab.exceptions.ConflictError` in Python and surfaces as an `APIError` with `.status === 409` in JavaScript.
-</Warning>
+Snapshot validation is block-specific:
 
-If you want to record a correction *and* approve it in one step, use [Submit Decision](/api-reference/workflows/reviews/submit-decision) with `edited_output` instead — the server appends the version and then approves it atomically.
+| Block type | Required snapshot |
+|---|---|
+| `extract` | Raw extracted JSON object. |
+| `classifier` | `{ "category": "..." }` only. Reasoning is not review state. |
+| `split` | `{ "documents": [{ "name": "...", "pages": [1, 2] }] }`. |
+| `for_each` | `{ "partitions": [{ "key": "...", "pages": [1, 2] }] }`. Only split-by-key for-each reviews are supported. |
+
+For split and for-each snapshots, page arrays must contain positive integers, sorted ascending, with no duplicates. Invalid snapshots return `422` and are not stored.
+
+The API does not support partial patches. Always submit the complete replacement snapshot you want reviewers to decide on.
 
 <RequestExample>
 
 ```python python
 from retab import Retab
-from retab.exceptions import ConflictError
 
 client = Retab()
 
-overlay = client.workflows.reviews.get("run_abc123", "block_extract")
+review = client.workflows.reviews.get("run_abc123", "block_extract")
+parent_id = next(iter(review.versions_by_id))
 
-try:
-    overlay = client.workflows.reviews.edit(
-        "run_abc123",
-        "block_extract",
-        snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
-        version_stamp=overlay.version_stamp,
-        origin="human_edit",
-        note="Corrected total to match ATM + checks subtotal.",
-    )
-    print("new effective version:", overlay.versions[-1].seq)
-except ConflictError:
-    # Overlay moved on — re-read and retry with the fresh stamp.
-    overlay = client.workflows.reviews.get("run_abc123", "block_extract")
+review = client.workflows.reviews.edit(
+    "run_abc123",
+    "block_extract",
+    parent_id=parent_id,
+    snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
+    origin="human_edit",
+    note="Corrected total.",
+)
+print("versions:", len(review.versions_by_id))
 ```
 
 ```javascript javascript
@@ -54,24 +55,16 @@ import { Retab } from '@retab/node';
 
 const client = new Retab();
 
-let overlay = await client.workflows.reviews.get("run_abc123", "block_extract");
+let review = await client.workflows.reviews.get("run_abc123", "block_extract");
+const parentId = Object.keys(review.versions_by_id)[0];
 
-try {
-  overlay = await client.workflows.reviews.edit("run_abc123", "block_extract", {
-    snapshot: { total_amount: 325, vendor_name: "Acme Corp" },
-    versionStamp: overlay.rev,
-    origin: "human_edit",
-    note: "Corrected total to match ATM + checks subtotal.",
-  });
-  console.log("new effective version:", overlay.versions.at(-1).seq);
-} catch (err) {
-  if (err.status === 409) {
-    // Overlay moved on — re-read and retry with the fresh stamp.
-    overlay = await client.workflows.reviews.get("run_abc123", "block_extract");
-  } else {
-    throw err;
-  }
-}
+review = await client.workflows.reviews.edit("run_abc123", "block_extract", {
+  parentId,
+  snapshot: { total_amount: 325, vendor_name: "Acme Corp" },
+  origin: "human_edit",
+  note: "Corrected total.",
+});
+console.log("versions:", Object.keys(review.versions_by_id).length);
 ```
 
 ```bash curl
@@ -81,9 +74,9 @@ curl -X 'POST' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
     "snapshot": { "total_amount": 325, "vendor_name": "Acme Corp" },
-    "version_stamp": 3,
+    "parent_id": "a9f4d2e7f50b8b7bc84f4d96d2ad831a2a3bfead9b46f945baf2f8eb2f457a18",
     "origin": "human_edit",
-    "note": "Corrected total to match ATM + checks subtotal."
+    "note": "Corrected total."
   }'
 ```
 
@@ -98,49 +91,42 @@ curl -X 'POST' \
   "block_run_id": "run_abc123:block_extract",
   "block_id": "block_extract",
   "workflow_id": "wf_1",
-  "status": "awaiting_review",
-  "rev": 4,
-  "claim": {
-    "holder": {
-      "kind": "human",
-      "id": "user_42",
-      "display_name": "Dana Rivera"
-    },
-    "claimed_at": "2026-05-13T08:55:00.000Z",
-    "expires_at": "2026-05-13T09:55:00.000Z"
-  },
-  "versions": [
-    {
-      "seq": 0,
+  "workflow_version_id": "wfv_1",
+  "block_type": "extract",
+  "triggered_by": { "kind": "always" },
+  "awaiting_since": "2026-05-13T08:14:02.341Z",
+  "priority": 0,
+  "versions_by_id": {
+    "a9f4d2e7f50b8b7bc84f4d96d2ad831a2a3bfead9b46f945baf2f8eb2f457a18": {
+      "parent_id": null,
       "origin": "model_output",
       "author": { "kind": "model", "id": "retab-small", "display_name": "Retab Small" },
       "snapshot": { "total_amount": 505, "vendor_name": "Acme Corp" },
       "note": null,
       "created_at": "2026-05-13T08:14:02.341Z"
     },
-    {
-      "seq": 1,
+    "b7d7f3ddc4ce98edbb5ea71d2ff8a7b711b3d4b70c20f481e14c03c7d53e15e2": {
+      "parent_id": "a9f4d2e7f50b8b7bc84f4d96d2ad831a2a3bfead9b46f945baf2f8eb2f457a18",
       "origin": "human_edit",
       "author": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
       "snapshot": { "total_amount": 325, "vendor_name": "Acme Corp" },
-      "note": "Corrected total to match ATM + checks subtotal.",
+      "note": "Corrected total.",
       "created_at": "2026-05-13T09:02:51.118Z"
     }
-  ],
-  "decisions": [],
-  "audit": [
-    {
-      "event": "version_appended",
-      "actor": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
-      "at": "2026-05-13T09:02:51.118Z"
-    }
-  ]
+  },
+  "decision": null
 }
 ```
 
 ```json 409
 {
-  "detail": "Stale version_stamp: overlay is at rev 4, request sent rev 3. Re-read the overlay and retry."
+  "detail": "Review run_abc123:block_extract already has a decision."
+}
+```
+
+```json 422
+{
+  "detail": "classifier review snapshots must match ClassificationReviewSnapshot: ..."
 }
 ```
 
