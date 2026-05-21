@@ -285,7 +285,7 @@ def _strip_public_workflow_internal_fields(spec: dict[str, object]) -> None:
         return
 
     internal_fields_by_schema = {
-        "WorkflowBlock": {"draft_version", "field_ref_snapshot"},
+        "WorkflowBlock": {"draft_version", "field_ref_snapshot", "organization_id"},
         "WorkflowEdge": {"draft_version"},
         "WorkflowConfigBlock": {"field_ref_snapshot"},
     }
