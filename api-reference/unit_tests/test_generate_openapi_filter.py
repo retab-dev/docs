@@ -141,6 +141,84 @@ def test_missing_docs_json_api_reference_page_fails(tmp_path: Path) -> None:
         )
 
 
+def test_workflow_create_request_docs_publish_shape_variants() -> None:
+    spec = {
+        "components": {
+            "schemas": {
+                "CreateWorkflowRunRequest": {
+                    "properties": {
+                        "workflow_id": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}],
+                            "title": "Workflow Id",
+                        },
+                        "documents": {"type": "array", "items": {"type": "object"}},
+                        "json_inputs": {"type": "object"},
+                        "version": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}]
+                        },
+                        "restart_of": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}]
+                        },
+                        "config_source": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}]
+                        },
+                        "command_id": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}]
+                        },
+                    }
+                },
+                "CreateWorkflowTestRunRequest": {
+                    "properties": {
+                        "workflow_id": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}]
+                        },
+                        "test_id": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}]
+                        },
+                        "target": {
+                            "anyOf": [
+                                {"$ref": "#/components/schemas/WorkflowTestTarget"},
+                                {"type": "null"},
+                            ]
+                        },
+                        "n_consensus": {
+                            "anyOf": [{"type": "integer"}, {"type": "null"}]
+                        },
+                    }
+                },
+            }
+        }
+    }
+
+    generate_openapi._hard_cutover_workflow_create_request_shapes(spec)
+
+    schemas = spec["components"]["schemas"]
+    assert schemas["CreateWorkflowRunRequest"]["oneOf"] == [
+        {"$ref": "#/components/schemas/CreateFreshWorkflowRunRequest"},
+        {"$ref": "#/components/schemas/CreateRestartWorkflowRunRequest"},
+    ]
+    assert schemas["CreateFreshWorkflowRunRequest"]["required"] == ["workflow_id"]
+    assert schemas["CreateFreshWorkflowRunRequest"]["properties"]["workflow_id"] == {
+        "type": "string",
+        "title": "Workflow Id",
+    }
+    assert schemas["CreateRestartWorkflowRunRequest"]["required"] == [
+        "restart_of",
+        "config_source",
+    ]
+    assert schemas["CreateWorkflowTestRunRequest"]["oneOf"] == [
+        {"$ref": "#/components/schemas/CreateWorkflowTestRunForTestRequest"},
+        {"$ref": "#/components/schemas/CreateWorkflowTestRunForTargetRequest"},
+        {"$ref": "#/components/schemas/CreateWorkflowTestRunAllRequest"},
+    ]
+    assert schemas["CreateWorkflowTestRunForTestRequest"]["required"] == ["test_id"]
+    assert schemas["CreateWorkflowTestRunForTargetRequest"]["required"] == [
+        "workflow_id",
+        "target",
+    ]
+    assert schemas["CreateWorkflowTestRunAllRequest"]["required"] == ["workflow_id"]
+
+
 def test_api_reference_pages_have_all_sdk_snippets() -> None:
     missing_by_page: dict[str, list[str]] = {}
 
