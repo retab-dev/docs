@@ -2893,6 +2893,79 @@
         }
       }
     },
+    "/v1/workflows/steps/{step_id}": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Run Steps"
+        ],
+        "summary": "Get Workflow Step",
+        "description": "Get one persisted step document by step id.\n\nThis is the canonical step object shape used by ``GET /workflows/steps``.\nIt intentionally does not join fingerprint rows or return experiment query\nprojections.",
+        "operationId": "get_workflow_step_v1_workflows_steps__step_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "step_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Step Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional workflow run ID disambiguator.",
+              "title": "Run Id"
+            },
+            "description": "Optional workflow run ID disambiguator."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepStatusObject"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workflows/reviews": {
       "get": {
         "tags": [
@@ -3468,6 +3541,63 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ReviewDecisionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/artifacts/{artifact_id}": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Artifacts"
+        ],
+        "summary": "Get Workflow Artifact By Id",
+        "description": "Get one workflow artifact by id alone.\n\nThe operation is derived from the id prefix\n(``extr_…`` → extraction, ``clss_…`` → classification, etc.). This is\nthe flat-resource shape — callers do not need to know which collection\nbacks the id.",
+        "operationId": "get_workflow_artifact_by_id_v1_workflows_artifacts__artifact_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Workflow Artifact By Id V1 Workflows Artifacts  Artifact Id  Get"
                 }
               }
             }
@@ -4073,14 +4203,14 @@
         }
       }
     },
-    "/v1/workflows/tests/runs/{run_id}/results": {
+    "/v1/workflows/tests/results": {
       "get": {
         "tags": [
           "Workflows",
           "Workflow Tests"
         ],
-        "summary": "Get Test Execution Run Results",
-        "operationId": "get_test_execution_run_results_v1_workflows_tests_runs__run_id__results_get",
+        "summary": "List Test Execution Results",
+        "operationId": "list_test_execution_results_v1_workflows_tests_results_get",
         "security": [
           {
             "HTTPBearer": []
@@ -4095,7 +4225,7 @@
         "parameters": [
           {
             "name": "run_id",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string",
@@ -4110,6 +4240,60 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedList_WorkflowTestRunRecord_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/tests/results/{result_id}": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Tests"
+        ],
+        "summary": "Get Test Execution Result",
+        "operationId": "get_test_execution_result_v1_workflows_tests_results__result_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "result_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Result Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowTestRunRecord"
                 }
               }
             }
@@ -5453,14 +5637,14 @@
         }
       }
     },
-    "/v1/workflows/experiments/runs/{run_id}/results": {
+    "/v1/workflows/experiments/results": {
       "get": {
         "tags": [
           "Workflows",
           "Workflow Experiments"
         ],
-        "summary": "List Experiment Run Results",
-        "operationId": "list_experiment_run_results_v1_workflows_experiments_runs__run_id__results_get",
+        "summary": "List Experiment Results",
+        "operationId": "list_experiment_results_v1_workflows_experiments_results_get",
         "security": [
           {
             "HTTPBearer": []
@@ -5475,7 +5659,7 @@
         "parameters": [
           {
             "name": "run_id",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string",
@@ -5519,14 +5703,68 @@
         }
       }
     },
-    "/v1/workflows/experiments/runs/{run_id}/metrics": {
+    "/v1/workflows/experiments/results/{result_id}": {
       "get": {
         "tags": [
           "Workflows",
           "Workflow Experiments"
         ],
-        "summary": "Get Experiment Run Metrics",
-        "operationId": "get_experiment_run_metrics_v1_workflows_experiments_runs__run_id__metrics_get",
+        "summary": "Get Experiment Result",
+        "operationId": "get_experiment_result_v1_workflows_experiments_results__result_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "result_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Result Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentResultPublic"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/experiments/metrics": {
+      "get": {
+        "tags": [
+          "Workflows",
+          "Workflow Experiments"
+        ],
+        "summary": "Get Experiment Metrics For Run",
+        "operationId": "get_experiment_metrics_for_run_v1_workflows_experiments_metrics_get",
         "security": [
           {
             "HTTPBearer": []
@@ -5541,7 +5779,7 @@
         "parameters": [
           {
             "name": "run_id",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string",
@@ -5662,7 +5900,7 @@
                       "$ref": "#/components/schemas/ExperimentMetricsMissingError"
                     }
                   ],
-                  "title": "Response Get Experiment Run Metrics V1 Workflows Experiments Runs  Run Id  Metrics Get"
+                  "title": "Response Get Experiment Metrics For Run V1 Workflows Experiments Metrics Get"
                 }
               }
             }
@@ -5947,15 +6185,67 @@
         }
       }
     },
-    "/v1/workflows/steps/{step_id}": {
+    "/v1/workflows/simulations": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow Simulations"
+        ],
+        "summary": "Create Simulation",
+        "description": "Create a block simulation for ``block_id`` against the current draft.",
+        "operationId": "create_simulation_v1_workflows_simulations_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSimulationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockSimulationObject"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
           "Workflows",
-          "Workflow Steps"
+          "Workflow Simulations"
         ],
-        "summary": "Get Step",
-        "description": "Return one joined step, matching the ``POST /query`` row shape.",
-        "operationId": "get_step_v1_workflows_steps__step_id__get",
+        "summary": "List Simulations",
+        "description": "List recent simulations for one workflow run block.",
+        "operationId": "list_simulations_v1_workflows_simulations_get",
         "security": [
           {
             "HTTPBearer": []
@@ -5969,12 +6259,33 @@
         ],
         "parameters": [
           {
-            "name": "step_id",
-            "in": "path",
+            "name": "run_id",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Step Id"
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
             }
           }
         ],
@@ -5984,7 +6295,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StepQueryResult"
+                  "$ref": "#/components/schemas/PaginatedList_BlockSimulationObject_"
                 }
               }
             }
@@ -7036,61 +7347,6 @@
         }
       }
     },
-    "/v1/edits/templates/fill": {
-      "post": {
-        "tags": [
-          "Edits",
-          "Edit Templates"
-        ],
-        "summary": "Fill Template",
-        "operationId": "fill_template_v1_edits_templates_fill_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": true,
-                "type": "object",
-                "title": "Payload"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Edit"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ]
-      }
-    },
     "/v1/edits": {
       "post": {
         "tags": [
@@ -8079,69 +8335,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/v1/workflows/simulations": {
-      "post": {
-        "tags": [
-          "Workflows"
-        ],
-        "summary": "Create Workflow Simulation",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Workflows"
-        ],
-        "summary": "List Workflow Simulations",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        }
-      }
-    },
-    "/v1/workflows/artifacts/{artifact_id}": {
-      "get": {
-        "tags": [
-          "Workflows"
-        ],
-        "summary": "Get Workflow Artifact",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        }
-      }
-    },
-    "/v1/workflows/tests/results/{result_id}": {
-      "get": {
-        "tags": [
-          "Workflows"
-        ],
-        "summary": "Get Test Run Result",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        }
-      }
-    },
-    "/v1/workflows/experiments/results/{result_id}": {
-      "get": {
-        "tags": [
-          "Workflows"
-        ],
-        "summary": "Get Experiment Run Result",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
           }
         }
       }
@@ -9189,6 +9382,179 @@
         ],
         "title": "BetweenCondition"
       },
+      "BlockSimulationObject": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique simulation ID"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "Workflow the block belongs to"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "Run whose inputs were used"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id",
+            "description": "ID of the block that was simulated"
+          },
+          "block_type": {
+            "type": "string",
+            "title": "Block Type",
+            "description": "Type of the block"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "description": "Whether simulation succeeded"
+          },
+          "handle_inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Inputs",
+            "description": "Input payloads keyed by handle ID (file metadata for files, data for json)"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical persisted-ref artifact for this simulation (operation + id), if any"
+          },
+          "handle_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Outputs",
+            "description": "Output payloads keyed by handle ID"
+          },
+          "routing_decision": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Decision",
+            "description": "Active output handles for routing decisions"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Error message if simulation failed"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "Duration of the simulation in milliseconds"
+          },
+          "skipped": {
+            "type": "boolean",
+            "title": "Skipped",
+            "description": "Whether the block was skipped due to missing inputs",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "block_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Config",
+            "description": "The draft block config used for this simulation"
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id",
+            "description": "The step ID that was used for inputs (includes iteration prefix if applicable)"
+          },
+          "available_iterations": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Iterations",
+            "description": "When the block has multiple iterations, lists all available ones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_id",
+          "run_id",
+          "block_id",
+          "block_type",
+          "success"
+        ],
+        "title": "BlockSimulationObject",
+        "description": "Public simulation result for a single workflow block."
+      },
       "BlockTestBatchExecutionCounts": {
         "properties": {
           "queued": {
@@ -9437,8 +9803,8 @@
           },
           "n_consensus": {
             "type": "integer",
-            "maximum": 16,
-            "minimum": 1,
+            "maximum": 16.0,
+            "minimum": 1.0,
             "title": "N Consensus",
             "description": "Number of classification runs to use for consensus voting. Uses deterministic single-pass when set to 1.",
             "default": 1
@@ -9745,8 +10111,8 @@
           },
           "image_resolution_dpi": {
             "type": "integer",
-            "maximum": 300,
-            "minimum": 96,
+            "maximum": 300.0,
+            "minimum": 96.0,
             "title": "Image Resolution Dpi",
             "description": "Resolution of the image sent to the LLM",
             "default": 192
@@ -9765,8 +10131,8 @@
           },
           "n_consensus": {
             "type": "integer",
-            "maximum": 16,
-            "minimum": 1,
+            "maximum": 16.0,
+            "minimum": 1.0,
             "title": "N Consensus",
             "description": "Number of consensus extraction runs to perform. Uses deterministic single-pass when set to 1.",
             "default": 1
@@ -9904,6 +10270,51 @@
         "title": "CreateReviewVersionRequest",
         "description": "POST /workflows/reviews/versions body.\n\nPublic callers create corrections, not seeds. ``parent_id`` must\nreference an existing version under the same ``review_id``; seed versions\nare created by the runtime through the store path."
       },
+      "CreateSimulationRequest": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "Workflow run id that owns the step."
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id",
+            "description": "Workflow block id to simulate."
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id",
+            "description": "Optional concrete step id whose inputs should be used. When omitted, the block id is used as the canonical step lookup key."
+          },
+          "n_consensus": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Consensus",
+            "description": "Optional override for n_consensus on extract / split / classifier blocks. Must be 3, 5, or 7."
+          },
+          "check_eligibility": {
+            "type": "boolean",
+            "title": "Check Eligibility",
+            "description": "Whether to verify the upstream subgraph hasn't drifted since the source run. Disable only for explicit force-rerun flows.",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "block_id"
+        ],
+        "title": "CreateSimulationRequest",
+        "description": "Body for ``POST /v1/workflows/simulations``.\n\n``block_id`` is the block to replay; ``run_id`` is the workflow run that\nsourced the original step's ``handle_inputs``. ``step_id`` optionally pins\na concrete step row whose inputs should be used, which is useful for\niteration-prefixed for_each body steps."
+      },
       "CreateSplitRequest": {
         "properties": {
           "document": {
@@ -9947,8 +10358,8 @@
           },
           "n_consensus": {
             "type": "integer",
-            "maximum": 8,
-            "minimum": 1,
+            "maximum": 8.0,
+            "minimum": 1.0,
             "title": "N Consensus",
             "description": "Number of consensus split runs to perform. Uses deterministic single-pass when set to 1.",
             "default": 1
@@ -10025,7 +10436,7 @@
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "Opaque block ID. Omit to let the server generate one."
+            "description": "Opaque block ID. Omit to let the server generate one. Block IDs are unique per ORGANIZATION (not per workflow) — reusing a human-friendly id like 'block_extract' across multiple workflows in the same org will fail with 409. Prefer the server-generated ``blk_<nanoid>`` form for predictability."
           },
           "type": {
             "type": "string",
@@ -12775,8 +13186,8 @@
           },
           "image_resolution_dpi": {
             "type": "integer",
-            "maximum": 300,
-            "minimum": 96,
+            "maximum": 300.0,
+            "minimum": 96.0,
             "title": "Image Resolution Dpi",
             "description": "Resolution of the image sent to the LLM",
             "default": 192
@@ -14138,6 +14549,26 @@
         ],
         "title": "PaginatedList"
       },
+      "PaginatedList_BlockSimulationObject_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/BlockSimulationObject"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[BlockSimulationObject]"
+      },
       "PaginatedList_ExperimentResponse_": {
         "properties": {
           "data": {
@@ -14500,8 +14931,8 @@
           },
           "n_consensus": {
             "type": "integer",
-            "maximum": 8,
-            "minimum": 1,
+            "maximum": 8.0,
+            "minimum": 1.0,
             "title": "N Consensus",
             "description": "Number of partitioning runs to use for consensus voting. Uses deterministic single-pass when set to 1.",
             "default": 1
@@ -14975,7 +15406,7 @@
           },
           "min_pages": {
             "type": "integer",
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Min Pages"
           }
         },
@@ -14997,8 +15428,8 @@
           },
           "threshold": {
             "type": "number",
-            "maximum": 1,
-            "minimum": 0,
+            "maximum": 1.0,
+            "minimum": 0.0,
             "title": "Threshold"
           }
         },
@@ -15070,8 +15501,8 @@
           },
           "threshold": {
             "type": "number",
-            "maximum": 1,
-            "minimum": 0,
+            "maximum": 1.0,
+            "minimum": 0.0,
             "title": "Threshold",
             "description": "Gate fires when confidence < threshold"
           }
@@ -15100,8 +15531,8 @@
           },
           "threshold": {
             "type": "number",
-            "maximum": 1,
-            "minimum": 0,
+            "maximum": 1.0,
+            "minimum": 0.0,
             "title": "Threshold"
           }
         },
@@ -15324,7 +15755,7 @@
           },
           "expected": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Expected"
           }
         },
@@ -15513,8 +15944,8 @@
           },
           "margin": {
             "type": "number",
-            "maximum": 1,
-            "minimum": 0,
+            "maximum": 1.0,
+            "minimum": 0.0,
             "title": "Margin"
           }
         },
@@ -15722,7 +16153,7 @@
           },
           "accumulated_review_waiting_ms": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Accumulated Review Waiting Ms",
             "description": "Accumulated time spent waiting for review across the run",
             "default": 0
@@ -15909,7 +16340,7 @@
           "threshold": {
             "type": "number",
             "title": "Threshold",
-            "default": 1
+            "default": 1.0
           }
         },
         "type": "object",
@@ -15971,200 +16402,6 @@
         ],
         "title": "StepArtifactRef",
         "description": "Canonical persisted resource produced by a workflow step.\n\nUniformly a `(operation, id)` ref into a backing collection. The artifact\nitself carries no payload — consumers dispatch on ``operation`` and fetch\nthe backing record by ``id``."
-      },
-      "StepFingerprintJoined": {
-        "properties": {
-          "input_fingerprint": {
-            "type": "string",
-            "title": "Input Fingerprint"
-          },
-          "schema_fingerprint": {
-            "type": "string",
-            "title": "Schema Fingerprint"
-          },
-          "definition_fingerprint": {
-            "type": "string",
-            "title": "Definition Fingerprint"
-          },
-          "resolved_definition_fingerprint": {
-            "type": "string",
-            "title": "Resolved Definition Fingerprint"
-          },
-          "effective_execution_fingerprint": {
-            "type": "string",
-            "title": "Effective Execution Fingerprint"
-          },
-          "handle_inputs_fingerprint": {
-            "type": "string",
-            "title": "Handle Inputs Fingerprint"
-          },
-          "effective_config": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Effective Config"
-          },
-          "runtime_overrides": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Runtime Overrides"
-          },
-          "cohort_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cohort Id"
-          },
-          "source_file_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source File Id"
-          },
-          "source_filename": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Filename"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "input_fingerprint",
-          "schema_fingerprint",
-          "definition_fingerprint",
-          "resolved_definition_fingerprint",
-          "effective_execution_fingerprint",
-          "handle_inputs_fingerprint"
-        ],
-        "title": "StepFingerprintJoined",
-        "description": "Slim fingerprint projection embedded in ``StepQueryResult``."
-      },
-      "StepQueryResult": {
-        "properties": {
-          "step_id": {
-            "type": "string",
-            "title": "Step Id"
-          },
-          "run_id": {
-            "type": "string",
-            "title": "Run Id"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          },
-          "block_type": {
-            "type": "string",
-            "title": "Block Type"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "started_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Started At"
-          },
-          "completed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Completed At"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          },
-          "iteration": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Iteration"
-          },
-          "is_iteration": {
-            "type": "boolean",
-            "title": "Is Iteration",
-            "default": false
-          },
-          "handle_inputs": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Handle Inputs"
-          },
-          "handle_outputs": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Handle Outputs"
-          },
-          "fingerprint": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/StepFingerprintJoined"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "step_id",
-          "run_id",
-          "workflow_id",
-          "block_id",
-          "block_type",
-          "status"
-        ],
-        "title": "StepQueryResult",
-        "description": "One joined row returned by ``POST /v1/workflows/steps/query``.\n\nMirrors ``StepQueryResult`` in\n``frontend/app/dashboard/workflows/[workflowId]/console/experiments/queries.ts``."
       },
       "StepStatusObject": {
         "properties": {
@@ -16361,81 +16598,6 @@
         ],
         "title": "StepStatusObject",
         "description": "Public step lifecycle object."
-      },
-      "StepsQueryRequest": {
-        "properties": {
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "block_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Block Id"
-          },
-          "block_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Block Type"
-          },
-          "source_kind": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Kind"
-          },
-          "status": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
-          },
-          "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 1000,
-                "minimum": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Limit"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "workflow_id"
-        ],
-        "title": "StepsQueryRequest",
-        "description": "Request body for ``POST /v1/workflows/steps/query``.\n\nFilters mirror the indexed columns on ``step_fingerprints`` so the\n``$match`` stage stays index-friendly. Status is the one filter that\ntargets the joined ``workflow_run_steps`` document (applied as a\npost-``$lookup`` ``$match`` on ``lifecycle.status``)."
       },
       "StoredJobResponse": {
         "properties": {
@@ -16684,7 +16846,7 @@
           },
           "size_bytes": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Size Bytes",
             "description": "Expected upload size in bytes"
           },
@@ -18790,8 +18952,8 @@
           },
           "image_resolution_dpi": {
             "type": "integer",
-            "maximum": 300,
-            "minimum": 96,
+            "maximum": 300.0,
+            "minimum": 96.0,
             "title": "Image Resolution Dpi",
             "description": "DPI used when rasterizing pages for the parser",
             "default": 192

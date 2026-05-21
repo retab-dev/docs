@@ -834,7 +834,7 @@ def generate_openapi() -> None:
     # Write updated spec to file
     output_path = Path(__file__).resolve().parent / "openapi.json"
     with output_path.open("w") as f:
-        json.dump(spec, f, indent=2)
+        json.dump(spec, f, indent=2, ensure_ascii=False)
 
 
 if __name__ == "__main__":

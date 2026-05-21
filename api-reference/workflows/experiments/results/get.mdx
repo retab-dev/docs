@@ -22,22 +22,13 @@ print(result.artifact)
 ```
 
 ```javascript javascript
-const resultId = "expresult_1";
+import { Retab } from "@retab/node";
 
-const response = await fetch(
-  `https://api.retab.com/v1/workflows/experiments/results/${resultId}`,
-  {
-    headers: {
-      "Api-Key": process.env.RETAB_API_KEY,
-    },
-  },
-);
+const client = new Retab();
 
-if (!response.ok) {
-  throw new Error(`Retab request failed: ${response.status}`);
-}
-
-const result = await response.json();
+const result = await client.workflows.experiments.runs.results.get({
+  resultId: "expresult_1",
+});
 console.log(result.document_id);
 console.log(result.lifecycle.status);
 console.log(result.artifact);
@@ -47,43 +38,29 @@ console.log(result.artifact);
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	resultID := "expresult_1"
-	req, err := http.NewRequest(
-		http.MethodGet,
-		"https://api.retab.com/v1/workflows/experiments/results/"+resultID,
-		nil,
-	)
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
 
-	resp, err := http.DefaultClient.Do(req)
+	result, err := client.Workflows.Experiments.Runs.Results.Get(ctx, "expresult_1")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		log.Fatalf("Retab request failed: %s", resp.Status)
-	}
-
-	var result map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(result["document_id"])
-	fmt.Println(result["lifecycle"])
-	fmt.Println(result["artifact"])
+	fmt.Println(result.DocumentID)
+	fmt.Println(result.Lifecycle.Status)
+	fmt.Println(result.Artifact)
 }
 ```
 
