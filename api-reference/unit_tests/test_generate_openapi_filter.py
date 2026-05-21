@@ -262,6 +262,26 @@ def test_api_reference_pages_have_all_sdk_snippets() -> None:
     assert missing_by_page == {}, json.dumps(missing_by_page, indent=2, sort_keys=True)
 
 
+def test_api_reference_openapi_frontmatter_omits_query_strings() -> None:
+    offenders: dict[str, str] = {}
+
+    for markdown_file in generate_openapi._list_api_reference_markdown_files(
+        REAL_DOCS_JSON,
+        DOCS_ROOT,
+    ):
+        match = generate_openapi.OPENAPI_FRONTMATTER_RE.search(
+            markdown_file.read_text()
+        )
+        if match is None:
+            continue
+        path = match.group("path")
+        if "?" in path:
+            page = markdown_file.relative_to(DOCS_ROOT).with_suffix("").as_posix()
+            offenders[page] = path
+
+    assert offenders == {}, json.dumps(offenders, indent=2, sort_keys=True)
+
+
 def test_generated_openapi_routes_match_docs_json_markdown_openapi_fields() -> None:
     markdown_files = generate_openapi._list_api_reference_markdown_files(
         REAL_DOCS_JSON,
