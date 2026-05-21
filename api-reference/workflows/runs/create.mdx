@@ -3,9 +3,13 @@ title: "Run Workflow"
 openapi: "POST /v1/workflows/runs"
 ---
 
-Run a workflow with the provided inputs. This endpoint creates a workflow run
-and starts execution in the background. The canonical API route is flat:
-`workflow_id` belongs in the request body, not in the URL.
+Create a workflow run. The canonical API route is flat: `workflow_id` belongs
+in the request body, not in the URL.
+
+The same endpoint also creates restarted runs. Send `restart_of` instead of
+fresh-run inputs, and set `config_source` to choose whether the new run uses
+the current draft or published workflow configuration. Restarted runs inherit
+the source run's inputs.
 
 The response returns immediately with `lifecycle.status` set to `"running"` or
 `"pending"` — use the Get Run endpoint to check for updates.
@@ -14,6 +18,10 @@ Workflows can accept two types of inputs:
 
 - **documents**: File inputs for Document (start) blocks
 - **json_inputs**: JSON data for JSON Input (start_json) blocks
+
+Fresh-run fields (`documents`, `json_inputs`, and `version`) are only valid
+when `restart_of` is omitted. Restart fields (`config_source` and `command_id`)
+are only valid when `restart_of` is present.
 
 <RequestExample>
 
@@ -27,7 +35,7 @@ client = Retab()
 run = client.workflows.runs.create(
     workflow_id="wf_abc123xyz",
     documents={
-        "start-document-block-1": Path("invoice.pdf"),
+        "start_document-block-1": Path("invoice.pdf"),
     }
 )
 
@@ -35,7 +43,7 @@ run = client.workflows.runs.create(
 run = client.workflows.runs.create(
     workflow_id="wf_abc123xyz",
     documents={
-        "start-document-block-1": Path("invoice.pdf"),
+        "start_document-block-1": Path("invoice.pdf"),
     },
     json_inputs={
         "start-json-block-1": {"customer_id": "cust_123", "priority": "high"},
@@ -55,7 +63,7 @@ const client = new Retab();
 const run = await client.workflows.runs.create({
   workflowId: "wf_abc123xyz",
   documents: {
-    "start-document-block-1": "./invoice.pdf",
+    "start_document-block-1": "./invoice.pdf",
   },
 });
 
@@ -63,7 +71,7 @@ const run = await client.workflows.runs.create({
 const run2 = await client.workflows.runs.create({
   workflowId: "wf_abc123xyz",
   documents: {
-    "start-document-block-1": "./invoice.pdf",
+    "start_document-block-1": "./invoice.pdf",
   },
   jsonInputs: {
     "start-json-block-1": { customerId: "cust_123", priority: "high" },
@@ -97,7 +105,7 @@ func main() {
 	run, err := client.Workflows.Runs.Create(ctx, retab.CreateWorkflowRunRequest{
 		WorkflowID: "wf_abc123xyz",
 		Documents: map[string]any{
-			"start-document-block-1": "invoice.pdf",
+			"start_document-block-1": "invoice.pdf",
 		},
 	})
 	if err != nil {
@@ -108,7 +116,7 @@ func main() {
 	run2, err := client.Workflows.Runs.Create(ctx, retab.CreateWorkflowRunRequest{
 		WorkflowID: "wf_abc123xyz",
 		Documents: map[string]any{
-			"start-document-block-1": "invoice.pdf",
+			"start_document-block-1": "invoice.pdf",
 		},
 		JSONInputs: map[string]any{
 			"start-json-block-1": map[string]any{
@@ -136,7 +144,7 @@ curl -X 'POST' \
   -d '{
     "workflow_id": "wf_abc123xyz",
     "documents": {
-      "start-document-block-1": {
+      "start_document-block-1": {
         "filename": "invoice.pdf",
         "content": "<BASE64_ENCODED_FILE_CONTENT>",
         "mime_type": "application/pdf"
@@ -152,7 +160,7 @@ curl -X 'POST' \
   -d '{
     "workflow_id": "wf_abc123xyz",
     "documents": {
-      "start-document-block-1": {
+      "start_document-block-1": {
         "filename": "invoice.pdf",
         "content": "<BASE64_ENCODED_FILE_CONTENT>",
         "mime_type": "application/pdf"
@@ -164,6 +172,17 @@ curl -X 'POST' \
         "priority": "high"
       }
     }
+  }'
+
+# Restart an existing run with inherited inputs
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/runs' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "restart_of": "run_abc123",
+    "config_source": "published",
+    "command_id": "cmd_restart_abc"
   }'
 ```
 
@@ -189,7 +208,7 @@ curl -X 'POST' \
   },
   "inputs": {
     "documents": {
-      "start-document-block-1": {
+      "start_document-block-1": {
         "id": "file_123",
         "filename": "invoice.pdf",
         "mime_type": "application/pdf"
@@ -202,7 +221,7 @@ curl -X 'POST' \
 
 ```json 400
 {
-  "detail": "Missing input documents for start-document blocks: Invoice Input, Receipt Input"
+  "detail": "Missing input documents for start_document blocks: Invoice Input, Receipt Input"
 }
 ```
 

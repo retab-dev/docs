@@ -1,9 +1,11 @@
 ---
 title: "Create Block"
-openapi: "POST /v1/workflows/blocks?workflow_id={workflow_id}"
+openapi: "POST /v1/workflows/blocks"
 ---
 
 Add a new block to a workflow's draft graph.
+
+The create route is flat: send `workflow_id` in the request body.
 
 You provide the block ID — it must be unique within the workflow. Pick something descriptive (e.g. `extract-invoice`, `classifier-language`) so edges and assertions stay readable.
 
@@ -11,7 +13,7 @@ The `config` shape depends on `type`. See [Workflow Blocks](/workflows/Blocks) f
 
 A few invariants the API enforces:
 
-- Input blocks (`start-document`, `start_json`) cannot be placed inside containers — `parent_id` must be `null` for them.
+- Input blocks (`start_document`, `start_json`) cannot be placed inside containers — `parent_id` must be `null` for them.
 - `parent_id` is reserved for placing blocks inside container blocks (`while_loop`, `for_each`).
 
 <RequestExample>
@@ -116,10 +118,11 @@ func main() {
 
 ```bash curl
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/blocks?workflow_id=wf_abc123xyz' \
+  'https://api.retab.com/v1/workflows/blocks' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
+    "workflow_id": "wf_abc123xyz",
     "id": "extract-1",
     "type": "extract",
     "label": "Extract Invoice Fields",
@@ -169,7 +172,7 @@ curl -X 'POST' \
 
 ```json 400
 {
-  "detail": "Input blocks (start-document, start-json) cannot be placed inside containers"
+  "detail": "Input blocks (start_document, start-json) cannot be placed inside containers"
 }
 ```
 
