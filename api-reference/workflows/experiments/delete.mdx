@@ -1,6 +1,6 @@
 ---
 title: "Delete Experiment"
-openapi: "DELETE /v1/workflows/{workflow_id}/experiments/{experiment_id}"
+openapi: "DELETE /v1/workflows/experiments/{experiment_id}?workflow_id={workflow_id}"
 ---
 
 Permanently delete an experiment along with all its runs and per-document
@@ -35,42 +35,29 @@ await client.workflows.experiments.delete("wf_abc123", "exp_abc");
 package main
 
 import (
-	"io"
+	"context"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	request, err := http.NewRequest(
-		http.MethodDelete,
-		"https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc",
-		nil,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	request.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	ctx := context.Background()
 
-	response, err := http.DefaultClient.Do(request)
+	client, err := retab.NewClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer response.Body.Close()
 
-	responseBody, err := io.ReadAll(response.Body)
-	if err != nil {
+	if err := client.Workflows.Experiments.Delete(ctx, "wf_abc123", "exp_abc"); err != nil {
 		log.Fatal(err)
-	}
-	if response.StatusCode >= 400 {
-		log.Fatalf("request failed: %s", responseBody)
 	}
 }
 ```
 
 ```bash curl
 curl -X 'DELETE' \
-  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc' \
+  'https://api.retab.com/v1/workflows/experiments/exp_abc?workflow_id=wf_abc123' \
   -H 'Api-Key: <your-api-key>'
 ```
 

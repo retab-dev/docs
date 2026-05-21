@@ -144,9 +144,8 @@ poll the returned workflow-test run `id`. Expect transient `pending` /
 `running` parent-run lifecycle states before terminal counts and per-test
 results are available.
 
-Workflow-test execution is a hard cutover to this run model. There is no public
-test `job_id` or `batch_id`; use the returned run `id` for polling,
-cancellation, and result inspection.
+Workflow-test execution uses the returned run `id` for polling, cancellation,
+and result inspection.
 
 ## Run records
 
@@ -233,7 +232,8 @@ draft, not the draft at create time.
 
 Test execution is asynchronous. The flow:
 
-1. `POST /v1/workflows/{wf}/tests/runs` returns a run object immediately.
+1. `POST /v1/workflows/tests/runs?workflow_id={workflow_id}` returns a run
+   object immediately.
 2. Poll `GET /v1/workflows/tests/runs/{run_id}` until `lifecycle.status` is
    `completed`, `error`, or `cancelled`, then fetch results from
    `GET /v1/workflows/tests/runs/{run_id}/results`.
@@ -246,19 +246,19 @@ records when the parent run reaches a terminal state.
 
 ## Endpoints
 
-| Method   | Path                                                  | Purpose                                                          |
-| -------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
-| `POST`   | `/v1/workflows/{wf}/tests`                            | [Create](/api-reference/workflows/tests/create)                  |
-| `GET`    | `/v1/workflows/{wf}/tests`                            | [List](/api-reference/workflows/tests/list)                      |
-| `GET`    | `/v1/workflows/{wf}/tests/{id}`                       | [Get](/api-reference/workflows/tests/get)                        |
-| `PATCH`  | `/v1/workflows/{wf}/tests/{id}`                       | [Update](/api-reference/workflows/tests/update)                  |
-| `DELETE` | `/v1/workflows/{wf}/tests/{id}`                       | [Delete](/api-reference/workflows/tests/delete)                  |
-| `POST`   | `/v1/workflows/{wf}/tests/runs`                       | [Create Run](/api-reference/workflows/tests/runs/create)         |
-| `GET`    | `/v1/workflows/tests/runs`                            | [List Runs](/api-reference/workflows/tests/runs/list)            |
-| `GET`    | `/v1/workflows/tests/runs/{run_id}`                   | [Get Run](/api-reference/workflows/tests/runs/get)               |
-| `POST`   | `/v1/workflows/tests/runs/{run_id}/cancel`            | [Cancel Run](/api-reference/workflows/tests/runs/cancel)         |
-| `GET`    | `/v1/workflows/tests/runs/{run_id}/results`           | [List Results](/api-reference/workflows/tests/runs/results/list) |
-| `GET`    | `/v1/workflows/tests/runs/{run_id}/results/{test_id}` | [Get Result](/api-reference/workflows/tests/runs/results/get)    |
+| Method   | Path                                                                 | Purpose                                                          |
+| -------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `POST`   | `/v1/workflows/tests?workflow_id={workflow_id}`                       | [Create](/api-reference/workflows/tests/create)                  |
+| `GET`    | `/v1/workflows/tests?workflow_id={workflow_id}`                       | [List](/api-reference/workflows/tests/list)                      |
+| `GET`    | `/v1/workflows/tests/{test_id}?workflow_id={workflow_id}`             | [Get](/api-reference/workflows/tests/get)                        |
+| `PATCH`  | `/v1/workflows/tests/{test_id}?workflow_id={workflow_id}`             | [Update](/api-reference/workflows/tests/update)                  |
+| `DELETE` | `/v1/workflows/tests/{test_id}?workflow_id={workflow_id}`             | [Delete](/api-reference/workflows/tests/delete)                  |
+| `POST`   | `/v1/workflows/tests/runs?workflow_id={workflow_id}`                  | [Create Run](/api-reference/workflows/tests/runs/create)         |
+| `GET`    | `/v1/workflows/tests/runs`                                           | [List Runs](/api-reference/workflows/tests/runs/list)            |
+| `GET`    | `/v1/workflows/tests/runs/{run_id}`                                  | [Get Run](/api-reference/workflows/tests/runs/get)               |
+| `POST`   | `/v1/workflows/tests/runs/{run_id}/cancel`                           | [Cancel Run](/api-reference/workflows/tests/runs/cancel)         |
+| `GET`    | `/v1/workflows/tests/runs/{run_id}/results`                          | [List Results](/api-reference/workflows/tests/runs/results/list) |
+| `GET`    | `/v1/workflows/tests/runs/{run_id}/results/{test_id}`                | [Get Result](/api-reference/workflows/tests/runs/results/get)    |
 
 ## MCP
 

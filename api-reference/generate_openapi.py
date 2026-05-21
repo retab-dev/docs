@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -42,6 +43,20 @@ LEGACY_SCHEMA_NAMES: set[str] = {
     "Submit" + "H" + "IL" + "DecisionResponse",
 }
 REVIEW_DECISION_STATUS_VALUES = ["pending", "approved", "rejected", "decided", "all"]
+OPENAPI_HTTP_METHODS = {
+    "get",
+    "put",
+    "post",
+    "delete",
+    "options",
+    "head",
+    "patch",
+    "trace",
+}
+OPENAPI_FRONTMATTER_RE = re.compile(
+    r"^openapi:\s*[\"'](?P<method>[A-Z]+)\s+(?P<path>[^\"']+)[\"']",
+    re.MULTILINE,
+)
 
 
 def _collect_schema_refs(node: object, refs: set[str]) -> None:
@@ -92,6 +107,102 @@ def _prune_unreferenced_schemas(spec: dict[str, object]) -> None:
     for schema_name in list(schemas.keys()):
         if schema_name not in reachable_schema_names:
             schemas.pop(schema_name, None)
+
+
+def _iter_docs_json_pages(node: object) -> list[str]:
+    pages: list[str] = []
+    if isinstance(node, str):
+        pages.append(node)
+    elif isinstance(node, list):
+        for item in node:
+            pages.extend(_iter_docs_json_pages(item))
+    elif isinstance(node, dict):
+        for value in node.values():
+            pages.extend(_iter_docs_json_pages(value))
+    return pages
+
+
+def _list_api_reference_markdown_files(
+    docs_json_path: Path,
+    docs_root: Path,
+) -> list[Path]:
+    """List api-reference markdown files that are explicitly present in docs.json."""
+    docs_json = json.loads(docs_json_path.read_text())
+    seen_pages: set[str] = set()
+    markdown_files: list[Path] = []
+
+    for page in _iter_docs_json_pages(docs_json):
+        if not page.startswith("api-reference/") or page in seen_pages:
+            continue
+        seen_pages.add(page)
+        markdown_file = docs_root / f"{page}.mdx"
+        if not markdown_file.exists():
+            raise FileNotFoundError(
+                f"docs.json references missing API reference page: {markdown_file}"
+            )
+        markdown_files.append(markdown_file)
+
+    return markdown_files
+
+
+def _normalize_openapi_path(path: str) -> str:
+    """Normalize a markdown openapi path to the OpenAPI paths-map key."""
+    return path.split("?", 1)[0]
+
+
+def _collect_api_reference_openapi_routes(
+    markdown_files: list[Path],
+) -> set[tuple[str, str]]:
+    """Read each referenced markdown file and collect its `openapi:` route."""
+    routes: set[tuple[str, str]] = set()
+    for markdown_file in markdown_files:
+        match = OPENAPI_FRONTMATTER_RE.search(markdown_file.read_text())
+        if match is None:
+            continue
+        method = match.group("method").lower()
+        path = _normalize_openapi_path(match.group("path"))
+        if method not in OPENAPI_HTTP_METHODS:
+            raise ValueError(
+                f"{markdown_file} has unsupported OpenAPI method {method!r}"
+            )
+        routes.add((method, path))
+    return routes
+
+
+def _strip_routes_not_in_api_reference_markdown(
+    spec: dict[str, object],
+    docs_json_path: Path,
+    docs_root: Path,
+) -> None:
+    """Keep only operations documented by api-reference markdown in docs.json.
+
+    The docs navigation is the source of truth for the public API reference:
+    first list all `api-reference/...` markdown pages from docs.json, then read
+    each page's `openapi: "METHOD /v1/path"` field and filter the generated
+    spec to those exact method/path pairs.
+    """
+    allowed_routes = _collect_api_reference_openapi_routes(
+        _list_api_reference_markdown_files(docs_json_path, docs_root)
+    )
+    if not allowed_routes:
+        raise RuntimeError(
+            f"No API reference OpenAPI routes found from docs navigation: {docs_json_path}"
+        )
+
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return
+
+    for path, path_item in list(paths.items()):
+        if not isinstance(path, str) or not isinstance(path_item, dict):
+            continue
+        for method in list(path_item.keys()):
+            if method not in OPENAPI_HTTP_METHODS:
+                continue
+            if (method, path) not in allowed_routes:
+                path_item.pop(method, None)
+        if not any(method in OPENAPI_HTTP_METHODS for method in path_item):
+            paths.pop(path, None)
 
 
 def _strip_legacy_from_enums(node: object) -> None:
@@ -337,7 +448,7 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
             schema["description"] = description.replace("step status", "step lifecycle")
 
     step_path = (
-        spec.get("paths", {}).get("/v1/workflows/runs/{run_id}/steps/{block_id}")
+        spec.get("paths", {}).get("/v1/workflows/steps/{step_id}")
         if isinstance(spec.get("paths"), dict)
         else None
     )
@@ -483,6 +594,13 @@ def generate_openapi() -> None:
             or path in LEGACY_EDIT_PATHS
         ):
             spec["paths"].pop(path, None)
+
+    docs_root = repo_root / "open-source" / "docs"
+    _strip_routes_not_in_api_reference_markdown(
+        spec,
+        docs_json_path=docs_root / "docs.json",
+        docs_root=docs_root,
+    )
 
     # Strip legacy URLs from any enum lists (e.g. Jobs endpoint enum)
     _strip_legacy_from_enums(spec)

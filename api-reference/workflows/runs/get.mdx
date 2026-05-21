@@ -8,9 +8,9 @@ Get a single workflow run by ID. Use this endpoint to check `lifecycle.status` f
 Run timing includes timestamps, not precomputed duration fields. Derive duration from
 `timing.completed_at - timing.started_at` when both timestamps are present.
 
-Run responses do not embed step records. Use [List Steps](/api-reference/workflows/runs/steps/list)
+Run responses do not embed step records. Use [List Steps](/api-reference/workflows/steps/list)
 for per-block status and `started_at` / `completed_at`, and use
-[Get Step](/api-reference/workflows/runs/steps/get) for typed handle inputs
+[Get Step](/api-reference/workflows/steps/get) for typed handle inputs
 and outputs. For persisted step records such as review-trigger evaluations, function
 invocations, or API call traces, use [List Artifacts](/api-reference/workflows/artifacts/list).
 
@@ -28,8 +28,8 @@ if run.lifecycle.status == "completed":
     if run.timing.started_at and run.timing.completed_at:
         duration_ms = int((run.timing.completed_at - run.timing.started_at).total_seconds() * 1000)
         print(f"Duration: {duration_ms}ms")
-    for step_summary in client.workflows.runs.steps.list(run.id):
-        step = client.workflows.runs.steps.get(run.id, step_summary.block_id)
+    for step_summary in client.workflows.steps.list(run.id):
+        step = client.workflows.steps.get(run.id, step_summary.block_id)
         if step.handle_outputs:
             print(f"{step.block_id}: {step.handle_outputs}")
         if step.artifact:
@@ -52,9 +52,9 @@ if (run.lifecycle.status === "completed") {
       new Date(run.timing.started_at).getTime();
     console.log(`Duration: ${durationMs}ms`);
   }
-  const stepSummaries = await client.workflows.runs.steps.list(run.id);
+  const stepSummaries = await client.workflows.steps.list(run.id);
   for (const stepSummary of stepSummaries) {
-    const step = await client.workflows.runs.steps.get(
+    const step = await client.workflows.steps.get(
       run.id,
       stepSummary.block_id,
     );
@@ -95,12 +95,12 @@ func main() {
 
 	fmt.Printf("Lifecycle: %s\n", run.Lifecycle.Status)
 	if run.Lifecycle.Status == "completed" {
-		stepSummaries, err := client.Workflows.Runs.Steps.List(ctx, run.ID)
+		stepSummaries, err := client.Workflows.Steps.List(ctx, run.ID)
 		if err != nil {
 			log.Fatal(err)
 		}
-		for _, summary := range stepSummaries {
-			step, err := client.Workflows.Runs.Steps.Get(ctx, run.ID, summary.BlockID)
+		for _, summary := range stepSummaries.Data {
+			step, err := client.Workflows.Steps.Get(ctx, run.ID, summary.BlockID)
 			if err != nil {
 				log.Fatal(err)
 			}

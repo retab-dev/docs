@@ -1,6 +1,6 @@
 ---
 title: "Create Workflow Test Run"
-openapi: "POST /v1/workflows/{workflow_id}/tests/runs"
+openapi: "POST /v1/workflows/tests/runs?workflow_id={workflow_id}"
 ---
 
 Create a workflow-test run against the current workflow draft. A run can execute
@@ -49,17 +49,48 @@ const run = await client.workflows.tests.runs.create({
 console.log(run.id, run.lifecycle.status);
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	run, err := client.Workflows.Tests.Runs.Create(ctx, retab.CreateWorkflowTestRunRequest{
+		WorkflowID: "wf_abc123xyz",
+		TestID:     "wfnodetest_hsLEQiM61ez9Piv147MWk",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(run.ID, run.Lifecycle.Status)
+}
+```
+
 ```bash curl
 # Single test
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/wf_abc123xyz/tests/runs' \
+  'https://api.retab.com/v1/workflows/tests/runs?workflow_id=wf_abc123xyz' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{ "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk" }'
 
 # All tests for one block
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/wf_abc123xyz/tests/runs' \
+  'https://api.retab.com/v1/workflows/tests/runs?workflow_id=wf_abc123xyz' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{

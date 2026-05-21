@@ -203,6 +203,10 @@ retab files download-link <file-id>
 
 ### Workflows
 
+Workflow graph commands operate on flat block, edge, test, and experiment
+resources keyed by workflow id, so the CLI takes `<workflow-id>` as an explicit
+argument when creating or updating those resources.
+
 ```sh
 retab workflows list
 retab workflows get <workflow-id>
@@ -227,8 +231,9 @@ retab workflows reviews get <review-id>
 retab workflows reviews approve <review-id> --version-id <version-id>
 
 # Create a corrected output version, then approve its returned version id.
-retab workflows reviews versions append <review-id> \
-  --parent-version-id <version-id> \
+retab workflows reviews versions list <review-id>
+retab workflows reviews versions create <review-id> \
+  --parent-id <version-id> \
   --snapshot-file ./corrected-output.json
 retab workflows reviews approve <review-id> --version-id <new-version-id>
 
@@ -245,6 +250,9 @@ retab workflows experiments runs metrics get <run-id> --view summary
 ```
 
 The full surface — `classifications`, `splits`, `partitions`, `edits`, `jobs`, `webhooks`, and the workflow sub-trees (`blocks`, `edges`, `runs`, `artifacts`, `tests`, `experiments`) — follows the same `retab <noun> <verb>` shape. Run `retab <noun> --help` to enumerate verbs, then `retab <noun> <verb> --help` for the flags.
+
+For review corrections, `--parent-id` is required. It must name the existing
+review version that the corrected snapshot derives from.
 
 Workflow tests and experiments do not use public `job_id` or `batch_id`
 handles. Store the returned run `id`, poll the corresponding `runs get`

@@ -55,6 +55,50 @@ const targetView = await client.workflows.experiments.runs.metrics.get({
 });
 ```
 
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	summary, err := client.Workflows.Experiments.Runs.Metrics.Get(
+		ctx,
+		"exprun_2",
+		&retab.GetExperimentMetricsParams{View: "summary"},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	targetView, err := client.Workflows.Experiments.Runs.Metrics.Get(
+		ctx,
+		"exprun_2",
+		&retab.GetExperimentMetricsParams{
+			View:       "by_target",
+			TargetPath: "line_items.*.unit_price",
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(summary["score"], targetView["view"])
+}
+```
+
 ```bash curl
 curl -X 'GET' \
   'https://api.retab.com/v1/workflows/experiments/runs/exprun_2/metrics?view=summary' \
