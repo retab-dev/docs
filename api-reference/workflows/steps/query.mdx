@@ -1,0 +1,127 @@
+---
+title: "Query Steps"
+openapi: "POST /v1/workflows/steps/query"
+---
+
+Query joined step rows for a workflow. Use this when you need step lifecycle,
+handle payloads, and execution fingerprints in one flat result.
+
+<RequestExample>
+
+```python python
+from retab import Retab
+from retab.types.workflows import StepsQueryRequest
+
+client = Retab()
+
+steps = client.workflows.steps.query(
+    StepsQueryRequest(
+        workflow_id="wf_abc123",
+        block_type="extract",
+        status=["completed"],
+        limit=20,
+    )
+)
+
+for step in steps:
+    print(step.step_id, step.status, step.fingerprint)
+```
+
+```javascript javascript
+import { Retab } from "@retab/node";
+
+const client = new Retab();
+
+const steps = await client.workflows.steps.query({
+  workflow_id: "wf_abc123",
+  block_type: "extract",
+  status: ["completed"],
+  limit: 20,
+});
+
+for (const step of steps) {
+  console.log(step.step_id, step.status, step.fingerprint);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	steps, err := client.Workflows.Steps.Query(ctx, retab.StepsQueryRequest{
+		WorkflowID: "wf_abc123",
+		BlockType:  "extract",
+		Status:     []string{"completed"},
+		Limit:      20,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, step := range steps {
+		fmt.Println(step.StepID, step.Status, step.Fingerprint)
+	}
+}
+```
+
+```bash curl
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/steps/query' \
+  -H 'Api-Key: <your-api-key>' \
+  -H 'Content-Type: application/json' \
+  -d '{"workflow_id":"wf_abc123","block_type":"extract","status":["completed"],"limit":20}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+[
+  {
+    "step_id": "step_abc123",
+    "run_id": "run_abc123",
+    "workflow_id": "wf_abc123",
+    "block_id": "extract-1",
+    "block_type": "extract",
+    "status": "completed",
+    "started_at": "2026-05-21T10:00:00Z",
+    "completed_at": "2026-05-21T10:00:03Z",
+    "duration_ms": 3000,
+    "iteration": null,
+    "is_iteration": false,
+    "handle_inputs": {},
+    "handle_outputs": {},
+    "fingerprint": {
+      "input_fingerprint": "inp_abc",
+      "schema_fingerprint": "sch_abc",
+      "definition_fingerprint": "def_abc",
+      "resolved_definition_fingerprint": "rdef_abc",
+      "effective_execution_fingerprint": "exec_abc",
+      "handle_inputs_fingerprint": "handles_abc",
+      "effective_config": {},
+      "runtime_overrides": {},
+      "cohort_id": null,
+      "source_file_id": null,
+      "source_filename": null
+    }
+  }
+]
+```
+
+</ResponseExample>

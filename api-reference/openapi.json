@@ -6157,6 +6157,64 @@
         }
       }
     },
+    "/v1/workflows/steps/query": {
+      "post": {
+        "tags": [
+          "Workflows",
+          "Workflow Steps"
+        ],
+        "summary": "Post Steps Query",
+        "description": "Filtered list of steps joined with fingerprint.\n\nResponse is a JSON array (no paginated wrapper) \u2014 matches the\nlocked ``StepQueryResult[]`` contract on the frontend.",
+        "operationId": "post_steps_query_v1_workflows_steps_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepsQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StepQueryResult"
+                  },
+                  "type": "array",
+                  "title": "Response Post Steps Query V1 Workflows Steps Query Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ]
+      }
+    },
     "/v1/workflows/steps/{step_id}": {
       "get": {
         "tags": [
@@ -16591,6 +16649,81 @@
         ],
         "title": "StepStatusObject",
         "description": "Public step lifecycle object."
+      },
+      "StepsQueryRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "block_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Id"
+          },
+          "block_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Type"
+          },
+          "source_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Kind"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "title": "StepsQueryRequest",
+        "description": "Request body for ``POST /v1/workflows/steps/query``.\n\nFilters mirror the indexed columns on ``step_fingerprints`` so the\n``$match`` stage stays index-friendly. Status is the one filter that\ntargets the joined ``workflow_run_steps`` document (applied as a\npost-``$lookup`` ``$match`` on ``lifecycle.status``)."
       },
       "StoredJobResponse": {
         "properties": {
