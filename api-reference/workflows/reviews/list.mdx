@@ -12,8 +12,10 @@ Filter the queue with the query parameters:
 | Parameter | Notes |
 |---|---|
 | `workflow_id` | Optional — restrict to a single workflow. |
-| `decision` | Defaults to `none`, which lists only reviews still awaiting a decision. Omit it to list all reviews. |
-| `limit` | `1`–`200`. Defaults to a server-side page size. `has_more: true` means the result was truncated; narrow filters or raise `limit` to inspect more items. |
+| `decision` | Defaults to `none`, which lists only reviews still awaiting a decision. Use `any` to include reviews that already have a terminal decision. |
+| `before` | Optional cursor from `list_metadata.before` for the previous page. |
+| `after` | Optional cursor from `list_metadata.after` for the next page. |
+| `limit` | `1`–`200`. Defaults to a server-side page size. `list_metadata.after != null` means another page is available. |
 
 <Note>
 This is the entry point for building a review inbox. For the end-to-end loop — editing and submitting a verdict — see the [Reviews guide](/workflows/Reviews).
@@ -30,6 +32,9 @@ queue = client.workflows.reviews.list(workflow_id="wf_1", limit=50)
 
 for item in queue.data:
     print(item.workflow_run_id, item.block_id, item.awaiting_since)
+
+if queue.list_metadata.after:
+    next_page = client.workflows.reviews.list(after=queue.list_metadata.after)
 ```
 
 ```javascript javascript
@@ -44,6 +49,12 @@ const queue = await client.workflows.reviews.list({
 
 for (const item of queue.data) {
   console.log(item.workflow_run_id, item.block_id, item.awaiting_since);
+}
+
+if (queue.list_metadata.after) {
+  const nextPage = await client.workflows.reviews.list({
+    after: queue.list_metadata.after,
+  });
 }
 ```
 
@@ -73,7 +84,10 @@ curl -X 'GET' \
       "priority": 0
     }
   ],
-  "has_more": false
+  "list_metadata": {
+    "before": null,
+    "after": null
+  }
 }
 ```
 

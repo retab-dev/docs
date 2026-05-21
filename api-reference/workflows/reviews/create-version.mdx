@@ -1,9 +1,9 @@
 ---
-title: 'Append Version'
+title: 'Create Version'
 openapi: 'POST /v1/workflows/reviews/{run_id}/{block_id}/versions'
 ---
 
-Append a corrective edit version to a review.
+Create a corrective output version in a review.
 
 This records a new immutable snapshot of the gated block's output without submitting a verdict. The new version is addressed by the content hash of its `snapshot`.
 
@@ -13,7 +13,7 @@ The request body carries:
 |---|---|
 | `snapshot` | The full corrected output payload. It must match the gated block's canonical review snapshot shape. |
 | `parent_id` | The content-hash id of the version this snapshot was edited from. |
-| `origin` | Provenance label for the version, e.g. `"human_edit"` (default). |
+| `origin` | Provenance label for the version: `"human_created"` or `"agent_created"`. Defaults to `"human_created"`. |
 | `note` | Optional free-text note explaining the correction. |
 
 Snapshot validation is block-specific:
@@ -39,12 +39,12 @@ client = Retab()
 review = client.workflows.reviews.get("run_abc123", "block_extract")
 parent_id = next(iter(review.versions_by_id))
 
-review = client.workflows.reviews.edit(
+review = client.workflows.reviews.create_version(
     "run_abc123",
     "block_extract",
     parent_id=parent_id,
     snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
-    origin="human_edit",
+    origin="human_created",
     note="Corrected total.",
 )
 print("versions:", len(review.versions_by_id))
@@ -58,10 +58,10 @@ const client = new Retab();
 let review = await client.workflows.reviews.get("run_abc123", "block_extract");
 const parentId = Object.keys(review.versions_by_id)[0];
 
-review = await client.workflows.reviews.edit("run_abc123", "block_extract", {
+review = await client.workflows.reviews.createVersion("run_abc123", "block_extract", {
   parentId,
   snapshot: { total_amount: 325, vendor_name: "Acme Corp" },
-  origin: "human_edit",
+  origin: "human_created",
   note: "Corrected total.",
 });
 console.log("versions:", Object.keys(review.versions_by_id).length);
@@ -75,7 +75,7 @@ curl -X 'POST' \
   -d '{
     "snapshot": { "total_amount": 325, "vendor_name": "Acme Corp" },
     "parent_id": "a9f4d2e7f50b8b7bc84f4d96d2ad831a2a3bfead9b46f945baf2f8eb2f457a18",
-    "origin": "human_edit",
+    "origin": "human_created",
     "note": "Corrected total."
   }'
 ```
@@ -107,7 +107,7 @@ curl -X 'POST' \
     },
     "b7d7f3ddc4ce98edbb5ea71d2ff8a7b711b3d4b70c20f481e14c03c7d53e15e2": {
       "parent_id": "a9f4d2e7f50b8b7bc84f4d96d2ad831a2a3bfead9b46f945baf2f8eb2f457a18",
-      "origin": "human_edit",
+      "origin": "human_created",
       "author": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
       "snapshot": { "total_amount": 325, "vendor_name": "Acme Corp" },
       "note": "Corrected total.",
