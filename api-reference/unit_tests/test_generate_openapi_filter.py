@@ -220,6 +220,24 @@ def test_workflow_create_request_docs_publish_shape_variants() -> None:
     assert schemas["CreateWorkflowTestRunAllRequest"]["required"] == ["workflow_id"]
 
 
+def test_generated_openapi_uses_named_workflow_artifact_record_schema() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+    artifact_get = generated_openapi["paths"][
+        "/v1/workflows/artifacts/{artifact_id}"
+    ]["get"]
+    response_schema = artifact_get["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+
+    assert response_schema == {"$ref": "#/components/schemas/WorkflowArtifactRecord"}
+    artifact_schema = generated_openapi["components"]["schemas"][
+        "WorkflowArtifactRecord"
+    ]
+    assert artifact_schema["required"] == ["operation", "id"]
+    assert artifact_schema["properties"]["operation"]["anyOf"][0]["enum"]
+    assert artifact_schema["additionalProperties"] is True
+
+
 def test_api_reference_pages_have_all_sdk_snippets() -> None:
     missing_by_page: dict[str, list[str]] = {}
 
