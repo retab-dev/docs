@@ -3,66 +3,34 @@ title: "List Reviews"
 openapi: "GET /v1/workflows/reviews"
 ---
 
-List the review queue — every gated block run that has an open review.
+List review summaries, hottest first.
 
-Each item is a `ReviewQueueItem` summary, not the full review. Use [Get Review](/api-reference/workflows/reviews/get) to fetch `versions_by_id` and `decision` for a given `(run_id, block_id)` pair.
-
-Filter the queue with the query parameters:
-
-| Parameter     | Notes                                                                                                                                       |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workflow_id` | Optional — restrict to a single workflow.                                                                                                   |
-| `decision`    | Defaults to `none`, which lists only reviews still awaiting a decision. Use `any` to include reviews that already have a terminal decision. |
-| `before`      | Optional cursor from `list_metadata.before` for the previous page.                                                                          |
-| `after`       | Optional cursor from `list_metadata.after` for the next page.                                                                               |
-| `limit`       | `1`–`200`. Defaults to a server-side page size. `list_metadata.after != null` means another page is available.                              |
-
-<Note>
-  This is the entry point for building a review inbox. For the end-to-end loop —
-  editing and submitting a verdict — see the [Reviews
-  guide](/workflows/Reviews).
-</Note>
+Use `decision_status="pending"` for the open review queue. Use `approved`, `rejected`, `decided`, or `all` for terminal-review views.
 
 <RequestExample>
 
 ```python python
-from retab import Retab
-
-client = Retab()
-
-queue = client.workflows.reviews.list(workflow_id="wf_1", limit=50)
+queue = client.workflows.reviews.list(
+    workflow_id="wf_1",
+    decision_status="pending",
+    limit=50,
+)
 
 for item in queue.data:
-    print(item.workflow_run_id, item.block_id, item.awaiting_since)
-
-if queue.list_metadata.after:
-    next_page = client.workflows.reviews.list(after=queue.list_metadata.after)
+    print(item.id, item.workflow_run_id, item.block_id, item.seed_version_id)
 ```
 
 ```javascript javascript
-import { Retab } from "@retab/node";
-
-const client = new Retab();
-
 const queue = await client.workflows.reviews.list({
   workflowId: "wf_1",
+  decisionStatus: "pending",
   limit: 50,
 });
-
-for (const item of queue.data) {
-  console.log(item.workflow_run_id, item.block_id, item.awaiting_since);
-}
-
-if (queue.list_metadata.after) {
-  const nextPage = await client.workflows.reviews.list({
-    after: queue.list_metadata.after,
-  });
-}
 ```
 
 ```bash curl
-curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/reviews?workflow_id=wf_1&limit=50' \
+curl -X GET \
+  'https://api.retab.com/v1/workflows/reviews?workflow_id=wf_1&decision_status=pending&limit=50' \
   -H 'Api-Key: <your-api-key>'
 ```
 
@@ -74,16 +42,21 @@ curl -X 'GET' \
 {
   "data": [
     {
-      "_id": "run_abc123:block_extract",
-      "workflow_run_id": "run_abc123",
-      "block_run_id": "run_abc123:block_extract",
-      "block_id": "block_extract",
+      "id": "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
       "workflow_id": "wf_1",
       "workflow_version_id": "wfv_1",
+      "workflow_run_id": "run_abc123",
+      "block_id": "block_extract",
+      "step_id": "run_abc123_block_extract",
+      "parent_step_id": null,
+      "iteration_key": null,
       "block_type": "extract",
       "triggered_by": { "kind": "always" },
       "awaiting_since": "2026-05-13T08:14:02.341Z",
-      "priority": 0
+      "priority": 0,
+      "seed_version_id": "ver_HQ6ZZBQTJLSGLZQCWBSI25SCOQ",
+      "version_count": 1,
+      "decision": null
     }
   ],
   "list_metadata": {

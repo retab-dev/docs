@@ -5,160 +5,97 @@ description: Review, correct, and decide on gated workflow block outputs
 
 ## Overview
 
-When a workflow reaches a **reviewable block** — a block with `config.review` whose predicate flagged its output for review — the run pauses and creates a **review**.
-
-The review is attached to one `(run_id, block_id)` pair. It is the object you read and mutate to walk from "the model produced this" to "a human approved, corrected, or rejected it, and the run resumed." Everything is driven through `client.workflows.reviews.*`.
-
-<Note>
-  Reviews replace the legacy v1 decision endpoints. Those have been removed —
-  `client.workflows.reviews.*` is the review surface.
-</Note>
+When a workflow reaches a block with `config.review` and the predicate fires, the run pauses and creates a review. A review is addressed by one opaque `id` such as `rev_...`; workflow context like `workflow_run_id`, `block_id`, `step_id`, and `iteration_key` is metadata for filtering and grounding.
 
 ## Review Shape
 
-A review carries immutable output versions keyed by content hash, plus at most one terminal decision:
+| Field | What it holds |
+| --- | --- |
+| `id` | Opaque review id. |
+| `workflow_run_id` | Run that is paused for review. |
+| `block_id` | Workflow block that produced the reviewed output. |
+| `step_id` | Exact execution step under review. |
+| `versions` | Immutable snapshots keyed by `ver_*` content ids. |
+| `decision` | Terminal verdict, or `null` while awaiting review. |
+| `triggered_by` | Review predicate that opened the gate. |
 
-| Field            | What it holds                                                                                 |
-| ---------------- | --------------------------------------------------------------------------------------------- |
-| `versions_by_id` | Immutable snapshots of the gated block's output, keyed by `sha256(canonical_json(snapshot))`. |
-| `decision`       | The terminal verdict, or `null` while the block is still awaiting review.                     |
-| `triggered_by`   | The review predicate that opened the gate.                                                    |
-| `awaiting_since` | When the review started waiting.                                                              |
+`versions` are peers. There is no head pointer. Use `created_at` for display ordering, and approve or reject the exact `version_id` you inspected.
 
-Every actor — whether a model, a managed agent, or a human — is described by the same symmetric `Actor` shape:
-
-```python
-{
-    "kind": "human",          # "model" | "agent" | "human"
-    "id": "user_42",
-    "display_name": "Dana Rivera",
-}
-```
-
-This means `versions_by_id[...].author` and `decision.decided_by` are the same type — you never special-case "was this a person or a model."
-
-## The review loop
+## The Review Loop
 
 ### 1. Find the work
 
-List the queue to find reviews awaiting a decision. Filter by `workflow_id` when you only want one workflow's queue.
-
 ```python
-queue = client.workflows.reviews.list(workflow_id="wf_abc123", limit=50)
+queue = client.workflows.reviews.list(
+    workflow_id="wf_abc123",
+    decision_status="pending",
+)
 
 for item in queue.data:
-    print(item.workflow_run_id, item.block_id, item.awaiting_since)
+    print(item.id, item.workflow_run_id, item.block_id, item.seed_version_id)
 ```
 
 ### 2. Inspect the output
 
-Read the full review and choose the exact version to decide on. The model's original output is the single version with `parent_id: null` and `author.kind: "model"`; corrective edits are additional entries in `versions_by_id`.
-
 ```python
-review = client.workflows.reviews.get("run_abc123", "block_extract")
+review = client.workflows.reviews.get("rev_abc123")
 
-model_root_version_id, model_root_version = next(
-    (version_id, version)
-    for version_id, version in review.versions_by_id.items()
+seed_version_id = next(
+    version_id
+    for version_id, version in review.versions.items()
     if version.parent_id is None and version.author.kind == "model"
 )
-print(model_root_version.snapshot)
+print(review.versions[seed_version_id].snapshot)
 ```
+
+Use `workflow_run_id` and `step_id` to inspect the source step and document before deciding.
 
 ### 3. Correct if needed
 
-When the model's output is close but wrong, create a full corrected snapshot version. The returned review includes the new content-hash `version_id`, which you can then approve.
+Append a complete replacement snapshot, then approve the returned `version_id`.
 
 ```python
-review = client.workflows.reviews.get("run_abc123", "block_extract")
-
-edited = client.workflows.reviews.create_version(
-    "run_abc123",
-    "block_extract",
-    parent_id=model_root_version_id,
+appended = client.workflows.reviews.append_version(
+    "rev_abc123",
+    parent_version_id=seed_version_id,
     snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
     note="Corrected total.",
 )
 
-version_id = next(
-    version_id
-    for version_id, version in edited.versions_by_id.items()
-    if version.snapshot == {"total_amount": 325, "vendor_name": "Acme Corp"}
-)
+version_id = appended.version_id
 ```
 
-The server validates the snapshot against the gated block's canonical review shape and stores the exact object you submit when it is valid:
+Snapshot validation is block-specific:
 
-| Block type   | Snapshot shape                                                                                                                          |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `extract`    | The raw extracted JSON object, for example `{ "invoice_number": "INV-991", "total": 1200 }`.                                            |
-| `classifier` | Only the selected category: `{ "category": "booking_confirmation" }`. Do not include reasoning.                                         |
-| `split`      | A document manifest: `{ "documents": [{ "name": "legal_mentions", "pages": [1, 2] }] }`.                                                |
-| `for_each`   | A partition manifest: `{ "partitions": [{ "key": "INV-001", "pages": [1, 2] }] }`. Only `split_by_key` for-each reviews are reviewable. |
+| Block type | Snapshot shape |
+| --- | --- |
+| `extract` | Raw extracted JSON object. |
+| `classifier` | `{ "category": "booking_confirmation" }` only. |
+| `split` | `{ "documents": [{ "name": "invoice", "pages": [1, 2] }] }`. |
+| `for_each` | `{ "partitions": [{ "key": "INV-001", "pages": [1, 2] }] }`. |
 
-For split and for-each snapshots, `pages` must be positive integers, sorted, and unique within each item. The create-version call returns `422` if the snapshot does not match the block type. It does not patch, normalize, or merge partial edits.
+For split and for-each snapshots, `pages` must be positive integers, sorted, and unique within each item. The API does not support partial patches.
 
 ### 4. Decide
 
-There are two verdicts:
-
-| Verdict    | Effect on the run                                               |
-| ---------- | --------------------------------------------------------------- |
-| `approved` | The selected `version_id` flows downstream and the run resumes. |
-| `rejected` | The run is cancelled. A `reason` is required.                   |
-
 ```python
-# Approve the exact version you inspected or just created.
-client.workflows.reviews.approve(
-    "run_abc123",
-    "block_extract",
-    version_id=version_id,
-)
+client.workflows.reviews.approve("rev_abc123", version_id=version_id)
 
-# Reject the exact version you inspected.
 client.workflows.reviews.reject(
-    "run_abc123",
-    "block_extract",
-    version_id=model_root_version_id,
+    "rev_abc123",
+    version_id=seed_version_id,
     reason="Source document is illegible; cannot verify totals.",
 )
 ```
 
-If another reviewer already decided the same review, the server returns `409`. Re-read the review and use its `decision` as the source of truth.
+`resume_status="resumed"` means the workflow accepted the signal. `resume_status="pending"` means the decision is durable and a backend reconciler will retry the resume.
 
-Repeated approval/rejection submissions for the exact same final decision return `submission_status="already_applied"` with the current review. A different terminal decision after the review is already decided returns `409`.
+## API Reference
 
-## Version rules
-
-- `version_id` is computed as `sha256(canonical_json(snapshot))`.
-- `OutputVersion` does not store its own id; the id is the key in `versions_by_id`.
-- `parent_id` means "this edit was authored from this version." It does not mean "latest."
-- Re-submitting the same snapshot is idempotent and returns the existing version, because `version_id` is derived from snapshot content.
-- `parent_id` records lineage for newly created versions; it is not part of the content hash.
-- After `decision` is set, the review is terminal: no more versions can be created and no second decision can be created.
-
-## Waiting for a gate
-
-If your integration submits a run and needs to wait until a block is ready for review, use `wait_for`. It polls until the review exists and has no terminal decision.
-
-```python
-run = client.workflows.runs.create(workflow_id="wf_abc123", ...)
-
-review = client.workflows.reviews.wait_for(
-    run.id,
-    "block_extract",
-    timeout=120.0,
-    poll_interval=2.0,
-)
-
-print("review is awaiting a decision:", review.block_id)
-```
-
-## API reference
-
-| Endpoint                                                            | Method                          |
-| ------------------------------------------------------------------- | ------------------------------- |
-| [List Reviews](/api-reference/workflows/reviews/list)               | `reviews.list(...)`             |
-| [Get Review](/api-reference/workflows/reviews/get)                  | `reviews.get(run_id, block_id)` |
-| [Create Version](/api-reference/workflows/reviews/create-version)   | `reviews.create_version(...)`   |
-| [Submit Decision](/api-reference/workflows/reviews/submit-decision) | `reviews.approve / reject(...)` |
+| Endpoint | SDK method |
+| --- | --- |
+| [List Reviews](/api-reference/workflows/reviews/list) | `reviews.list(...)` |
+| [Get Review](/api-reference/workflows/reviews/get) | `reviews.get(id)` |
+| [Append Version](/api-reference/workflows/reviews/append-version) | `reviews.append_version(...)` |
+| [Approve Review](/api-reference/workflows/reviews/approve) | `reviews.approve(...)` |
+| [Reject Review](/api-reference/workflows/reviews/reject) | `reviews.reject(...)` |

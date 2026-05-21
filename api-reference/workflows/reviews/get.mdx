@@ -1,56 +1,32 @@
 ---
 title: "Get Review"
-openapi: "GET /v1/workflows/reviews/{run_id}/{block_id}"
+openapi: "GET /v1/workflows/reviews/{id}"
 ---
 
-Get the full review for a gated block run.
-
-The review is attached to a single `(run_id, block_id)` pair. It records immutable output snapshots in `versions_by_id`, keyed by content hash, and a single terminal `decision` once the review is resolved.
-
-| Field            | Notes                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------- |
-| `versions_by_id` | Output snapshots keyed by `sha256(canonical_json(snapshot))`.                         |
-| `decision`       | `null` while awaiting review; otherwise the terminal `approved` / `rejected` verdict. |
-| `triggered_by`   | The review predicate that opened the gate.                                            |
-| `awaiting_since` | When the block began waiting for review.                                              |
-
-Every actor — model, agent, or human — is described by the same symmetric `Actor` shape: `{kind, id, display_name}`.
+Get one full review by opaque review id.
 
 <RequestExample>
 
 ```python python
-from retab import Retab
+review = client.workflows.reviews.get("rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY")
 
-client = Retab()
-
-review = client.workflows.reviews.get("run_abc123", "block_extract")
-
-for version_id, version in review.versions_by_id.items():
+for version_id, version in review.versions.items():
     print(version_id, version.parent_id, version.author.kind)
-
-print("decision:", review.decision)
 ```
 
 ```javascript javascript
-import { Retab } from "@retab/node";
-
-const client = new Retab();
-
 const review = await client.workflows.reviews.get(
-  "run_abc123",
-  "block_extract",
+  "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
 );
 
-for (const [versionId, version] of Object.entries(review.versions_by_id)) {
+for (const [versionId, version] of Object.entries(review.versions)) {
   console.log(versionId, version.parent_id, version.author.kind);
 }
-
-console.log("decision:", review.decision);
 ```
 
 ```bash curl
-curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/reviews/run_abc123/block_extract' \
+curl -X GET \
+  'https://api.retab.com/v1/workflows/reviews/rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY' \
   -H 'Api-Key: <your-api-key>'
 ```
 
@@ -60,18 +36,20 @@ curl -X 'GET' \
 
 ```json 200
 {
-  "_id": "run_abc123:block_extract",
-  "workflow_run_id": "run_abc123",
-  "block_run_id": "run_abc123:block_extract",
-  "block_id": "block_extract",
+  "id": "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
   "workflow_id": "wf_1",
   "workflow_version_id": "wfv_1",
+  "workflow_run_id": "run_abc123",
+  "block_id": "block_extract",
+  "step_id": "run_abc123_block_extract",
+  "parent_step_id": null,
+  "iteration_key": null,
   "block_type": "extract",
   "triggered_by": { "kind": "always" },
   "awaiting_since": "2026-05-13T08:14:02.341Z",
   "priority": 0,
-  "versions_by_id": {
-    "a9f4d2e7f50b8b7bc84f4d96d2ad831a2a3bfead9b46f945baf2f8eb2f457a18": {
+  "versions": {
+    "ver_HQ6ZZBQTJLSGLZQCWBSI25SCOQ": {
       "parent_id": null,
       "author": {
         "kind": "model",
@@ -84,12 +62,6 @@ curl -X 'GET' \
     }
   },
   "decision": null
-}
-```
-
-```json 404
-{
-  "detail": "No review found for run_id='run_abc123' block_id='block_extract'"
 }
 ```
 
