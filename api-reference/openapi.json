@@ -2340,24 +2340,6 @@
             "description": "Search by run ID (partial match)"
           },
           {
-            "name": "fields",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Comma-separated list of fields to return (e.g., 'id,lifecycle.status,timing.started_at'). If not specified, returns all fields.",
-              "title": "Fields"
-            },
-            "description": "Comma-separated list of fields to return (e.g., 'id,lifecycle.status,timing.started_at'). If not specified, returns all fields."
-          },
-          {
             "name": "before",
             "in": "query",
             "required": false,
@@ -2434,7 +2416,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedList"
+                  "$ref": "#/components/schemas/PaginatedList_WorkflowRunObject_"
                 }
               }
             }
@@ -3141,7 +3123,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewQueueResponse"
+                  "$ref": "#/components/schemas/PaginatedList_ReviewSummaryResponse_"
                 }
               }
             }
@@ -3294,7 +3276,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewVersionListResponse"
+                  "$ref": "#/components/schemas/PaginatedList_ReviewVersionResponse_"
                 }
               }
             }
@@ -3312,7 +3294,7 @@
         }
       }
     },
-    "/v1/workflows/reviews/versions/{rvr_id}": {
+    "/v1/workflows/reviews/versions/{version_id}": {
       "get": {
         "tags": [
           "Workflows",
@@ -3320,7 +3302,7 @@
         ],
         "summary": "Get Review Version Route",
         "description": "Read one review version by its content-addressed id.",
-        "operationId": "get_review_version_route_v1_workflows_reviews_versions__rvr_id__get",
+        "operationId": "get_review_version_route_v1_workflows_reviews_versions__version_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -3334,12 +3316,12 @@
         ],
         "parameters": [
           {
-            "name": "rvr_id",
+            "name": "version_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Rvr Id"
+              "title": "Version Id"
             }
           }
         ],
@@ -3595,7 +3577,58 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowArtifactRecord"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ExtractionWorkflowArtifact"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SplitWorkflowArtifact"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ClassificationWorkflowArtifact"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ParseWorkflowArtifact"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EditWorkflowArtifact"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PartitionWorkflowArtifact"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ConditionalEvaluationWorkflowArtifact"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ReviewEvaluationWorkflowArtifact"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WhileLoopTerminationWorkflowArtifact"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiCallInvocationWorkflowArtifact"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FunctionInvocationWorkflowArtifact"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "operation",
+                    "mapping": {
+                      "extraction": "#/components/schemas/ExtractionWorkflowArtifact",
+                      "split": "#/components/schemas/SplitWorkflowArtifact",
+                      "classification": "#/components/schemas/ClassificationWorkflowArtifact",
+                      "parse": "#/components/schemas/ParseWorkflowArtifact",
+                      "edit": "#/components/schemas/EditWorkflowArtifact",
+                      "partition": "#/components/schemas/PartitionWorkflowArtifact",
+                      "conditional_evaluation": "#/components/schemas/ConditionalEvaluationWorkflowArtifact",
+                      "review_trigger_evaluation": "#/components/schemas/ReviewEvaluationWorkflowArtifact",
+                      "while_loop_termination": "#/components/schemas/WhileLoopTerminationWorkflowArtifact",
+                      "api_call_invocation": "#/components/schemas/ApiCallInvocationWorkflowArtifact",
+                      "function_invocation": "#/components/schemas/FunctionInvocationWorkflowArtifact"
+                    }
+                  },
+                  "title": "Response Get Workflow Artifact By Id V1 Workflows Artifacts  Artifact Id  Get"
                 }
               }
             }
@@ -5865,31 +5898,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "anyOf": [
+                  "oneOf": [
                     {
-                      "oneOf": [
-                        {
-                          "$ref": "#/components/schemas/ExperimentSummaryMetricsResponse"
-                        },
-                        {
-                          "$ref": "#/components/schemas/ExperimentByDocumentMetricsResponse"
-                        },
-                        {
-                          "$ref": "#/components/schemas/ExperimentByTargetMetricsResponse"
-                        },
-                        {
-                          "$ref": "#/components/schemas/ExperimentVotesMetricsResponse"
-                        }
-                      ],
-                      "discriminator": {
-                        "propertyName": "view",
-                        "mapping": {
-                          "summary": "#/components/schemas/ExperimentSummaryMetricsResponse",
-                          "by_document": "#/components/schemas/ExperimentByDocumentMetricsResponse",
-                          "by_target": "#/components/schemas/ExperimentByTargetMetricsResponse",
-                          "votes": "#/components/schemas/ExperimentVotesMetricsResponse"
-                        }
-                      }
+                      "$ref": "#/components/schemas/ExperimentSummaryMetricsResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ExperimentByDocumentMetricsResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ExperimentByTargetMetricsResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ExperimentVotesMetricsResponse"
                     },
                     {
                       "$ref": "#/components/schemas/ExperimentMetricsStaleError"
@@ -5898,6 +5918,17 @@
                       "$ref": "#/components/schemas/ExperimentMetricsMissingError"
                     }
                   ],
+                  "discriminator": {
+                    "propertyName": "kind",
+                    "mapping": {
+                      "summary": "#/components/schemas/ExperimentSummaryMetricsResponse",
+                      "by_document": "#/components/schemas/ExperimentByDocumentMetricsResponse",
+                      "by_target": "#/components/schemas/ExperimentByTargetMetricsResponse",
+                      "votes": "#/components/schemas/ExperimentVotesMetricsResponse",
+                      "stale_metrics": "#/components/schemas/ExperimentMetricsStaleError",
+                      "no_metrics": "#/components/schemas/ExperimentMetricsMissingError"
+                    }
+                  },
                   "title": "Response Get Experiment Metrics For Run V1 Workflows Experiments Metrics Get"
                 }
               }
@@ -6400,24 +6431,6 @@
               "default": "updated_at",
               "title": "Sort By"
             }
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Comma-separated list of fields to return (e.g., 'id,name'). If not specified, returns all fields.",
-              "title": "Fields"
-            },
-            "description": "Comma-separated list of fields to return (e.g., 'id,name'). If not specified, returns all fields."
           }
         ],
         "responses": {
@@ -6426,7 +6439,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedList"
+                  "$ref": "#/components/schemas/PaginatedList_WorkflowResponse_"
                 }
               }
             }
@@ -6726,7 +6739,7 @@
           "Workflows"
         ],
         "summary": "Validate Workflow Spec",
-        "description": "Validate declarative YAML without mutating workflow state.\n\nContract:\n- parse/compile failures return `is_valid=False` with structured issues\n- warnings do not make the document invalid\n- counts reflect the canonical compiled graph, not raw authored block count",
+        "description": "Validate declarative YAML without mutating workflow state.\n\nContract:\n- validate, plan, and apply agree on whether a spec is acceptable: any\n  severity=error diagnostic — whether emitted at parse time as a\n  DeclarativeWorkflowError or bumped during compile/diagnose — raises\n  HTTP 400 with the structured error issues\n- warnings do not make the document invalid; warning-only specs return\n  HTTP 200 with `is_valid=True` and the warning issues in `diagnostics`\n- counts reflect the canonical compiled graph, not raw authored block count",
         "operationId": "validate_workflow_spec_v1_workflows_spec_validate_post",
         "requestBody": {
           "content": {
@@ -8370,7 +8383,7 @@
         "title": "Actor",
         "description": "One actor shape for humans, agents, and models."
       },
-      "AllItemsMatchCondition-Input": {
+      "AllItemsMatchCondition": {
         "properties": {
           "kind": {
             "type": "string",
@@ -8435,10 +8448,10 @@
                 "$ref": "#/components/schemas/EndsWithCondition"
               },
               {
-                "$ref": "#/components/schemas/AllItemsMatchCondition-Input"
+                "$ref": "#/components/schemas/AllItemsMatchCondition"
               },
               {
-                "$ref": "#/components/schemas/AnyItemMatchesCondition-Input"
+                "$ref": "#/components/schemas/AnyItemMatchesCondition"
               },
               {
                 "$ref": "#/components/schemas/SplitIOUCondition"
@@ -8448,8 +8461,8 @@
             "discriminator": {
               "propertyName": "kind",
               "mapping": {
-                "all_items_match": "#/components/schemas/AllItemsMatchCondition-Input",
-                "any_item_matches": "#/components/schemas/AnyItemMatchesCondition-Input",
+                "all_items_match": "#/components/schemas/AllItemsMatchCondition",
+                "any_item_matches": "#/components/schemas/AnyItemMatchesCondition",
                 "array_contains": "#/components/schemas/ArrayContainsCondition",
                 "between": "#/components/schemas/BetweenCondition",
                 "contains": "#/components/schemas/ContainsCondition",
@@ -8479,116 +8492,7 @@
         ],
         "title": "AllItemsMatchCondition"
       },
-      "AllItemsMatchCondition-Output": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "const": "all_items_match",
-            "title": "Kind",
-            "default": "all_items_match"
-          },
-          "condition": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ExistsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NotExistsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/EqualsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NotEqualsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NumberCompareCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ObjectContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ArrayContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/MatchesRegexCondition"
-              },
-              {
-                "$ref": "#/components/schemas/JsonSchemaValidCondition"
-              },
-              {
-                "$ref": "#/components/schemas/SimilarityGteCondition"
-              },
-              {
-                "$ref": "#/components/schemas/LlmJudgedAsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/LlmNotJudgedAsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NotContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/LengthCompareCondition"
-              },
-              {
-                "$ref": "#/components/schemas/BetweenCondition"
-              },
-              {
-                "$ref": "#/components/schemas/StartsWithCondition"
-              },
-              {
-                "$ref": "#/components/schemas/EndsWithCondition"
-              },
-              {
-                "$ref": "#/components/schemas/AllItemsMatchCondition-Output"
-              },
-              {
-                "$ref": "#/components/schemas/AnyItemMatchesCondition-Output"
-              },
-              {
-                "$ref": "#/components/schemas/SplitIOUCondition"
-              }
-            ],
-            "title": "Condition",
-            "discriminator": {
-              "propertyName": "kind",
-              "mapping": {
-                "all_items_match": "#/components/schemas/AllItemsMatchCondition-Output",
-                "any_item_matches": "#/components/schemas/AnyItemMatchesCondition-Output",
-                "array_contains": "#/components/schemas/ArrayContainsCondition",
-                "between": "#/components/schemas/BetweenCondition",
-                "contains": "#/components/schemas/ContainsCondition",
-                "ends_with": "#/components/schemas/EndsWithCondition",
-                "equals": "#/components/schemas/EqualsCondition",
-                "exists": "#/components/schemas/ExistsCondition",
-                "json_schema_valid": "#/components/schemas/JsonSchemaValidCondition",
-                "length_compare": "#/components/schemas/LengthCompareCondition",
-                "llm_judged_as": "#/components/schemas/LlmJudgedAsCondition",
-                "llm_not_judged_as": "#/components/schemas/LlmNotJudgedAsCondition",
-                "matches_regex": "#/components/schemas/MatchesRegexCondition",
-                "not_contains": "#/components/schemas/NotContainsCondition",
-                "not_equals": "#/components/schemas/NotEqualsCondition",
-                "not_exists": "#/components/schemas/NotExistsCondition",
-                "number_compare": "#/components/schemas/NumberCompareCondition",
-                "object_contains": "#/components/schemas/ObjectContainsCondition",
-                "similarity_gte": "#/components/schemas/SimilarityGteCondition",
-                "split_iou_gte": "#/components/schemas/SplitIOUCondition",
-                "starts_with": "#/components/schemas/StartsWithCondition"
-              }
-            }
-          }
-        },
-        "type": "object",
-        "required": [
-          "condition"
-        ],
-        "title": "AllItemsMatchCondition"
-      },
-      "AnyItemMatchesCondition-Input": {
+      "AnyItemMatchesCondition": {
         "properties": {
           "kind": {
             "type": "string",
@@ -8653,10 +8557,10 @@
                 "$ref": "#/components/schemas/EndsWithCondition"
               },
               {
-                "$ref": "#/components/schemas/AllItemsMatchCondition-Input"
+                "$ref": "#/components/schemas/AllItemsMatchCondition"
               },
               {
-                "$ref": "#/components/schemas/AnyItemMatchesCondition-Input"
+                "$ref": "#/components/schemas/AnyItemMatchesCondition"
               },
               {
                 "$ref": "#/components/schemas/SplitIOUCondition"
@@ -8666,8 +8570,8 @@
             "discriminator": {
               "propertyName": "kind",
               "mapping": {
-                "all_items_match": "#/components/schemas/AllItemsMatchCondition-Input",
-                "any_item_matches": "#/components/schemas/AnyItemMatchesCondition-Input",
+                "all_items_match": "#/components/schemas/AllItemsMatchCondition",
+                "any_item_matches": "#/components/schemas/AnyItemMatchesCondition",
                 "array_contains": "#/components/schemas/ArrayContainsCondition",
                 "between": "#/components/schemas/BetweenCondition",
                 "contains": "#/components/schemas/ContainsCondition",
@@ -8697,114 +8601,173 @@
         ],
         "title": "AnyItemMatchesCondition"
       },
-      "AnyItemMatchesCondition-Output": {
+      "ApiCallAttempt": {
         "properties": {
-          "kind": {
-            "type": "string",
-            "const": "any_item_matches",
-            "title": "Kind",
-            "default": "any_item_matches"
+          "attempt_number": {
+            "type": "integer",
+            "title": "Attempt Number",
+            "description": "0-based attempt index"
           },
-          "condition": {
-            "oneOf": [
+          "request_method": {
+            "type": "string",
+            "title": "Request Method"
+          },
+          "request_url": {
+            "type": "string",
+            "title": "Request Url"
+          },
+          "request_headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Request Headers"
+          },
+          "request_body": {
+            "anyOf": [
+              {},
               {
-                "$ref": "#/components/schemas/ExistsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NotExistsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/EqualsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NotEqualsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NumberCompareCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ObjectContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ArrayContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/MatchesRegexCondition"
-              },
-              {
-                "$ref": "#/components/schemas/JsonSchemaValidCondition"
-              },
-              {
-                "$ref": "#/components/schemas/SimilarityGteCondition"
-              },
-              {
-                "$ref": "#/components/schemas/LlmJudgedAsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/LlmNotJudgedAsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NotContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/LengthCompareCondition"
-              },
-              {
-                "$ref": "#/components/schemas/BetweenCondition"
-              },
-              {
-                "$ref": "#/components/schemas/StartsWithCondition"
-              },
-              {
-                "$ref": "#/components/schemas/EndsWithCondition"
-              },
-              {
-                "$ref": "#/components/schemas/AllItemsMatchCondition-Output"
-              },
-              {
-                "$ref": "#/components/schemas/AnyItemMatchesCondition-Output"
-              },
-              {
-                "$ref": "#/components/schemas/SplitIOUCondition"
+                "type": "null"
               }
             ],
-            "title": "Condition",
-            "discriminator": {
-              "propertyName": "kind",
-              "mapping": {
-                "all_items_match": "#/components/schemas/AllItemsMatchCondition-Output",
-                "any_item_matches": "#/components/schemas/AnyItemMatchesCondition-Output",
-                "array_contains": "#/components/schemas/ArrayContainsCondition",
-                "between": "#/components/schemas/BetweenCondition",
-                "contains": "#/components/schemas/ContainsCondition",
-                "ends_with": "#/components/schemas/EndsWithCondition",
-                "equals": "#/components/schemas/EqualsCondition",
-                "exists": "#/components/schemas/ExistsCondition",
-                "json_schema_valid": "#/components/schemas/JsonSchemaValidCondition",
-                "length_compare": "#/components/schemas/LengthCompareCondition",
-                "llm_judged_as": "#/components/schemas/LlmJudgedAsCondition",
-                "llm_not_judged_as": "#/components/schemas/LlmNotJudgedAsCondition",
-                "matches_regex": "#/components/schemas/MatchesRegexCondition",
-                "not_contains": "#/components/schemas/NotContainsCondition",
-                "not_equals": "#/components/schemas/NotEqualsCondition",
-                "not_exists": "#/components/schemas/NotExistsCondition",
-                "number_compare": "#/components/schemas/NumberCompareCondition",
-                "object_contains": "#/components/schemas/ObjectContainsCondition",
-                "similarity_gte": "#/components/schemas/SimilarityGteCondition",
-                "split_iou_gte": "#/components/schemas/SplitIOUCondition",
-                "starts_with": "#/components/schemas/StartsWithCondition"
+            "title": "Request Body"
+          },
+          "response_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
               }
-            }
+            ],
+            "title": "Response Status"
+          },
+          "response_headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Response Headers"
+          },
+          "response_body": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Body"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
           }
         },
         "type": "object",
         "required": [
-          "condition"
+          "attempt_number",
+          "request_method",
+          "request_url"
         ],
-        "title": "AnyItemMatchesCondition"
+        "title": "ApiCallAttempt",
+        "description": "One attempt of an api_call (initial + retries)."
+      },
+      "ApiCallInvocationWorkflowArtifact": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "const": "api_call_invocation",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "api_call_invocation"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/ApiCallAttempt"
+            },
+            "type": "array",
+            "title": "Attempts"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_run_id",
+          "step_id",
+          "created_at"
+        ],
+        "title": "ApiCallInvocationWorkflowArtifact"
       },
       "ApiTrigger": {
         "properties": {
@@ -9015,7 +8978,7 @@
         "title": "AssertionSchemaDep",
         "description": "Single-rule schema dependency for Level 2 drift detection."
       },
-      "AssertionSpec-Input": {
+      "AssertionSpec": {
         "properties": {
           "id": {
             "anyOf": [
@@ -9088,141 +9051,10 @@
                 "$ref": "#/components/schemas/EndsWithCondition"
               },
               {
-                "$ref": "#/components/schemas/AllItemsMatchCondition-Input"
+                "$ref": "#/components/schemas/AllItemsMatchCondition"
               },
               {
-                "$ref": "#/components/schemas/AnyItemMatchesCondition-Input"
-              },
-              {
-                "$ref": "#/components/schemas/SplitIOUCondition"
-              }
-            ],
-            "title": "Condition",
-            "discriminator": {
-              "propertyName": "kind",
-              "mapping": {
-                "all_items_match": "#/components/schemas/AllItemsMatchCondition-Input",
-                "any_item_matches": "#/components/schemas/AnyItemMatchesCondition-Input",
-                "array_contains": "#/components/schemas/ArrayContainsCondition",
-                "between": "#/components/schemas/BetweenCondition",
-                "contains": "#/components/schemas/ContainsCondition",
-                "ends_with": "#/components/schemas/EndsWithCondition",
-                "equals": "#/components/schemas/EqualsCondition",
-                "exists": "#/components/schemas/ExistsCondition",
-                "json_schema_valid": "#/components/schemas/JsonSchemaValidCondition",
-                "length_compare": "#/components/schemas/LengthCompareCondition",
-                "llm_judged_as": "#/components/schemas/LlmJudgedAsCondition",
-                "llm_not_judged_as": "#/components/schemas/LlmNotJudgedAsCondition",
-                "matches_regex": "#/components/schemas/MatchesRegexCondition",
-                "not_contains": "#/components/schemas/NotContainsCondition",
-                "not_equals": "#/components/schemas/NotEqualsCondition",
-                "not_exists": "#/components/schemas/NotExistsCondition",
-                "number_compare": "#/components/schemas/NumberCompareCondition",
-                "object_contains": "#/components/schemas/ObjectContainsCondition",
-                "similarity_gte": "#/components/schemas/SimilarityGteCondition",
-                "split_iou_gte": "#/components/schemas/SplitIOUCondition",
-                "starts_with": "#/components/schemas/StartsWithCondition"
-              }
-            }
-          },
-          "label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "target",
-          "condition"
-        ],
-        "title": "AssertionSpec",
-        "description": "Block-test assertion against one declared output handle.\n\n``target`` is the only supported shape: an output handle id and an\noptional relative path inside that handle's payload."
-      },
-      "AssertionSpec-Output": {
-        "properties": {
-          "id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id"
-          },
-          "target": {
-            "$ref": "#/components/schemas/OutputTarget"
-          },
-          "condition": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ExistsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NotExistsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/EqualsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NotEqualsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NumberCompareCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ObjectContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ArrayContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/MatchesRegexCondition"
-              },
-              {
-                "$ref": "#/components/schemas/JsonSchemaValidCondition"
-              },
-              {
-                "$ref": "#/components/schemas/SimilarityGteCondition"
-              },
-              {
-                "$ref": "#/components/schemas/LlmJudgedAsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/LlmNotJudgedAsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/NotContainsCondition"
-              },
-              {
-                "$ref": "#/components/schemas/LengthCompareCondition"
-              },
-              {
-                "$ref": "#/components/schemas/BetweenCondition"
-              },
-              {
-                "$ref": "#/components/schemas/StartsWithCondition"
-              },
-              {
-                "$ref": "#/components/schemas/EndsWithCondition"
-              },
-              {
-                "$ref": "#/components/schemas/AllItemsMatchCondition-Output"
-              },
-              {
-                "$ref": "#/components/schemas/AnyItemMatchesCondition-Output"
+                "$ref": "#/components/schemas/AnyItemMatchesCondition"
               },
               {
                 "$ref": "#/components/schemas/SplitIOUCondition"
@@ -9232,8 +9064,8 @@
             "discriminator": {
               "propertyName": "kind",
               "mapping": {
-                "all_items_match": "#/components/schemas/AllItemsMatchCondition-Output",
-                "any_item_matches": "#/components/schemas/AnyItemMatchesCondition-Output",
+                "all_items_match": "#/components/schemas/AllItemsMatchCondition",
+                "any_item_matches": "#/components/schemas/AnyItemMatchesCondition",
                 "array_contains": "#/components/schemas/ArrayContainsCondition",
                 "between": "#/components/schemas/BetweenCondition",
                 "contains": "#/components/schemas/ContainsCondition",
@@ -9820,6 +9652,97 @@
         ],
         "title": "ClassificationRequest"
       },
+      "ClassificationWorkflowArtifact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier of the classification"
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileRef",
+            "description": "Information about the classified file"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model used for classification"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/Category-Output"
+            },
+            "type": "array",
+            "title": "Categories",
+            "description": "Categories the document was classified against"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus",
+            "description": "Number of consensus votes used",
+            "default": 1
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions",
+            "description": "Free-form instructions supplied with the classification request."
+          },
+          "output": {
+            "$ref": "#/components/schemas/ClassificationDecision",
+            "description": "The classification result with reasoning"
+          },
+          "consensus": {
+            "$ref": "#/components/schemas/ClassificationConsensus",
+            "description": "Consensus metadata for multi-vote classification runs"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetabUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Usage information for the classification"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "operation": {
+            "type": "string",
+            "const": "classification",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "classification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file",
+          "model",
+          "categories",
+          "output"
+        ],
+        "title": "ClassificationWorkflowArtifact"
+      },
       "CompleteUploadRequest": {
         "properties": {
           "sha256": {
@@ -9851,6 +9774,338 @@
         "type": "object",
         "title": "CompletedTerminal",
         "description": "The run finished successfully."
+      },
+      "ConditionEvaluationDetails": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path",
+            "description": "JSON path that was evaluated",
+            "default": ""
+          },
+          "operator": {
+            "type": "string",
+            "title": "Operator",
+            "description": "Comparison operator used",
+            "default": ""
+          },
+          "expected": {
+            "title": "Expected",
+            "description": "Expected value"
+          },
+          "actual": {
+            "title": "Actual",
+            "description": "Actual value found"
+          },
+          "matched": {
+            "type": "boolean",
+            "title": "Matched",
+            "description": "Whether the condition matched",
+            "default": false
+          },
+          "per_item": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConditionEvaluationPerItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Per Item",
+            "description": "Per-item breakdown for wildcard array conditions"
+          },
+          "sub_conditions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConditionEvaluationSubCondition"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Conditions",
+            "description": "Sub-condition evaluations for compound conditions"
+          },
+          "logical_operator": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "and",
+                  "or"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logical Operator",
+            "description": "Logical operator combining sub-conditions"
+          }
+        },
+        "type": "object",
+        "title": "ConditionEvaluationDetails",
+        "description": "Detailed evaluation information for frontend display.\n\nThe frontend reads evaluation data from this nested 'details' object\nfor compatibility with the ConditionalEvaluationsTable component."
+      },
+      "ConditionEvaluationPerItem": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Index of this item in the array"
+          },
+          "indices": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Indices",
+            "description": "Hierarchical indices for nested arrays (e.g., [0, 2, 1] for items[0].subitems[2].field[1])"
+          },
+          "actual": {
+            "title": "Actual",
+            "description": "Actual value at this index"
+          },
+          "matched": {
+            "type": "boolean",
+            "title": "Matched",
+            "description": "Whether this item matched the condition",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "index"
+        ],
+        "title": "ConditionEvaluationPerItem",
+        "description": "Per-item evaluation result for wildcard array conditions.\n\nWhen a condition path contains .*, each array element is evaluated\nindividually with implicit AND logic (all must match)."
+      },
+      "ConditionEvaluationResult": {
+        "properties": {
+          "condition_id": {
+            "type": "string",
+            "title": "Condition Id",
+            "description": "Unique identifier for this condition"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path",
+            "description": "JSON path that was evaluated",
+            "default": ""
+          },
+          "operator": {
+            "type": "string",
+            "title": "Operator",
+            "description": "Comparison operator used",
+            "default": ""
+          },
+          "expected": {
+            "title": "Expected",
+            "description": "Expected value"
+          },
+          "actual": {
+            "title": "Actual",
+            "description": "Actual value found"
+          },
+          "matched": {
+            "type": "boolean",
+            "title": "Matched",
+            "description": "Whether the condition matched",
+            "default": false
+          },
+          "branch_name": {
+            "type": "string",
+            "title": "Branch Name",
+            "description": "Branch name (always 'exit' for while-loop termination)",
+            "default": "exit"
+          },
+          "logical_operator": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "and",
+                  "or"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logical Operator",
+            "description": "Logical operator for compound conditions"
+          },
+          "per_item": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConditionEvaluationPerItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Per Item",
+            "description": "Per-item breakdown for wildcard array conditions"
+          },
+          "sub_evaluations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConditionEvaluationSubCondition"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Evaluations",
+            "description": "Sub-condition evaluations for compound conditions"
+          },
+          "details": {
+            "$ref": "#/components/schemas/ConditionEvaluationDetails",
+            "description": "Nested details object for frontend compatibility"
+          }
+        },
+        "type": "object",
+        "required": [
+          "condition_id",
+          "details"
+        ],
+        "title": "ConditionEvaluationResult",
+        "description": "Complete evaluation result for a termination condition.\n\nThis model represents the full evaluation data sent to the frontend\nfor displaying in the Exit Trigger Evaluation dialog.\n\nThe frontend expects data at both top-level and nested in 'details'\nfor compatibility with the ConditionalEvaluationsTable component."
+      },
+      "ConditionEvaluationSubCondition": {
+        "properties": {
+          "sub_condition_id": {
+            "type": "string",
+            "title": "Sub Condition Id",
+            "description": "Identifier for this sub-condition",
+            "default": ""
+          },
+          "path": {
+            "type": "string",
+            "title": "Path",
+            "description": "JSON path that was evaluated",
+            "default": ""
+          },
+          "operator": {
+            "type": "string",
+            "title": "Operator",
+            "description": "Comparison operator used",
+            "default": ""
+          },
+          "expected": {
+            "title": "Expected",
+            "description": "Expected value"
+          },
+          "actual": {
+            "title": "Actual",
+            "description": "Actual value found"
+          },
+          "matched": {
+            "type": "boolean",
+            "title": "Matched",
+            "description": "Whether this sub-condition matched",
+            "default": false
+          },
+          "per_item": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConditionEvaluationPerItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Per Item",
+            "description": "Per-item breakdown if this sub-condition used a wildcard path"
+          }
+        },
+        "type": "object",
+        "title": "ConditionEvaluationSubCondition",
+        "description": "Evaluation result for a sub-condition in a compound condition.\n\nUsed when multiple conditions are combined with AND/OR operators."
+      },
+      "ConditionalEvaluationWorkflowArtifact": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "const": "conditional_evaluation",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "conditional_evaluation"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionEvaluationResult"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          },
+          "selected_handles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Selected Handles"
+          },
+          "matched_branch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Branch Id"
+          },
+          "matched_condition_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Condition Ids"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_run_id",
+          "step_id",
+          "created_at"
+        ],
+        "title": "ConditionalEvaluationWorkflowArtifact"
       },
       "ContainerContextData": {
         "properties": {
@@ -9948,7 +10203,7 @@
             "title": "Name"
           },
           "assertion": {
-            "$ref": "#/components/schemas/AssertionSpec-Input"
+            "$ref": "#/components/schemas/AssertionSpec"
           }
         },
         "additionalProperties": false,
@@ -11275,6 +11530,83 @@
         ],
         "title": "EditTemplateRequest"
       },
+      "EditWorkflowArtifact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier of the edit."
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileRef",
+            "description": "Information about the source file (input document or template PDF)."
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model used for the edit operation."
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions",
+            "description": "Instructions supplied with the edit request."
+          },
+          "config": {
+            "$ref": "#/components/schemas/EditConfig-Output",
+            "description": "Configuration used for the edit operation."
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id",
+            "description": "Template id used when the edit was created from a template; null for direct-document edits."
+          },
+          "data": {
+            "$ref": "#/components/schemas/EditResult",
+            "description": "The edit result: filled form fields and the rendered PDF."
+          },
+          "usage": {
+            "$ref": "#/components/schemas/RetabUsage",
+            "description": "Usage information for the edit operation."
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "operation": {
+            "type": "string",
+            "const": "edit",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "edit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file",
+          "model",
+          "instructions",
+          "config",
+          "data",
+          "usage"
+        ],
+        "title": "EditWorkflowArtifact"
+      },
       "EmailTrigger": {
         "properties": {
           "type": {
@@ -11513,6 +11845,12 @@
             "type": "string",
             "title": "Run Id"
           },
+          "kind": {
+            "type": "string",
+            "const": "by_document",
+            "title": "Kind",
+            "default": "by_document"
+          },
           "view": {
             "type": "string",
             "const": "by_document",
@@ -11671,6 +12009,12 @@
             "type": "string",
             "title": "Run Id"
           },
+          "kind": {
+            "type": "string",
+            "const": "by_target",
+            "title": "Kind",
+            "default": "by_target"
+          },
           "view": {
             "type": "string",
             "const": "by_target",
@@ -11731,13 +12075,13 @@
       },
       "ExperimentConfusionFlowMetric": {
         "properties": {
-          "from": {
+          "source": {
             "type": "string",
-            "title": "From"
+            "title": "Source"
           },
-          "to": {
+          "target": {
             "type": "string",
-            "title": "To"
+            "title": "Target"
           },
           "score": {
             "type": "number",
@@ -11746,8 +12090,8 @@
         },
         "type": "object",
         "required": [
-          "from",
-          "to",
+          "source",
+          "target",
           "score"
         ],
         "title": "ExperimentConfusionFlowMetric",
@@ -11885,6 +12229,12 @@
       },
       "ExperimentMetricsMissingError": {
         "properties": {
+          "kind": {
+            "type": "string",
+            "const": "no_metrics",
+            "title": "Kind",
+            "default": "no_metrics"
+          },
           "error": {
             "type": "string",
             "const": "no_metrics",
@@ -11910,6 +12260,12 @@
       },
       "ExperimentMetricsStaleError": {
         "properties": {
+          "kind": {
+            "type": "string",
+            "const": "stale_metrics",
+            "title": "Kind",
+            "default": "stale_metrics"
+          },
           "error": {
             "type": "string",
             "const": "stale_metrics",
@@ -12521,6 +12877,12 @@
             "type": "string",
             "title": "Run Id"
           },
+          "kind": {
+            "type": "string",
+            "const": "summary",
+            "title": "Kind",
+            "default": "summary"
+          },
           "view": {
             "type": "string",
             "const": "summary",
@@ -12672,6 +13034,12 @@
           "run_id": {
             "type": "string",
             "title": "Run Id"
+          },
+          "kind": {
+            "type": "string",
+            "const": "votes",
+            "title": "Kind",
+            "default": "votes"
           },
           "view": {
             "type": "string",
@@ -12891,6 +13259,110 @@
         },
         "type": "object",
         "title": "ExtractionConsensus"
+      },
+      "ExtractionWorkflowArtifact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier of the extraction"
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileRef",
+            "description": "Information about the extracted file"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model used for the extraction"
+          },
+          "json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Schema",
+            "description": "JSON schema used for the extraction"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus",
+            "description": "Number of consensus votes used",
+            "default": 1
+          },
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "DPI used to render document images",
+            "default": 192
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions",
+            "description": "Free-form instructions supplied with the extraction request."
+          },
+          "output": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Output",
+            "description": "The extracted structured data"
+          },
+          "consensus": {
+            "$ref": "#/components/schemas/ExtractionConsensus",
+            "description": "Consensus metadata for multi-vote extraction runs"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metadata"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetabUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Usage information for the extraction"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "operation": {
+            "type": "string",
+            "const": "extraction",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "extraction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file",
+          "model",
+          "json_schema",
+          "output"
+        ],
+        "title": "ExtractionWorkflowArtifact"
       },
       "FieldType": {
         "type": "string",
@@ -13141,6 +13613,78 @@
         ],
         "title": "FileRef",
         "description": "Public/shared file reference used across SDK and customer-facing APIs."
+      },
+      "FunctionInvocationWorkflowArtifact": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "const": "function_invocation",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "function_invocation"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Inputs"
+          },
+          "output": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_run_id",
+          "step_id",
+          "created_at"
+        ],
+        "title": "FunctionInvocationWorkflowArtifact"
       },
       "GenerateSchemaRequest": {
         "properties": {
@@ -13402,13 +13946,20 @@
             "title": "Warnings"
           },
           "created_at": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Created At"
           },
           "started_at": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -13419,7 +13970,7 @@
           "completed_at": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -13428,7 +13979,14 @@
             "title": "Completed At"
           },
           "expires_at": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Expires At"
           },
           "metadata": {
@@ -13458,7 +14016,7 @@
           "last_attempt_at": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -13609,13 +14167,20 @@
             "title": "Warnings"
           },
           "created_at": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Created At"
           },
           "started_at": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -13626,7 +14191,7 @@
           "completed_at": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -13635,7 +14200,14 @@
             "title": "Completed At"
           },
           "expires_at": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Expires At"
           },
           "metadata": {
@@ -13665,7 +14237,7 @@
           "last_attempt_at": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -14630,6 +15202,46 @@
         ],
         "title": "PaginatedList[ExperimentRunPublic]"
       },
+      "PaginatedList_ReviewSummaryResponse_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewSummaryResponse"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[ReviewSummaryResponse]"
+      },
+      "PaginatedList_ReviewVersionResponse_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewVersionResponse"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList[ReviewVersionResponse]"
+      },
       "PaginatedList_StepStatusObject_": {
         "properties": {
           "data": {
@@ -14709,6 +15321,46 @@
           "list_metadata"
         ],
         "title": "PaginatedList[WorkflowEdgeObject]"
+      },
+      "PaginatedList_WorkflowResponse_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowResponse"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList_WorkflowResponse_"
+      },
+      "PaginatedList_WorkflowRunObject_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowRunObject"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "PaginatedList_WorkflowRunObject_"
       },
       "PaginatedList_WorkflowTestRunRecord_": {
         "properties": {
@@ -14792,6 +15444,96 @@
           "text"
         ],
         "title": "ParseOutput"
+      },
+      "ParseWorkflowArtifact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier of the parse"
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileRef",
+            "description": "Information about the parsed file"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model used for parsing"
+          },
+          "table_parsing_format": {
+            "type": "string",
+            "enum": [
+              "markdown",
+              "yaml",
+              "html",
+              "json"
+            ],
+            "title": "Table Parsing Format",
+            "description": "Format used to render tables extracted from the document"
+          },
+          "image_resolution_dpi": {
+            "type": "integer",
+            "title": "Image Resolution Dpi",
+            "description": "DPI used when rasterizing pages for the parser"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions",
+            "description": "Free-form instructions supplied with the parse request."
+          },
+          "output": {
+            "$ref": "#/components/schemas/ParseOutput",
+            "description": "The parsed document content"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetabUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Usage information for the parse operation"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "operation": {
+            "type": "string",
+            "const": "parse",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "parse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file",
+          "model",
+          "table_parsing_format",
+          "image_resolution_dpi",
+          "output"
+        ],
+        "title": "ParseWorkflowArtifact"
       },
       "PartialSchema": {
         "properties": {
@@ -14958,6 +15700,97 @@
           "instructions"
         ],
         "title": "PartitionRequest"
+      },
+      "PartitionWorkflowArtifact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier of the partition"
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileRef",
+            "description": "Information about the partitioned file"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model used for the partition operation"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "Partition key used for the run"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions",
+            "description": "Instructions supplied with the partition request",
+            "default": ""
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus",
+            "description": "Number of consensus votes used",
+            "default": 1
+          },
+          "allow_overlap": {
+            "type": "boolean",
+            "title": "Allow Overlap",
+            "description": "Whether pages were allowed to appear in more than one partition chunk",
+            "default": true
+          },
+          "output": {
+            "items": {
+              "$ref": "#/components/schemas/PartitionChunk"
+            },
+            "type": "array",
+            "title": "Output",
+            "description": "The list of partition chunks with their assigned pages"
+          },
+          "consensus": {
+            "$ref": "#/components/schemas/PartitionConsensus",
+            "description": "Consensus metadata for multi-vote partition runs"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetabUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Usage information for the partition operation"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "operation": {
+            "type": "string",
+            "const": "partition",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "partition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file",
+          "model",
+          "key"
+        ],
+        "title": "PartitionWorkflowArtifact"
       },
       "PatchBlockRequest": {
         "properties": {
@@ -15515,6 +16348,129 @@
         "title": "ReviewConfidenceLt",
         "description": "Gate if the overall block confidence is below `threshold`.\n\nNote: LLM confidences are poorly calibrated; per-field confidence\n(ReviewFieldConfidenceLt) tends to behave better."
       },
+      "ReviewEvaluationWorkflowArtifact": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "const": "review_trigger_evaluation",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "review_trigger_evaluation"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionEvaluationResult"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          },
+          "selected_handles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Selected Handles"
+          },
+          "matched_branch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Branch Id"
+          },
+          "matched_condition_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Condition Ids"
+          },
+          "requires_human_review": {
+            "type": "boolean",
+            "title": "Requires Human Review",
+            "default": false
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          },
+          "review_decision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "approved",
+                  "rejected",
+                  "needs_changes"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Decision"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_run_id",
+          "step_id",
+          "created_at"
+        ],
+        "title": "ReviewEvaluationWorkflowArtifact"
+      },
       "ReviewFieldConfidenceLt": {
         "properties": {
           "kind": {
@@ -15567,27 +16523,6 @@
         ],
         "title": "ReviewJsonCondition",
         "description": "Gate when a conditional-block-style JSON condition matches.\n\nThe `condition` payload uses the same shape as workflow conditional blocks:\none condition group with `sub_conditions` and a `logical_operator`. Paths are\nevaluated against a review condition root, for example `data.invoice_total`\nor `likelihoods.invoice_total`."
-      },
-      "ReviewQueueResponse": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/ReviewSummaryResponse"
-            },
-            "type": "array",
-            "title": "Data"
-          },
-          "list_metadata": {
-            "$ref": "#/components/schemas/ListMetadata"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "data",
-          "list_metadata"
-        ],
-        "title": "ReviewQueueResponse"
       },
       "ReviewResponse": {
         "properties": {
@@ -15971,27 +16906,6 @@
         "title": "ReviewValidationFailed",
         "description": "Gate if the block output fails its declared schema validation."
       },
-      "ReviewVersionListResponse": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/ReviewVersionResponse"
-            },
-            "type": "array",
-            "title": "Data"
-          },
-          "list_metadata": {
-            "$ref": "#/components/schemas/ListMetadata"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "data",
-          "list_metadata"
-        ],
-        "title": "ReviewVersionListResponse"
-      },
       "ReviewVersionResponse": {
         "properties": {
           "id": {
@@ -16016,7 +16930,8 @@
             "title": "Parent Id"
           },
           "author": {
-            "title": "Author"
+            "$ref": "#/components/schemas/Actor",
+            "description": "Actor that created the version."
           },
           "snapshot": {
             "additionalProperties": true,
@@ -16349,6 +17264,108 @@
         ],
         "title": "SplitIOUCondition",
         "description": "Intersection-over-Union for split page assignments.\n\n``expected`` is stored in the canonical split-eval payload shape:\n``{\"splits\": [{\"name\", \"pages\"}]}``"
+      },
+      "SplitWorkflowArtifact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier of the split result"
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileRef",
+            "description": "Information about the split file"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model used for the split operation"
+          },
+          "subdocuments": {
+            "items": {
+              "$ref": "#/components/schemas/main_server__types__splits__Subdocument"
+            },
+            "type": "array",
+            "title": "Subdocuments",
+            "description": "Subdocuments used for the split operation"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus",
+            "description": "Number of consensus votes used",
+            "default": 1
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions",
+            "description": "Free-form instructions supplied with the split request."
+          },
+          "output": {
+            "items": {
+              "$ref": "#/components/schemas/main_server__types__splits__SplitResult"
+            },
+            "type": "array",
+            "title": "Output",
+            "description": "The list of document splits with their assigned pages"
+          },
+          "consensus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/main_server__types__splits__SplitConsensus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Consensus metadata for multi-vote split runs"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetabUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Usage information for the split operation"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "operation": {
+            "type": "string",
+            "const": "split",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "split"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file",
+          "model",
+          "subdocuments",
+          "output"
+        ],
+        "title": "SplitWorkflowArtifact"
       },
       "StartsWithCondition": {
         "properties": {
@@ -16692,7 +17709,7 @@
           "assertion": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/AssertionSpec-Input"
+                "$ref": "#/components/schemas/AssertionSpec"
               },
               {
                 "type": "null"
@@ -16971,6 +17988,60 @@
         "title": "WebhookTrigger",
         "description": "Run started by an inbound webhook."
       },
+      "WhileLoopTerminationWorkflowArtifact": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "const": "while_loop_termination",
+            "title": "Operation",
+            "description": "Artifact operation that determines the backing record type",
+            "default": "while_loop_termination"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_run_id": {
+            "type": "string",
+            "title": "Workflow Run Id"
+          },
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "termination_reason": {
+            "type": "string",
+            "enum": [
+              "max_iterations_reached",
+              "condition_matched",
+              "error"
+            ],
+            "title": "Termination Reason",
+            "description": "Why the while-loop terminated"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionEvaluationResult"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_run_id",
+          "step_id",
+          "termination_reason",
+          "created_at"
+        ],
+        "title": "WhileLoopTerminationWorkflowArtifact"
+      },
       "WorkflowArtifactRecord": {
         "properties": {
           "operation": {
@@ -17118,8 +18189,10 @@
         },
         "type": "object",
         "required": [
+          "id",
           "workflow_id",
-          "type"
+          "type",
+          "updated_at"
         ],
         "title": "WorkflowBlockObject",
         "description": "Public live workflow block object."
@@ -17464,9 +18537,11 @@
         },
         "type": "object",
         "required": [
+          "id",
           "workflow_id",
           "source_block",
-          "target_block"
+          "target_block",
+          "updated_at"
         ],
         "title": "WorkflowEdgeObject",
         "description": "Public live workflow edge object."
@@ -17647,7 +18722,7 @@
           "delimiter": {
             "type": "string",
             "title": "Delimiter",
-            "description": "CSV delimiter",
+            "description": "CSV field delimiter. Default is ';' (Excel-EU locale default); pass ',' for RFC 4180 / pandas compatibility. Cell values are always quoted when they contain the delimiter, the line terminator, or the quote character, with embedded quotes doubled per RFC 4180.",
             "default": ";"
           },
           "line_delimiter": {
@@ -17766,6 +18841,12 @@
             ],
             "title": "Published At",
             "description": "When the workflow was last published"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Release note attached to the currently published version. Echoes the ``description`` body passed to ``POST /v1/workflows/{id}/publish`` so the caller can confirm it was stored without a separate fetch.",
+            "default": ""
           }
         },
         "type": "object",
@@ -17818,7 +18899,9 @@
         },
         "type": "object",
         "required": [
-          "id"
+          "id",
+          "created_at",
+          "updated_at"
         ],
         "title": "WorkflowResponse",
         "description": "Public workflow resource returned by workflow metadata endpoints."
@@ -18000,7 +19083,7 @@
           "assertion": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/AssertionSpec-Output"
+                "$ref": "#/components/schemas/AssertionSpec"
               },
               {
                 "type": "null"

@@ -11,7 +11,11 @@ from retab import Retab
 client = Retab()
 
 # Retrieve a job by ID
-job = client.jobs.retrieve_full("job_V1StGXR8_Z5jdHi6B-myT")
+job = client.jobs.retrieve(
+    "job_V1StGXR8_Z5jdHi6B-myT",
+    include_request=True,
+    include_response=True,
+)
 
 print(f"Status: {job.status}")
 
@@ -27,7 +31,10 @@ import { Retab } from "@retab/node";
 const client = new Retab();
 
 // Retrieve a job by ID
-const job = await client.jobs.retrieveFull("job_V1StGXR8_Z5jdHi6B-myT");
+const job = await client.jobs.retrieve("job_V1StGXR8_Z5jdHi6B-myT", {
+  include_request: true,
+  include_response: true,
+});
 
 console.log(`Status: ${job.status}`);
 
@@ -58,7 +65,10 @@ func main() {
 	}
 
 	// Retrieve a job by ID
-	job, err := client.Jobs.RetrieveFull(ctx, "job_V1StGXR8_Z5jdHi6B-myT")
+	job, err := client.Jobs.Retrieve(ctx, "job_V1StGXR8_Z5jdHi6B-myT", &retab.JobRetrieveParams{
+		IncludeRequest:  true,
+		IncludeResponse: true,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -194,10 +204,9 @@ curl -X GET \
 
 ## SDK Convenience Methods
 
-- Python: `client.jobs.retrieve(job_id)` defaults to lightweight polling.
-- Python: `client.jobs.retrieve_full(job_id)` fetches full request/response payloads.
-- JavaScript: `client.jobs.retrieve(jobId)` defaults to lightweight polling.
-- JavaScript: `client.jobs.retrieveFull(jobId)` fetches full request/response payloads.
+- Python: `client.jobs.retrieve(job_id)` defaults to lightweight polling. Pass `include_request=True` or `include_response=True` when you need payloads.
+- JavaScript: `client.jobs.retrieve(jobId)` defaults to lightweight polling. Pass `include_request: true` or `include_response: true` when you need payloads.
+- Go: `client.Jobs.Retrieve(ctx, jobID, params)` defaults to lightweight polling when `params` is nil. Pass `JobRetrieveParams` when you need payloads.
 
 ## Payload Restoration
 
@@ -219,20 +228,20 @@ job = client.jobs.retrieve(job_id)
 terminal_statuses = ("completed", "failed", "cancelled", "expired")
 
 while job.status not in terminal_statuses:
-time.sleep(2) # Wait 2 seconds between polls
-job = client.jobs.retrieve(job_id)
+    time.sleep(2) # Wait 2 seconds between polls
+    job = client.jobs.retrieve(job_id)
 
-# Fetch full payload only once the job is terminal
+# Fetch the payload only once the job is terminal
 
 if job.status == "completed":
-job = client.jobs.retrieve_full(job_id)
+    job = client.jobs.retrieve(job_id, include_response=True)
 
 # Or use the helper method
 
 job = client.jobs.wait_for_completion(
-job_id,
-poll_interval_seconds=2.0,
-timeout_seconds=300,
+    job_id,
+    poll_interval_seconds=2.0,
+    timeout_seconds=300,
 )
 
 ````
@@ -245,9 +254,9 @@ while (!terminalStatuses.includes(job.status)) {
     job = await client.jobs.retrieve(jobId);
 }
 
-// Fetch full payload only once the job is terminal
+// Fetch the payload only once the job is terminal
 if (job.status === "completed") {
-    job = await client.jobs.retrieveFull(jobId);
+    job = await client.jobs.retrieve(jobId, { include_response: true });
 }
 
 // Or use the helper method
@@ -298,7 +307,7 @@ func main() {
 	}
 
 	if status, _ := (*job)["status"].(string); status == "completed" {
-		job, err = client.Jobs.RetrieveFull(ctx, jobID)
+		job, err = client.Jobs.Retrieve(ctx, jobID, &retab.JobRetrieveParams{IncludeResponse: true})
 		if err != nil {
 			log.Fatal(err)
 		}
