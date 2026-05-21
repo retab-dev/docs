@@ -1,0 +1,136 @@
+---
+title: "Get Artifact"
+openapi: "GET /v1/workflows/artifacts/{artifact_id}"
+---
+
+Fetch one dereferenced workflow artifact by `artifact_id`. The endpoint infers
+the backing artifact operation from the id prefix, so callers do not need to
+know which collection stores the record.
+
+The response is the flattened artifact record with `operation` injected at the
+top level. Operation-specific fields are preserved.
+
+<RequestExample>
+
+```python python
+import os
+import requests
+
+artifact_id = "ceval_abc123"
+
+response = requests.get(
+    f"https://api.retab.com/v1/workflows/artifacts/{artifact_id}",
+    headers={"Api-Key": os.environ["RETAB_API_KEY"]},
+    timeout=30,
+)
+response.raise_for_status()
+
+artifact = response.json()
+print(artifact["operation"])
+print(artifact["id"])
+```
+
+```javascript javascript
+const artifactId = "ceval_abc123";
+
+const response = await fetch(
+  `https://api.retab.com/v1/workflows/artifacts/${artifactId}`,
+  {
+    headers: {
+      "Api-Key": process.env.RETAB_API_KEY,
+    },
+  },
+);
+
+if (!response.ok) {
+  throw new Error(`Retab request failed: ${response.status}`);
+}
+
+const artifact = await response.json();
+console.log(artifact.operation);
+console.log(artifact.id);
+```
+
+```go go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	artifactID := "ceval_abc123"
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"https://api.retab.com/v1/workflows/artifacts/"+artifactID,
+		nil,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		log.Fatalf("Retab request failed: %s", resp.Status)
+	}
+
+	var artifact map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&artifact); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(artifact["operation"])
+	fmt.Println(artifact["id"])
+}
+```
+
+```bash curl
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/artifacts/ceval_abc123' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "operation": "conditional_evaluation",
+  "id": "ceval_abc123",
+  "workflow_run_id": "run_abc123xyz",
+  "step_id": "conditional-block-1",
+  "selected_handles": ["wrong"],
+  "matched_branch_id": "branch_wrong",
+  "matched_condition_ids": ["condition_wrong_total"],
+  "evaluations": [
+    {
+      "condition_id": "condition_wrong_total",
+      "matched": true,
+      "output_handle_id": "wrong",
+      "left_value": 1200,
+      "operator": "greater_than",
+      "right_value": 1000
+    }
+  ],
+  "created_at": "2026-03-12T09:00:04Z"
+}
+```
+
+```json 404
+{
+  "detail": "Unknown artifact id - prefix does not match any known workflow artifact operation"
+}
+```
+
+</ResponseExample>
