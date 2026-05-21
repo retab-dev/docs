@@ -3,11 +3,7 @@ title: "Get Artifact"
 openapi: "GET /v1/workflows/artifacts/{operation}/{artifact_id}"
 ---
 
-Dereference a workflow step artifact ref into its persisted record.
-
-Workflow steps return `artifact` as a small `{ operation, id }` pointer. This
-endpoint follows that pointer and returns the backing record flattened with
-`operation` and `id` at the top level.
+Fetch a persisted workflow artifact record by operation and artifact ID.
 
 Use this when you need details that do not belong in the generic step payload:
 conditional branch matches, function output,
@@ -21,13 +17,13 @@ from retab import Retab
 
 client = Retab()
 
-step = client.workflows.steps.get("run_abc123xyz", "function-block-1")
-
-if step.artifact:
-    artifact = client.workflows.artifacts.get(step.artifact)
-    print(artifact.operation)
-    print(artifact.output)
-    print(artifact.error)
+artifact = client.workflows.artifacts.get(
+    operation="function_invocation",
+    artifact_id="finv_abc123",
+)
+print(artifact.operation)
+print(artifact.output)
+print(artifact.error)
 ```
 
 ```javascript javascript
@@ -35,17 +31,13 @@ import { Retab } from "@retab/node";
 
 const client = new Retab();
 
-const step = await client.workflows.steps.get(
-  "run_abc123xyz",
-  "function-block-1",
-);
-
-if (step.artifact) {
-  const artifact = await client.workflows.artifacts.get(step.artifact);
-  console.log(artifact.operation);
-  console.log(artifact.output);
-  console.log(artifact.error);
-}
+const artifact = await client.workflows.artifacts.get({
+  operation: "function_invocation",
+  artifactId: "finv_abc123",
+});
+console.log(artifact.operation);
+console.log(artifact.output);
+console.log(artifact.error);
 ```
 
 ```go go
@@ -67,20 +59,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	step, err := client.Workflows.Steps.Get(ctx, "run_abc123xyz", "function-block-1")
+	artifact, err := client.Workflows.Artifacts.Get(ctx, "function_invocation", "finv_abc123")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if step.Artifact != nil {
-		artifact, err := client.Workflows.Artifacts.GetRef(ctx, *step.Artifact)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println((*artifact)["operation"])
-		fmt.Println((*artifact)["output"])
-		fmt.Println((*artifact)["error"])
-	}
+	fmt.Println((*artifact)["operation"])
+	fmt.Println((*artifact)["output"])
+	fmt.Println((*artifact)["error"])
 }
 ```
 
@@ -99,7 +85,7 @@ curl -X 'GET' \
   "operation": "function_invocation",
   "id": "finv_abc123",
   "workflow_run_id": "run_abc123xyz",
-  "step_id": "function-block-1",
+  "step_id": "step_function_1",
   "inputs": { "invoice_number": "INV-100" },
   "output": { "normalized_invoice_number": "INV-100" },
   "error": null,

@@ -29,12 +29,9 @@ if run.lifecycle.status == "completed":
         duration_ms = int((run.timing.completed_at - run.timing.started_at).total_seconds() * 1000)
         print(f"Duration: {duration_ms}ms")
     for step_summary in client.workflows.steps.list(run.id):
-        step = client.workflows.steps.get(run.id, step_summary.block_id)
+        step = client.workflows.steps.get(step_summary.step_id)
         if step.handle_outputs:
             print(f"{step.block_id}: {step.handle_outputs}")
-        if step.artifact:
-            artifact = client.workflows.artifacts.get(step.artifact)
-            print(f"{step.block_id} artifact: {artifact.operation}")
 ```
 
 ```javascript javascript
@@ -54,16 +51,9 @@ if (run.lifecycle.status === "completed") {
   }
   const stepSummaries = await client.workflows.steps.list(run.id);
   for (const stepSummary of stepSummaries) {
-    const step = await client.workflows.steps.get(
-      run.id,
-      stepSummary.block_id,
-    );
+    const step = await client.workflows.steps.get(stepSummary.step_id);
     if (Object.keys(step.handle_outputs).length > 0) {
       console.log(`${step.block_id}:`, step.handle_outputs);
-    }
-    if (step.artifact) {
-      const artifact = await client.workflows.artifacts.get(step.artifact);
-      console.log(`${step.block_id} artifact:`, artifact.operation);
     }
   }
 }
@@ -98,12 +88,12 @@ func main() {
 		stepSummaries, err := client.Workflows.Steps.List(ctx, run.ID)
 		if err != nil {
 			log.Fatal(err)
-		}
-		for _, summary := range stepSummaries.Data {
-			step, err := client.Workflows.Steps.Get(ctx, run.ID, summary.BlockID)
-			if err != nil {
-				log.Fatal(err)
 			}
+			for _, summary := range stepSummaries.Data {
+				step, err := client.Workflows.Steps.Get(ctx, summary.StepID)
+				if err != nil {
+					log.Fatal(err)
+				}
 			if len(step.HandleOutputs) > 0 {
 				fmt.Printf("%s: %v\n", step.BlockID, step.HandleOutputs)
 			}

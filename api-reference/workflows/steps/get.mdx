@@ -1,9 +1,11 @@
 ---
 title: "Get Step"
-openapi: "GET /v1/workflows/steps/{step_id}?run_id={run_id}"
+openapi: "GET /v1/workflows/steps/{step_id}"
 ---
 
-Get step lifecycle and handle data for a specific step in a workflow run. Use this to inspect the normalized inputs and outputs for a particular block after or during execution.
+Get one joined step row by `step_id`. The response matches a single row from
+[Query Steps](/api-reference/workflows/steps/query), including status, handle
+data, and fingerprint metadata.
 
 <RequestExample>
 
@@ -12,18 +14,11 @@ from retab import Retab
 
 client = Retab()
 
-step = client.workflows.steps.get("run_abc123xyz", "extract-block-1")
+step = client.workflows.steps.get("step_extract_1")
 
-print(step.lifecycle.status)
-print(step.extracted_data)
+print(step.status)
+print(step.handle_outputs)
 
-# Dereference the artifact record produced by this step:
-if step.artifact:
-    artifact = client.workflows.artifacts.get(step.artifact)
-    print(artifact.operation)
-    print(artifact.id)
-
-# Or inspect raw handle payloads:
 if step.handle_outputs:
     payload = step.handle_outputs["output-json-0"]
     print(payload.type)
@@ -35,19 +30,12 @@ import { Retab } from "@retab/node";
 
 const client = new Retab();
 
-const step = await client.workflows.steps.get(
-  "run_abc123xyz",
-  "extract-block-1",
-);
+const step = await client.workflows.steps.get("step_extract_1");
 
-console.log(`Step lifecycle: ${step.lifecycle.status}`);
+console.log(`Step status: ${step.status}`);
 const payload = step.handle_outputs["output-json-0"];
 if (payload?.type === "json") {
   console.log(payload.data);
-}
-if (step.artifact) {
-  const artifact = await client.workflows.artifacts.get(step.artifact);
-  console.log(artifact);
 }
 ```
 
@@ -70,17 +58,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	step, err := client.Workflows.Steps.Get(ctx, "run_abc123xyz", "extract-block-1")
+	step, err := client.Workflows.Steps.Get(ctx, "step_extract_1")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Step lifecycle: %s\n", step.Lifecycle["status"])
-	if step.Artifact != nil {
-		fmt.Println(step.Artifact.Operation, step.Artifact.ID)
-	}
-
-	// Or inspect raw handle payloads:
+	fmt.Printf("Step status: %s\n", step.Status)
 	if payload, ok := step.HandleOutputs["output-json-0"]; ok {
 		fmt.Println(payload.Type)
 		fmt.Println(payload.Data)
@@ -90,29 +73,27 @@ func main() {
 
 ```bash curl
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/steps/extract-block-1?run_id=run_abc123xyz' \
+  'https://api.retab.com/v1/workflows/steps/step_extract_1' \
   -H 'Api-Key: <your-api-key>'
 ```
 
 </RequestExample>
 
-`artifact` is a pointer, not the artifact payload. Use
-[Get Artifact](/api-reference/workflows/artifacts/get) when you need the full
-record for a persisted step result, such as review-trigger evaluations,
-function output, or API call retry attempts.
-
 <ResponseExample>
 
 ```json 200
 {
+  "step_id": "step_extract_1",
+  "run_id": "run_abc123xyz",
+  "workflow_id": "wf_abc123xyz",
   "block_id": "extract-block-1",
   "block_type": "extract",
-  "block_label": "Extract Data",
-  "lifecycle": { "status": "completed" },
-  "artifact": {
-    "operation": "extraction",
-    "id": "ext_abc123"
-  },
+  "status": "completed",
+  "started_at": "2026-05-18T10:00:00Z",
+  "completed_at": "2026-05-18T10:00:04Z",
+  "duration_ms": 4210,
+  "iteration": null,
+  "is_iteration": false,
   "handle_outputs": {
     "output-json-0": {
       "type": "json",
@@ -132,31 +113,45 @@ function output, or API call retry attempts.
         "mime_type": "application/pdf"
       }
     }
+  },
+  "fingerprint": {
+    "input_fingerprint": "6d1f8c8a",
+    "schema_fingerprint": "b44b1c28",
+    "definition_fingerprint": "0ff93ddc",
+    "resolved_definition_fingerprint": "42d114aa",
+    "effective_execution_fingerprint": "ca8f2b04",
+    "handle_inputs_fingerprint": "7b03fa21",
+    "effective_config": {},
+    "runtime_overrides": {},
+    "cohort_id": null,
+    "source_file_id": "file_123",
+    "source_filename": "invoice.pdf"
   }
 }
 ```
 
 ```json 200 (failed step)
 {
+  "step_id": "step_extract_1",
+  "run_id": "run_abc123xyz",
+  "workflow_id": "wf_abc123xyz",
   "block_id": "extract-block-1",
   "block_type": "extract",
-  "block_label": "Extract Data",
-  "lifecycle": {
-    "status": "error",
-    "message": "LLM returned malformed JSON",
-    "stage": "execution",
-    "category": null,
-    "details": null
-  },
-  "artifact": null,
+  "status": "error",
+  "started_at": "2026-05-18T10:00:00Z",
+  "completed_at": "2026-05-18T10:00:04Z",
+  "duration_ms": 4210,
+  "iteration": null,
+  "is_iteration": false,
   "handle_outputs": {},
-  "handle_inputs": {}
+  "handle_inputs": {},
+  "fingerprint": null
 }
 ```
 
 ```json 404
 {
-  "detail": "Step not found"
+  "detail": "Step 'step_extract_1' not found"
 }
 ```
 
