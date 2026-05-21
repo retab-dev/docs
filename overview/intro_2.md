@@ -177,7 +177,7 @@ Among the features we're working on:
 
 * [OpenAI](https://platform.openai.com/docs/guides/structured-outputs), [Google](https://ai.google.dev/gemini-api/docs/structured-output), [xAI](https://docs.x.ai/docs/guides/structured-outputs), [Outlines](https://dottxt-ai.github.io/outlines/latest/reference/generation/structured_generation_explanation/) on structured generation
 * [Structured generation Starter Pack](https://github.com/retab-dev/structured-generation-starter-pack)
-* [Quickstart](/get-started/quickstart)
+* [Quickstart](/overview/introduction)
 * [API Reference](/api-reference/introduction)
 * [Github Repository](https://github.com/retab-dev/retab)
 

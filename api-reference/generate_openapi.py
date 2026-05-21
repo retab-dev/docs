@@ -300,6 +300,52 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
                 get_operation["description"] = description.replace("Get step status", "Get step lifecycle")
 
 
+def _replace_schema_ref(node: object, old_schema_name: str, new_schema_name: str) -> None:
+    """Replace component schema refs deep in an OpenAPI subtree."""
+    old_ref = f"#/components/schemas/{old_schema_name}"
+    new_ref = f"#/components/schemas/{new_schema_name}"
+    if isinstance(node, dict):
+        if node.get("$ref") == old_ref:
+            node["$ref"] = new_ref
+        for value in node.values():
+            _replace_schema_ref(value, old_schema_name, new_schema_name)
+    elif isinstance(node, list):
+        for item in node:
+            _replace_schema_ref(item, old_schema_name, new_schema_name)
+
+
+def _hard_cutover_review_create_version(spec: dict[str, object]) -> None:
+    """Publish the review version endpoint with create-version naming.
+
+    The backend route still uses older internal append-oriented symbols while
+    the public API contract is create-version.
+    """
+    paths = spec.get("paths")
+    if isinstance(paths, dict):
+        path = paths.get("/v1/workflows/reviews/{run_id}/{block_id}/versions")
+        if isinstance(path, dict):
+            post_operation = path.get("post")
+            if isinstance(post_operation, dict):
+                post_operation["summary"] = "Create Version"
+                post_operation["operationId"] = (
+                    "create_version_route_v1_workflows_reviews__run_id___block_id__versions_post"
+                )
+
+    _replace_schema_ref(spec, "AppendVersionRequest", "CreateVersionRequest")
+
+    schemas = spec.get("components", {}).get("schemas") if isinstance(spec.get("components"), dict) else None
+    if not isinstance(schemas, dict):
+        return
+
+    append_version_request = schemas.pop("AppendVersionRequest", None)
+    if not isinstance(append_version_request, dict):
+        return
+
+    append_version_request["title"] = "CreateVersionRequest"
+    append_version_request["description"] = "Create a corrected snapshot version without deciding."
+    schemas["CreateVersionRequest"] = append_version_request
+
+
 def generate_openapi() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     backend_main_server = repo_root / "backend" / "main_server"
@@ -333,6 +379,7 @@ def generate_openapi() -> None:
     _strip_public_workflow_internal_fields(spec)
     _strip_update_workflow_email_trigger_docs(spec)
     _hard_cutover_workflow_step_lifecycle(spec)
+    _hard_cutover_review_create_version(spec)
 
     # Strip unused legacy request/response schemas that only belonged to the
     # document-scoped classification API.
