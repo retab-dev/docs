@@ -1,7 +1,5 @@
 ---
-
 ## title: Reasoning
-
 ---
 
 When extracting data, LLMs sometimes make errors with calculations, unit conversions, or complex logic. Reasoning helps by encouraging the LLM to "show its work" before providing the final answer.
@@ -12,7 +10,6 @@ Reasoning uses a special JSON Schema annotation to create auxiliary fields where
 
 This approach improves accuracy while keeping your original schema structure intact.
 
-
 ## Reasoning Prompt
 
 A `X-ReasoningPrompt` tag in the schema generates a reasoning field alongside the data field. This is particularly useful for calculations, unit conversions, or multi-step logic.
@@ -20,15 +17,10 @@ A `X-ReasoningPrompt` tag in the schema generates a reasoning field alongside th
 **Example: Temperature Unit Conversion**
 
 ```markdown Temperature_report.md
-| Date        | Location | Temperature (°C)| Humidity | Conditions    |
-|-------------|----------|-----------------|----------|---------------|
-| 2024-01-15  | New York | 22.5            | 65       | Partly Cloudy |
+| Date       | Location | Temperature (°C) | Humidity | Conditions    |
+| ---------- | -------- | ---------------- | -------- | ------------- |
+| 2024-01-15 | New York | 22.5             | 65       | Partly Cloudy |
 ```
-
-
-
-
-
 
 Let's say we have a temperature report in Celsius, but our data model expects the temperature in Fahrenheit:
 
@@ -40,19 +32,20 @@ from datetime import date
 # You can define the custom annotations in the `pydantic.Field` class using the `json_schema_extra` field.
 
 class TemperatureReport(BaseModel):
-    date: date
-    location: str
-    temperature: float = Field(...,
-        description="temperature in Fahrenheit",
-        json_schema_extra={
-            "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.",
-        }
-    )
-    humidity: float
-    conditions: str
+date: date
+location: str
+temperature: float = Field(...,
+description="temperature in Fahrenheit",
+json_schema_extra={
+"X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.",
+}
+)
+humidity: float
+conditions: str
 
 # If you need a json_schema, you can call TemperatureReport.model_json_schema()
-```
+
+````
 ```typescript JavaScript {10-12}
 import { z } from "zod";
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-openapi";
@@ -88,7 +81,8 @@ const document = generator.generateDocument({
 
 // Print the schema in the console
 console.log(JSON.stringify(document.components?.schemas?.TemperatureReport, null, 2));
-```
+````
+
 ```go Go {21}
 // Build the JSON schema as map[string]any. The X-ReasoningPrompt key is
 // preserved verbatim when the schema is sent to the Retab API.
@@ -125,6 +119,7 @@ func main() {
 	fmt.Println(string(encoded))
 }
 ```
+
 ```json json_schema.json {13}
 {
   "properties": {
@@ -152,13 +147,7 @@ func main() {
       "type": "string"
     }
   },
-  "required": [
-    "date",
-    "location",
-    "temperature",
-    "humidity",
-    "conditions"
-  ],
+  "required": ["date", "location", "temperature", "humidity", "conditions"],
   "title": "TemperatureReport",
   "type": "object"
 }
@@ -190,13 +179,9 @@ Without reasoning, the LLM might incorrectly use 22.5°F instead of converting f
 ```
 </CodeGroup>
 
-
-As you can see, the "reasoning___" fields help the LLM show its work while the final output follows your schema structure.
-
-
+As you can see, the "reasoning\_\_\_" fields help the LLM show its work while the final output follows your schema structure.
 
 ---
-
 
 ## Key Benefits
 
@@ -211,7 +196,6 @@ As you can see, the "reasoning___" fields help the LLM show its work while the f
 - Make the reasoning description specific to guide the LLM's thought process
 - Place reasoning fields before the fields that depend on the reasoning
 - Keep reasoning concise but complete enough to follow the logic
-
 
 ## Go further
 

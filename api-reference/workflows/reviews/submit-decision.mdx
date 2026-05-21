@@ -1,43 +1,43 @@
 ---
-title: 'Submit Decision'
-openapi: 'POST /v1/workflows/reviews/{run_id}/{block_id}/decision'
+title: "Submit Decision"
+openapi: "POST /v1/workflows/reviews/{run_id}/{block_id}/decision"
 ---
 
 Submit a terminal verdict against one exact review version.
 
 There are two verdicts:
 
-| Verdict | Effect |
-|---|---|
+| Verdict    | Effect                                                          |
+| ---------- | --------------------------------------------------------------- |
 | `approved` | The selected `version_id` flows downstream and the run resumes. |
-| `rejected` | The run is cancelled. `reason` is required. |
+| `rejected` | The run is cancelled. `reason` is required.                     |
 
 The request body carries:
 
-| Field | Notes |
-|---|---|
-| `verdict` | `approved` / `rejected`. |
+| Field        | Notes                            |
+| ------------ | -------------------------------- |
+| `verdict`    | `approved` / `rejected`.         |
 | `version_id` | Exact key from `versions_by_id`. |
-| `reason` | Required for `rejected`. |
+| `reason`     | Required for `rejected`.         |
 
 The SDK exposes one method per verdict — `approve` and `reject` — both of which post to this endpoint.
 
 The response includes:
 
-| Field | Notes |
-|---|---|
-| `submission_status` | Whether this request created the decision or matched an existing final decision. |
-| `review` | The current review, including `versions_by_id` and `decision`. |
-| `resume_status` | `resumed`, `skipped`, or `failed` for the runtime resume/cancel signal. |
-| `resume_error` | Present when the decision was committed but runtime resume/cancel signaling failed. |
+| Field               | Notes                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `submission_status` | Whether this request created the decision or matched an existing final decision.    |
+| `review`            | The current review, including `versions_by_id` and `decision`.                      |
+| `resume_status`     | `resumed`, `skipped`, or `failed` for the runtime resume/cancel signal.             |
+| `resume_error`      | Present when the decision was committed but runtime resume/cancel signaling failed. |
 
 `submission_status` values:
 
-| Status | Meaning |
-|---|---|
-| `accepted` | The terminal decision was created by this request. |
-| `already_applied` | The review already had the exact same verdict and `version_id`; the server returned the current review without creating another decision. |
-| `accepted_pending_resume` | The decision was recorded, but runtime resume/cancel signaling failed. The reconcile loop will retry. |
+| Status                    | Meaning                                                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `accepted`                | The terminal decision was created by this request.                                                                                        |
+| `already_applied`         | The review already had the exact same verdict and `version_id`; the server returned the current review without creating another decision. |
+| `accepted_pending_resume` | The decision was recorded, but runtime resume/cancel signaling failed. The reconcile loop will retry.                                     |
 
 <RequestExample>
 
@@ -65,16 +65,23 @@ client.workflows.reviews.reject(
 ```
 
 ```javascript javascript
-import { Retab } from '@retab/node';
+import { Retab } from "@retab/node";
 
 const client = new Retab();
 
-const review = await client.workflows.reviews.get("run_abc123", "block_extract");
+const review = await client.workflows.reviews.get(
+  "run_abc123",
+  "block_extract",
+);
 const versionId = Object.keys(review.versions_by_id)[0];
 
-const result = await client.workflows.reviews.approve("run_abc123", "block_extract", {
-  versionId,
-});
+const result = await client.workflows.reviews.approve(
+  "run_abc123",
+  "block_extract",
+  {
+    versionId,
+  },
+);
 console.log(result.submission_status);
 
 await client.workflows.reviews.reject("run_abc123", "block_extract", {
@@ -115,7 +122,11 @@ curl -X 'POST' \
     "versions_by_id": {
       "b7d7f3ddc4ce98edbb5ea71d2ff8a7b711b3d4b70c20f481e14c03c7d53e15e2": {
         "parent_id": null,
-        "author": { "kind": "model", "id": "retab-small", "display_name": "Retab Small" },
+        "author": {
+          "kind": "model",
+          "id": "retab-small",
+          "display_name": "Retab Small"
+        },
         "snapshot": { "total_amount": 325, "vendor_name": "Acme Corp" },
         "note": null,
         "created_at": "2026-05-13T08:14:02.341Z"
@@ -124,7 +135,11 @@ curl -X 'POST' \
     "decision": {
       "verdict": "approved",
       "version_id": "b7d7f3ddc4ce98edbb5ea71d2ff8a7b711b3d4b70c20f481e14c03c7d53e15e2",
-      "decided_by": { "kind": "human", "id": "user_42", "display_name": "Dana Rivera" },
+      "decided_by": {
+        "kind": "human",
+        "id": "user_42",
+        "display_name": "Dana Rivera"
+      },
       "reason": null,
       "decided_at": "2026-05-13T09:10:00.000Z"
     }

@@ -7,11 +7,10 @@ Your backend should be able to receive this payload and process the extracted da
 
 ## Request Details
 
-* **Method**: `POST`
-* **Content-Type**: `application/json`
-* **Headers**:
-
-  * `Cube AI-Signature`: HMAC-SHA256 signature (can be used to verify authenticity of the payload)
+- **Method**: `POST`
+- **Content-Type**: `application/json`
+- **Headers**:
+  - `Cube AI-Signature`: HMAC-SHA256 signature (can be used to verify authenticity of the payload)
 
 ---
 
@@ -61,7 +60,7 @@ Your backend should be able to receive this payload and process the extracted da
 
 ## Where to Find the Data You Care About
 
-* The **structured extraction result** is always inside:
+- The **structured extraction result** is always inside:
 
   ```json
   completion.choices[0].message.content
@@ -69,7 +68,7 @@ Your backend should be able to receive this payload and process the extracted da
 
   > This field is a **JSON string** — you must parse it (in Python: `json.loads(...)`, in Node: `JSON.parse(...)`).
 
-* The **uploaded file** (if present) is in:
+- The **uploaded file** (if present) is in:
 
   ```json
   file_payload.url
@@ -91,7 +90,7 @@ app.post("/webhook", (req, res) => {
 
   console.log("📬 Webhook received:", parsed, {
     user: body?.user,
-    file: body?.file_payload?.filename
+    file: body?.file_payload?.filename,
   });
 
   res.json({ status: "success" });

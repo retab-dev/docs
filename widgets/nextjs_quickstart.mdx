@@ -14,7 +14,7 @@ npm create-next-app@latest retab-app --typescript --tailwind --eslint --no-src-d
 ```
 
 ```bash pnpm
-pnpm create-next-app@latest retab-app --typescript --tailwind --eslint --no-src-dir --app --no-react-compiler --import-alias "@/*" 
+pnpm create-next-app@latest retab-app --typescript --tailwind --eslint --no-src-dir --app --no-react-compiler --import-alias "@/*"
 ```
 
 ```bash yarn
@@ -24,6 +24,7 @@ yarn create-next-app@latest retab-app --typescript --tailwind --eslint --no-src-
 ```bash bun
 bun create-next-app@latest retab-app --typescript --tailwind --eslint --no-src-dir --app --no-react-compiler --import-alias "@/*"
 ```
+
 </CodeGroup>
 
 Install the required packages:
@@ -44,6 +45,7 @@ yarn add @retab/react
 ```bash bun
 bun add @retab/react
 ```
+
 </CodeGroup>
 
 ## Step 2: Environment Variables
@@ -60,7 +62,8 @@ NEXT_PUBLIC_RETAB_BASE_URL=https://api.retab.com
 ```
 
 <Tip>
-  Get your API key and project ID from the [Retab dashboard](https://retab.com/dashboard/settings).
+  Get your API key and project ID from the [Retab
+  dashboard](https://retab.com/dashboard/settings).
 </Tip>
 
 ## Step 3: Create the Token Endpoint
@@ -75,7 +78,7 @@ export async function GET() {
     if (!retabApiKey) {
       return NextResponse.json(
         { error: "RETAB_API_KEY is not set" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -88,13 +91,13 @@ export async function GET() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ ttl: 3600 }),
-      }
+      },
     );
 
     if (!response.ok) {
       return NextResponse.json(
         { error: "Failed to get session token" },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -103,7 +106,7 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -136,7 +139,8 @@ export function Providers({ children }: ProvidersProps) {
           const { token } = await response.json();
           return token;
         },
-        baseUrl: process.env.NEXT_PUBLIC_RETAB_BASE_URL || "https://api.retab.com",
+        baseUrl:
+          process.env.NEXT_PUBLIC_RETAB_BASE_URL || "https://api.retab.com",
       }}
     >
       {children}
@@ -169,9 +173,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
@@ -179,7 +181,9 @@ export default function RootLayout({
 ```
 
 <Note>
-  The root layout remains a Server Component (no "use client"), which allows you to use `metadata` exports and other server-only features. The `Providers` component handles the client-side context.
+  The root layout remains a Server Component (no "use client"), which allows you
+  to use `metadata` exports and other server-only features. The `Providers`
+  component handles the client-side context.
 </Note>
 
 ## Step 6: Create the Widgets Demo Page
@@ -199,7 +203,13 @@ import {
   UploadJobsList,
 } from "@retab/react";
 
-type WidgetId = "data" | "file" | "list" | "reviewer" | "extraction" | "uploads";
+type WidgetId =
+  | "data"
+  | "file"
+  | "list"
+  | "reviewer"
+  | "extraction"
+  | "uploads";
 
 interface Widget {
   id: WidgetId;
@@ -235,14 +245,16 @@ const widgets: Widget[] = [
     id: "reviewer",
     name: "ExtractionReviewer",
     component: "<ExtractionReviewer />",
-    description: "Complete review interface with list, file preview, and data editor",
+    description:
+      "Complete review interface with list, file preview, and data editor",
     category: "composite",
   },
   {
     id: "extraction",
     name: "ExtractionComponent",
     component: "<ExtractionComponent />",
-    description: "Side-by-side file preview and data display with resizable panels",
+    description:
+      "Side-by-side file preview and data display with resizable panels",
     category: "composite",
   },
   {
@@ -276,7 +288,7 @@ function WidgetRenderer({ widgetId }: { widgetId: WidgetId }) {
         : `/?widget=${widgetId}`;
       router.push(url);
     },
-    [router, widgetId]
+    [router, widgetId],
   );
 
   switch (widgetId) {
@@ -293,12 +305,7 @@ function WidgetRenderer({ widgetId }: { widgetId: WidgetId }) {
       );
 
     case "file":
-      return (
-        <FileComponent
-          extraction={firstExtraction}
-          fieldPath={null}
-        />
-      );
+      return <FileComponent extraction={firstExtraction} fieldPath={null} />;
 
     case "list":
       return (
@@ -346,7 +353,11 @@ function WidgetRenderer({ widgetId }: { widgetId: WidgetId }) {
       );
 
     case "uploads":
-      return <div className="flex flex-1 flex-col min-h-0 p-2"><UploadJobsList /></div>;
+      return (
+        <div className="flex flex-1 flex-col min-h-0 p-2">
+          <UploadJobsList />
+        </div>
+      );
 
     default:
       return null;
@@ -365,7 +376,7 @@ export default function WidgetsDemo() {
     setExpandedCategories((prev) =>
       prev.includes(categoryId)
         ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
+        : [...prev, categoryId],
     );
   };
 
@@ -385,7 +396,7 @@ export default function WidgetsDemo() {
         <div className="flex-1 overflow-auto p-2">
           {categories.map((category) => {
             const categoryWidgets = widgets.filter(
-              (w) => w.category === category.id
+              (w) => w.category === category.id,
             );
             const isExpanded = expandedCategories.includes(category.id);
 
@@ -397,8 +408,9 @@ export default function WidgetsDemo() {
                 >
                   <span>{category.label}</span>
                   <svg
-                    className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""
-                      }`}
+                    className={`w-4 h-4 transition-transform ${
+                      isExpanded ? "rotate-180" : ""
+                    }`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -418,10 +430,11 @@ export default function WidgetsDemo() {
                       <button
                         key={widget.id}
                         onClick={() => setSelectedWidget(widget.id)}
-                        className={`w-full text-left px-3 py-2 text-sm rounded transition-colors ${selectedWidget === widget.id
-                          ? "bg-indigo-100 text-indigo-700"
-                          : "text-gray-600 hover:bg-gray-100"
-                          }`}
+                        className={`w-full text-left px-3 py-2 text-sm rounded transition-colors ${
+                          selectedWidget === widget.id
+                            ? "bg-indigo-100 text-indigo-700"
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
                       >
                         <code className="text-xs">{widget.component}</code>
                       </button>
@@ -487,6 +500,7 @@ yarn dev
 ```bash bun
 bun dev
 ```
+
 </CodeGroup>
 
 Open [http://localhost:3000](http://localhost:3000) to see the widgets demo. You can:
@@ -522,11 +536,11 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   const session = await getServerSession();
-  
+
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  
+
   // ... rest of token generation
 }
 ```

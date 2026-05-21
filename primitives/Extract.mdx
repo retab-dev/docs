@@ -1,7 +1,5 @@
 ---
-
 ## title: Extraction
-
 ---
 
 ### Introduction
@@ -24,17 +22,17 @@ You can still add your own application-level validation if you want stricter bus
 ```mermaid
 flowchart LR
     A[Documents] --> B
-    
+
     subgraph Retab["Retab Extract API"]
     B[1. AI-Powered Extraction]
     end
-    
+
     B --> C
-    
+
     subgraph Validation["Schema Validation (eg. Pydantic/Zod)"]
         C[2. Validate & Clean Data]
     end
-    
+
     C --> D
 
     subgraph Application["Database/Application"]
@@ -43,6 +41,7 @@ flowchart LR
 ```
 
 Unlike the `parse` method that focuses on raw text extraction, `extract` provides:
+
 - **Structured Output**: Data extracted directly into JSON format matching your schema.
 - **AI-Powered Inference**: Handles complex layouts, handwritten text, and contextual understanding.
 - **Modality Support**: Works with text, images, or native document formats.
@@ -56,17 +55,20 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
   <Expandable title="properties">
 
 <ParamField body="document" type="string | object" required>
-  The document to extract from. Can be a file path (string), or an object with `filename` (string) and `url` (string, e.g., base64-encoded data).
+  The document to extract from. Can be a file path (string), or an object with
+  `filename` (string) and `url` (string, e.g., base64-encoded data).
 </ParamField>
 
 <ParamField body="model" type="string" required>
-  The AI model to use for extraction. Examples: `retab-small` for balanced accuracy and speed.
+  The AI model to use for extraction. Examples: `retab-small` for balanced
+  accuracy and speed.
 </ParamField>
 
 <ParamField body="json_schema" type="object" required>
-  The JSON schema defining the structure of the extracted data. Includes properties, required fields, and optional `X-SystemPrompt` for custom instructions.
+  The JSON schema defining the structure of the extracted data. Includes
+  properties, required fields, and optional `X-SystemPrompt` for custom
+  instructions.
 </ParamField>
-
 
 <ParamField body="image_resolution_dpi" type="integer" default="192">
   The DPI of the image sent to the LLM. Defaults to 192.
@@ -77,7 +79,8 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
 </ParamField>
 
 <ParamField body="n_consensus" type="integer" default="1">
-  Number of consensus runs. Set to >1 for multi-run averaging to improve accuracy on uncertain extractions (increases cost).
+  Number of consensus runs. Set to >1 for multi-run averaging to improve
+  accuracy on uncertain extractions (increases cost).
 </ParamField>
 
 <ParamField body="instructions" type="string | null" default="null">
@@ -88,7 +91,8 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
 </ParamField>
 
 <ResponseField name="Returns" type="Extraction">
-An `Extraction` record with the extracted data, usage details, consensus likelihoods, and a persisted `id`.
+  An `Extraction` record with the extracted data, usage details, consensus
+  likelihoods, and a persisted `id`.
   <Expandable title="properties">
     <ResponseField name="id" type="string">
       Unique identifier for the stored extraction record.
@@ -97,7 +101,8 @@ An `Extraction` record with the extracted data, usage details, consensus likelih
       The extracted structured data (parsed against your `json_schema`).
     </ResponseField>
     <ResponseField name="consensus" type="object">
-      Consensus metadata. `consensus.likelihoods` holds per-field confidence scores (populated when `n_consensus > 1`).
+      Consensus metadata. `consensus.likelihoods` holds per-field confidence
+      scores (populated when `n_consensus > 1`).
     </ResponseField>
     <ResponseField name="usage" type="object">
       Token usage details.
@@ -116,35 +121,36 @@ from retab.types.extractions import ExtractionRequest
 client = Retab()
 
 extraction = client.extractions.create(
-    ExtractionRequest(
-        document="freight/booking_confirmation.jpg",
-        model="retab-micro",
-        json_schema={
-            'X-SystemPrompt': 'You are a useful assistant.',
-            'properties': {
-                'name': {
-                    'description': 'The name of the calendar event.',
-                    'title': 'Name',
-                    'type': 'string'
-                },
-                'date': {
-                    'description': 'The date of the calendar event in ISO 8601 format.',
-                    'title': 'Date',
-                    'type': 'string'
-                }
-            },
-            'required': ['name', 'date'],
-            'title': 'CalendarEvent',
-            'type': 'object'
-        },
-        n_consensus=1,  # 1 means disabled (default); if > 1 the extraction runs in consensus mode
-    )
+ExtractionRequest(
+document="freight/booking_confirmation.jpg",
+model="retab-micro",
+json_schema={
+'X-SystemPrompt': 'You are a useful assistant.',
+'properties': {
+'name': {
+'description': 'The name of the calendar event.',
+'title': 'Name',
+'type': 'string'
+},
+'date': {
+'description': 'The date of the calendar event in ISO 8601 format.',
+'title': 'Date',
+'type': 'string'
+}
+},
+'required': ['name', 'date'],
+'title': 'CalendarEvent',
+'type': 'object'
+},
+n_consensus=1, # 1 means disabled (default); if > 1 the extraction runs in consensus mode
+)
 )
 
 print(extraction.output)
 print(extraction.consensus.likelihoods)
 print(extraction.id)
-```
+
+````
 ```javascript JavaScript
 import { Retab } from '@retab/node';
 
@@ -177,7 +183,8 @@ const extraction = await client.extractions.create({
 console.log(extraction.output);
 console.log(extraction.consensus?.likelihoods);
 console.log(extraction.id);
-```
+````
+
 ```go Go
 package main
 
@@ -231,6 +238,7 @@ func main() {
 	fmt.Println((*extraction)["id"])
 }
 ```
+
 ```curl cURL
 curl -X POST https://api.retab.com/v1/extractions \
 -H "Api-Key: $RETAB_API_KEY" \
@@ -247,14 +255,14 @@ curl -X POST https://api.retab.com/v1/extractions \
             "name": {
                 "description": "The name of the calendar event.",
                 "title": "Name",
-                "type": "string"  
+                "type": "string"
             },
             "date": {
                 "description": "The date of the calendar event in ISO 8601 format.",
                 "title": "Date",
                 "type": "string"
             }
-        },  
+        },
         "required": ["name", "date"],
         "title": "CalendarEvent",
         "type": "object"
@@ -262,35 +270,37 @@ curl -X POST https://api.retab.com/v1/extractions \
     "n_consensus": 1
 }
 ```
+
 ```json Response
 {
-    "id": "extr_01HZX0ABCDEF123456",
-    "file": {
-        "filename": "booking_confirmation.jpg",
-        "mime_type": "image/jpeg"
-    },
-    "model": "retab-micro",
-    "json_schema": { "...": "..." },
-    "n_consensus": 1,
-    "output": {
-        "name": "Confirmation d'affrètement",
-        "date": "2024-11-08"
-    },
-    "consensus": {
-        "choices": [],
-        "likelihoods": {
-            "name": 0.7227993785831323,
-            "date": 0.7306298416895017
-        }
-    },
-    "usage": {
-        "completion_tokens": 20,
-        "prompt_tokens": 2760,
-        "total_tokens": 2780
-    },
-    "created_at": "2025-01-10T15:30:00Z"
+  "id": "extr_01HZX0ABCDEF123456",
+  "file": {
+    "filename": "booking_confirmation.jpg",
+    "mime_type": "image/jpeg"
+  },
+  "model": "retab-micro",
+  "json_schema": { "...": "..." },
+  "n_consensus": 1,
+  "output": {
+    "name": "Confirmation d'affrètement",
+    "date": "2024-11-08"
+  },
+  "consensus": {
+    "choices": [],
+    "likelihoods": {
+      "name": 0.7227993785831323,
+      "date": 0.7306298416895017
+    }
+  },
+  "usage": {
+    "completion_tokens": 20,
+    "prompt_tokens": 2760,
+    "total_tokens": 2780
+  },
+  "created_at": "2025-01-10T15:30:00Z"
 }
 ```
+
 </CodeGroup>
 
 ## Build Your Schema
@@ -317,14 +327,14 @@ As a rule of thumb, fields below `0.75` likelihood need attention before product
 
 ### Schema improvement levers
 
-| Lever | When to apply | Concrete fix |
-|-------|----------------|--------------|
-| Change field names | Models mix up concepts | Rename `name` to `event_name` |
-| Improve descriptions | Correct concept, inconsistent format | Add format instructions and examples |
-| Tighten field types | Strings, numbers, and dates drift across runs | Use stronger types and explicit ISO formats |
-| Restructure nested data | One field combines multiple concepts | Replace `address: string` with nested address fields |
-| Add reasoning prompts | Calculations or conversions are unstable | Add `X-ReasoningPrompt` to the field |
-| Remove weak fields | The field is noisy and non-critical | Drop it or defer it to a later version |
+| Lever                   | When to apply                                 | Concrete fix                                         |
+| ----------------------- | --------------------------------------------- | ---------------------------------------------------- |
+| Change field names      | Models mix up concepts                        | Rename `name` to `event_name`                        |
+| Improve descriptions    | Correct concept, inconsistent format          | Add format instructions and examples                 |
+| Tighten field types     | Strings, numbers, and dates drift across runs | Use stronger types and explicit ISO formats          |
+| Restructure nested data | One field combines multiple concepts          | Replace `address: string` with nested address fields |
+| Add reasoning prompts   | Calculations or conversions are unstable      | Add `X-ReasoningPrompt` to the field                 |
+| Remove weak fields      | The field is noisy and non-critical           | Drop it or defer it to a later version               |
 
 ### Example: iterating on a schema
 
@@ -336,28 +346,29 @@ from retab.types.extractions import ExtractionRequest
 client = Retab()
 
 initial_schema = {
-    "title": "CalendarEvent",
-    "type": "object",
-    "properties": {
-        "name": {"type": "string"},
-        "date": {"type": "string"},
-        "address": {"type": "string"},
-    },
-    "required": ["name", "date", "address"],
+"title": "CalendarEvent",
+"type": "object",
+"properties": {
+"name": {"type": "string"},
+"date": {"type": "string"},
+"address": {"type": "string"},
+},
+"required": ["name", "date", "address"],
 }
 
 result = client.extractions.create(
-    ExtractionRequest(
-        document="event_flyer.pdf",
-        model="retab-small",
-        json_schema=initial_schema,
-        n_consensus=4,
-    )
+ExtractionRequest(
+document="event_flyer.pdf",
+model="retab-small",
+json_schema=initial_schema,
+n_consensus=4,
+)
 )
 
 print(result.output)
 print(result.consensus.likelihoods if result.consensus else None)
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -384,7 +395,7 @@ const result = await client.extractions.create({
 
 console.log(result.output);
 console.log(result.consensus?.likelihoods);
-```
+````
 
 ```go Go
 package main
@@ -432,6 +443,7 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 Example interpretation:
@@ -465,19 +477,20 @@ The model then produces an auxiliary `reasoning___<field_name>` output during ex
 from pydantic import BaseModel, Field
 
 class TemperatureReport(BaseModel):
-    temperature: float = Field(
-        ...,
-        description="temperature in Fahrenheit",
-        json_schema_extra={
-            "X-ReasoningPrompt": (
-                "If the temperature is given in Celsius, explicitly convert it "
-                "to Fahrenheit. If it is already in Fahrenheit, leave it unchanged."
-            )
-        },
-    )
+temperature: float = Field(
+...,
+description="temperature in Fahrenheit",
+json_schema_extra={
+"X-ReasoningPrompt": (
+"If the temperature is given in Celsius, explicitly convert it "
+"to Fahrenheit. If it is already in Fahrenheit, leave it unchanged."
+)
+},
+)
 
 print(TemperatureReport.model_json_schema())
-```
+
+````
 
 ```javascript JavaScript
 import { z } from 'zod';
@@ -488,7 +501,7 @@ const TemperatureReportSchema = z.object({
       "If the temperature is given in Celsius, explicitly convert it to Fahrenheit. If it is already in Fahrenheit, leave it unchanged."
   } as any),
 });
-```
+````
 
 ```go Go
 package main
@@ -521,6 +534,7 @@ func main() {
 	fmt.Println(string(encoded))
 }
 ```
+
 </CodeGroup>
 
 Without reasoning, a model may copy `22.5` directly. With reasoning enabled, it is more likely to compute `72.5` and explain the conversion in `reasoning___temperature`.
@@ -553,7 +567,8 @@ sources = client.extractions.sources("extr_01G34H8J2K")
 
 print(sources.extraction)
 print(sources.sources)
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -564,7 +579,7 @@ const sources = await client.extractions.sources("extr_01G34H8J2K");
 
 console.log(sources.extraction);
 console.log(sources.sources);
-```
+````
 
 ```go Go
 package main
@@ -594,6 +609,7 @@ func main() {
 	fmt.Println((*sources)["sources"])
 }
 ```
+
 </CodeGroup>
 
 ### Response shape
@@ -608,7 +624,7 @@ Every sourced leaf looks like this:
     "anchor": {
       "kind": "pdf_bbox",
       "page": 1,
-      "left": 0.60,
+      "left": 0.6,
       "top": 0.12,
       "width": 0.25,
       "height": 0.03
@@ -644,20 +660,21 @@ from retab import Retab
 client = Retab()
 
 recent = client.extractions.list(
-    limit=10,
-    order="desc",
+limit=10,
+order="desc",
 )
 
 customer_specific = client.extractions.list(
-    metadata={"customer_id": "cust_acme_corp"},
-    limit=50,
+metadata={"customer_id": "cust_acme_corp"},
+limit=50,
 )
 
 date_filtered = client.extractions.list(
-    from_date=datetime(2024, 1, 1),
-    to_date=datetime(2024, 12, 31),
+from_date=datetime(2024, 1, 1),
+to_date=datetime(2024, 12, 31),
 )
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -678,7 +695,7 @@ const dateFiltered = await client.extractions.list({
   from_date: new Date("2024-01-01"),
   to_date: new Date("2024-12-31"),
 });
-```
+````
 
 ```go Go
 package main
@@ -728,6 +745,7 @@ func main() {
 	fmt.Println(dateFiltered.Data)
 }
 ```
+
 </CodeGroup>
 
 Useful list filters:
@@ -748,7 +766,8 @@ client = Retab()
 
 extraction = client.extractions.get("extr_01G34H8J2K")
 print(extraction)
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -757,7 +776,7 @@ const client = new Retab();
 
 const extraction = await client.extractions.get("extr_01G34H8J2K");
 console.log(extraction);
-```
+````
 
 ```go Go
 package main
@@ -785,6 +804,7 @@ func main() {
 	fmt.Println(*extraction)
 }
 ```
+
 </CodeGroup>
 
 ### Filtering by metadata
@@ -798,10 +818,11 @@ from retab import Retab
 client = Retab()
 
 customer_extractions = client.extractions.list(
-    metadata={"customer_id": "cust_acme_corp"},
-    limit=100,
+metadata={"customer_id": "cust_acme_corp"},
+limit=100,
 )
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -812,7 +833,7 @@ const customerExtractions = await client.extractions.list({
   metadata: { customer_id: "cust_acme_corp" },
   limit: 100,
 });
-```
+````
 
 ```go Go
 package main
@@ -843,6 +864,7 @@ func main() {
 	fmt.Println(customerExtractions.Data)
 }
 ```
+
 </CodeGroup>
 
 For full request and response details, see the extraction endpoints in the API Reference.
@@ -859,30 +881,31 @@ from retab.types.extractions import ExtractionRequest
 client = Retab()
 
 # Extract data
+
 result = client.extractions.create(
-    ExtractionRequest(
-        document="freight/booking_confirmation.jpg",
-        model="retab-micro",
-        json_schema={
-            'X-SystemPrompt': 'You are a useful assistant.',
-            'properties': {
-                'name': {
-                    'description': 'The name of the calendar event.',
-                    'title': 'Name',
-                    'type': 'string'
-                },
-                'date': {
-                    'description': 'The date of the calendar event in ISO 8601 format.',
-                    'title': 'Date',
-                    'type': 'string'
-                }
-            },
-            'required': ['name', 'date'],
-            'title': 'CalendarEvent',
-            'type': 'object'
-        },
-        n_consensus=1,
-    )
+ExtractionRequest(
+document="freight/booking_confirmation.jpg",
+model="retab-micro",
+json_schema={
+'X-SystemPrompt': 'You are a useful assistant.',
+'properties': {
+'name': {
+'description': 'The name of the calendar event.',
+'title': 'Name',
+'type': 'string'
+},
+'date': {
+'description': 'The date of the calendar event in ISO 8601 format.',
+'title': 'Date',
+'type': 'string'
+}
+},
+'required': ['name', 'date'],
+'title': 'CalendarEvent',
+'type': 'object'
+},
+n_consensus=1,
+)
 )
 
 extracted_data = result.output
@@ -891,13 +914,14 @@ likelihoods = (result.consensus.likelihoods or {}) if result.consensus else {}
 print(f"Extracted Event: {extracted_data.get('name')} on {extracted_data.get('date')}")
 
 if likelihoods and all(score > 0.7 for score in likelihoods.values()):
-    print("High likelihood extraction - Saving to DB...")
+print("High likelihood extraction - Saving to DB...")
 else:
-    print("Low likelihood - Review manually")
+print("Low likelihood - Review manually")
 
 if result.usage:
-    print(f"Processed with {result.usage.total_tokens} tokens")
-```
+print(f"Processed with {result.usage.total_tokens} tokens")
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -943,7 +967,7 @@ if (validation.success) {
 }
 
 console.log(`Processed with ${result.usage?.total_tokens} tokens`);
-```
+````
 
 ```go Go
 package main
@@ -1020,6 +1044,7 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 ## Use Case: Passing Extra Instructions
@@ -1034,29 +1059,30 @@ from retab.types.extractions import ExtractionRequest
 client = Retab()
 
 result = client.extractions.create(
-    ExtractionRequest(
-        document="invoices/invoice_001.pdf",
-        model="retab-micro",
-        json_schema={
-            'properties': {
-                'vendor_name': {'type': 'string', 'description': 'Name of the vendor'},
-                'invoice_number': {'type': 'string', 'description': 'Invoice number'},
-                'total_amount': {'type': 'number', 'description': 'Total amount due'},
-                'currency': {'type': 'string', 'description': 'Currency code (e.g., USD, EUR)'}
-            },
-            'required': ['vendor_name', 'invoice_number', 'total_amount'],
-            'type': 'object'
-        },
-        instructions=(
-            "This invoice is from our European supplier. "
-            "Amounts should be in EUR unless explicitly stated otherwise. "
-            "Extract values exactly as written; do not infer a missing currency."
-        ),
-    )
+ExtractionRequest(
+document="invoices/invoice_001.pdf",
+model="retab-micro",
+json_schema={
+'properties': {
+'vendor_name': {'type': 'string', 'description': 'Name of the vendor'},
+'invoice_number': {'type': 'string', 'description': 'Invoice number'},
+'total_amount': {'type': 'number', 'description': 'Total amount due'},
+'currency': {'type': 'string', 'description': 'Currency code (e.g., USD, EUR)'}
+},
+'required': ['vendor_name', 'invoice_number', 'total_amount'],
+'type': 'object'
+},
+instructions=(
+"This invoice is from our European supplier. "
+"Amounts should be in EUR unless explicitly stated otherwise. "
+"Extract values exactly as written; do not infer a missing currency."
+),
+)
 )
 
 print(result.output)
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -1080,7 +1106,7 @@ const result = await client.extractions.create({
 });
 
 console.log(result.output);
-```
+````
 
 ```go Go
 package main
@@ -1149,6 +1175,7 @@ curl -X POST https://api.retab.com/v1/extractions \
     "instructions": "This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise."
 }'
 ```
+
 </CodeGroup>
 
 ## Metadata Filters
@@ -1167,18 +1194,19 @@ from retab.types.extractions import ExtractionRequest
 client = Retab()
 
 result = client.extractions.create(
-    ExtractionRequest(
-        document="freight/booking_confirmation.jpg",
-        model="retab-small",
-        json_schema=my_schema,
-        metadata={
-            "customer_id": "cust_123",
-            "source": "sinari_jobs",
-            "project_id": "project_abc",
-        },
-    )
+ExtractionRequest(
+document="freight/booking_confirmation.jpg",
+model="retab-small",
+json_schema=my_schema,
+metadata={
+"customer_id": "cust_123",
+"source": "sinari_jobs",
+"project_id": "project_abc",
+},
 )
-```
+)
+
+````
 
 ```javascript JavaScript
 import { Retab } from "@retab/node";
@@ -1195,7 +1223,7 @@ const result = await client.extractions.create({
     project_id: "project_abc",
   },
 });
-```
+````
 
 ```go Go
 package main
@@ -1235,6 +1263,7 @@ func main() {
 	fmt.Println(*result)
 }
 ```
+
 </CodeGroup>
 
 ### 2. Filter extractions by metadata
@@ -1246,13 +1275,14 @@ from retab import Retab
 client = Retab()
 
 customer_extractions = client.extractions.list(
-    limit=50,
-    metadata={
-        "customer_id": "cust_123",
-        "source": "sinari_jobs",
-    },
+limit=50,
+metadata={
+"customer_id": "cust_123",
+"source": "sinari_jobs",
+},
 )
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from "@retab/node";
@@ -1266,7 +1296,7 @@ const customerExtractions = await client.extractions.list({
     source: "sinari_jobs",
   },
 });
-```
+````
 
 ```go Go
 package main
@@ -1307,6 +1337,7 @@ curl -G 'https://api.retab.com/v1/extractions' \
   --data-urlencode 'limit=50' \
   --data-urlencode 'metadata={"customer_id":"cust_123","source":"sinari_jobs"}'
 ```
+
 </CodeGroup>
 
 When multiple metadata keys are provided, all keys are applied together as exact-match filters.
@@ -1314,20 +1345,24 @@ When multiple metadata keys are provided, all keys are applied together as exact
 ## Best Practices
 
 ### Model Selection
+
 - **`retab-large`**: Use for complex documents requiring deep contextual understanding.
 - **`retab-small`**: Balanced for accuracy and cost, recommended for most extraction tasks.
 - **`retab-micro`**: Faster and cheaper for simple extractions or high-volume processing.
 
 ### Schema Design
+
 - Keep schemas concise: Only include required fields to improve extraction accuracy.
 - Use descriptive `description` fields: Helps the AI model understand what to extract.
 - Add `X-SystemPrompt` for custom guidance: E.g., "Focus on freight details" for domain-specific extractions.
 
 ### Confidence Handling
+
 - Set a threshold (e.g., 0.7) for automated processing.
 - For critical tasks, enable `n_consensus > 1` to average results and boost reliability.
 
 ### Using Instructions
+
 - Use `instructions` to pass domain-specific hints that aren't part of the schema.
 - Ideal for: currency defaults, date format preferences, handling ambiguous abbreviations, or specifying regional conventions.
 - Keep the string concise to avoid diluting the extraction focus.

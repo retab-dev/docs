@@ -44,8 +44,8 @@ A `WorkflowTest` is a Pydantic model with three meaningful sections:
 
 A discriminated union by `type`:
 
-| `type` | Fields | Meaning |
-|---|---|---|
+| `type`  | Fields     | Meaning                                              |
+| ------- | ---------- | ---------------------------------------------------- |
 | `block` | `block_id` | Run the test against a single block in the workflow. |
 
 `block` is the only variant today. The shape is a discriminated union so
@@ -56,10 +56,10 @@ can be added later without renaming the field at every callsite.
 
 Also a discriminated union by `type`:
 
-| `type` | Fields | Meaning |
-|---|---|---|
-| `manual` | `handle_inputs: { [handle_id]: HandleInput }` | Hand-written inputs. Use for synthetic test cases. |
-| `run_step` | `run_id: str`, `step_id?: str` | Replay the inputs the block actually received during a previous workflow run. `step_id` is required for blocks executed inside a `for_each` (each iteration is its own step). |
+| `type`     | Fields                                        | Meaning                                                                                                                                                                       |
+| ---------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `manual`   | `handle_inputs: { [handle_id]: HandleInput }` | Hand-written inputs. Use for synthetic test cases.                                                                                                                            |
+| `run_step` | `run_id: str`, `step_id?: str`                | Replay the inputs the block actually received during a previous workflow run. `step_id` is required for blocks executed inside a `for_each` (each iteration is its own step). |
 
 When you create a test from `run_step`, Retab snapshots the inputs at create
 time — subsequent edits to the source workflow run don't affect the test.
@@ -86,22 +86,22 @@ catalog below.
 
 #### Available `condition.kind` values
 
-| Kind | Use | Notes |
-|---|---|---|
-| `exists` / `not_exists` | Path is/isn't present | Treats missing keys, out-of-bounds indices, and traversals through `null` as "not there" — does NOT block. |
-| `equals` | Strict deep equality | Does NOT conflate `True == 1` or `False == 0`. Strips `reasoning___*` keys before comparing (LLM extractor sidecars). |
-| `compare` | `<`, `<=`, `>`, `>=` for numbers | |
-| `contains` | Substring on strings; element on lists | If `expected` is a dict, use `array_contains` instead. |
-| `array_contains` | Subset matching for list-of-dicts | |
-| `object_contains` | Subset matching for dicts | Same `reasoning___*` strip as `equals`. |
-| `length_compare` | Length operator on strings / lists / dicts | |
-| `matches_regex` | `re.fullmatch` | Use `.*foo.*` for substring search. |
-| `validates_json_schema` | Validate a subtree against a JSON Schema | |
-| `all_items_match` | Every list item matches the inner condition | Passes vacuously on empty arrays. |
-| `any_item_matches` | Some list item matches | Fails on empty arrays. |
-| `similarity_gte` | Embedding-similarity threshold | Async; can produce `error` status. |
-| `llm_judged_as` / `llm_not_judged_as` | LLM rubric check | Async; can produce `error` status. |
-| `split_iou_gte` | IOU threshold for split manifests | |
+| Kind                                  | Use                                         | Notes                                                                                                                 |
+| ------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `exists` / `not_exists`               | Path is/isn't present                       | Treats missing keys, out-of-bounds indices, and traversals through `null` as "not there" — does NOT block.            |
+| `equals`                              | Strict deep equality                        | Does NOT conflate `True == 1` or `False == 0`. Strips `reasoning___*` keys before comparing (LLM extractor sidecars). |
+| `compare`                             | `<`, `<=`, `>`, `>=` for numbers            |                                                                                                                       |
+| `contains`                            | Substring on strings; element on lists      | If `expected` is a dict, use `array_contains` instead.                                                                |
+| `array_contains`                      | Subset matching for list-of-dicts           |                                                                                                                       |
+| `object_contains`                     | Subset matching for dicts                   | Same `reasoning___*` strip as `equals`.                                                                               |
+| `length_compare`                      | Length operator on strings / lists / dicts  |                                                                                                                       |
+| `matches_regex`                       | `re.fullmatch`                              | Use `.*foo.*` for substring search.                                                                                   |
+| `validates_json_schema`               | Validate a subtree against a JSON Schema    |                                                                                                                       |
+| `all_items_match`                     | Every list item matches the inner condition | Passes vacuously on empty arrays.                                                                                     |
+| `any_item_matches`                    | Some list item matches                      | Fails on empty arrays.                                                                                                |
+| `similarity_gte`                      | Embedding-similarity threshold              | Async; can produce `error` status.                                                                                    |
+| `llm_judged_as` / `llm_not_judged_as` | LLM rubric check                            | Async; can produce `error` status.                                                                                    |
+| `split_iou_gte`                       | IOU threshold for split manifests           |                                                                                                                       |
 
 The full assertion-targeting reference, including which path syntaxes work
 inside each handle type, lives at [Tests](/workflows/tests).
@@ -115,12 +115,12 @@ mixing them up.
 
 The outcome of evaluating ONE assertion against the block's output.
 
-| Status | Meaning |
-|---|---|
-| `passed` | The operator was evaluated and matched. |
-| `failed` | The operator was evaluated and did not match. The result includes `actual_value` and a `failure.code` / `failure.message`. |
+| Status    | Meaning                                                                                                                                                                                                                                                |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `passed`  | The operator was evaluated and matched.                                                                                                                                                                                                                |
+| `failed`  | The operator was evaluated and did not match. The result includes `actual_value` and a `failure.code` / `failure.message`.                                                                                                                             |
 | `blocked` | The assertion couldn't be evaluated. The simulation failed, the output handle isn't declared, or the path hit a type error / bad selector. The failure includes `details.partial_path` / `details.partial_value` pointing at the deepest valid prefix. |
-| `error` | An async operator (`similarity_gte`, `llm_judged_as`) couldn't run for environmental reasons (e.g. embedding service unreachable). |
+| `error`   | An async operator (`similarity_gte`, `llm_judged_as`) couldn't run for environmental reasons (e.g. embedding service unreachable).                                                                                                                     |
 
 ### Run-record status (7 values)
 
@@ -129,15 +129,15 @@ state. This is what appears on `WorkflowTestRunRecord.status`,
 `latest_run_summary.status`, and per-test result rows returned from
 `/v1/workflows/tests/runs/{run_id}/results`.
 
-| Status | Meaning |
-|---|---|
-| `queued` | The run has been scheduled but the worker hasn't picked it up yet. |
-| `running` | The worker is mid-execution. |
-| `passed` | Execution finished and the assertion passed. |
-| `failed` | Execution finished and the assertion failed. |
-| `blocked` | Execution finished but the assertion was blocked (see above). Counted distinctly from `failed` because the user typically needs to fix the test definition or the block's outputs, not the assertion expectation. |
-| `error` | Execution itself failed (block raised, simulation timed out, etc.) before any assertion could be evaluated. |
-| `cancelled` | The user or a downstream system cancelled the run. |
+| Status      | Meaning                                                                                                                                                                                                           |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `queued`    | The run has been scheduled but the worker hasn't picked it up yet.                                                                                                                                                |
+| `running`   | The worker is mid-execution.                                                                                                                                                                                      |
+| `passed`    | Execution finished and the assertion passed.                                                                                                                                                                      |
+| `failed`    | Execution finished and the assertion failed.                                                                                                                                                                      |
+| `blocked`   | Execution finished but the assertion was blocked (see above). Counted distinctly from `failed` because the user typically needs to fix the test definition or the block's outputs, not the assertion expectation. |
+| `error`     | Execution itself failed (block raised, simulation timed out, etc.) before any assertion could be evaluated.                                                                                                       |
+| `cancelled` | The user or a downstream system cancelled the run.                                                                                                                                                                |
 
 After [Create Workflow Test Run](/api-reference/workflows/tests/runs/create),
 poll the returned workflow-test run `id`. Expect transient `pending` /
@@ -206,24 +206,24 @@ debugging — drop them via a later cleanup migration once nothing reads them.
 
 Three deterministic hashes pinned per run record:
 
-| Fingerprint | Computed from | Used for |
-|---|---|---|
-| `handle_inputs_fingerprint` | The captured handle inputs | Detecting "we already ran this exact input" — drives the cache hit at runner start. |
-| `workflow_draft_fingerprint` | The full workflow draft DAG | Telling you whether the run was against the current draft or a stale one. |
-| `block_config_fingerprint` | The single block's resolved config | Same as above, scoped to just the tested block — gives finer-grained staleness signals. |
-| `execution_fingerprint` | A combined hash | Cache key for "this exact (inputs, draft, block) combination" — re-runs that match all three return the cached record. |
+| Fingerprint                  | Computed from                      | Used for                                                                                                               |
+| ---------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `handle_inputs_fingerprint`  | The captured handle inputs         | Detecting "we already ran this exact input" — drives the cache hit at runner start.                                    |
+| `workflow_draft_fingerprint` | The full workflow draft DAG        | Telling you whether the run was against the current draft or a stale one.                                              |
+| `block_config_fingerprint`   | The single block's resolved config | Same as above, scoped to just the tested block — gives finer-grained staleness signals.                                |
+| `execution_fingerprint`      | A combined hash                    | Cache key for "this exact (inputs, draft, block) combination" — re-runs that match all three return the cached record. |
 
 ## Schema drift and staleness
 
 When the workflow draft changes (schema edited, block config tweaked), tests
 captured against the old draft get a non-fresh `schema_drift` status:
 
-| `schema_drift` | Meaning |
-|---|---|
-| `fresh` | The captured assertion target still resolves to the same subtree shape in the current draft. |
-| `partial` | Some assertion paths still resolve, others don't. The test will likely produce a `blocked` result. |
-| `drifted` | The output handle or its schema is no longer compatible. Re-capture before running. |
-| `unknown` | Drift couldn't be determined (e.g. block missing, fingerprint absent on a legacy doc). |
+| `schema_drift` | Meaning                                                                                            |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| `fresh`        | The captured assertion target still resolves to the same subtree shape in the current draft.       |
+| `partial`      | Some assertion paths still resolve, others don't. The test will likely produce a `blocked` result. |
+| `drifted`      | The output handle or its schema is no longer compatible. Re-capture before running.                |
+| `unknown`      | Drift couldn't be determined (e.g. block missing, fingerprint absent on a legacy doc).             |
 
 Drift status is **recomputed at read time** — it's not persisted on the storage
 doc. So the value you see in a `GET` response always reflects the current
@@ -238,27 +238,27 @@ Test execution is asynchronous. The flow:
    `completed`, `error`, or `cancelled`, then fetch results from
    `GET /v1/workflows/tests/runs/{run_id}/results`.
 3. Workflow-test run results shape:
-    - `counts` — one bucket per run-record status (7 fields)
-    - `data[]` — one result per test, keyed by `test_id` within the parent run.
+   - `counts` — one bucket per run-record status (7 fields)
+   - `data[]` — one result per test, keyed by `test_id` within the parent run.
 
 For dashboard integrations, poll the parent run status and refresh test-run
 records when the parent run reaches a terminal state.
 
 ## Endpoints
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/v1/workflows/{wf}/tests` | [Create](/api-reference/workflows/tests/create) |
-| `GET` | `/v1/workflows/{wf}/tests` | [List](/api-reference/workflows/tests/list) |
-| `GET` | `/v1/workflows/{wf}/tests/{id}` | [Get](/api-reference/workflows/tests/get) |
-| `PATCH` | `/v1/workflows/{wf}/tests/{id}` | [Update](/api-reference/workflows/tests/update) |
-| `DELETE` | `/v1/workflows/{wf}/tests/{id}` | [Delete](/api-reference/workflows/tests/delete) |
-| `POST` | `/v1/workflows/{wf}/tests/runs` | [Create Run](/api-reference/workflows/tests/runs/create) |
-| `GET` | `/v1/workflows/tests/runs` | [List Runs](/api-reference/workflows/tests/runs/list) |
-| `GET` | `/v1/workflows/tests/runs/{run_id}` | [Get Run](/api-reference/workflows/tests/runs/get) |
-| `POST` | `/v1/workflows/tests/runs/{run_id}/cancel` | [Cancel Run](/api-reference/workflows/tests/runs/cancel) |
-| `GET` | `/v1/workflows/tests/runs/{run_id}/results` | [List Results](/api-reference/workflows/tests/runs/results/list) |
-| `GET` | `/v1/workflows/tests/runs/{run_id}/results/{test_id}` | [Get Result](/api-reference/workflows/tests/runs/results/get) |
+| Method   | Path                                                  | Purpose                                                          |
+| -------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
+| `POST`   | `/v1/workflows/{wf}/tests`                            | [Create](/api-reference/workflows/tests/create)                  |
+| `GET`    | `/v1/workflows/{wf}/tests`                            | [List](/api-reference/workflows/tests/list)                      |
+| `GET`    | `/v1/workflows/{wf}/tests/{id}`                       | [Get](/api-reference/workflows/tests/get)                        |
+| `PATCH`  | `/v1/workflows/{wf}/tests/{id}`                       | [Update](/api-reference/workflows/tests/update)                  |
+| `DELETE` | `/v1/workflows/{wf}/tests/{id}`                       | [Delete](/api-reference/workflows/tests/delete)                  |
+| `POST`   | `/v1/workflows/{wf}/tests/runs`                       | [Create Run](/api-reference/workflows/tests/runs/create)         |
+| `GET`    | `/v1/workflows/tests/runs`                            | [List Runs](/api-reference/workflows/tests/runs/list)            |
+| `GET`    | `/v1/workflows/tests/runs/{run_id}`                   | [Get Run](/api-reference/workflows/tests/runs/get)               |
+| `POST`   | `/v1/workflows/tests/runs/{run_id}/cancel`            | [Cancel Run](/api-reference/workflows/tests/runs/cancel)         |
+| `GET`    | `/v1/workflows/tests/runs/{run_id}/results`           | [List Results](/api-reference/workflows/tests/runs/results/list) |
+| `GET`    | `/v1/workflows/tests/runs/{run_id}/results/{test_id}` | [Get Result](/api-reference/workflows/tests/runs/results/get)    |
 
 ## MCP
 

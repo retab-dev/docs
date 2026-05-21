@@ -18,12 +18,12 @@ flowchart LR
 
 The module exposes four methods:
 
-| Method | Purpose |
-| ------ | ------- |
-| **`upload`** | Upload a document and receive a durable `MIMEData` reference for future requests. |
-| **`list`** | List uploaded files with pagination, filename prefix search, and MIME type filtering. |
-| **`get`** | Retrieve metadata for a single file by ID. |
-| **`get_download_link`** | Get a temporary signed URL (60 min) to download the original file. |
+| Method                  | Purpose                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------- |
+| **`upload`**            | Upload a document and receive a durable `MIMEData` reference for future requests.     |
+| **`list`**              | List uploaded files with pagination, filename prefix search, and MIME type filtering. |
+| **`get`**               | Retrieve metadata for a single file by ID.                                            |
+| **`get_download_link`** | Get a temporary signed URL (60 min) to download the original file.                    |
 
 ## Uploading files
 
@@ -37,10 +37,12 @@ from pathlib import Path
 client = Retab()
 
 # Upload from a file path
+
 mime_data = client.files.upload(Path("invoice.pdf"))
 print(f"Filename: {mime_data.filename}")
 print(f"URL: {mime_data.url}")
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -51,7 +53,7 @@ const mimeData = await client.files.upload("invoice.pdf");
 
 console.log(`Filename: ${mimeData.filename}`);
 console.log(`URL: ${mimeData.url}`);
-```
+````
 
 ```go Go
 package main
@@ -106,6 +108,7 @@ curl -X POST \
   -H 'Content-Type: application/json' \
   -d '{}'
 ```
+
 </CodeGroup>
 
 The returned `url` has the form `https://storage.retab.com/file_...`. It is an opaque Retab URL, not a public signed URL, and can be passed to later processing requests without sending the file bytes again.
@@ -127,12 +130,12 @@ Pass an HTTPS URL from object storage directly as the `document`.
 
 Supported remote URL hosts include:
 
-| Provider | Supported URL shape |
-| -------- | ------------------- |
-| Azure Blob Storage | `https://<account>.blob.core.windows.net/...` |
-| Google Cloud Storage | `https://storage.googleapis.com/...` or `https://<bucket>.storage.googleapis.com/...` |
-| Amazon S3 | `https://<bucket>.s3.<region>.amazonaws.com/...` or other `amazonaws.com` S3 URLs |
-| Cloudflare R2 | `https://<account>.r2.cloudflarestorage.com/...` and public `https://<public-id>.r2.dev/...` URLs |
+| Provider             | Supported URL shape                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| Azure Blob Storage   | `https://<account>.blob.core.windows.net/...`                                                     |
+| Google Cloud Storage | `https://storage.googleapis.com/...` or `https://<bucket>.storage.googleapis.com/...`             |
+| Amazon S3            | `https://<bucket>.s3.<region>.amazonaws.com/...` or other `amazonaws.com` S3 URLs                 |
+| Cloudflare R2        | `https://<account>.r2.cloudflarestorage.com/...` and public `https://<public-id>.r2.dev/...` URLs |
 
 Custom domains are not fetched by default. Contact support if you need a custom storage hostname allowlisted. For private files, generate a signed URL with enough time for Retab to fetch the document.
 
@@ -143,23 +146,24 @@ from retab import Retab
 client = Retab(api_key="YOUR_RETAB_API_KEY")
 
 schema = {
-    "type": "object",
-    "properties": {
-        "invoice_number": {"type": "string"},
-        "total_amount": {"type": "number"},
-    },
+"type": "object",
+"properties": {
+"invoice_number": {"type": "string"},
+"total_amount": {"type": "number"},
+},
 }
 
 azure_blob_url = "https://<account>.blob.core.windows.net/<container>/large_document.pdf?<sas_token>"
 
 extraction = client.extractions.create(
-    document=azure_blob_url,
-    model="retab-small",
-    json_schema=schema,
+document=azure_blob_url,
+model="retab-small",
+json_schema=schema,
 )
 
 print(extraction.output)
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -183,7 +187,7 @@ const extraction = await client.extractions.create({
 });
 
 console.log(extraction.output);
-```
+````
 
 ```go Go
 package main
@@ -226,6 +230,7 @@ func main() {
 	fmt.Println((*extraction)["output"])
 }
 ```
+
 </CodeGroup>
 
 ### Option 2: upload to Retab, then reuse the URL
@@ -241,17 +246,18 @@ client = Retab(api_key="YOUR_RETAB_API_KEY")
 mime_ref = client.files.upload("large_document.pdf")
 
 extraction = client.extractions.create(
-    document=mime_ref.url,
-    model="retab-small",
-    json_schema={
-        "type": "object",
-        "properties": {
-            "invoice_number": {"type": "string"},
-            "total_amount": {"type": "number"},
-        },
-    },
+document=mime_ref.url,
+model="retab-small",
+json_schema={
+"type": "object",
+"properties": {
+"invoice_number": {"type": "string"},
+"total_amount": {"type": "number"},
+},
+},
 )
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -271,7 +277,7 @@ const extraction = await client.extractions.create({
         },
     },
 });
-```
+````
 
 ```go Go
 package main
@@ -312,6 +318,7 @@ func main() {
 	}
 }
 ```
+
 </CodeGroup>
 
 You can also pass `document=mime_ref` directly. Passing `mime_ref.url` is equivalent for Retab storage URLs: the backend parses the file ID and resolves it against the authenticated caller's organization before processing.
@@ -370,15 +377,17 @@ for f in files:
     print(f"{f.id}: {f.filename}")
 
 # Filter by filename prefix
+
 pdfs = client.files.list(filename="invoice", mime_type="application/pdf")
-```
+
+````
 
 ```javascript JavaScript
 const files = await client.files.list({ limit: 20 });
 for (const f of files) {
     console.log(`${f.id}: ${f.filename}`);
 }
-```
+````
 
 ```go Go
 files, err := client.Files.List(ctx, &retab.ListFilesParams{
@@ -391,6 +400,7 @@ for _, f := range files.Data {
     fmt.Printf("%s: %s\n", f["id"], f["filename"])
 }
 ```
+
 </CodeGroup>
 
 ## Downloading files
@@ -418,4 +428,5 @@ if err != nil {
 fmt.Printf("Download URL: %s\n", link.DownloadURL)
 fmt.Printf("Expires in: %s\n", link.ExpiresIn)
 ```
+
 </CodeGroup>

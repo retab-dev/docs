@@ -1,26 +1,30 @@
-
 ## Overview
+
 This tutorial guides you through the process of extracting structured data from the Airbnb pitch deck using Retab, OpenAI, and Pydantic. We will define a schema to capture important entities from the document and use an LLM to analyze and extract relevant information.
 
 ## Prerequisites
+
 Before proceeding, ensure you have the following installed and configured:
 
 - Python 3.8+
 - `pydantic`, `dotenv`, `retab`, `openai`
 - An `.env.production` file containing your API keys
-- A [airbnb_pitch_deck.pdf](https://github.com/retab-dev/retab/blob/main/notebooks/airbnb/airbnb_pitch_deck.pdf) file in the same directory as the `main.py` file 
+- A [airbnb_pitch_deck.pdf](https://github.com/retab-dev/retab/blob/main/notebooks/airbnb/airbnb_pitch_deck.pdf) file in the same directory as the `main.py` file
 
 Install dependencies:
+
 ```bash
 pip install pydantic python-dotenv retab openai
 ```
 
 Download the pitch deck:
+
 ```bash
 wget https://github.com/retab-dev/retab/blob/main/notebooks/airbnb/airbnb_pitch_deck.pdf
 ```
 
 ## Step 1: Load Environment Variables
+
 First, load the environment variables to access the API keys securely.
 
 ```python
@@ -50,7 +54,7 @@ Key Guidelines:
 	•	Avoid duplication or conflicting information by cross-referencing details from various slides.
 	4.	Data Formatting:
 	•	Company Name: Extract the official name as presented in the deck, ensuring correctness.
-	•	Website: Extract and format URLs correctly 
+	•	Website: Extract and format URLs correctly
 	•	Country: Convert to the appropriate two-letter country code for uniformity.
 	•	Business Model: Determine whether the startup follows B2B, B2C, or C2C based on their product offerings and customer base.
 	5.	Handling Team Data:
@@ -168,6 +172,7 @@ class Deck(BaseModel):
 ```
 
 ## Step 3: Prepare Document Context
+
 Prepare OpenAI-compatible document context for the pitch deck before running the schema-driven analysis.
 
 ```python
@@ -175,6 +180,7 @@ doc_msg = ...  # An object exposing `.openai_messages` and `.openai_responses_in
 ```
 
 ## Step 4: Schema Creation
+
 We create a schema object using the `Schema` class from Retab to structure the extraction process.
 
 <CodeGroup>
@@ -182,9 +188,10 @@ We create a schema object using the `Schema` class from Retab to structure the e
 from retab.types.schemas.model import Schema
 
 schema_obj = Schema(
-    pydantic_model=Deck
+pydantic_model=Deck
 )
-```
+
+````
 
 ```go main.go
 // Build the JSON schema directly as map[string]any in Go. The Retab API
@@ -252,7 +259,8 @@ func main() {
 	}
 	fmt.Println(string(encoded))
 }
-```
+````
+
 ```python json_schema.json
 {
   "$defs": {
@@ -404,9 +412,11 @@ func main() {
   "type": "object"
 }
 ```
+
 </CodeGroup>
 
 ## Step 5: Perform LLM Analysis
+
 We use OpenAI's GPT model to analyze the document and extract structured data.
 
 The reasoning fields (see `result_with_reasoning.json`) helps the model to reason about the data and extract it in the correct format.
@@ -418,14 +428,15 @@ import json
 
 client = OpenAI()
 completion = client.beta.chat.completions.parse(
-    model="gpt-5-nano",
-    messages=schema_obj.openai_messages + doc_msg.openai_messages,
-    response_format=schema_obj.inference_pydantic_model
+model="gpt-5-nano",
+messages=schema_obj.openai_messages + doc_msg.openai_messages,
+response_format=schema_obj.inference_pydantic_model
 )
 
 assert completion.choices[0].message.parsed is not None
 print(json.dumps(completion.choices[0].message.parsed.model_dump(), indent=2))
-```
+
+````
 
 ```python main.py (OpenAI Responses API)
 from openai import OpenAI
@@ -445,7 +456,7 @@ response = client.responses.create(
 
 assert response.output_text is not None
 print(response.output_text)
-```
+````
 
 ```json result_with_reasoning.json
 {
@@ -495,6 +506,7 @@ print(response.output_text)
   "businessModel": "B2C"
 }
 ```
+
 </CodeGroup>
 ## Step 6: Validate Extracted Data
 Finally, validate the extracted data against the schema by removing reasoning fields.
@@ -505,11 +517,12 @@ from main_server.libs.document_analysis.functions.json_schema  import filter_aux
 
 assert completion.choices[0].message.content is not None
 extraction = schema_obj.pydantic_model.model_validate(
-    filter_auxiliary_fields_json(completion.choices[0].message.content)
+filter_auxiliary_fields_json(completion.choices[0].message.content)
 )
 
 print(json.dumps(extraction.model_dump(), indent=2))
-```
+
+````
 
 ```python main.py (OpenAI Responses API)
 from main_server.libs.document_analysis.functions.json_schema  import filter_auxiliary_fields_json
@@ -520,7 +533,7 @@ extraction = schema_obj.pydantic_model.model_validate(
 )
 
 print(json.dumps(extraction.model_dump(), indent=2))
-```
+````
 
 ```json final_result.json
 {
@@ -597,7 +610,7 @@ Key Guidelines:
 	•	Avoid duplication or conflicting information by cross-referencing details from various slides.
 	4.	Data Formatting:
 	•	Company Name: Extract the official name as presented in the deck, ensuring correctness.
-	•	Website: Extract and format URLs correctly 
+	•	Website: Extract and format URLs correctly
 	•	Country: Convert to the appropriate two-letter country code for uniformity.
 	•	Business Model: Determine whether the startup follows B2B, B2C, or C2C based on their product offerings and customer base.
 	5.	Handling Team Data:
@@ -740,7 +753,6 @@ extraction = schema_obj.pydantic_model.model_validate(
 print(json.dumps(extraction.model_dump(), indent=2))
 ```
 
-
 ```python main.py (OpenAI Responses API)
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List
@@ -764,7 +776,7 @@ Key Guidelines:
 	•	Avoid duplication or conflicting information by cross-referencing details from various slides.
 	4.	Data Formatting:
 	•	Company Name: Extract the official name as presented in the deck, ensuring correctness.
-	•	Website: Extract and format URLs correctly 
+	•	Website: Extract and format URLs correctly
 	•	Country: Convert to the appropriate two-letter country code for uniformity.
 	•	Business Model: Determine whether the startup follows B2B, B2C, or C2C based on their product offerings and customer base.
 	5.	Handling Team Data:
@@ -913,7 +925,6 @@ extraction = schema_obj.pydantic_model.model_validate(
 print(json.dumps(extraction.model_dump(), indent=2))
 ```
 
-
 ```python json_schema.json
 {
   "$defs": {
@@ -1160,10 +1171,8 @@ print(json.dumps(extraction.model_dump(), indent=2))
 }
 ```
 
-
 </CodeGroup>
 
-
-
 ## Conclusion
+
 In this tutorial, we've successfully extracted structured data from the Airbnb pitch deck using Retab and OpenAI, leveraging Pydantic models for data validation and schema definition.

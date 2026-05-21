@@ -1,18 +1,18 @@
 ---
-title: 'Get Review'
-openapi: 'GET /v1/workflows/reviews/{run_id}/{block_id}'
+title: "Get Review"
+openapi: "GET /v1/workflows/reviews/{run_id}/{block_id}"
 ---
 
 Get the full review for a gated block run.
 
 The review is attached to a single `(run_id, block_id)` pair. It records immutable output snapshots in `versions_by_id`, keyed by content hash, and a single terminal `decision` once the review is resolved.
 
-| Field | Notes |
-|---|---|
-| `versions_by_id` | Output snapshots keyed by `sha256(canonical_json(snapshot))`. |
-| `decision` | `null` while awaiting review; otherwise the terminal `approved` / `rejected` verdict. |
-| `triggered_by` | The review predicate that opened the gate. |
-| `awaiting_since` | When the block began waiting for review. |
+| Field            | Notes                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| `versions_by_id` | Output snapshots keyed by `sha256(canonical_json(snapshot))`.                         |
+| `decision`       | `null` while awaiting review; otherwise the terminal `approved` / `rejected` verdict. |
+| `triggered_by`   | The review predicate that opened the gate.                                            |
+| `awaiting_since` | When the block began waiting for review.                                              |
 
 Every actor — model, agent, or human — is described by the same symmetric `Actor` shape: `{kind, id, display_name}`.
 
@@ -32,11 +32,14 @@ print("decision:", review.decision)
 ```
 
 ```javascript javascript
-import { Retab } from '@retab/node';
+import { Retab } from "@retab/node";
 
 const client = new Retab();
 
-const review = await client.workflows.reviews.get("run_abc123", "block_extract");
+const review = await client.workflows.reviews.get(
+  "run_abc123",
+  "block_extract",
+);
 
 for (const [versionId, version] of Object.entries(review.versions_by_id)) {
   console.log(versionId, version.parent_id, version.author.kind);
@@ -70,7 +73,11 @@ curl -X 'GET' \
   "versions_by_id": {
     "a9f4d2e7f50b8b7bc84f4d96d2ad831a2a3bfead9b46f945baf2f8eb2f457a18": {
       "parent_id": null,
-      "author": { "kind": "model", "id": "retab-small", "display_name": "Retab Small" },
+      "author": {
+        "kind": "model",
+        "id": "retab-small",
+        "display_name": "Retab Small"
+      },
       "snapshot": { "total_amount": 505, "vendor_name": "Acme Corp" },
       "note": null,
       "created_at": "2026-05-13T08:14:02.341Z"

@@ -10,19 +10,20 @@ When a workflow reaches a **reviewable block** — a block with `config.review` 
 The review is attached to one `(run_id, block_id)` pair. It is the object you read and mutate to walk from "the model produced this" to "a human approved, corrected, or rejected it, and the run resumed." Everything is driven through `client.workflows.reviews.*`.
 
 <Note>
-Reviews replace the legacy v1 decision endpoints. Those have been removed — `client.workflows.reviews.*` is the review surface.
+  Reviews replace the legacy v1 decision endpoints. Those have been removed —
+  `client.workflows.reviews.*` is the review surface.
 </Note>
 
 ## Review Shape
 
 A review carries immutable output versions keyed by content hash, plus at most one terminal decision:
 
-| Field | What it holds |
-|---|---|
+| Field            | What it holds                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------- |
 | `versions_by_id` | Immutable snapshots of the gated block's output, keyed by `sha256(canonical_json(snapshot))`. |
-| `decision` | The terminal verdict, or `null` while the block is still awaiting review. |
-| `triggered_by` | The review predicate that opened the gate. |
-| `awaiting_since` | When the review started waiting. |
+| `decision`       | The terminal verdict, or `null` while the block is still awaiting review.                     |
+| `triggered_by`   | The review predicate that opened the gate.                                                    |
+| `awaiting_since` | When the review started waiting.                                                              |
 
 Every actor — whether a model, a managed agent, or a human — is described by the same symmetric `Actor` shape:
 
@@ -88,12 +89,12 @@ version_id = next(
 
 The server validates the snapshot against the gated block's canonical review shape and stores the exact object you submit when it is valid:
 
-| Block type | Snapshot shape |
-|---|---|
-| `extract` | The raw extracted JSON object, for example `{ "invoice_number": "INV-991", "total": 1200 }`. |
-| `classifier` | Only the selected category: `{ "category": "booking_confirmation" }`. Do not include reasoning. |
-| `split` | A document manifest: `{ "documents": [{ "name": "legal_mentions", "pages": [1, 2] }] }`. |
-| `for_each` | A partition manifest: `{ "partitions": [{ "key": "INV-001", "pages": [1, 2] }] }`. Only `split_by_key` for-each reviews are reviewable. |
+| Block type   | Snapshot shape                                                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `extract`    | The raw extracted JSON object, for example `{ "invoice_number": "INV-991", "total": 1200 }`.                                            |
+| `classifier` | Only the selected category: `{ "category": "booking_confirmation" }`. Do not include reasoning.                                         |
+| `split`      | A document manifest: `{ "documents": [{ "name": "legal_mentions", "pages": [1, 2] }] }`.                                                |
+| `for_each`   | A partition manifest: `{ "partitions": [{ "key": "INV-001", "pages": [1, 2] }] }`. Only `split_by_key` for-each reviews are reviewable. |
 
 For split and for-each snapshots, `pages` must be positive integers, sorted, and unique within each item. The create-version call returns `422` if the snapshot does not match the block type. It does not patch, normalize, or merge partial edits.
 
@@ -101,10 +102,10 @@ For split and for-each snapshots, `pages` must be positive integers, sorted, and
 
 There are two verdicts:
 
-| Verdict | Effect on the run |
-|---|---|
+| Verdict    | Effect on the run                                               |
+| ---------- | --------------------------------------------------------------- |
 | `approved` | The selected `version_id` flows downstream and the run resumes. |
-| `rejected` | The run is cancelled. A `reason` is required. |
+| `rejected` | The run is cancelled. A `reason` is required.                   |
 
 ```python
 # Approve the exact version you inspected or just created.
@@ -155,9 +156,9 @@ print("review is awaiting a decision:", review.block_id)
 
 ## API reference
 
-| Endpoint | Method |
-|---|---|
-| [List Reviews](/api-reference/workflows/reviews/list) | `reviews.list(...)` |
-| [Get Review](/api-reference/workflows/reviews/get) | `reviews.get(run_id, block_id)` |
-| [Create Version](/api-reference/workflows/reviews/create-version) | `reviews.create_version(...)` |
+| Endpoint                                                            | Method                          |
+| ------------------------------------------------------------------- | ------------------------------- |
+| [List Reviews](/api-reference/workflows/reviews/list)               | `reviews.list(...)`             |
+| [Get Review](/api-reference/workflows/reviews/get)                  | `reviews.get(run_id, block_id)` |
+| [Create Version](/api-reference/workflows/reviews/create-version)   | `reviews.create_version(...)`   |
 | [Submit Decision](/api-reference/workflows/reviews/submit-decision) | `reviews.approve / reject(...)` |

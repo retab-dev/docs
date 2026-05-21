@@ -1,56 +1,52 @@
 ---
-
 ## title: k-LLMs Consensus
-
 ---
 
 Large language models are **non-deterministic**—the same prompt can return different answers each time. **Consensus reduces this variability** by sending the prompt through **K** independent model calls and merging their JSON outputs into one result.
 
-Our algorithm then compares those outputs *field-by-field* and scores the uncertainty of every field by averaging the pair-wise distance between answers. **The smaller the distance, the higher the likelihood.**
+Our algorithm then compares those outputs _field-by-field_ and scores the uncertainty of every field by averaging the pair-wise distance between answers. **The smaller the distance, the higher the likelihood.**
 
 On Retab's platform this signal **exposes ambiguous user queries**. When the calls disagree, it means the prompt can be interpreted in several ways, so we need to tighten the schema—clearer descriptions, less-ambiguous names, stricter types—before moving on.
 
-These field-level likelihoods also lay the groundwork for an agent that can *refine schemas autonomously*, even without human supervision.
-
+These field-level likelihoods also lay the groundwork for an agent that can _refine schemas autonomously_, even without human supervision.
 
 You can use consensus using our SDK with the parameter `n_consensus`, but also with our dedicated [k-llms library](https://retab.com/k-llms).
-
 
 ```mermaid
 flowchart TD
     User["User Query: 'Extract calendar event from: Alice and Bob are going to a science fair on Friday'"]
-    
+
     User --> LLM1["LLM Instance 1"]
     User --> LLM2["LLM Instance 2"]
     User --> LLM3["LLM Instance 3"]
     User --> LLM4["LLM Instance 4"]
-    
+
     LLM1 --> R1["{name: 'Science Fair',
       date: 'Friday',
       participants: ['Alice', 'Bob']}"]
-    
+
     LLM2 --> R2["{name: 'Science Fair',
       date: 'Friday',
       participants: ['Alice', 'Bob', 'Charlie']}"]
-    
+
     LLM3 --> R3["{name: 'Science Exhibition',
       date: 'Friday',
       participants: ['Alice', 'Bob']}"]
-    
+
     LLM4 --> R4["{name: 'Science Fair',
       date: 'Friday',
       participants: ['Alice', 'Bob']}"]
-    
+
     R1 --> Consensus["Consensus Engine"]
     R2 --> Consensus
     R3 --> Consensus
     R4 --> Consensus
-    
+
     Consensus --> Final["Final Result:
     {name: 'Science Fair' (3/4 votes),
       date: 'Friday' (4/4 votes),
       participants: ['Alice', 'Bob'] (3/4 votes)}"]
-    
+
     style User fill:#ff9500,stroke:#333,stroke-width:2px,color:#000
     style LLM1 fill:#404040,stroke:#fff,stroke-width:1px,color:#fff
     style LLM2 fill:#404040,stroke:#fff,stroke-width:1px,color:#fff
@@ -66,28 +62,25 @@ flowchart TD
 
 > **Context**: This approach follows similar principles to [Palantir's "K-LLMs" methodology](https://www.linkedin.com/posts/palantir-technologies_never-use-1-llm-when-you-can-use-k-llms-activity-7109622372021780480-eMPG/), where multiple models evaluate the same prompt and their outputs are synthesized for increased accuracy, confidence, and reduced hallucinations.
 
-
 ### How it works
+
 Under the hood Retab:
 
-1. Fires *n\_consensus* identical calls.
+1. Fires _n_consensus_ identical calls.
 2. Parses each raw answer into a Pydantic model / JSON‑Schema object.
 3. Runs a **deterministic reconciliation strategy**:
-   * **Exact match** vote for scalar fields (strings, numbers, booleans)
-   * **Deep merge** for arrays when all models agree on length and order
-   * **Recursive reconciliation** for nested objects
+   - **Exact match** vote for scalar fields (strings, numbers, booleans)
+   - **Deep merge** for arrays when all models agree on length and order
+   - **Recursive reconciliation** for nested objects
 4. Returns the reconciled object in `response.output_parsed` (Responses) or `completion.choices[0].message.parsed` (Completions).
 
 If any response fails JSON validation the call is retried at most once; after that a `ConsensusError` is raised.
 
-> **Note**: Running consensus with `n=4` means **4× the API costs** and parallel requests may *hit rate limits*. Consider using smaller models like `gpt-5-mini` for *cost optimization*.
-
+> **Note**: Running consensus with `n=4` means **4× the API costs** and parallel requests may _hit rate limits_. Consider using smaller models like `gpt-5-mini` for _cost optimization_.
 
 ---
 
-
 ## k-LLMs
-
 
 We provide a quick, type‑safe wrapper around OpenAI **Chat Completions** and **Responses** endpoints with automatic consensus reconciliation.
 
@@ -95,11 +88,9 @@ We provide a quick, type‑safe wrapper around OpenAI **Chat Completions** and
 pip install k-llms
 ```
 
+- **Step 1: Generating diverse answers.** We purposely sample each call with diversity settings to obtain _distinct_ answers.
 
-- **Step 1: Generating diverse answers.** We purposely sample each call with diversity settings to obtain *distinct* answers.
-
-- **Step 2: SOTA reconciliation.** A bespoke strategy merge the candidates with *state‑of‑the‑art accuracy*.
-
+- **Step 2: SOTA reconciliation.** A bespoke strategy merge the candidates with _state‑of‑the‑art accuracy_.
 
 ### Quick‑Start: **Switch in One Line**
 
@@ -127,8 +118,7 @@ for i in range(len(completion.choices)):
     print(f"Choice {i}: {completion.choices[i].message.parsed}")
 ```
 
-
-*Everything in the API call stays untouched.*
+_Everything in the API call stays untouched._
 
 ---
 
@@ -138,7 +128,7 @@ for i in range(len(completion.choices)):
 | ----------------- | -------------------------------------------- | ------- | ---------------------------------- |
 | `model`           | `str`                                        | —       | Any OpenAI chat model name.        |
 | `messages`        | `list[dict]`                                 | —       | Same shape as OpenAI's `messages`. |
-| `response_format` | `pydantic.BaseModel` *or* `dict JSON‑Schema` | —       | Target structure.                  |
+| `response_format` | `pydantic.BaseModel` _or_ `dict JSON‑Schema` | —       | Target structure.                  |
 | `n`               | `int`                                        | `1`     | >1 enables consensus.              |
 
 ### Example

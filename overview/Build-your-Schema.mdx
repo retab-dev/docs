@@ -1,7 +1,5 @@
 ---
-
 ## title: Build your Schema
-
 ---
 
 ## How to Build a Great Schema
@@ -38,27 +36,28 @@ The Retab dashboard provides powerful visualization tools to help you understand
 
 **Query parameters:**
 
-| Parameter | Description | Default |
-| --------- | ----------- | ------- |
-| `extraction_id` | Unique identifier for the extraction | Required |
-| `include_responses` | Include individual response details | `false` |
-| `format` | Response format (`summary` or `detailed`) | `summary` |
-| `threshold` | Minimum likelihood threshold for filtering | `0.0` |
+| Parameter           | Description                                | Default   |
+| ------------------- | ------------------------------------------ | --------- |
+| `extraction_id`     | Unique identifier for the extraction       | Required  |
+| `include_responses` | Include individual response details        | `false`   |
+| `format`            | Response format (`summary` or `detailed`)  | `summary` |
+| `threshold`         | Minimum likelihood threshold for filtering | `0.0`     |
 
 ---
 
 ### Schema Improvement Levers
 
-| Lever | When to apply (typical consensus patterns) | Root cause | Concrete fix |
-|-------|---------------------------------------------|------------|--------------|
-| **Change field names** | Diverging values because models mix up concepts (e.g. organizer vs event title) | Ambiguous or overloaded label | Rename `name` → `event_name`; clarify: "Do not include organizer." |
-| **Enhance field descriptions** | Correct data, wrong format · Empty vs filled arrays · Varying data across requests | Instructions too vague | Add examples: "Return price in USD, two decimals (e.g. 1234.56)." / "Include items only if stock > 0." |
-| **Adjust field types** | Numbers arrive as strings/ints/floats · Date/time fields vary wildly | Format ambiguity or loose typing | `amount: Decimal` instead of `str`; `date: datetime.date` with ISO-8601 requirement |
-| **Restructure data hierarchy** | Single field conflates multiple concepts (address, full name, etc.) | Ambiguous formatting | Replace `address: str` with nested `Address` model (`street`, `city`, `zip_code`, `country`) |
-| **Add reasoning prompts** | Simple computations fail or values inconsistent even with clear schema | Model needs step-by-step reasoning space | Add "Convert the weight to kg" as [reasoning prompt](https://docs.retab.com/core-concepts/Reasoning) to `weight` |
-| **Remove problematic fields** | Field stays low-likelihood after multiple iterations and isn't critical | Unnecessary complexity | Drop the field entirely or defer to a later version |
+| Lever                          | When to apply (typical consensus patterns)                                         | Root cause                               | Concrete fix                                                                                                     |
+| ------------------------------ | ---------------------------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Change field names**         | Diverging values because models mix up concepts (e.g. organizer vs event title)    | Ambiguous or overloaded label            | Rename `name` → `event_name`; clarify: "Do not include organizer."                                               |
+| **Enhance field descriptions** | Correct data, wrong format · Empty vs filled arrays · Varying data across requests | Instructions too vague                   | Add examples: "Return price in USD, two decimals (e.g. 1234.56)." / "Include items only if stock > 0."           |
+| **Adjust field types**         | Numbers arrive as strings/ints/floats · Date/time fields vary wildly               | Format ambiguity or loose typing         | `amount: Decimal` instead of `str`; `date: datetime.date` with ISO-8601 requirement                              |
+| **Restructure data hierarchy** | Single field conflates multiple concepts (address, full name, etc.)                | Ambiguous formatting                     | Replace `address: str` with nested `Address` model (`street`, `city`, `zip_code`, `country`)                     |
+| **Add reasoning prompts**      | Simple computations fail or values inconsistent even with clear schema             | Model needs step-by-step reasoning space | Add "Convert the weight to kg" as [reasoning prompt](https://docs.retab.com/core-concepts/Reasoning) to `weight` |
+| **Remove problematic fields**  | Field stays low-likelihood after multiple iterations and isn't critical            | Unnecessary complexity                   | Drop the field entirely or defer to a later version                                                              |
 
 ---
+
 ### Example of a schema building process
 
 #### Step 1 — Draft an Initial Schema
@@ -72,12 +71,12 @@ class CalendarEvent(BaseModel):
 ```
 
 ```javascript JavaScript
-import { z } from 'zod';
+import { z } from "zod";
 
 const CalendarEvent = z.object({
-    name: z.string(),
-    date: z.string(),
-    address: z.string()
+  name: z.string(),
+  date: z.string(),
+  address: z.string(),
 });
 ```
 
@@ -113,16 +112,17 @@ from retab.types.extractions import ExtractionRequest
 client = Retab()
 
 result = client.extractions.create(
-    ExtractionRequest(
-        document="event_flyer.pdf",
-        model="retab-small",
-        json_schema=CalendarEvent.model_json_schema(),
-        n_consensus=4,
-    )
+ExtractionRequest(
+document="event_flyer.pdf",
+model="retab-small",
+json_schema=CalendarEvent.model_json_schema(),
+n_consensus=4,
+)
 )
 
 print(json.dumps(result.consensus.likelihoods, indent=2))
-```
+
+````
 
 ```javascript JavaScript
 import { Retab } from '@retab/node';
@@ -138,7 +138,7 @@ const result = await client.extractions.create({
 });
 
 console.log(JSON.stringify(result.consensus?.likelihoods, null, 2));
-```
+````
 
 ```go Go
 package main
@@ -190,9 +190,11 @@ func main() {
 	fmt.Println(string(pretty))
 }
 ```
+
 </CodeGroup>
 
 **Sample output:**
+
 <CodeGroup>
 ```json Consolidated output
 # result.output
@@ -237,6 +239,7 @@ func main() {
   "address": "Main Street 123, 12345 Anytown, USA"
 }
 ```
+
 ```json Likelihoods
 # result.consensus.likelihoods
 {
@@ -245,6 +248,7 @@ func main() {
   "address": 0.25
 }
 ```
+
 </CodeGroup>
 
 **Interpretation of the consensus likelihoods:**
@@ -257,11 +261,11 @@ func main() {
 
 #### Step 3 — Rank Fields by Likelihood
 
-| Field     | Likelihood | Status | Recommended Action             |
-| --------- | ---------- | ------ | ------------------------------ |
-| `name`    | 1.0        | ✅ Good | Retain current configuration   |
+| Field     | Likelihood | Status        | Recommended Action             |
+| --------- | ---------- | ------------- | ------------------------------ |
+| `name`    | 1.0        | ✅ Good       | Retain current configuration   |
 | `date`    | 0.5        | ⚠️ Needs work | Clarify format or tighten type |
-| `address` | 0.25       | ❌ Poor | Redesign field data structure  |
+| `address` | 0.25       | ❌ Poor       | Redesign field data structure  |
 
 **Production threshold:** Likelihood **≥ 0.75** is recommended for production deployment.
 
@@ -269,11 +273,11 @@ func main() {
 
 #### Step 4 — Enhance schema
 
-| Priority | Lever                    | Use Case                         | Example Modification                                                |
-| -------- | ------------------------ | -------------------------------- | ------------------------------------------------------------------- |
-| 1        | **Prompt clarification** | Extraction varies across runs   | "Name is the event title, not the organizer's name"                |
-| 2        | **Type constraints**     | Parsing errors, format issues   | Convert `str` → `datetime.date`                                     |
-| 3        | **Structural revision**  | Field conflates multiple concepts| Break `address` into `street`, `city`, `zip_code`, `country`       |
+| Priority | Lever                    | Use Case                          | Example Modification                                         |
+| -------- | ------------------------ | --------------------------------- | ------------------------------------------------------------ |
+| 1        | **Prompt clarification** | Extraction varies across runs     | "Name is the event title, not the organizer's name"          |
+| 2        | **Type constraints**     | Parsing errors, format issues     | Convert `str` → `datetime.date`                              |
+| 3        | **Structural revision**  | Field conflates multiple concepts | Break `address` into `street`, `city`, `zip_code`, `country` |
 
 **Revised schema:**
 
@@ -286,10 +290,11 @@ class Address(BaseModel):
     country: str
 
 class CalendarEvent(BaseModel):
-    name: str
-    date: datetime.date
-    address: Address
-```
+name: str
+date: datetime.date
+address: Address
+
+````
 
 ```javascript JavaScript
 import { z } from 'zod';
@@ -306,7 +311,7 @@ const CalendarEvent = z.object({
     date: z.string().date(), // ISO date string (YYYY-MM-DD)
     address: Address
 });
-```
+````
 
 ```go Go
 calendarEventSchema := map[string]any{
@@ -341,11 +346,11 @@ calendarEventSchema := map[string]any{
 	"required": []string{"name", "date", "address"},
 }
 ```
+
 </CodeGroup>
 
-
-
 **Improved outputs:**
+
 <CodeGroup>
 ```json Consolidated output
 # Obtained from result.choices[0].message.content
@@ -415,6 +420,7 @@ calendarEventSchema := map[string]any{
   }
 }
 ```
+
 ```json Likelihoods
 {
   "name": 1.0,
@@ -427,6 +433,7 @@ calendarEventSchema := map[string]any{
   }
 }
 ```
+
 </CodeGroup>
 
 **Repeat these steps** until all fields achieve high likelihood scores.
