@@ -51,22 +51,22 @@ for item in queue.data:
 
 ### 2. Inspect the output
 
-Read the full review and choose the exact version to decide on. The model's original output is the version whose `origin` is `model_output`; corrective edits are additional entries in `versions_by_id`.
+Read the full review and choose the exact version to decide on. The model's original output is the single version with `parent_id: null` and `author.kind: "model"`; corrective edits are additional entries in `versions_by_id`.
 
 ```python
 review = client.workflows.reviews.get("run_abc123", "block_extract")
 
-model_output_version_id, model_output_version = next(
+model_root_version_id, model_root_version = next(
     (version_id, version)
     for version_id, version in review.versions_by_id.items()
-    if version.origin == "model_output"
+    if version.parent_id is None and version.author.kind == "model"
 )
-print(model_output_version.snapshot)
+print(model_root_version.snapshot)
 ```
 
 ### 3. Correct if needed
 
-When the model's output is close but wrong, append a full corrected snapshot. The returned review includes the new content-hash `version_id`, which you can then approve.
+When the model's output is close but wrong, create a full corrected snapshot version. The returned review includes the new content-hash `version_id`, which you can then approve.
 
 ```python
 review = client.workflows.reviews.get("run_abc123", "block_extract")
@@ -74,9 +74,8 @@ review = client.workflows.reviews.get("run_abc123", "block_extract")
 edited = client.workflows.reviews.create_version(
     "run_abc123",
     "block_extract",
-    parent_id=model_output_version_id,
+    parent_id=model_root_version_id,
     snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
-    origin="human_created",
     note="Corrected total.",
 )
 
@@ -96,7 +95,7 @@ The server validates the snapshot against the gated block's canonical review sha
 | `split` | A document manifest: `{ "documents": [{ "name": "legal_mentions", "pages": [1, 2] }] }`. |
 | `for_each` | A partition manifest: `{ "partitions": [{ "key": "INV-001", "pages": [1, 2] }] }`. Only `split_by_key` for-each reviews are reviewable. |
 
-For split and for-each snapshots, `pages` must be positive integers, sorted, and unique within each item. The append call returns `422` if the snapshot does not match the block type. It does not patch, normalize, or merge partial edits.
+For split and for-each snapshots, `pages` must be positive integers, sorted, and unique within each item. The create-version call returns `422` if the snapshot does not match the block type. It does not patch, normalize, or merge partial edits.
 
 ### 4. Decide
 
@@ -108,7 +107,7 @@ There are two verdicts:
 | `rejected` | The run is cancelled. A `reason` is required. |
 
 ```python
-# Approve the exact version you inspected or just appended.
+# Approve the exact version you inspected or just created.
 client.workflows.reviews.approve(
     "run_abc123",
     "block_extract",
@@ -119,7 +118,7 @@ client.workflows.reviews.approve(
 client.workflows.reviews.reject(
     "run_abc123",
     "block_extract",
-    version_id=model_output_version_id,
+    version_id=model_root_version_id,
     reason="Source document is illegible; cannot verify totals.",
 )
 ```
@@ -133,9 +132,9 @@ Repeated approval/rejection submissions for the exact same final decision return
 - `version_id` is computed as `sha256(canonical_json(snapshot))`.
 - `OutputVersion` does not store its own id; the id is the key in `versions_by_id`.
 - `parent_id` means "this edit was authored from this version." It does not mean "latest."
-- Re-submitting the same snapshot with the same `parent_id` is idempotent and returns the existing version.
-- Re-submitting the same snapshot with a different `parent_id` is rejected with `409`.
-- After `decision` is set, the review is terminal: no more versions can be appended and no second decision can be created.
+- Re-submitting the same snapshot is idempotent and returns the existing version, because `version_id` is derived from snapshot content.
+- `parent_id` records lineage for newly created versions; it is not part of the content hash.
+- After `decision` is set, the review is terminal: no more versions can be created and no second decision can be created.
 
 ## Waiting for a gate
 
