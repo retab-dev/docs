@@ -21,22 +21,13 @@ print(result.verdict)
 ```
 
 ```javascript javascript
-const resultId = "wfnodetestrun_a";
+import { Retab } from "@retab/node";
 
-const response = await fetch(
-  `https://api.retab.com/v1/workflows/tests/results/${resultId}`,
-  {
-    headers: {
-      "Api-Key": process.env.RETAB_API_KEY,
-    },
-  },
-);
+const client = new Retab();
 
-if (!response.ok) {
-  throw new Error(`Retab request failed: ${response.status}`);
-}
-
-const result = await response.json();
+const result = await client.workflows.tests.runs.results.get({
+  resultId: "wfnodetestrun_a",
+});
 console.log(result.test_id);
 console.log(result.lifecycle.status);
 console.log(result.verdict);
@@ -46,43 +37,29 @@ console.log(result.verdict);
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	resultID := "wfnodetestrun_a"
-	req, err := http.NewRequest(
-		http.MethodGet,
-		"https://api.retab.com/v1/workflows/tests/results/"+resultID,
-		nil,
-	)
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
 
-	resp, err := http.DefaultClient.Do(req)
+	result, err := client.Workflows.Tests.Runs.Results.Get(ctx, "wfnodetestrun_a")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		log.Fatalf("Retab request failed: %s", resp.Status)
-	}
-
-	var result map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(result["test_id"])
-	fmt.Println(result["lifecycle"])
-	fmt.Println(result["verdict"])
+	fmt.Println((*result)["test_id"])
+	fmt.Println((*result)["lifecycle"])
+	fmt.Println((*result)["verdict"])
 }
 ```
 
