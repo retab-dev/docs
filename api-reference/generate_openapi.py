@@ -1,6 +1,7 @@
 import json
 import re
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 
@@ -285,6 +286,35 @@ def _strip_update_workflow_email_trigger_docs(spec: dict[str, object]) -> None:
         ]
 
 
+def _strip_stale_workflow_entities_reference(spec: dict[str, object]) -> None:
+    """Avoid publishing stale internal workflow graph route guidance."""
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return
+
+    workflow_path = paths.get("/v1/workflows/{workflow_id}")
+    if not isinstance(workflow_path, dict):
+        return
+
+    get_operation = workflow_path.get("get")
+    if not isinstance(get_operation, dict):
+        return
+
+    description = get_operation.get("description")
+    if not isinstance(description, str):
+        return
+
+    stale_entities_guidance = (
+        "\nUse GET /{workflow_id}/"
+        + "entities for the live draft graph stored in\n"
+        "separate block and edge collections."
+    )
+    get_operation["description"] = description.replace(
+        stale_entities_guidance,
+        "\nUse the Blocks and Edges endpoints for the current draft graph.",
+    )
+
+
 def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
     """Publish workflow steps with lifecycle, not status + terminal.
 
@@ -462,6 +492,164 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
                 )
 
 
+def _without_null_variant(schema: object) -> dict[str, object]:
+    if not isinstance(schema, dict):
+        return {}
+
+    copied_schema = deepcopy(schema)
+    any_of = copied_schema.get("anyOf")
+    if not isinstance(any_of, list):
+        return copied_schema
+
+    non_null_variants = [
+        variant
+        for variant in any_of
+        if not (isinstance(variant, dict) and variant.get("type") == "null")
+    ]
+    if len(non_null_variants) != 1 or len(non_null_variants) == len(any_of):
+        return copied_schema
+
+    replacement = deepcopy(non_null_variants[0])
+    if not isinstance(replacement, dict):
+        return copied_schema
+
+    for metadata_key in ("title", "description", "default", "examples"):
+        if metadata_key in copied_schema and metadata_key not in replacement:
+            replacement[metadata_key] = copied_schema[metadata_key]
+    return replacement
+
+
+def _schema_property(
+    properties: dict[str, object],
+    name: str,
+    *,
+    nullable: bool = False,
+) -> dict[str, object]:
+    property_schema = properties.get(name)
+    if nullable:
+        return deepcopy(property_schema) if isinstance(property_schema, dict) else {}
+    return _without_null_variant(property_schema)
+
+
+def _hard_cutover_workflow_create_request_shapes(spec: dict[str, object]) -> None:
+    """Publish workflow create requests as shape-enforced public contracts."""
+    schemas = (
+        spec.get("components", {}).get("schemas")
+        if isinstance(spec.get("components"), dict)
+        else None
+    )
+    if not isinstance(schemas, dict):
+        return
+
+    run_schema = schemas.get("CreateWorkflowRunRequest")
+    if isinstance(run_schema, dict):
+        properties = run_schema.get("properties")
+        if isinstance(properties, dict):
+            schemas["CreateFreshWorkflowRunRequest"] = {
+                "properties": {
+                    "workflow_id": _schema_property(properties, "workflow_id"),
+                    "documents": _schema_property(
+                        properties, "documents", nullable=True
+                    ),
+                    "json_inputs": _schema_property(
+                        properties, "json_inputs", nullable=True
+                    ),
+                    "version": _schema_property(properties, "version"),
+                },
+                "type": "object",
+                "required": ["workflow_id"],
+                "additionalProperties": False,
+                "title": "CreateFreshWorkflowRunRequest",
+                "description": (
+                    "Create a fresh workflow run from a workflow id, optional "
+                    "draft/version selector, and optional inputs."
+                ),
+            }
+            schemas["CreateRestartWorkflowRunRequest"] = {
+                "properties": {
+                    "restart_of": _schema_property(properties, "restart_of"),
+                    "config_source": _schema_property(properties, "config_source"),
+                    "command_id": _schema_property(properties, "command_id"),
+                    "workflow_id": _schema_property(properties, "workflow_id"),
+                },
+                "type": "object",
+                "required": ["restart_of", "config_source"],
+                "additionalProperties": False,
+                "title": "CreateRestartWorkflowRunRequest",
+                "description": (
+                    "Restart a workflow run from a previous run id. workflow_id "
+                    "may be supplied when the client already has it."
+                ),
+            }
+            schemas["CreateWorkflowRunRequest"] = {
+                "oneOf": [
+                    {"$ref": "#/components/schemas/CreateFreshWorkflowRunRequest"},
+                    {"$ref": "#/components/schemas/CreateRestartWorkflowRunRequest"},
+                ],
+                "title": "CreateWorkflowRunRequest",
+                "description": (
+                    "Request body for POST /v1/workflows/runs. Use the fresh-run "
+                    "shape or the restart shape."
+                ),
+            }
+
+    test_run_schema = schemas.get("CreateWorkflowTestRunRequest")
+    if not isinstance(test_run_schema, dict):
+        return
+
+    properties = test_run_schema.get("properties")
+    if not isinstance(properties, dict):
+        return
+
+    schemas["CreateWorkflowTestRunForTestRequest"] = {
+        "properties": {
+            "test_id": _schema_property(properties, "test_id"),
+            "workflow_id": _schema_property(properties, "workflow_id"),
+            "n_consensus": _schema_property(properties, "n_consensus"),
+        },
+        "type": "object",
+        "required": ["test_id"],
+        "additionalProperties": False,
+        "title": "CreateWorkflowTestRunForTestRequest",
+        "description": "Run one saved workflow test by test id.",
+    }
+    schemas["CreateWorkflowTestRunForTargetRequest"] = {
+        "properties": {
+            "workflow_id": _schema_property(properties, "workflow_id"),
+            "target": _schema_property(properties, "target"),
+            "n_consensus": _schema_property(properties, "n_consensus"),
+        },
+        "type": "object",
+        "required": ["workflow_id", "target"],
+        "additionalProperties": False,
+        "title": "CreateWorkflowTestRunForTargetRequest",
+        "description": "Run every workflow test for one target in a workflow.",
+    }
+    schemas["CreateWorkflowTestRunAllRequest"] = {
+        "properties": {
+            "workflow_id": _schema_property(properties, "workflow_id"),
+            "n_consensus": _schema_property(properties, "n_consensus"),
+        },
+        "type": "object",
+        "required": ["workflow_id"],
+        "additionalProperties": False,
+        "title": "CreateWorkflowTestRunAllRequest",
+        "description": "Run every saved test in a workflow.",
+    }
+    schemas["CreateWorkflowTestRunRequest"] = {
+        "oneOf": [
+            {"$ref": "#/components/schemas/CreateWorkflowTestRunForTestRequest"},
+            {"$ref": "#/components/schemas/CreateWorkflowTestRunForTargetRequest"},
+            {"$ref": "#/components/schemas/CreateWorkflowTestRunAllRequest"},
+        ],
+        "title": "CreateWorkflowTestRunRequest",
+        "description": (
+            "Request body for POST /v1/workflows/tests/runs. Use exactly one "
+            "of the single-test, target, or all-tests shapes."
+        ),
+    }
+
+
 def _replace_schema_ref(
     node: object, old_schema_name: str, new_schema_name: str
 ) -> None:
@@ -607,7 +795,9 @@ def generate_openapi() -> None:
 
     _strip_public_workflow_internal_fields(spec)
     _strip_update_workflow_email_trigger_docs(spec)
+    _strip_stale_workflow_entities_reference(spec)
     _hard_cutover_workflow_step_lifecycle(spec)
+    _hard_cutover_workflow_create_request_shapes(spec)
     _hard_cutover_review_overlay_docs(spec)
 
     # Strip unused legacy request/response schemas that only belonged to the

@@ -2738,7 +2738,7 @@
           "Workflow Run Steps"
         ],
         "summary": "List Workflow Run Steps",
-        "description": "List steps for a workflow run with status and artifact summaries.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. Cursor pagination is not yet implemented for this\nendpoint \u2014 ``list_metadata`` is always ``{before: null, after: null}``.",
+        "description": "List steps with status and artifact summaries.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. Cursor pagination is not yet implemented for this\nendpoint \u2014 ``list_metadata`` is always ``{before: null, after: null}``.\n``run_id`` is an optional filter; when omitted, the list is scoped to\nthe caller's organization and bounded to 200 rows unless ``limit`` is\nprovided.",
         "operationId": "list_workflow_run_steps_v1_workflows_steps_get",
         "security": [
           {
@@ -2755,11 +2755,118 @@
           {
             "name": "run_id",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional workflow run ID filter.",
               "title": "Run Id"
-            }
+            },
+            "description": "Optional workflow run ID filter."
+          },
+          {
+            "name": "block_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional logical block ID filter.",
+              "title": "Block Id"
+            },
+            "description": "Optional logical block ID filter."
+          },
+          {
+            "name": "step_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional step ID filter.",
+              "title": "Step Id"
+            },
+            "description": "Optional step ID filter."
+          },
+          {
+            "name": "block_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional block type filter. Repeat the query parameter for multiple values.",
+              "title": "Block Type"
+            },
+            "description": "Optional block type filter. Repeat the query parameter for multiple values."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional step lifecycle status filter. Repeat the query parameter for multiple values.",
+              "title": "Status"
+            },
+            "description": "Optional step lifecycle status filter. Repeat the query parameter for multiple values."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 1000,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum number of steps to return. Defaults to all rows for a run-scoped query and 200 for cross-run queries.",
+              "title": "Limit"
+            },
+            "description": "Maximum number of steps to return. Defaults to all rows for a run-scoped query and 200 for cross-run queries."
           }
         ],
         "responses": {
@@ -3378,86 +3485,6 @@
         }
       }
     },
-    "/v1/workflows/artifacts/{operation}/{artifact_id}": {
-      "get": {
-        "tags": [
-          "Workflows",
-          "Workflow Artifacts"
-        ],
-        "summary": "Get Workflow Artifact",
-        "description": "Deprecated. Use ``GET /workflows/artifacts/{artifact_id}`` instead.\n\nThe two-segment ``{operation}/{artifact_id}`` address violates the\nflat-resource principle (a parent discriminator is encoded in the URL\nwhen the id itself already carries enough information to disambiguate).\nRetained for one release while SDK and CLI consumers migrate.",
-        "operationId": "get_workflow_artifact_v1_workflows_artifacts__operation___artifact_id__get",
-        "deprecated": true,
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "operation",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "enum": [
-                "extraction",
-                "split",
-                "classification",
-                "parse",
-                "edit",
-                "partition",
-                "conditional_evaluation",
-                "review_trigger_evaluation",
-                "while_loop_termination",
-                "api_call_invocation",
-                "function_invocation"
-              ],
-              "type": "string",
-              "title": "Operation"
-            }
-          },
-          {
-            "name": "artifact_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Artifact Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Get Workflow Artifact V1 Workflows Artifacts  Operation   Artifact Id  Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/workflows/artifacts": {
       "get": {
         "tags": [
@@ -3891,7 +3918,7 @@
           "Workflow Block Tests"
         ],
         "summary": "Create Test Run",
-        "description": "Create a workflow-scoped test run.\n\nScoping identity comes from the body \u2014 ``workflow_id`` and/or\n``test_id`` per ``CreateWorkflowTestRunRequest``. The\n``?workflow_id=\u2026`` query parameter is the legacy entry-point and is\ndeprecated; callers should migrate to the body field.",
+        "description": "Create a workflow-scoped test run.\n\nScoping identity comes from the body \u2014 ``workflow_id`` and/or\n``test_id`` per ``CreateWorkflowTestRunRequest``.",
         "operationId": "create_test_run_v1_workflows_tests_runs_post",
         "security": [
           {
@@ -3902,28 +3929,6 @@
           },
           {
             "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "DEPRECATED \u2014 pass ``workflow_id`` in the request body instead. Retained for one release so existing SDK/CLI callers continue to work; the body field takes precedence when both are set.",
-              "deprecated": true,
-              "title": "Workflow Id"
-            },
-            "description": "DEPRECATED \u2014 pass ``workflow_id`` in the request body instead. Retained for one release so existing SDK/CLI callers continue to work; the body field takes precedence when both are set.",
-            "deprecated": true
           }
         ],
         "requestBody": {
@@ -4122,69 +4127,6 @@
         }
       }
     },
-    "/v1/workflows/tests/runs/{run_id}/results/{test_id}": {
-      "get": {
-        "tags": [
-          "Workflows",
-          "Workflow Tests"
-        ],
-        "summary": "Get Test Execution Run Result",
-        "operationId": "get_test_execution_run_result_v1_workflows_tests_runs__run_id__results__test_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "test_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Test Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestRunRecord"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/workflows/blocks": {
       "get": {
         "tags": [
@@ -4258,23 +4200,12 @@
             "API Key": []
           }
         ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          }
-        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateBlockRequest"
+                "$ref": "#/components/schemas/CreateWorkflowBlockRequest"
               }
             }
           }
@@ -4332,15 +4263,6 @@
               "type": "string",
               "title": "Block Id"
             }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
           }
         ],
         "responses": {
@@ -4393,15 +4315,6 @@
             "schema": {
               "type": "string",
               "title": "Block Id"
-            }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
             }
           }
         ],
@@ -4465,15 +4378,6 @@
             "schema": {
               "type": "string",
               "title": "Block Id"
-            }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
             }
           }
         ],
@@ -4603,23 +4507,12 @@
             "API Key": []
           }
         ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          }
-        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateEdgeRequest"
+                "$ref": "#/components/schemas/CreateWorkflowEdgeRequest"
               }
             }
           }
@@ -4677,15 +4570,6 @@
               "type": "string",
               "title": "Edge Id"
             }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
           }
         ],
         "responses": {
@@ -4739,15 +4623,6 @@
               "type": "string",
               "title": "Edge Id"
             }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
           }
         ],
         "responses": {
@@ -4784,17 +4659,6 @@
           },
           {
             "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
           }
         ],
         "requestBody": {
@@ -4939,15 +4803,6 @@
               "type": "string",
               "title": "Test Id"
             }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
           }
         ],
         "responses": {
@@ -4999,15 +4854,6 @@
             "schema": {
               "type": "string",
               "title": "Test Id"
-            }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
             }
           }
         ],
@@ -5070,15 +4916,6 @@
             "schema": {
               "type": "string",
               "title": "Test Id"
-            }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
             }
           }
         ],
@@ -5628,69 +5465,6 @@
         }
       }
     },
-    "/v1/workflows/experiments/runs/{run_id}/results/{document_id}": {
-      "get": {
-        "tags": [
-          "Workflows",
-          "Workflow Experiments"
-        ],
-        "summary": "Get Experiment Run Result",
-        "operationId": "get_experiment_run_result_v1_workflows_experiments_runs__run_id__results__document_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "document_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Document Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExperimentResultPublic"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/workflows/experiments/runs/{run_id}/metrics": {
       "get": {
         "tags": [
@@ -5924,17 +5698,6 @@
             "API Key": []
           }
         ],
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          }
-        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -5996,15 +5759,6 @@
             "schema": {
               "type": "string",
               "title": "Experiment Id"
-            }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
             }
           }
         ],
@@ -6068,15 +5822,6 @@
               "type": "string",
               "title": "Experiment Id"
             }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
           }
         ],
         "responses": {
@@ -6128,15 +5873,6 @@
             "schema": {
               "type": "string",
               "title": "Experiment Id"
-            }
-          },
-          {
-            "name": "workflow_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
             }
           }
         ],
@@ -6460,7 +6196,7 @@
           "Workflows"
         ],
         "summary": "Get Workflow",
-        "description": "Get a single workflow by ID.\n\nReturns workflow metadata only.\nUse GET /{workflow_id}/entities for the live draft graph stored in\nseparate block and edge collections.",
+        "description": "Get a single workflow by ID.\n\nReturns workflow metadata only.",
         "operationId": "get_workflow_v1_workflows__workflow_id__get",
         "security": [
           {
@@ -9751,117 +9487,12 @@
         ],
         "title": "ContainsCondition"
       },
-      "CreateBlockRequest": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Client-provided block ID"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "start-document",
-              "start_json",
-              "note",
-              "parse",
-              "edit",
-              "extract",
-              "split",
-              "classifier",
-              "conditional",
-              "api_call",
-              "review",
-              "function",
-              "while_loop",
-              "for_each",
-              "merge_dicts",
-              "while_loop_sentinel_start",
-              "while_loop_sentinel_end",
-              "for_each_sentinel_start",
-              "for_each_sentinel_end"
-            ],
-            "title": "Type",
-            "description": "Block type"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label",
-            "description": "Display label",
-            "default": ""
-          },
-          "position_x": {
-            "type": "number",
-            "title": "Position X",
-            "description": "X position",
-            "default": 0
-          },
-          "position_y": {
-            "type": "number",
-            "title": "Position Y",
-            "description": "Y position",
-            "default": 0
-          },
-          "width": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Width",
-            "description": "Block width"
-          },
-          "height": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Height",
-            "description": "Block height"
-          },
-          "config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config",
-            "description": "Block configuration"
-          },
-          "parent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Id",
-            "description": "ID of parent container block (while_loop, for_each)"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "type"
-        ],
-        "title": "CreateBlockRequest",
-        "description": "Request to create a new block."
-      },
       "CreateBlockTestRequest": {
         "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
           "target": {
             "$ref": "#/components/schemas/WorkflowTestBlockTarget"
           },
@@ -9901,65 +9532,19 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "workflow_id",
           "target",
           "source",
           "assertion"
         ],
         "title": "CreateBlockTestRequest"
       },
-      "CreateEdgeRequest": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Client-provided edge ID"
-          },
-          "source_block": {
-            "type": "string",
-            "title": "Source Block",
-            "description": "Source block ID"
-          },
-          "target_block": {
-            "type": "string",
-            "title": "Target Block",
-            "description": "Target block ID"
-          },
-          "source_handle": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Handle",
-            "description": "Output handle"
-          },
-          "target_handle": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Target Handle",
-            "description": "Input handle"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "source_block",
-          "target_block"
-        ],
-        "title": "CreateEdgeRequest",
-        "description": "Request to create a new edge."
-      },
       "CreateExperimentRequest": {
         "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
           "block_id": {
             "anyOf": [
               {
@@ -10040,6 +9625,9 @@
         },
         "additionalProperties": false,
         "type": "object",
+        "required": [
+          "workflow_id"
+        ],
         "title": "CreateExperimentRequest",
         "description": "Body for POST /v1/workflows/experiments.\n\nTwo modes:\n\n- **Create from scratch** \u2014 provide ``block_id``, ``name``, optional\n  ``document_captures``/``documents``/``n_consensus``. ``source_experiment_id``\n  is omitted.\n- **Duplicate an existing experiment** \u2014 provide only\n  ``source_experiment_id``. The handler copies the source's block, name\n  (with ``(Copy)`` suffix), n_consensus, and documents. All other fields\n  must be omitted.\n\nThe discriminator is whether ``source_experiment_id`` is set. This is\nvalidated server-side: combining a source with any other field is\nrejected so the two modes stay structurally distinct."
       },
@@ -10368,6 +9956,176 @@
         ],
         "title": "CreateUploadResponse"
       },
+      "CreateWorkflowBlockRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "Workflow to create the block in."
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Opaque block ID. Omit to let the server generate one."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "start_document",
+              "start_json",
+              "note",
+              "parse",
+              "edit",
+              "extract",
+              "split",
+              "classifier",
+              "conditional",
+              "api_call",
+              "review",
+              "function",
+              "while_loop",
+              "for_each",
+              "merge_dicts",
+              "while_loop_sentinel_start",
+              "while_loop_sentinel_end",
+              "for_each_sentinel_start",
+              "for_each_sentinel_end"
+            ],
+            "title": "Type",
+            "description": "Block type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Display label",
+            "default": ""
+          },
+          "position_x": {
+            "type": "number",
+            "title": "Position X",
+            "description": "X position",
+            "default": 0
+          },
+          "position_y": {
+            "type": "number",
+            "title": "Position Y",
+            "description": "Y position",
+            "default": 0
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width",
+            "description": "Block width"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height",
+            "description": "Block height"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "Block configuration"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id",
+            "description": "ID of parent container block (while_loop, for_each)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "type"
+        ],
+        "title": "CreateWorkflowBlockRequest",
+        "description": "Body for POST /v1/workflows/blocks."
+      },
+      "CreateWorkflowEdgeRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "Workflow to create the edge in."
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Opaque edge ID. Omit to let the server generate one."
+          },
+          "source_block": {
+            "type": "string",
+            "title": "Source Block",
+            "description": "Source block ID"
+          },
+          "target_block": {
+            "type": "string",
+            "title": "Target Block",
+            "description": "Target block ID"
+          },
+          "source_handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Handle",
+            "description": "Output handle"
+          },
+          "target_handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Handle",
+            "description": "Input handle"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "source_block",
+          "target_block"
+        ],
+        "title": "CreateWorkflowEdgeRequest",
+        "description": "Body for POST /v1/workflows/edges."
+      },
       "CreateWorkflowRequest": {
         "properties": {
           "name": {
@@ -10425,7 +10183,7 @@
             },
             "type": "object",
             "title": "Documents",
-            "description": "Mapping of start-document block IDs to their input documents. Only valid for fresh-run creation (``restart_of`` is None)."
+            "description": "Mapping of start_document block IDs to their input documents. Only valid for fresh-run creation (``restart_of`` is None)."
           },
           "json_inputs": {
             "additionalProperties": true,
@@ -10527,7 +10285,7 @@
         "additionalProperties": false,
         "type": "object",
         "title": "CreateWorkflowTestRunRequest",
-        "description": "Body shape for ``POST /v1/workflows/tests/runs``.\n\nCarries the scoping identity (``workflow_id`` or ``test_id``) in the\nbody \u2014 no parent id in the URL (meta-pattern-blueprint \u00a71). At least\none of (body.``workflow_id``, body.``test_id``, query.``workflow_id``)\nmust be present at request time; the at-least-one check lives on the\nroute so legacy callers passing ``workflow_id`` via the deprecated\nquery param continue to work without putting it in the body too."
+        "description": "Body shape for ``POST /v1/workflows/tests/runs``.\n\nCarries the scoping identity (``workflow_id`` or ``test_id``) in the\nbody \u2014 no parent id in the URL (meta-pattern-blueprint \u00a71). At least\none of (body.``workflow_id``, body.``test_id``) must be present at\nrequest time; the at-least-one check lives on the route."
       },
       "Decision": {
         "properties": {
@@ -14911,11 +14669,27 @@
               }
             ],
             "title": "Parent Id"
+          },
+          "config_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "merge",
+                  "replace"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Mode",
+            "description": "How to apply the ``config`` field. 'merge' (default) deep-merges the patch into the existing config with null-as-delete; 'replace' uses the patch as the full new config. Not persisted."
           }
         },
         "type": "object",
         "title": "PatchBlockRequest",
-        "description": "Request to update a block. Only provided fields are updated."
+        "description": "Request to update a block. Only provided fields are updated.\n\n``config_mode`` is a request-level signal (not persisted) that controls\nhow the route folds the ``config`` patch into the existing config doc:\n\n* ``\"merge\"`` (default): RFC 7396 JSON Merge Patch \u2014 dicts recurse,\n  arrays/scalars replace, ``null`` deletes the key. This is what CLI\n  callers pass via ``--merge-config-file``.\n* ``\"replace\"``: take ``config`` as the full new typed config. Top-level\n  ``null`` values are pruned so the caller can wipe a key with one\n  request. This is what CLI callers pass via ``--config-file``.\n\nPre-config_mode callers (legacy SDKs, the canvas, any code that doesn't\nsend the field) keep the merge behavior; they were already sending\nfull configs on every save, which is idempotent under merge."
       },
       "PatchWorkflowRequest": {
         "properties": {
@@ -15917,7 +15691,7 @@
             },
             "type": "object",
             "title": "Documents",
-            "description": "start-document block ID -> input document reference"
+            "description": "start_document block ID -> input document reference"
           },
           "json_data": {
             "additionalProperties": true,
@@ -16469,7 +16243,7 @@
           "block_type": {
             "type": "string",
             "enum": [
-              "start-document",
+              "start_document",
               "start_json",
               "note",
               "parse",
@@ -17111,7 +16885,7 @@
           "type": {
             "type": "string",
             "enum": [
-              "start-document",
+              "start_document",
               "start_json",
               "note",
               "parse",
@@ -17242,7 +17016,7 @@
           "type": {
             "type": "string",
             "enum": [
-              "start-document",
+              "start_document",
               "start_json",
               "note",
               "parse",
@@ -17495,7 +17269,7 @@
           "start_document_blocks": {
             "type": "integer",
             "title": "Start Document Blocks",
-            "description": "Number of start-document blocks",
+            "description": "Number of start_document blocks",
             "default": 0
           }
         },

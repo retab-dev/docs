@@ -1,17 +1,21 @@
 ---
 title: "Create Workflow Test Run"
-openapi: "POST /v1/workflows/tests/runs?workflow_id={workflow_id}"
+openapi: "POST /v1/workflows/tests/runs"
 ---
 
 Create a workflow-test run against the current workflow draft. A run can execute
 one saved test, every test for one block, or every test in the workflow.
 
+The canonical route is flat: send `workflow_id` in the request body. The
+`workflow_id` query parameter is still accepted for legacy callers because it
+is present in the OpenAPI contract, but new integrations should use the body
+field.
+
 The response is a run resource. Use its `id` with the run-id-first endpoints:
 [Get Workflow Test Run](/api-reference/workflows/tests/runs/get), [List Test
-Run Results](/api-reference/workflows/tests/runs/results/list), and [Get Test
-Run Result](/api-reference/workflows/tests/runs/results/get).
+Run Results](/api-reference/workflows/tests/runs/results/list).
 
-The request body provides exactly one of:
+The request body provides the workflow scope and exactly one selector:
 
 - **`test_id`** - run a single test by id.
 - **`target`** - run every test for one block (`{ "type": "block", "block_id": "..." }`).
@@ -83,17 +87,21 @@ func main() {
 ```bash curl
 # Single test
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/tests/runs?workflow_id=wf_abc123xyz' \
-  -H 'Content-Type: application/json' \
-  -H 'Api-Key: <your-api-key>' \
-  -d '{ "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk" }'
-
-# All tests for one block
-curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/tests/runs?workflow_id=wf_abc123xyz' \
+  'https://api.retab.com/v1/workflows/tests/runs' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
+    "workflow_id": "wf_abc123xyz",
+    "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk"
+  }'
+
+# All tests for one block
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/tests/runs' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "workflow_id": "wf_abc123xyz",
     "target": { "type": "block", "block_id": "block_extract_invoice" },
     "n_consensus": 5
   }'
