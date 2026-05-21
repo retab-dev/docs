@@ -214,6 +214,43 @@ def _strip_routes_not_in_api_reference_markdown(
             paths.pop(path, None)
 
 
+def _public_operation_id(operation_id: str) -> str:
+    """Convert FastAPI's route-derived id into the public SDK operation id."""
+    stable_id = operation_id.split("_v1_", 1)[0]
+    for suffix in ("_route", "_flat"):
+        if stable_id.endswith(suffix):
+            stable_id = stable_id[: -len(suffix)]
+    return stable_id
+
+
+def _normalize_public_operation_ids(spec: dict[str, object]) -> None:
+    """Publish stable operationIds, independent of path and HTTP method suffixes."""
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return
+
+    seen: dict[str, str] = {}
+    for path, path_item in paths.items():
+        if not isinstance(path, str) or not isinstance(path_item, dict):
+            continue
+        for method, operation in path_item.items():
+            if method not in OPENAPI_HTTP_METHODS or not isinstance(operation, dict):
+                continue
+            operation_id = operation.get("operationId")
+            if not isinstance(operation_id, str):
+                continue
+            public_operation_id = _public_operation_id(operation_id)
+            route_key = f"{method.upper()} {path}"
+            previous_route = seen.get(public_operation_id)
+            if previous_route is not None:
+                raise ValueError(
+                    "Duplicate public OpenAPI operationId "
+                    f"{public_operation_id!r}: {previous_route} and {route_key}"
+                )
+            seen[public_operation_id] = route_key
+            operation["operationId"] = public_operation_id
+
+
 def _strip_legacy_from_enums(node: object) -> None:
     """Remove legacy URL entries from any "enum" list deep in the spec."""
     if isinstance(node, dict):
@@ -248,8 +285,8 @@ def _strip_public_workflow_internal_fields(spec: dict[str, object]) -> None:
         return
 
     internal_fields_by_schema = {
-        "WorkflowBlockObject": {"draft_version", "field_ref_snapshot"},
-        "WorkflowEdgeObject": {"draft_version"},
+        "WorkflowBlock": {"draft_version", "field_ref_snapshot"},
+        "WorkflowEdge": {"draft_version"},
         "WorkflowConfigBlock": {"field_ref_snapshot"},
     }
     for schema_name, internal_fields in internal_fields_by_schema.items():
@@ -279,7 +316,9 @@ def _strip_update_workflow_email_trigger_docs(spec: dict[str, object]) -> None:
     if not isinstance(schemas, dict):
         return
 
-    patch_workflow_schema = schemas.get("PatchWorkflowRequest")
+    patch_workflow_schema = schemas.get("UpdateWorkflowRequest")
+    if not isinstance(patch_workflow_schema, dict):
+        patch_workflow_schema = schemas.get("PatchWorkflowRequest")
     if not isinstance(patch_workflow_schema, dict):
         return
 
@@ -467,7 +506,7 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
         "description": "Current lifecycle state",
     }
 
-    for schema_name in ("StepResponse", "StepStatusObject"):
+    for schema_name in ("StepResponse", "WorkflowStep"):
         schema = schemas.get(schema_name)
         if not isinstance(schema, dict):
             continue
@@ -719,6 +758,58 @@ def _rename_schema(
     _replace_schema_ref(spec, old_schema_name, new_schema_name)
 
 
+def _normalize_public_schema_names(spec: dict[str, object]) -> None:
+    """Rename generated/internal component names to public API names.
+
+    This is a documentation-time overlay for the public OpenAPI contract. It
+    keeps wire JSON unchanged while preventing Python module paths,
+    Pydantic-generated input/output names, and storage DTO names from leaking
+    into generated SDKs.
+    """
+    schema_renames = {
+        "BBox-Input": "BoundingBoxInput",
+        "Category-Output": "ClassificationCategoryOutput",
+        "ClassificationRequest": "CreateClassificationRequest",
+        "CompleteUploadRequest": "CompleteFileUploadRequest",
+        "CreateUploadResponse": "CreateFileUploadResponse",
+        "EditConfig-Output": "EditConfigOutput",
+        "EditTemplateRequest": "CreateEditTemplateRequest",
+        "FileRecord": "File",
+        "GetSourcesResponse": "ExtractionSources",
+        "MIMEData-Input": "MIMEDataInput",
+        "MIMEData-Output": "MIMEData",
+        "BlockSimulationObject": "WorkflowSimulation",
+        "PatchBlockRequest": "UpdateWorkflowBlockRequest",
+        "PatchWorkflowRequest": "UpdateWorkflowRequest",
+        "PartitionRequest": "CreatePartitionRequest",
+        "main_server__types__classifications__Category": (
+            "ClassificationCategory"
+        ),
+        "main_server__types__classifications__Classification": (
+            "Classification"
+        ),
+        "main_server__types__edits__BBox": "BoundingBox",
+        "main_server__types__edits__EditConfig": "EditConfig",
+        "main_server__types__edits__EditRequest": "CreateEditRequest",
+        "main_server__types__edits__FormField-Input": "EditFormFieldInput",
+        "main_server__types__edits__FormField-Output": "EditFormFieldOutput",
+        "main_server__types__mime__OCR": "OCR",
+        "main_server__types__mime__Page": "Page",
+        "main_server__types__parses__Parse": "Parse",
+        "main_server__types__parses__ParseRequest": "CreateParseRequest",
+        "main_server__types__partitions__Partition": "Partition",
+        "main_server__types__splits__SplitConsensus": "SplitConsensus",
+        "main_server__types__splits__SplitResult": "SplitResult",
+        "main_server__types__splits__SplitSubdocumentLikelihood": (
+            "SplitSubdocumentLikelihood"
+        ),
+        "main_server__types__splits__Subdocument": "SplitSubdocument",
+    }
+
+    for old_schema_name, new_schema_name in schema_renames.items():
+        _rename_schema(spec, old_schema_name, new_schema_name)
+
+
 def _hard_cutover_review_overlay_docs(spec: dict[str, object]) -> None:
     """Normalize review overlay docs to the public hard-cutover contract."""
     schemas = (
@@ -729,14 +820,14 @@ def _hard_cutover_review_overlay_docs(spec: dict[str, object]) -> None:
     if not isinstance(schemas, dict):
         return
 
-    _rename_schema(spec, "Submit" + "DecisionResponse", "ReviewDecisionResponse")
+    _rename_schema(spec, "Submit" + "DecisionResponse", "WorkflowReviewDecisionResponse")
 
     output_version_schema = schemas.get("OutputVersion")
     if isinstance(output_version_schema, dict):
         description = output_version_schema.get("description")
         if isinstance(description, str):
             output_version_schema["description"] = description.replace(
-                "ReviewOverlay.versions", "ReviewResponse.versions"
+                "ReviewOverlay.versions", "WorkflowReview.versions"
             )
 
     paths = spec.get("paths")
@@ -790,9 +881,9 @@ def _workflow_paginated_schema(
     schemas: dict[str, object],
     schema_name: str,
     item_schema_name: str,
-) -> None:
+) -> bool:
     if item_schema_name not in schemas or "ListMetadata" not in schemas:
-        return
+        return False
 
     schemas[schema_name] = {
         "properties": {
@@ -807,6 +898,57 @@ def _workflow_paginated_schema(
         "required": ["data", "list_metadata"],
         "title": schema_name,
     }
+    return True
+
+
+PUBLIC_PAGINATED_LIST_ROUTES: tuple[tuple[str, str, str], ...] = (
+    (
+        "/v1/classifications",
+        "ClassificationList",
+        "Classification",
+    ),
+    ("/v1/edits", "EditList", "Edit"),
+    ("/v1/edits/templates", "EditTemplateList", "EditTemplate"),
+    ("/v1/extractions", "ExtractionList", "Extraction"),
+    ("/v1/parses", "ParseList", "Parse"),
+    ("/v1/partitions", "PartitionList", "Partition"),
+    ("/v1/splits", "SplitList", "Split"),
+    ("/v1/workflows", "WorkflowList", "Workflow"),
+    ("/v1/workflows/artifacts", "WorkflowArtifactList", "WorkflowArtifact"),
+    ("/v1/workflows/blocks", "WorkflowBlockList", "WorkflowBlock"),
+    ("/v1/workflows/edges", "WorkflowEdgeList", "WorkflowEdge"),
+    ("/v1/workflows/experiments", "WorkflowExperimentList", "WorkflowExperiment"),
+    (
+        "/v1/workflows/experiments/results",
+        "WorkflowExperimentResultList",
+        "WorkflowExperimentResult",
+    ),
+    (
+        "/v1/workflows/experiments/runs",
+        "WorkflowExperimentRunList",
+        "WorkflowExperimentRun",
+    ),
+    (
+        "/v1/workflows/reviews",
+        "WorkflowReviewSummaryList",
+        "WorkflowReviewSummary",
+    ),
+    (
+        "/v1/workflows/reviews/versions",
+        "WorkflowReviewVersionList",
+        "WorkflowReviewVersion",
+    ),
+    ("/v1/workflows/runs", "WorkflowRunList", "WorkflowRun"),
+    ("/v1/workflows/simulations", "WorkflowSimulationList", "WorkflowSimulation"),
+    ("/v1/workflows/steps", "WorkflowStepList", "WorkflowStep"),
+    ("/v1/workflows/tests", "WorkflowTestList", "WorkflowTest"),
+    (
+        "/v1/workflows/tests/results",
+        "WorkflowTestResultList",
+        "WorkflowTestResult",
+    ),
+    ("/v1/workflows/tests/runs", "WorkflowTestRunList", "WorkflowTestRun"),
+)
 
 
 def _set_get_response_schema(
@@ -832,6 +974,29 @@ def _set_get_response_schema(
         response["schema"] = {"$ref": f"#/components/schemas/{schema_name}"}
 
 
+def _normalize_public_list_response_docs(spec: dict[str, object]) -> None:
+    """Publish typed, public names for list response envelopes."""
+    components = spec.get("components")
+    if not isinstance(components, dict):
+        return
+    schemas = components.get("schemas")
+    if not isinstance(schemas, dict):
+        return
+
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return
+
+    for path, schema_name, item_schema_name in PUBLIC_PAGINATED_LIST_ROUTES:
+        if _workflow_paginated_schema(schemas, schema_name, item_schema_name):
+            _set_get_response_schema(paths, path, schema_name)
+
+    _rename_schema(spec, "JobListResponse", "JobList")
+    job_list_schema = schemas.get("JobList")
+    if isinstance(job_list_schema, dict):
+        job_list_schema["description"] = "List response for GET /v1/jobs."
+
+
 def _normalize_workflow_read_docs(spec: dict[str, object]) -> None:
     """Apply public workflow read-model documentation overlays."""
     components = spec.get("components")
@@ -845,24 +1010,9 @@ def _normalize_workflow_read_docs(spec: dict[str, object]) -> None:
     if not isinstance(paths, dict):
         return
 
-    _workflow_paginated_schema(
-        schemas,
-        "PaginatedList_WorkflowResponse_",
-        "WorkflowResponse",
-    )
-    _workflow_paginated_schema(
-        schemas,
-        "PaginatedList_WorkflowRunObject_",
-        "WorkflowRunObject",
-    )
-    _set_get_response_schema(paths, "/v1/workflows", "PaginatedList_WorkflowResponse_")
-    _set_get_response_schema(
-        paths,
-        "/v1/workflows/runs",
-        "PaginatedList_WorkflowRunObject_",
-    )
+    _normalize_public_list_response_docs(spec)
 
-    review_version_schema = schemas.get("ReviewVersionResponse")
+    review_version_schema = schemas.get("WorkflowReviewVersion")
     if isinstance(review_version_schema, dict):
         properties = review_version_schema.get("properties")
         if isinstance(properties, dict) and "Actor" in schemas:
@@ -951,7 +1101,9 @@ def generate_openapi() -> None:
     _hard_cutover_workflow_step_lifecycle(spec)
     _hard_cutover_workflow_create_request_shapes(spec)
     _hard_cutover_review_overlay_docs(spec)
+    _normalize_public_schema_names(spec)
     _normalize_workflow_read_docs(spec)
+    _normalize_public_operation_ids(spec)
 
     # Strip unused legacy request/response schemas that only belonged to the
     # document-scoped classification API.
