@@ -4,7 +4,9 @@ from pathlib import Path
 
 
 LEGACY_DOCUMENT_PATH_PREFIX = "/v1/documents/"
-LEGACY_REVIEW_DECISION_PATH_PREFIX = "/v1/workflows/runs/{run_id}/" + "h" + "il-decisions"
+LEGACY_REVIEW_DECISION_PATH_PREFIX = (
+    "/v1/workflows/runs/{run_id}/" + "h" + "il-decisions"
+)
 PRIVATE_PATH_PREFIXES: tuple[str, ...] = (
     "/internal/",
     "/custom/",
@@ -116,7 +118,11 @@ def _strip_legacy_from_enums(node: object) -> None:
 
 def _strip_public_workflow_internal_fields(spec: dict[str, object]) -> None:
     """Hide workflow graph implementation fields from the published API docs."""
-    schemas = spec.get("components", {}).get("schemas") if isinstance(spec.get("components"), dict) else None
+    schemas = (
+        spec.get("components", {}).get("schemas")
+        if isinstance(spec.get("components"), dict)
+        else None
+    )
     if not isinstance(schemas, dict):
         return
 
@@ -144,7 +150,11 @@ def _strip_public_workflow_internal_fields(spec: dict[str, object]) -> None:
 
 def _strip_update_workflow_email_trigger_docs(spec: dict[str, object]) -> None:
     """Hide private workflow email policy fields from the public update docs."""
-    schemas = spec.get("components", {}).get("schemas") if isinstance(spec.get("components"), dict) else None
+    schemas = (
+        spec.get("components", {}).get("schemas")
+        if isinstance(spec.get("components"), dict)
+        else None
+    )
     if not isinstance(schemas, dict):
         return
 
@@ -159,9 +169,7 @@ def _strip_update_workflow_email_trigger_docs(spec: dict[str, object]) -> None:
     required = patch_workflow_schema.get("required")
     if isinstance(required, list):
         patch_workflow_schema["required"] = [
-            field_name
-            for field_name in required
-            if field_name != "email_trigger"
+            field_name for field_name in required if field_name != "email_trigger"
         ]
 
 
@@ -171,28 +179,44 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
     The backend service can lag the SDK/docs public contract during the hard
     cutover. Keep the generated public OpenAPI aligned with the SDK surface.
     """
-    schemas = spec.get("components", {}).get("schemas") if isinstance(spec.get("components"), dict) else None
+    schemas = (
+        spec.get("components", {}).get("schemas")
+        if isinstance(spec.get("components"), dict)
+        else None
+    )
     if not isinstance(schemas, dict):
         return
 
     lifecycle_variants: dict[str, dict[str, object]] = {
         "PendingStepLifecycle": {
-            "properties": {"status": {"const": "pending", "title": "Status", "default": "pending"}},
+            "properties": {
+                "status": {"const": "pending", "title": "Status", "default": "pending"}
+            },
             "type": "object",
             "title": "PendingStepLifecycle",
         },
         "QueuedStepLifecycle": {
-            "properties": {"status": {"const": "queued", "title": "Status", "default": "queued"}},
+            "properties": {
+                "status": {"const": "queued", "title": "Status", "default": "queued"}
+            },
             "type": "object",
             "title": "QueuedStepLifecycle",
         },
         "RunningStepLifecycle": {
-            "properties": {"status": {"const": "running", "title": "Status", "default": "running"}},
+            "properties": {
+                "status": {"const": "running", "title": "Status", "default": "running"}
+            },
             "type": "object",
             "title": "RunningStepLifecycle",
         },
         "CompletedStepLifecycle": {
-            "properties": {"status": {"const": "completed", "title": "Status", "default": "completed"}},
+            "properties": {
+                "status": {
+                    "const": "completed",
+                    "title": "Status",
+                    "default": "completed",
+                }
+            },
             "type": "object",
             "title": "CompletedStepLifecycle",
         },
@@ -210,7 +234,11 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
         "ErrorStepLifecycle": {
             "properties": {
                 "status": {"const": "error", "title": "Status", "default": "error"},
-                "message": {"type": "string", "title": "Message", "description": "Human-readable error message"},
+                "message": {
+                    "type": "string",
+                    "title": "Message",
+                    "description": "Human-readable error message",
+                },
                 "stage": {
                     "anyOf": [{"type": "string"}, {"type": "null"}],
                     "title": "Stage",
@@ -222,7 +250,10 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
                     "description": "Category of error for retry decisions",
                 },
                 "details": {
-                    "anyOf": [{"$ref": "#/components/schemas/ErrorDetails"}, {"type": "null"}],
+                    "anyOf": [
+                        {"$ref": "#/components/schemas/ErrorDetails"},
+                        {"type": "null"},
+                    ],
                     "description": "Structured error context",
                 },
             },
@@ -233,7 +264,11 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
         "SkippedStepLifecycle": {
             "properties": {
                 "status": {"const": "skipped", "title": "Status", "default": "skipped"},
-                "reason": {"type": "string", "title": "Reason", "description": "Reason the step was skipped"},
+                "reason": {
+                    "type": "string",
+                    "title": "Reason",
+                    "description": "Reason the step was skipped",
+                },
             },
             "type": "object",
             "required": ["reason"],
@@ -241,8 +276,16 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
         },
         "CancelledStepLifecycle": {
             "properties": {
-                "status": {"const": "cancelled", "title": "Status", "default": "cancelled"},
-                "reason": {"type": "string", "title": "Reason", "description": "Reason the step was cancelled"},
+                "status": {
+                    "const": "cancelled",
+                    "title": "Status",
+                    "default": "cancelled",
+                },
+                "reason": {
+                    "type": "string",
+                    "title": "Reason",
+                    "description": "Reason the step was cancelled",
+                },
             },
             "type": "object",
             "required": ["reason"],
@@ -253,7 +296,10 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
 
     variant_names = list(lifecycle_variants)
     lifecycle_schema = {
-        "oneOf": [{"$ref": f"#/components/schemas/{schema_name}"} for schema_name in variant_names],
+        "oneOf": [
+            {"$ref": f"#/components/schemas/{schema_name}"}
+            for schema_name in variant_names
+        ],
         "discriminator": {
             "propertyName": "status",
             "mapping": {
@@ -282,7 +328,9 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
             properties["lifecycle"] = lifecycle_schema
         required = schema.get("required")
         if isinstance(required, list):
-            schema["required"] = ["lifecycle" if item == "status" else item for item in required]
+            schema["required"] = [
+                "lifecycle" if item == "status" else item for item in required
+            ]
         description = schema.get("description")
         if isinstance(description, str):
             schema["description"] = description.replace("step status", "step lifecycle")
@@ -297,10 +345,14 @@ def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
         if isinstance(get_operation, dict):
             description = get_operation.get("description")
             if isinstance(description, str):
-                get_operation["description"] = description.replace("Get step status", "Get step lifecycle")
+                get_operation["description"] = description.replace(
+                    "Get step status", "Get step lifecycle"
+                )
 
 
-def _replace_schema_ref(node: object, old_schema_name: str, new_schema_name: str) -> None:
+def _replace_schema_ref(
+    node: object, old_schema_name: str, new_schema_name: str
+) -> None:
     """Replace component schema refs deep in an OpenAPI subtree."""
     old_ref = f"#/components/schemas/{old_schema_name}"
     new_ref = f"#/components/schemas/{new_schema_name}"
@@ -333,7 +385,11 @@ def _hard_cutover_review_create_version(spec: dict[str, object]) -> None:
 
     _replace_schema_ref(spec, "AppendVersionRequest", "CreateVersionRequest")
 
-    schemas = spec.get("components", {}).get("schemas") if isinstance(spec.get("components"), dict) else None
+    schemas = (
+        spec.get("components", {}).get("schemas")
+        if isinstance(spec.get("components"), dict)
+        else None
+    )
     if not isinstance(schemas, dict):
         return
 
@@ -342,7 +398,9 @@ def _hard_cutover_review_create_version(spec: dict[str, object]) -> None:
         return
 
     append_version_request["title"] = "CreateVersionRequest"
-    append_version_request["description"] = "Create a corrected snapshot version without deciding."
+    append_version_request["description"] = (
+        "Create a corrected snapshot version without deciding."
+    )
     schemas["CreateVersionRequest"] = append_version_request
 
 
@@ -357,7 +415,9 @@ def generate_openapi() -> None:
     spec = app.openapi()
 
     # Update security schemes
-    spec["components"]["securitySchemes"] = {"API Key": {"type": "apiKey", "in": "header", "name": "Api-Key"}}
+    spec["components"]["securitySchemes"] = {
+        "API Key": {"type": "apiKey", "in": "header", "name": "Api-Key"}
+    }
 
     # Update servers
     spec["servers"] = [{"url": "https://api.retab.com"}]
