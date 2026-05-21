@@ -1,6 +1,6 @@
 ---
 title: "Get Experiment"
-openapi: "GET /v1/workflows/{workflow_id}/experiments/{experiment_id}"
+openapi: "GET /v1/workflows/experiments/{experiment_id}?workflow_id={workflow_id}"
 ---
 
 Fetch one experiment by id. The response includes the latest run status,
@@ -35,50 +35,33 @@ const experiment = await client.workflows.experiments.get(
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	request, err := http.NewRequest(
-		http.MethodGet,
-		"https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc",
-		nil,
-	)
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
-	request.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
 
-	response, err := http.DefaultClient.Do(request)
+	experiment, err := client.Workflows.Experiments.Get(ctx, "wf_abc123", "exp_abc")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer response.Body.Close()
 
-	responseBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if response.StatusCode >= 400 {
-		log.Fatalf("request failed: %s", responseBody)
-	}
-
-	var experiment map[string]any
-	if err := json.Unmarshal(responseBody, &experiment); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(experiment["id"])
+	fmt.Println(experiment.ID)
 }
 ```
 
 ```bash curl
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc' \
+  'https://api.retab.com/v1/workflows/experiments/exp_abc?workflow_id=wf_abc123' \
   -H 'Api-Key: <your-api-key>'
 ```
 

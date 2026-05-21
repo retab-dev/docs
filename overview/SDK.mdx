@@ -54,6 +54,106 @@ client, _ := retab.NewClient("")  // empty string → reads RETAB_API_KEY
 
 For a worked end-to-end extraction, see the [quickstart in the introduction](./introduction). Full method signatures live under [API Reference](../api-reference/introduction).
 
+## Workflow Graph Resources
+
+Blocks and edges are flat workflow resources keyed by `workflow_id`. SDK calls
+take the workflow id explicitly instead of nesting graph resources under a
+`/workflows/{workflow_id}/...` path.
+
+<CodeGroup>
+```python Python
+block = client.workflows.blocks.create(
+    workflow_id="wf_abc123",
+    id="blk_extract_1",
+    type="extract",
+    label="Extract invoice",
+    config={
+        "model": "retab-small",
+        "json_schema": {
+            "type": "object",
+            "properties": {"invoice_number": {"type": "string"}},
+            "required": ["invoice_number"],
+        },
+    },
+)
+
+edge = client.workflows.edges.create(
+    workflow_id="wf_abc123",
+    id="edge_start_extract",
+    source_block="start",
+    target_block=block.id,
+)
+````
+
+```javascript Node
+const block = await client.workflows.blocks.create("wf_abc123", {
+  id: "blk_extract_1",
+  type: "extract",
+  label: "Extract invoice",
+  config: {
+    model: "retab-small",
+    json_schema: {
+      type: "object",
+      properties: { invoice_number: { type: "string" } },
+      required: ["invoice_number"],
+    },
+  },
+});
+
+const edge = await client.workflows.edges.create("wf_abc123", {
+  id: "edge_start_extract",
+  source_block: "start",
+  target_block: block.id,
+});
+````
+
+</CodeGroup>
+
+## Workflow Reviews
+
+Reviews use immutable versions. To submit a corrected output, create a new
+version under `client.workflows.reviews.versions` and pass the reviewed
+`parent_id`/`parentVersionId`; SDK-created versions are always corrections of an
+existing version.
+
+<CodeGroup>
+```python Python
+review = client.workflows.reviews.get("rev_abc123")
+versions = client.workflows.reviews.versions.list(review_id=review.id)
+
+corrected = client.workflows.reviews.versions.create(
+    review_id=review.id,
+    parent_id=versions.data[0].id,
+    snapshot={"invoice_number": "INV-1001", "total": 1200},
+    note="fixed total",
+)
+
+decision = client.workflows.reviews.approve(
+    review.id,
+    version_id=corrected.id,
+)
+````
+
+```javascript Node
+const review = await client.workflows.reviews.get("rev_abc123");
+const versions = await client.workflows.reviews.versions.list({
+  reviewId: review.id,
+});
+
+const corrected = await client.workflows.reviews.versions.create({
+  reviewId: review.id,
+  parentVersionId: versions.data[0].id,
+  snapshot: { invoice_number: "INV-1001", total: 1200 },
+  note: "fixed total",
+});
+
+const decision = await client.workflows.reviews.approve(review.id, {
+  versionId: corrected.id,
+});
+````
+
+</CodeGroup>
+
 ## Workflow Test and Experiment Runs
 
 Workflow runs, workflow-test runs, and experiment runs all use the same

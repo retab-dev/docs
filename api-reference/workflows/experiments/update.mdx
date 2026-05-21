@@ -1,6 +1,6 @@
 ---
 title: "Update Experiment"
-openapi: "PATCH /v1/workflows/{workflow_id}/experiments/{experiment_id}"
+openapi: "PATCH /v1/workflows/experiments/{experiment_id}?workflow_id={workflow_id}"
 ---
 
 Patch the name, document set, or `n_consensus` of an experiment. Only fields
@@ -41,7 +41,7 @@ import { Retab } from "@retab/node";
 const client = new Retab();
 
 await client.workflows.experiments.update("wf_abc123", "exp_abc", {
-  n_consensus: 7,
+  nConsensus: 7,
 });
 ```
 
@@ -49,59 +49,39 @@ await client.workflows.experiments.update("wf_abc123", "exp_abc", {
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	body, err := json.Marshal(map[string]any{
-		"n_consensus": 7,
-	})
+	ctx := context.Background()
+	nConsensus := 7
+
+	client, err := retab.NewClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	request, err := http.NewRequest(
-		http.MethodPatch,
-		"https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc",
-		bytes.NewReader(body),
+	experiment, err := client.Workflows.Experiments.Update(
+		ctx,
+		"wf_abc123",
+		"exp_abc",
+		retab.UpdateExperimentRequest{NConsensus: &nConsensus},
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	request.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	request.Header.Set("Content-Type", "application/json")
 
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer response.Body.Close()
-
-	responseBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if response.StatusCode >= 400 {
-		log.Fatalf("request failed: %s", responseBody)
-	}
-
-	var experiment map[string]any
-	if err := json.Unmarshal(responseBody, &experiment); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(experiment["id"], experiment["n_consensus"])
+	fmt.Println(experiment.ID, experiment.NConsensus)
 }
 ```
 
 ```bash curl
 curl -X 'PATCH' \
-  'https://api.retab.com/v1/workflows/wf_abc123/experiments/exp_abc' \
+  'https://api.retab.com/v1/workflows/experiments/exp_abc?workflow_id=wf_abc123' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{"n_consensus": 7}'

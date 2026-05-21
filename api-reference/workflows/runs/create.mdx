@@ -1,16 +1,19 @@
 ---
 title: "Run Workflow"
-openapi: "POST /v1/workflows/{workflow_id}/run"
+openapi: "POST /v1/workflows/runs"
 ---
 
-Run a workflow with the provided inputs. This endpoint creates a workflow run and starts execution in the background. The response returns immediately with `lifecycle.status` set to `"running"` or `"pending"` — use the Get Run endpoint to check for updates.
+Run a workflow with the provided inputs. This endpoint creates a workflow run
+and starts execution in the background. The canonical API route is flat:
+`workflow_id` belongs in the request body, not in the URL.
+
+The response returns immediately with `lifecycle.status` set to `"running"` or
+`"pending"` — use the Get Run endpoint to check for updates.
 
 Workflows can accept two types of inputs:
 
 - **documents**: File inputs for Document (start) blocks
 - **json_inputs**: JSON data for JSON Input (start_json) blocks
-
-If you do not know the input block IDs yet, call `client.workflows.get_entities(workflow_id)` first and read `.start_document_blocks` / `.start_json_blocks`.
 
 <RequestExample>
 
@@ -20,15 +23,11 @@ from pathlib import Path
 
 client = Retab()
 
-workflow = client.workflows.get_entities("wf_abc123xyz")
-document_start_id = workflow.start_document_blocks[0].id
-json_start_id = workflow.start_json_blocks[0].id
-
 # Run with documents only
 run = client.workflows.runs.create(
     workflow_id="wf_abc123xyz",
     documents={
-        document_start_id: Path("invoice.pdf"),
+        "start-document-block-1": Path("invoice.pdf"),
     }
 )
 
@@ -36,10 +35,10 @@ run = client.workflows.runs.create(
 run = client.workflows.runs.create(
     workflow_id="wf_abc123xyz",
     documents={
-        document_start_id: Path("invoice.pdf"),
+        "start-document-block-1": Path("invoice.pdf"),
     },
     json_inputs={
-        json_start_id: {"customer_id": "cust_123", "priority": "high"},
+        "start-json-block-1": {"customer_id": "cust_123", "priority": "high"},
     }
 )
 
@@ -131,10 +130,11 @@ func main() {
 ```bash curl
 # Run with documents only
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/wf_abc123xyz/run' \
+  'https://api.retab.com/v1/workflows/runs' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
+    "workflow_id": "wf_abc123xyz",
     "documents": {
       "start-document-block-1": {
         "filename": "invoice.pdf",
@@ -146,10 +146,11 @@ curl -X 'POST' \
 
 # Run with documents and JSON inputs
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/wf_abc123xyz/run' \
+  'https://api.retab.com/v1/workflows/runs' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
+    "workflow_id": "wf_abc123xyz",
     "documents": {
       "start-document-block-1": {
         "filename": "invoice.pdf",

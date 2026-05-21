@@ -1,6 +1,6 @@
 ---
 title: "Create Experiment"
-openapi: "POST /v1/workflows/{workflow_id}/experiments"
+openapi: "POST /v1/workflows/experiments?workflow_id={workflow_id}"
 ---
 
 Create a consensus experiment on a supported block (`extract`, `classifier`,
@@ -46,13 +46,13 @@ const client = new Retab();
 
 const experiment = await client.workflows.experiments.create({
   workflowId: "wf_abc123",
-  block_id: "extract-invoice",
+  blockId: "extract-invoice",
   name: "Q1 invoices",
-  document_captures: [
+  documentCaptures: [
     { workflow_run_id: "wfrun_1" },
     { workflow_run_id: "wfrun_2", step_id: "for_each-0" },
   ],
-  n_consensus: 5,
+  nConsensus: 5,
 });
 console.log(experiment.id);
 ```
@@ -61,65 +61,42 @@ console.log(experiment.id);
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	body, err := json.Marshal(map[string]any{
-		"block_id": "extract-invoice",
-		"name":     "Q1 invoices",
-		"document_captures": []map[string]string{
-			{"workflow_run_id": "wfrun_1"},
-			{"workflow_run_id": "wfrun_2", "step_id": "for_each-0"},
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	experiment, err := client.Workflows.Experiments.Create(ctx, retab.CreateExperimentRequest{
+		WorkflowID: "wf_abc123",
+		BlockID:    "extract-invoice",
+		Name:       "Q1 invoices",
+		DocumentCaptures: []retab.ExperimentDocumentCaptureRequest{
+			{WorkflowRunID: "wfrun_1"},
+			{WorkflowRunID: "wfrun_2", StepID: "for_each-0"},
 		},
-		"n_consensus": 5,
+		NConsensus: 5,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	request, err := http.NewRequest(
-		http.MethodPost,
-		"https://api.retab.com/v1/workflows/wf_abc123/experiments",
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	request.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
-	request.Header.Set("Content-Type", "application/json")
-
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer response.Body.Close()
-
-	responseBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if response.StatusCode >= 400 {
-		log.Fatalf("request failed: %s", responseBody)
-	}
-
-	var experiment map[string]any
-	if err := json.Unmarshal(responseBody, &experiment); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(experiment["id"])
+	fmt.Println(experiment.ID)
 }
 ```
 
 ```bash curl
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/wf_abc123/experiments' \
+  'https://api.retab.com/v1/workflows/experiments?workflow_id=wf_abc123' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{

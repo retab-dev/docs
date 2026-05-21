@@ -1,9 +1,15 @@
 ---
 title: "Restart Run"
-openapi: "POST /v1/workflows/runs/{run_id}/restart"
+openapi: "POST /v1/workflows/runs"
 ---
 
-Restart a completed, errored, or cancelled run with the same inputs. A brand-new run is created with `lifecycle.status` set to `running`; the original run is left untouched.
+Restart a completed, errored, or cancelled run with the same inputs. A
+brand-new run is created with `lifecycle.status` set to `running`; the original
+run is left untouched.
+
+The canonical API route is the same flat create-run route used for normal
+workflow runs: `POST /v1/workflows/runs` with `restart_of` in the request body.
+SDK restart helpers are ergonomic wrappers around that flat route.
 
 The restart picks up the current published snapshot — not the snapshot the original run executed against. If you've published changes since the original run, the restart reflects them.
 
@@ -71,10 +77,13 @@ func main() {
 
 ```bash curl
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/runs/run_abc123/restart' \
+  'https://api.retab.com/v1/workflows/runs' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
-  -d '{"command_id": "cmd_restart_abc"}'
+  -d '{
+    "restart_of": "run_abc123",
+    "command_id": "cmd_restart_abc"
+  }'
 ```
 
 </RequestExample>

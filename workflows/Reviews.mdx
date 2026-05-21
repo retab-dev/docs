@@ -7,6 +7,8 @@ description: Review, correct, and decide on gated workflow block outputs
 
 When a workflow reaches a block with `config.review` and the predicate fires, the run pauses and creates a review. Address the review by its opaque `id`, such as `rev_...`; workflow context like `workflow_run_id`, `block_id`, `step_id`, and `iteration_key` is metadata for filtering and grounding.
 
+Reviews hold gate metadata and the terminal decision. Review versions hold immutable output snapshots and are managed separately through `reviews.versions.*`.
+
 ## Review Shape
 
 | Field | What it holds |
@@ -15,11 +17,23 @@ When a workflow reaches a block with `config.review` and the predicate fires, th
 | `workflow_run_id` | Run that is paused for review. |
 | `block_id` | Workflow block that produced the reviewed output. |
 | `step_id` | Exact execution step under review. |
-| `versions` | Immutable snapshots keyed by `ver_*` content ids. |
 | `decision` | Terminal verdict, or `null` while awaiting review. |
 | `triggered_by` | Review predicate that opened the gate. |
 
-`versions` are peers. There is no head pointer. Use `created_at` for display ordering, and approve or reject the exact `version_id` you inspected.
+Review queue items also include `seed_version_id` and `version_count` so you can open the runtime-created seed snapshot without embedding version history in the review object.
+
+## Version Shape
+
+| Field | What it holds |
+| --- | --- |
+| `id` | Content-addressed version id. |
+| `review_id` | Review this version belongs to. |
+| `parent_id` | Parent version id. `null` appears only on runtime-created seed versions in read responses. |
+| `snapshot` | Complete reviewed output payload for this version. |
+| `note` | Optional reviewer note. |
+| `created_at` | When the version was created. |
+
+Versions are peers. There is no head pointer. Use `created_at` for display ordering, and approve or reject the exact `version_id` you inspected.
 
 ## The Review Loop
 
@@ -38,26 +52,24 @@ for item in queue.data:
 ### 2. Inspect the output
 
 ```python
-review = client.workflows.reviews.get("rev_abc123")
+item = queue.data[0]
+review = client.workflows.reviews.get(item.id)
+seed_version = client.workflows.reviews.versions.get(item.seed_version_id)
 
-seed_version_id = next(
-    version_id
-    for version_id, version in review.versions.items()
-    if version.parent_id is None and version.author.kind == "model"
-)
-print(review.versions[seed_version_id].snapshot)
+print(review.workflow_run_id, review.step_id)
+print(seed_version.snapshot)
 ```
 
 Use `workflow_run_id` and `step_id` to inspect the source step and document before deciding.
 
 ### 3. Correct if needed
 
-Create a new version (a complete replacement snapshot) with the reviewed version as `parent_id`, then approve the returned `id`. Versions are a flat CRUD resource — the parent id lives in the body, not the URL.
+Create a new version (a complete replacement snapshot) with the reviewed version as `parent_id`, then approve the returned `id`. Public clients must provide `parent_id` when creating correction versions. Versions are a flat CRUD resource at `POST /v1/workflows/reviews/versions`; the parent id lives in the body, not the URL.
 
 ```python
 version = client.workflows.reviews.versions.create(
-    review_id="rev_abc123",
-    parent_id=seed_version_id,
+    review_id=review.id,
+    parent_id=seed_version.id,
     snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
     note="Corrected total.",
 )
@@ -79,11 +91,11 @@ For split and for-each snapshots, `pages` must be positive integers, sorted, and
 ### 4. Decide
 
 ```python
-client.workflows.reviews.approve("rev_abc123", version_id=version_id)
+client.workflows.reviews.approve(review.id, version_id=version_id)
 
 client.workflows.reviews.reject(
-    "rev_abc123",
-    version_id=seed_version_id,
+    review.id,
+    version_id=seed_version.id,
     reason="Source document is illegible; cannot verify totals.",
 )
 ```

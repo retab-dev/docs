@@ -77,15 +77,18 @@ The server exposes tools grouped under underscore-separated namespaces. Start wi
 
 ### Workflow blocks
 
+Block tools operate on flat block resources keyed by `workflow_id`.
+
 | Tool                        | Use it to                                                                                                                                                                                                                                                     |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `workflows_blocks_get`      | Get a block's type, label, config, position, parent container, connected edges, and available handles.                                                                                                                                                        |
 | `workflows_blocks_create`   | Add a block to a draft. Supports `parent_id` for placing inside `for_each`/`while_loop` containers, `connect_from` for auto-wired connections, and `connections` for explicit handle wiring on branching blocks (classifier, split).                          |
 | `workflows_blocks_update`   | Update a block's label, config, position, size, or parent. For extract blocks supports surgical `json_schema_patch` (RFC 6902); for function blocks supports surgical `code_patch` (exact-string Edit-style). Pass `replace=true` to replace config entirely. |
 | `workflows_blocks_delete`   | Delete a block and all its connected edges from the draft.                                                                                                                                                                                                    |
-| `workflows_blocks_simulate` | Replay one or more historical run steps against the current draft config. Async — returns a `job_id`. Supports cohort replay via `run_ids` and consensus override via `n_consensus`.                                                                          |
 
 ### Workflow edges
+
+Edge tools operate on flat edge resources keyed by `workflow_id`.
 
 | Tool                     | Use it to                                                                                                                           |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -100,9 +103,9 @@ The server exposes tools grouped under underscore-separated namespaces. Start wi
 | `workflows_runs_create`     | Run a workflow against `production`, `draft`, or a pinned version id. Inputs map start-document block ids to `file_id` strings (or `{download_url, filename}`) and `start_json` block ids to JSON objects. |
 | `workflows_runs_list`       | List recent runs with lifecycle and timing, optionally filtered by status.                                                                                                                                 |
 | `workflows_runs_get`        | Fetch a run's lifecycle, timing, inputs, and step summaries. Waits up to 5s for in-progress runs.                                                                                                          |
-| `workflows_runs_steps_list` | List every step in a run with lifecycle, timing, errors, model, and the `artifact` ref.                                                                                                                    |
-| `workflows_runs_steps_get`  | Inspect a single step. For extract blocks, surfaces the top-level `extraction_id` so you can pipe it straight into `files_get_sources`. Supports `path` to drill into big payloads.                        |
-| `workflows_reviews_*`       | Reviews for gated block runs: list the queue, inspect `triggered_by`, append corrected versions, approve/reject an exact `version_id`, or wait for a gate to fire.                                         |
+| `workflows_steps_list` | List every step in a run with lifecycle, timing, errors, model, and the `artifact` ref.                                                                                                                    |
+| `workflows_steps_get`  | Inspect a single step. For extract blocks, surfaces the top-level `extraction_id` so you can pipe it straight into `files_get_sources`. Supports `path` to drill into big payloads.                        |
+| `workflows_reviews_*`       | Reviews for gated block runs: list the queue, inspect `triggered_by`, create corrected versions with `parent_id`, approve/reject an exact `version_id`, or wait for a gate to fire.                         |
 
 ### Workflow artifacts
 
@@ -144,7 +147,7 @@ The server exposes tools grouped under underscore-separated namespaces. Start wi
 | Tool       | Use it to                                                                                                                                                                                                               |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `help`     | Get Retab-specific guidance before touching an unfamiliar subsystem. Topics: `default`, `files`, `workflows`, `workflows_runs`, `workflow_blocks` (with optional `block_type`), `tests`, `experiments`, `human_review`. |
-| `jobs_get` | Poll generic async jobs from tools such as `files_analyze` and `workflows_blocks_simulate`. Waits up to 5s before returning.                                                                                            |
+| `jobs_get` | Poll generic async jobs from tools such as `files_analyze`. Waits up to 5s before returning.                                                                                                                            |
 
 ### Prompts
 

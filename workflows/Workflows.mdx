@@ -162,8 +162,8 @@ For the SDK and HTTP endpoint details, see the workflow API reference:
 - [Get Workflow](/api-reference/workflows/get)
 - [Run Workflow](/api-reference/workflows/runs/create)
 - [Get Run](/api-reference/workflows/runs/get)
-- [List Steps](/api-reference/workflows/runs/steps/list)
-- [Get Step](/api-reference/workflows/runs/steps/get)
+- [List Steps](/api-reference/workflows/steps/list)
+- [Get Step](/api-reference/workflows/steps/get)
 
 ### From the Dashboard
 
@@ -177,13 +177,13 @@ For the SDK and HTTP endpoint details, see the workflow API reference:
 
 The Python, Node, and Go SDKs expose workflow metadata, graph authoring, run execution, and typed step inspection:
 
-- `client.workflows.*` / `client.Workflows.*` for `list()`, `get()`, `create()`, `publish()`, `duplicate()`, and `get_entities()`
+- `client.workflows.*` / `client.Workflows.*` for `list()`, `get()`, `create()`, `update()`, `delete()`, and `publish()`
 - `client.workflows.blocks.*` / `client.Workflows.Blocks.*` and `client.workflows.edges.*` / `client.Workflows.Edges.*` for programmatic graph changes
-- `client.workflows.runs.*` / `client.Workflows.Runs.*` and `client.workflows.runs.steps.*` / `client.Workflows.Runs.Steps.*` for running flows and reading results
+- `client.workflows.runs.*` / `client.Workflows.Runs.*` and `client.workflows.steps.*` / `client.Workflows.Steps.*` for running flows and reading results
 
 #### Discover input block IDs
 
-Workflow run inputs are keyed by the IDs of your `start-document` and `start_json` blocks. `get_entities()` is the easiest way to discover them.
+Workflow run inputs are keyed by the IDs of your `start-document` and `start_json` blocks. List the workflow's blocks to discover them.
 
 <CodeGroup>
 ```python Python
@@ -191,10 +191,10 @@ from retab import Retab
 
 client = Retab()
 
-workflow = client.workflows.get_entities("wf_abc123")
+blocks = client.workflows.blocks.list("wf_abc123")
 
-document_start_id = workflow.start_document_blocks[0].id
-json_start_id = workflow.start_json_blocks[0].id
+document_start_id = next(block.id for block in blocks.data if block.type == "start-document")
+json_start_id = next(block.id for block in blocks.data if block.type == "start_json")
 
 ````
 
@@ -203,10 +203,10 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const workflow = await client.workflows.getEntities("wf_abc123");
+const blocks = await client.workflows.blocks.list("wf_abc123");
 
-const documentStartId = workflow.blocks.find((block) => block.type === "start-document")?.id;
-const jsonStartId = workflow.blocks.find((block) => block.type === "start_json")?.id;
+const documentStartId = blocks.data.find((block) => block.type === "start-document")?.id;
+const jsonStartId = blocks.data.find((block) => block.type === "start_json")?.id;
 
 if (!documentStartId || !jsonStartId) {
   throw new Error("Workflow is missing a required input block");
@@ -232,16 +232,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	workflow, err := client.Workflows.GetEntities(ctx, "wf_abc123")
+	blocks, err := client.Workflows.Blocks.List(ctx, "wf_abc123")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var documentStartID string
 	var jsonStartID string
-	for _, block := range workflow.Blocks {
+	for _, block := range blocks.Data {
 		switch block.Type {
-		case "start":
+		case "start-document":
 			documentStartID = block.ID
 		case "start_json":
 			jsonStartID = block.ID
@@ -271,12 +271,13 @@ from retab import Retab
 
 client = Retab()
 
-workflow = client.workflows.get_entities("wf_abc123")
-document_start_id = workflow.start_document_blocks[0].id
-json_start_id = workflow.start_json_blocks[0].id
+workflow = client.workflows.get("wf_abc123")
+blocks = client.workflows.blocks.list(workflow.id)
+document_start_id = next(block.id for block in blocks.data if block.type == "start-document")
+json_start_id = next(block.id for block in blocks.data if block.type == "start_json")
 
 run = client.workflows.runs.create(
-workflow_id=workflow.workflow.id,
+workflow_id=workflow.id,
 documents={
 document_start_id: Path("path/to/invoice.pdf"),
 },
@@ -298,8 +299,8 @@ raise RuntimeError(run.lifecycle.message)
 elif run.lifecycle.status == "cancelled":
 raise RuntimeError(run.lifecycle.reason or "Workflow run was cancelled")
 else:
-for step_summary in client.workflows.runs.steps.list(run.id):
-step = client.workflows.runs.steps.get(run.id, step_summary.block_id)
+for step_summary in client.workflows.steps.list(run.id):
+step = client.workflows.steps.get(run.id, step_summary.block_id)
 if step.handle_outputs:
 print(step.block_id, step.handle_outputs)
 
@@ -310,16 +311,17 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const workflow = await client.workflows.getEntities("wf_abc123");
-const documentStartId = workflow.blocks.find((block) => block.type === "start-document")?.id;
-const jsonStartId = workflow.blocks.find((block) => block.type === "start_json")?.id;
+const workflow = await client.workflows.get("wf_abc123");
+const blocks = await client.workflows.blocks.list(workflow.id);
+const documentStartId = blocks.data.find((block) => block.type === "start-document")?.id;
+const jsonStartId = blocks.data.find((block) => block.type === "start_json")?.id;
 
 if (!documentStartId || !jsonStartId) {
   throw new Error("Workflow is missing a required input block");
 }
 
 let run = await client.workflows.runs.create({
-  workflowId: workflow.workflow.id,
+  workflowId: workflow.id,
   documents: {
     [documentStartId]: "path/to/invoice.pdf",
   },
@@ -342,9 +344,9 @@ if (run.lifecycle.status === "awaiting_review") {
 } else if (run.lifecycle.status === "cancelled") {
   throw new Error(run.lifecycle.reason ?? "Workflow run was cancelled");
 } else {
-  const steps = await client.workflows.runs.steps.list(run.id);
+  const steps = await client.workflows.steps.list(run.id);
   for (const stepSummary of steps) {
-    const step = await client.workflows.runs.steps.get(run.id, stepSummary.block_id);
+    const step = await client.workflows.steps.get(run.id, stepSummary.block_id);
     if (Object.keys(step.handle_outputs).length > 0) {
       console.log(step.block_id, step.handle_outputs);
     }
@@ -372,16 +374,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	workflow, err := client.Workflows.GetEntities(ctx, "wf_abc123")
+	workflow, err := client.Workflows.Get(ctx, "wf_abc123")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	blocks, err := client.Workflows.Blocks.List(ctx, workflow.ID)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var documentStartID string
 	var jsonStartID string
-	for _, block := range workflow.Blocks {
+	for _, block := range blocks.Data {
 		switch block.Type {
-		case "start":
+		case "start-document":
 			documentStartID = block.ID
 		case "start_json":
 			jsonStartID = block.ID
@@ -389,7 +396,7 @@ func main() {
 	}
 
 	run, err := client.Workflows.Runs.Create(ctx, retab.CreateWorkflowRunRequest{
-		WorkflowID: workflow.Workflow.ID,
+		WorkflowID: workflow.ID,
 		Documents: map[string]any{
 			documentStartID: "path/to/invoice.pdf",
 		},
@@ -425,12 +432,12 @@ func main() {
 		log.Fatalf("workflow finished with lifecycle %s", run.Lifecycle.Status)
 	}
 
-	steps, err := client.Workflows.Runs.Steps.List(ctx, run.ID)
+	steps, err := client.Workflows.Steps.List(ctx, run.ID)
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, stepSummary := range steps {
-		step, err := client.Workflows.Runs.Steps.Get(ctx, run.ID, stepSummary.BlockID)
+		step, err := client.Workflows.Steps.Get(ctx, run.ID, stepSummary.BlockID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -454,14 +461,14 @@ Step payloads are normalized into `HandlePayload` objects. For JSON-producing bl
 <CodeGroup>
 ```python Python
 # Step roster:
-for step in client.workflows.runs.steps.list(run.id):
+for step in client.workflows.steps.list(run.id):
     print(step.block_id, step.lifecycle.status)
     if step.artifact:
         print(step.artifact.operation, step.artifact.id)
 
 # Full execution record for one step:
 
-step = client.workflows.runs.steps.get(run.id, "extract-block-id")
+step = client.workflows.steps.get(run.id, "extract-block-id")
 print(step.lifecycle.status)
 if step.extracted_data:
 print(step.extracted_data)
@@ -470,7 +477,7 @@ print(step.extracted_data)
 
 ```javascript JavaScript
 // Step roster:
-const steps = await client.workflows.runs.steps.list(run.id);
+const steps = await client.workflows.steps.list(run.id);
 for (const step of steps) {
   console.log(step.block_id, step.lifecycle.status);
   if (step.artifact) {
@@ -479,7 +486,7 @@ for (const step of steps) {
 }
 
 // Full execution record for one step:
-const step = await client.workflows.runs.steps.get(run.id, "extract-block-id");
+const step = await client.workflows.steps.get(run.id, "extract-block-id");
 console.log(step.lifecycle.status);
 const extractedData = step.handle_outputs["output-json-0"]?.data;
 if (extractedData) {
@@ -489,7 +496,7 @@ if (extractedData) {
 
 ```go Go
 // Step roster:
-steps, err := client.Workflows.Runs.Steps.List(ctx, run.ID)
+steps, err := client.Workflows.Steps.List(ctx, run.ID)
 if err != nil {
 	log.Fatal(err)
 }
@@ -501,7 +508,7 @@ for _, step := range steps {
 }
 
 // Full execution record for one step:
-step, err := client.Workflows.Runs.Steps.Get(ctx, run.ID, "extract-block-id")
+step, err := client.Workflows.Steps.Get(ctx, run.ID, "extract-block-id")
 if err != nil {
 	log.Fatal(err)
 }
@@ -531,7 +538,7 @@ wrapper.
 
 <CodeGroup>
 ```python Python
-step = client.workflows.runs.steps.get(run.id, "conditional-block-id")
+step = client.workflows.steps.get(run.id, "conditional-block-id")
 if step.artifact:
     artifact = client.workflows.artifacts.get(step.artifact)
     print(artifact.operation)
@@ -540,7 +547,7 @@ if step.artifact:
 ```
 
 ```javascript JavaScript
-const step = await client.workflows.runs.steps.get(run.id, "function-block-id");
+const step = await client.workflows.steps.get(run.id, "function-block-id");
 if (step.artifact) {
   const artifact = await client.workflows.artifacts.get(step.artifact);
   console.log(artifact.operation);
@@ -591,8 +598,8 @@ The same SDK can create and publish workflow graphs:
 <CodeGroup>
 ```python Python
 workflow = client.workflows.create(name="Invoice Pipeline")
-entities = client.workflows.get_entities(workflow.id)
-start_document_block = entities.start_document_blocks[0]
+blocks = client.workflows.blocks.list(workflow.id)
+start_document_block = next(block for block in blocks.data if block.type == "start-document")
 
 extract_block = client.workflows.blocks.create(
 workflow.id,
@@ -627,8 +634,8 @@ client.workflows.publish(workflow.id, description="Initial version")
 
 ```javascript JavaScript
 const workflow = await client.workflows.create({ name: "Invoice Pipeline" });
-const entities = await client.workflows.getEntities(workflow.id);
-const startDocumentBlock = entities.blocks.find((block) => block.type === "start-document");
+const blocks = await client.workflows.blocks.list(workflow.id);
+const startDocumentBlock = blocks.data.find((block) => block.type === "start-document");
 
 if (!startDocumentBlock) {
   throw new Error("Workflow is missing a start-document block");
@@ -670,14 +677,14 @@ if err != nil {
 	log.Fatal(err)
 }
 
-entities, err := client.Workflows.GetEntities(ctx, workflow.ID)
+blocks, err := client.Workflows.Blocks.List(ctx, workflow.ID)
 if err != nil {
 	log.Fatal(err)
 }
 
 var startDocumentBlock retab.WorkflowBlock
-for _, block := range entities.Blocks {
-	if block.Type == "start" {
+for _, block := range blocks.Data {
+	if block.Type == "start-document" {
 		startDocumentBlock = block
 		break
 	}
@@ -724,7 +731,7 @@ if err != nil {
 
 </CodeGroup>
 
-Use `client.workflows.list()` or `client.workflows.get(workflow_id)` when you need to browse existing workflows before launching a run, and `client.workflows.duplicate(workflow_id)` when you want a draft copy of an existing flow.
+Use `client.workflows.list()` or `client.workflows.get(workflow_id)` when you need to browse existing workflows before launching a run.
 
 ### Reading Workflow Results
 

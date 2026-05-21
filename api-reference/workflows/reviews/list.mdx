@@ -10,6 +10,10 @@ Use `decision_status="pending"` for the open review queue. Use `approved`, `reje
 <RequestExample>
 
 ```python python
+from retab import Retab
+
+client = Retab()
+
 queue = client.workflows.reviews.list(
     workflow_id="wf_1",
     decision_status="pending",
@@ -21,11 +25,53 @@ for item in queue.data:
 ```
 
 ```javascript javascript
+import { Retab } from "@retab/node";
+
+const client = new Retab();
+
 const queue = await client.workflows.reviews.list({
   workflowId: "wf_1",
   decisionStatus: "pending",
   limit: 50,
 });
+
+for (const item of queue.data) {
+  console.log(item.id, item.workflow_run_id, item.block_id, item.seed_version_id);
+}
+```
+
+```go go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	queue, err := client.Workflows.Reviews.List(ctx, &retab.ListReviewsParams{
+		WorkflowID:     "wf_1",
+		DecisionStatus: "pending",
+		Limit:          50,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, item := range queue.Data {
+		fmt.Println(item.ID, item.WorkflowRunID, item.BlockID, item.SeedVersionID)
+	}
+}
 ```
 
 ```bash curl
