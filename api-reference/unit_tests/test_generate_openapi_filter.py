@@ -241,9 +241,24 @@ def test_generated_openapi_uses_dereferenced_workflow_artifact_schema() -> None:
     )
 
 
-def test_workflow_list_get_responses_are_typed() -> None:
+def test_public_list_get_responses_are_typed() -> None:
     spec = {
         "paths": {
+            "/v1/classifications": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "$ref": "#/components/schemas/PaginatedList"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "/v1/workflows": {
                 "get": {
                     "responses": {
@@ -278,28 +293,37 @@ def test_workflow_list_get_responses_are_typed() -> None:
         "components": {
             "schemas": {
                 "ListMetadata": {},
-                "WorkflowResponse": {},
-                "WorkflowRunObject": {},
+                "Classification": {},
+                "Workflow": {},
+                "WorkflowRun": {},
             }
         },
     }
 
     generate_openapi._normalize_workflow_read_docs(spec)
 
+    assert spec["paths"]["/v1/classifications"]["get"]["responses"]["200"][
+        "content"
+    ]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/ClassificationList"
+    }
+    assert spec["components"]["schemas"]["ClassificationList"]["properties"]["data"][
+        "items"
+    ] == {"$ref": "#/components/schemas/Classification"}
     assert spec["paths"]["/v1/workflows"]["get"]["responses"]["200"]["content"][
         "application/json"
-    ]["schema"] == {"$ref": "#/components/schemas/PaginatedList_WorkflowResponse_"}
-    assert spec["components"]["schemas"]["PaginatedList_WorkflowResponse_"][
-        "properties"
-    ]["data"]["items"] == {"$ref": "#/components/schemas/WorkflowResponse"}
+    ]["schema"] == {"$ref": "#/components/schemas/WorkflowList"}
+    assert spec["components"]["schemas"]["WorkflowList"]["properties"]["data"][
+        "items"
+    ] == {"$ref": "#/components/schemas/Workflow"}
     assert spec["paths"]["/v1/workflows/runs"]["get"]["responses"]["200"][
         "content"
     ]["application/json"]["schema"] == {
-        "$ref": "#/components/schemas/PaginatedList_WorkflowRunObject_"
+        "$ref": "#/components/schemas/WorkflowRunList"
     }
-    assert spec["components"]["schemas"]["PaginatedList_WorkflowRunObject_"][
-        "properties"
-    ]["data"]["items"] == {"$ref": "#/components/schemas/WorkflowRunObject"}
+    assert spec["components"]["schemas"]["WorkflowRunList"]["properties"]["data"][
+        "items"
+    ] == {"$ref": "#/components/schemas/WorkflowRun"}
 
 
 def test_review_version_route_uses_semantic_version_id_parameter() -> None:
@@ -325,7 +349,7 @@ def test_review_version_route_uses_semantic_version_id_parameter() -> None:
         "components": {
             "schemas": {
                 "ListMetadata": {},
-                "ReviewVersionResponse": {"properties": {}},
+                "WorkflowReviewVersion": {"properties": {}},
             }
         },
     }
@@ -348,6 +372,139 @@ def test_review_version_route_uses_semantic_version_id_parameter() -> None:
             },
         }
     ]
+
+
+def test_normalize_public_operation_ids_strips_fastapi_route_suffixes() -> None:
+    spec = {
+        "paths": {
+            "/v1/workflows/reviews": {
+                "get": {
+                    "operationId": "list_reviews_route_v1_workflows_reviews_get"
+                }
+            },
+            "/v1/workflows/experiments/runs": {
+                "post": {
+                    "operationId": (
+                        "create_experiment_run_flat_v1_workflows_experiments_runs_post"
+                    )
+                }
+            },
+            "/v1/workflows/reviews/{review_id}": {
+                "get": {
+                    "operationId": (
+                        "get_review_route_v1_workflows_reviews__review_id__get"
+                    )
+                }
+            },
+        }
+    }
+
+    generate_openapi._normalize_public_operation_ids(spec)
+
+    assert spec["paths"]["/v1/workflows/reviews"]["get"]["operationId"] == (
+        "list_reviews"
+    )
+    assert spec["paths"]["/v1/workflows/experiments/runs"]["post"][
+        "operationId"
+    ] == "create_experiment_run"
+    assert spec["paths"]["/v1/workflows/reviews/{review_id}"]["get"][
+        "operationId"
+    ] == "get_review"
+
+
+def test_normalize_public_operation_ids_rejects_duplicates() -> None:
+    spec = {
+        "paths": {
+            "/v1/widgets": {"get": {"operationId": "list_widgets_v1_widgets_get"}},
+            "/v1/other-widgets": {
+                "get": {"operationId": "list_widgets_v1_other_widgets_get"}
+            },
+        }
+    }
+
+    with pytest.raises(ValueError, match="Duplicate public OpenAPI operationId"):
+        generate_openapi._normalize_public_operation_ids(spec)
+
+
+def test_normalize_public_schema_names_renames_patch_workflow_requests() -> None:
+    spec = {
+        "paths": {
+            "/v1/workflows/{workflow_id}": {
+                "patch": {
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PatchWorkflowRequest"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/v1/workflows/blocks/{block_id}": {
+                "patch": {
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PatchBlockRequest"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        },
+        "components": {
+            "schemas": {
+                "PatchWorkflowRequest": {"title": "PatchWorkflowRequest"},
+                "PatchBlockRequest": {"title": "PatchBlockRequest"},
+            }
+        },
+    }
+
+    generate_openapi._normalize_public_schema_names(spec)
+
+    schemas = spec["components"]["schemas"]
+    assert "PatchWorkflowRequest" not in schemas
+    assert "PatchBlockRequest" not in schemas
+    assert schemas["UpdateWorkflowRequest"]["title"] == "UpdateWorkflowRequest"
+    assert schemas["UpdateWorkflowBlockRequest"]["title"] == (
+        "UpdateWorkflowBlockRequest"
+    )
+    assert spec["paths"]["/v1/workflows/{workflow_id}"]["patch"]["requestBody"][
+        "content"
+    ]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/UpdateWorkflowRequest"
+    }
+    assert spec["paths"]["/v1/workflows/blocks/{block_id}"]["patch"]["requestBody"][
+        "content"
+    ]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/UpdateWorkflowBlockRequest"
+    }
+
+
+def test_strip_update_workflow_email_trigger_docs_uses_renamed_schema() -> None:
+    spec = {
+        "components": {
+            "schemas": {
+                "UpdateWorkflowRequest": {
+                    "properties": {
+                        "name": {"type": "string"},
+                        "email_trigger": {"type": "object"},
+                    },
+                    "required": ["name", "email_trigger"],
+                }
+            }
+        }
+    }
+
+    generate_openapi._strip_update_workflow_email_trigger_docs(spec)
+
+    update_schema = spec["components"]["schemas"]["UpdateWorkflowRequest"]
+    assert update_schema["properties"] == {"name": {"type": "string"}}
+    assert update_schema["required"] == ["name"]
 
 
 def test_api_reference_pages_have_all_code_snippets() -> None:
@@ -419,18 +576,76 @@ def test_generated_workflow_lists_use_typed_paginated_schemas() -> None:
 
     assert workflow_list["responses"]["200"]["content"]["application/json"][
         "schema"
-    ] == {"$ref": "#/components/schemas/PaginatedList_WorkflowResponse_"}
+    ] == {"$ref": "#/components/schemas/WorkflowList"}
     assert run_list["responses"]["200"]["content"]["application/json"][
         "schema"
-    ] == {"$ref": "#/components/schemas/PaginatedList_WorkflowRunObject_"}
-    assert generated_openapi["components"]["schemas"][
-        "PaginatedList_WorkflowResponse_"
-    ]["properties"]["data"]["items"] == {"$ref": "#/components/schemas/WorkflowResponse"}
-    assert generated_openapi["components"]["schemas"][
-        "PaginatedList_WorkflowRunObject_"
-    ]["properties"]["data"]["items"] == {
-        "$ref": "#/components/schemas/WorkflowRunObject"
+    ] == {"$ref": "#/components/schemas/WorkflowRunList"}
+    assert generated_openapi["components"]["schemas"]["WorkflowList"]["properties"][
+        "data"
+    ]["items"] == {"$ref": "#/components/schemas/Workflow"}
+    assert generated_openapi["components"]["schemas"]["WorkflowRunList"]["properties"][
+        "data"
+    ]["items"] == {
+        "$ref": "#/components/schemas/WorkflowRun"
     }
+
+
+def test_generated_list_responses_use_public_schema_names() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+    schemas = generated_openapi["components"]["schemas"]
+    expected_lists = {
+        "/v1/classifications": (
+            "ClassificationList",
+            "Classification",
+        ),
+        "/v1/edits": ("EditList", "Edit"),
+        "/v1/edits/templates": ("EditTemplateList", "EditTemplate"),
+        "/v1/extractions": ("ExtractionList", "Extraction"),
+        "/v1/files": ("FileList", "File"),
+        "/v1/jobs": ("JobList", "JobListItem"),
+        "/v1/parses": ("ParseList", "Parse"),
+        "/v1/partitions": ("PartitionList", "Partition"),
+        "/v1/splits": ("SplitList", "Split"),
+        "/v1/workflows": ("WorkflowList", "Workflow"),
+        "/v1/workflows/artifacts": ("WorkflowArtifactList", "WorkflowArtifact"),
+        "/v1/workflows/blocks": ("WorkflowBlockList", "WorkflowBlock"),
+        "/v1/workflows/edges": ("WorkflowEdgeList", "WorkflowEdge"),
+        "/v1/workflows/experiments": ("WorkflowExperimentList", "WorkflowExperiment"),
+        (
+            "/v1/workflows/experiments/results"
+        ): ("WorkflowExperimentResultList", "WorkflowExperimentResult"),
+        (
+            "/v1/workflows/experiments/runs"
+        ): ("WorkflowExperimentRunList", "WorkflowExperimentRun"),
+        "/v1/workflows/reviews": ("WorkflowReviewSummaryList", "WorkflowReviewSummary"),
+        (
+            "/v1/workflows/reviews/versions"
+        ): ("WorkflowReviewVersionList", "WorkflowReviewVersion"),
+        "/v1/workflows/runs": ("WorkflowRunList", "WorkflowRun"),
+        "/v1/workflows/simulations": (
+            "WorkflowSimulationList",
+            "WorkflowSimulation",
+        ),
+        "/v1/workflows/steps": ("WorkflowStepList", "WorkflowStep"),
+        "/v1/workflows/tests": ("WorkflowTestList", "WorkflowTest"),
+        "/v1/workflows/tests/results": ("WorkflowTestResultList", "WorkflowTestResult"),
+        "/v1/workflows/tests/runs": ("WorkflowTestRunList", "WorkflowTestRun"),
+    }
+
+    for path, (list_schema_name, item_schema_name) in expected_lists.items():
+        response_schema = generated_openapi["paths"][path]["get"]["responses"]["200"][
+            "content"
+        ]["application/json"]["schema"]
+        assert response_schema == {
+            "$ref": f"#/components/schemas/{list_schema_name}"
+        }
+        assert schemas[list_schema_name]["properties"]["data"]["items"] == {
+            "$ref": f"#/components/schemas/{item_schema_name}"
+        }
+
+    assert "PaginatedList" not in schemas
+    assert not any(name.startswith("PaginatedList_") for name in schemas)
+    assert "JobListResponse" not in schemas
 
 
 def test_generated_review_version_docs_use_public_version_id_and_actor() -> None:
@@ -442,12 +657,47 @@ def test_generated_review_version_docs_use_public_version_id_and_actor() -> None
     ]["get"]
     assert review_version_get["parameters"][0]["name"] == "version_id"
     assert review_version_get["parameters"][0]["schema"]["title"] == "Version Id"
-    assert generated_openapi["components"]["schemas"]["ReviewVersionResponse"][
+    assert generated_openapi["components"]["schemas"]["WorkflowReviewVersion"][
         "properties"
     ]["author"] == {
         "$ref": "#/components/schemas/Actor",
         "description": "Actor that created the version.",
     }
+
+
+def test_generated_review_docs_use_public_review_id_path_parameter() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+
+    assert "/v1/workflows/reviews/{id}" not in generated_openapi["paths"]
+    assert "/v1/workflows/reviews/{id}/approve" not in generated_openapi["paths"]
+    assert "/v1/workflows/reviews/{id}/reject" not in generated_openapi["paths"]
+
+    review_get = generated_openapi["paths"]["/v1/workflows/reviews/{review_id}"][
+        "get"
+    ]
+    assert review_get["parameters"][0]["name"] == "review_id"
+    assert review_get["parameters"][0]["schema"]["title"] == "Review Id"
+
+
+def test_generated_public_operation_ids_are_stable() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+
+    operation_ids: list[str] = []
+    for path_item in generated_openapi["paths"].values():
+        for method, operation in path_item.items():
+            if method not in generate_openapi.OPENAPI_HTTP_METHODS:
+                continue
+            operation_ids.append(operation["operationId"])
+
+    assert len(operation_ids) == len(set(operation_ids))
+    assert [
+        operation_id
+        for operation_id in operation_ids
+        if "_v1_" in operation_id
+        or "__" in operation_id
+        or operation_id.endswith("_route")
+        or operation_id.endswith("_flat")
+    ] == []
 
 
 def test_generated_experiment_metrics_use_kind_discriminator_and_public_flows() -> None:
