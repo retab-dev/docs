@@ -1,0 +1,74 @@
+---
+title: "Create Version"
+openapi: "POST /v1/workflows/reviews/versions"
+---
+
+Create one immutable content-addressed review version. The version is
+addressable by its `rvr_…` id and forms the parent of any subsequent
+correction in the version graph.
+
+Versions live in their own collection, addressable via flat CRUD —
+`review_id` lives in the body, not the URL.
+
+<RequestExample>
+
+```python python
+version = client.workflows.reviews.versions.create(
+    review_id="rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
+    parent_id="rvr_HQ6ZZBQTJLSGLZQCWBSI25SCOQ",
+    snapshot={"total_amount": 325, "vendor_name": "Acme Corp"},
+    note="Corrected total.",
+)
+print(version.id)
+```
+
+```javascript javascript
+const version = await client.workflows.reviews.versions.create({
+  reviewId: "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
+  parentId: "rvr_HQ6ZZBQTJLSGLZQCWBSI25SCOQ",
+  snapshot: { total_amount: 325, vendor_name: "Acme Corp" },
+  note: "Corrected total.",
+});
+```
+
+```bash curl
+curl -X POST \
+  'https://api.retab.com/v1/workflows/reviews/versions' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "review_id": "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
+    "parent_id": "rvr_HQ6ZZBQTJLSGLZQCWBSI25SCOQ",
+    "snapshot": { "total_amount": 325, "vendor_name": "Acme Corp" },
+    "note": "Corrected total."
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "rvr_PFBGO3R6T3PG5O37U4Y3NDXWAM",
+  "review_id": "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
+  "parent_id": "rvr_HQ6ZZBQTJLSGLZQCWBSI25SCOQ",
+  "author": {
+    "kind": "human",
+    "id": "user_42",
+    "display_name": "Dana Rivera"
+  },
+  "snapshot": { "total_amount": 325, "vendor_name": "Acme Corp" },
+  "note": "Corrected total.",
+  "created_at": "2026-05-13T09:05:00.000Z"
+}
+```
+
+</ResponseExample>
+
+## Idempotency
+
+Version ids are `sha256(canonical_json(normalized_snapshot))`. Submitting
+the same `(review_id, parent_id, snapshot)` triple returns the existing
+row; the server does not create a duplicate. Submitting the same content
+with a different `parent_id` returns `409 parent_conflict`.
