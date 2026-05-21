@@ -201,6 +201,7 @@ def test_workflow_create_request_docs_publish_shape_variants() -> None:
     assert schemas["CreateFreshWorkflowRunRequest"]["properties"]["workflow_id"] == {
         "type": "string",
         "title": "Workflow Id",
+        "description": "Workflow id for the fresh run.",
     }
     assert schemas["CreateRestartWorkflowRunRequest"]["required"] == [
         "restart_of",
