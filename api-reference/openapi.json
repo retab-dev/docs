@@ -10145,147 +10145,31 @@
         "title": "CreateWorkflowRequest"
       },
       "CreateWorkflowRunRequest": {
-        "properties": {
-          "workflow_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workflow Id",
-            "description": "Required when starting a fresh run. Optional when ``restart_of`` is set (inferred from the source run)."
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CreateFreshWorkflowRunRequest"
           },
-          "restart_of": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Restart Of",
-            "description": "When present, the new run is created as a restart of this source run id (the source run's inputs are inherited)."
-          },
-          "documents": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/FileRef"
-                },
-                {
-                  "$ref": "#/components/schemas/MIMEDataInput"
-                }
-              ]
-            },
-            "type": "object",
-            "title": "Documents",
-            "description": "Mapping of start_document block IDs to their input documents. Only valid for fresh-run creation (``restart_of`` is None)."
-          },
-          "json_inputs": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Json Inputs",
-            "description": "Mapping of start-json block IDs to their input JSON data. Only valid for fresh-run creation (``restart_of`` is None)."
-          },
-          "version": {
-            "type": "string",
-            "title": "Version",
-            "description": "Workflow version to run: 'production', 'draft', or a pinned version id like 'ver_...'. Only valid for fresh-run creation.",
-            "default": "production",
-            "examples": [
-              "production",
-              "draft",
-              "ver_abc123def456"
-            ]
-          },
-          "config_source": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "draft",
-                  "published"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config Source",
-            "description": "Required when ``restart_of`` is set. Config source for the restarted run."
-          },
-          "command_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Command Id",
-            "description": "Optional idempotency key for deduplicating restart commands. Only valid when ``restart_of`` is set."
+          {
+            "$ref": "#/components/schemas/CreateRestartWorkflowRunRequest"
           }
-        },
-        "additionalProperties": false,
-        "type": "object",
+        ],
         "title": "CreateWorkflowRunRequest",
-        "description": "Flat CRUD-style request body for ``POST /v1/workflows/runs``.\n\nHandles two creation flows by discriminating on ``restart_of``:\n\n- **Fresh run** (``restart_of is None``): requires ``workflow_id``; accepts\n  ``documents``, ``json_inputs``, and ``version``.\n- **Restart** (``restart_of`` set): re-runs an existing run by inheriting\n  its inputs. ``workflow_id`` is optional (inferred from the source run);\n  ``documents``/``json_inputs``/``version`` are not accepted and the\n  caller must supply ``config_source`` (``draft`` or ``published``).\n\nShape-enforced invariants \u2014 fresh-vs-restart bodies are distinguishable\nvia the schema, not prose."
+        "description": "Request body for POST /v1/workflows/runs. Use the fresh-run shape or the restart shape."
       },
       "CreateWorkflowTestRunRequest": {
-        "properties": {
-          "workflow_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workflow Id"
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CreateWorkflowTestRunForTestRequest"
           },
-          "test_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Test Id"
+          {
+            "$ref": "#/components/schemas/CreateWorkflowTestRunForTargetRequest"
           },
-          "target": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WorkflowTestBlockTarget"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "n_consensus": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "N Consensus"
+          {
+            "$ref": "#/components/schemas/CreateWorkflowTestRunAllRequest"
           }
-        },
-        "additionalProperties": false,
-        "type": "object",
+        ],
         "title": "CreateWorkflowTestRunRequest",
-        "description": "Body shape for ``POST /v1/workflows/tests/runs``.\n\nCarries the scoping identity (``workflow_id`` or ``test_id``) in the\nbody \u2014 no parent id in the URL (meta-pattern-blueprint \u00a71). At least\none of (body.``workflow_id``, body.``test_id``) must be present at\nrequest time; the at-least-one check lives on the route."
+        "description": "Request body for POST /v1/workflows/tests/runs. Use exactly one of the single-test, target, or all-tests shapes."
       },
       "Decision": {
         "properties": {
@@ -19221,6 +19105,155 @@
           "reason"
         ],
         "title": "CancelledStepLifecycle"
+      },
+      "CreateFreshWorkflowRunRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "Required when starting a fresh run. Optional when ``restart_of`` is set (inferred from the source run)."
+          },
+          "documents": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FileRef"
+                },
+                {
+                  "$ref": "#/components/schemas/MIMEDataInput"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Documents",
+            "description": "Mapping of start_document block IDs to their input documents. Only valid for fresh-run creation (``restart_of`` is None)."
+          },
+          "json_inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Inputs",
+            "description": "Mapping of start-json block IDs to their input JSON data. Only valid for fresh-run creation (``restart_of`` is None)."
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Workflow version to run: 'production', 'draft', or a pinned version id like 'ver_...'. Only valid for fresh-run creation.",
+            "default": "production",
+            "examples": [
+              "production",
+              "draft",
+              "ver_abc123def456"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "additionalProperties": false,
+        "title": "CreateFreshWorkflowRunRequest",
+        "description": "Create a fresh workflow run from a workflow id, optional draft/version selector, and optional inputs."
+      },
+      "CreateRestartWorkflowRunRequest": {
+        "properties": {
+          "restart_of": {
+            "type": "string",
+            "title": "Restart Of",
+            "description": "When present, the new run is created as a restart of this source run id (the source run's inputs are inherited)."
+          },
+          "config_source": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published"
+            ],
+            "title": "Config Source",
+            "description": "Required when ``restart_of`` is set. Config source for the restarted run."
+          },
+          "command_id": {
+            "type": "string",
+            "title": "Command Id",
+            "description": "Optional idempotency key for deduplicating restart commands. Only valid when ``restart_of`` is set."
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "Required when starting a fresh run. Optional when ``restart_of`` is set (inferred from the source run)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "restart_of",
+          "config_source"
+        ],
+        "additionalProperties": false,
+        "title": "CreateRestartWorkflowRunRequest",
+        "description": "Restart a workflow run from a previous run id. workflow_id may be supplied when the client already has it."
+      },
+      "CreateWorkflowTestRunForTestRequest": {
+        "properties": {
+          "test_id": {
+            "type": "string",
+            "title": "Test Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_id"
+        ],
+        "additionalProperties": false,
+        "title": "CreateWorkflowTestRunForTestRequest",
+        "description": "Run one saved workflow test by test id."
+      },
+      "CreateWorkflowTestRunForTargetRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "target": {
+            "$ref": "#/components/schemas/WorkflowTestBlockTarget"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "target"
+        ],
+        "additionalProperties": false,
+        "title": "CreateWorkflowTestRunForTargetRequest",
+        "description": "Run every workflow test for one target in a workflow."
+      },
+      "CreateWorkflowTestRunAllRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "additionalProperties": false,
+        "title": "CreateWorkflowTestRunAllRequest",
+        "description": "Run every saved test in a workflow."
       },
       "ReviewDecisionResponse": {
         "properties": {
