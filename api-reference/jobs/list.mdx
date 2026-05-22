@@ -129,7 +129,6 @@ curl -X GET \
 
 ```json 200 (include_request=true&include_response=true)
 {
-  "object": "list",
   "data": [
     {
       "id": "job_V1StGXR8_Z5jdHi6B-myT",
@@ -163,19 +162,20 @@ curl -X GET \
       "metadata": null
     }
   ],
-  "first_id": "job_V1StGXR8_Z5jdHi6B-myT",
-  "last_id": "job_X2TuHYS9_A6keIj7C-nzU",
-  "has_more": true
+  "list_metadata": {
+    "before": "job_V1StGXR8_Z5jdHi6B-myT",
+    "after": "job_X2TuHYS9_A6keIj7C-nzU"
+  }
 }
 ```
 
 ```json 200 (empty)
 {
-  "object": "list",
   "data": [],
-  "first_id": null,
-  "last_id": null,
-  "has_more": false
+  "list_metadata": {
+    "before": null,
+    "after": null
+  }
 }
 ```
 
@@ -196,7 +196,7 @@ all_jobs.extend(response.data)
 
     if not response.has_more:
         break
-    after = response.last_id
+    after = response.list_metadata.after
 
 print(f"Total jobs: {len(all_jobs)}")
 
@@ -210,10 +210,10 @@ while (true) {
     const response = await client.jobs.list({ after, limit: 100 });
     allJobs.push(...response.data);
 
-    if (!response.has_more) {
+    if (!response.list_metadata.after) {
         break;
     }
-    after = response.last_id;
+    after = response.list_metadata.after;
 }
 
 console.log(`Total jobs: ${allJobs.length}`);
