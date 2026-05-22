@@ -81,11 +81,18 @@ The main endpoint for filling documents with AI. Supports all document formats.
   Natural language or JSON instructions describing how to fill the document. Include the field values you want to populate, e.g., "Name: John Doe, Date: 2025-01-15" or `{"name": "John Doe", "date": "2025-01-15"}`.
 </ParamField>
 
-<ParamField body="document" type="MIMEData" required>
+<ParamField body="document" type="MIMEData">
   The document to edit. Supports PDF, DOCX, XLSX, and PPTX files. Can be a file
   path, URL, or MIMEData object containing: - `filename`: Name of the file
   (e.g., "form.pdf", "template.docx", "data.xlsx") - `url`: Data URI with base64
-  content (e.g., "data:application/pdf;base64,...")
+  content (e.g., "data:application/pdf;base64,..."). Mutually exclusive with
+  `template_id` — provide exactly one of the two.
+</ParamField>
+
+<ParamField body="template_id" type="string">
+  Id of a pre-registered PDF form template (see `edits.templates.create`).
+  Mutually exclusive with `document` — provide exactly one of the two. Use this
+  for batch-filling the same PDF form repeatedly without re-detecting fields.
 </ParamField>
 
 <ParamField body="model" type="LLMModel" default="retab-small">
@@ -716,7 +723,7 @@ const applicants = [
     }
 ];
 
-// For batch processing, use templates.fill() with a pre-created template
+// For batch processing, use edits.create with templateId against a pre-created template
 // This skips field detection for each document, making it much faster
 for (let i = 0; i < applicants.length; i++) {
     const applicant = applicants[i];
@@ -727,15 +734,15 @@ for (let i = 0; i < applicants.length; i++) {
         Phone Number: ${applicant.phone}
     `;
 
-    const result = await client.edits.templates.fill({
-        template_id: "edittplt_your_template_id",
+    const result = await client.edits.create({
+        templateId: "edittplt_your_template_id",
         instructions: instructions,
         model: "retab-small"
     });
 
-    if (result.data.filled_document) {
+    if (result.output.filled_document) {
         const outputFilename = `filled-form-${i+1}-${applicant.name.replace(/ /g, '-')}.pdf`;
-        const base64Content = result.data.filled_document.url.split(",")[1];
+        const base64Content = result.output.filled_document.url.split(",")[1];
         writeFileSync(outputFilename, Buffer.from(base64Content, 'base64'));
         console.log(`Created: ${outputFilename}`);
     }
@@ -779,7 +786,7 @@ func main() {
 		{Name: "Bob Williams", DOB: "December 5, 1995", Email: "bob.w@example.com", Phone: "(555) 555-6666"},
 	}
 
-	// For batch processing, use Edits.Templates.Fill with a pre-created template.
+	// For batch processing, use Edits.Create with a TemplateID against a pre-created template.
 	// This skips field detection for each document, making it much faster.
 	for i, person := range applicants {
 		instructions := fmt.Sprintf(`
@@ -789,7 +796,7 @@ func main() {
         Phone Number: %s
         `, person.Name, person.DOB, person.Email, person.Phone)
 
-		result, err := client.Edits.Templates.Fill(ctx, retab.EditTemplateFillRequest{
+		result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
 			TemplateID:   "edittplt_your_template_id",
 			Instructions: instructions,
 			Model:        "retab-small",
@@ -798,8 +805,8 @@ func main() {
 			log.Fatal(err)
 		}
 
-		data, _ := (*result)["data"].(map[string]any)
-		filled, _ := data["filled_document"].(map[string]any)
+		output, _ := (*result)["output"].(map[string]any)
+		filled, _ := output["filled_document"].(map[string]any)
 		if url, ok := filled["url"].(string); ok && url != "" {
 			parts := strings.SplitN(url, ",", 2)
 			if len(parts) == 2 {
@@ -851,8 +858,8 @@ model="retab-small",
 
 # Save the filled DOCX (preserves original formatting)
 
-if result.data.filled_document:
-base64_content = result.data.filled_document.url.split(",")[1]
+if result.output.filled_document:
+base64_content = result.output.filled_document.url.split(",")[1]
 filled_bytes = base64.b64decode(base64_content)
 with open("filled-contract.docx", "wb") as f:
 f.write(filled_bytes)
@@ -884,8 +891,8 @@ const result = await client.edits.create({
     model: "retab-small",
 });
 
-if (result.data.filled_document) {
-    const base64Content = result.data.filled_document.url.split(",")[1];
+if (result.output.filled_document) {
+    const base64Content = result.output.filled_document.url.split(",")[1];
     writeFileSync("filled-contract.docx", Buffer.from(base64Content, 'base64'));
     console.log("Filled Word document saved!");
 }
@@ -939,8 +946,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	data, _ := (*result)["data"].(map[string]any)
-	filled, _ := data["filled_document"].(map[string]any)
+	output, _ := (*result)["output"].(map[string]any)
+	filled, _ := output["filled_document"].(map[string]any)
 	if url, ok := filled["url"].(string); ok && url != "" {
 		parts := strings.SplitN(url, ",", 2)
 		if len(parts) == 2 {
@@ -989,8 +996,8 @@ instructions="""
 model="retab-small",
 )
 
-if result.data.filled_document:
-base64_content = result.data.filled_document.url.split(",")[1]
+if result.output.filled_document:
+base64_content = result.output.filled_document.url.split(",")[1]
 with open("filled-invoice.xlsx", "wb") as f:
 f.write(base64.b64decode(base64_content))
 print("Filled Excel spreadsheet saved!")
@@ -1024,8 +1031,8 @@ const result = await client.edits.create({
     model: "retab-small",
 });
 
-if (result.data.filled_document) {
-    const base64Content = result.data.filled_document.url.split(",")[1];
+if (result.output.filled_document) {
+    const base64Content = result.output.filled_document.url.split(",")[1];
     writeFileSync("filled-invoice.xlsx", Buffer.from(base64Content, 'base64'));
     console.log("Filled Excel spreadsheet saved!");
 }
@@ -1082,8 +1089,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	data, _ := (*result)["data"].(map[string]any)
-	filled, _ := data["filled_document"].(map[string]any)
+	output, _ := (*result)["output"].(map[string]any)
+	filled, _ := output["filled_document"].(map[string]any)
 	if url, ok := filled["url"].(string); ok && url != "" {
 		parts := strings.SplitN(url, ",", 2)
 		if len(parts) == 2 {
@@ -1130,8 +1137,8 @@ instructions="""
 model="retab-small",
 )
 
-if result.data.filled_document:
-base64_content = result.data.filled_document.url.split(",")[1]
+if result.output.filled_document:
+base64_content = result.output.filled_document.url.split(",")[1]
 with open("filled-sales-deck.pptx", "wb") as f:
 f.write(base64.b64decode(base64_content))
 print("Filled PowerPoint presentation saved!")
@@ -1163,8 +1170,8 @@ const result = await client.edits.create({
     model: "retab-small",
 });
 
-if (result.data.filled_document) {
-    const base64Content = result.data.filled_document.url.split(",")[1];
+if (result.output.filled_document) {
+    const base64Content = result.output.filled_document.url.split(",")[1];
     writeFileSync("filled-sales-deck.pptx", Buffer.from(base64Content, 'base64'));
     console.log("Filled PowerPoint presentation saved!");
 }
@@ -1223,8 +1230,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	data, _ := (*result)["data"].(map[string]any)
-	filled, _ := data["filled_document"].(map[string]any)
+	output, _ := (*result)["output"].(map[string]any)
+	filled, _ := output["filled_document"].(map[string]any)
 	if url, ok := filled["url"].(string); ok && url != "" {
 		parts := strings.SplitN(url, ",", 2)
 		if len(parts) == 2 {
@@ -1297,4 +1304,4 @@ func main() {
 
 1. **Register**: Use `edits.templates.create()` with a blank PDF and the list of form fields (bounding boxes + descriptions)
 2. **Review**: Inspect `template.form_fields` to verify coverage
-3. **Fill**: Use `edits.templates.fill()` for fast batch processing against the saved template
+3. **Fill**: Use `edits.create(template_id=...)` for fast batch processing against the saved template
