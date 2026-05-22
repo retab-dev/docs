@@ -8538,19 +8538,6 @@
   },
   "components": {
     "schemas": {
-      "AccessTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "access",
-            "title": "Type",
-            "default": "access"
-          }
-        },
-        "type": "object",
-        "title": "AccessTrigger",
-        "description": "Run started by a generic access path (default auto-retry source)."
-      },
       "Actor": {
         "properties": {
           "kind": {
@@ -8877,8 +8864,7 @@
               {
                 "type": "null"
               }
-            ],
-            "description": "Structured error captured for this attempt. ``message`` carries the human-readable text; ``error_code`` / ``stack_trace`` are populated when available."
+            ]
           },
           "started_at": {
             "anyOf": [
@@ -8950,13 +8936,13 @@
               {
                 "type": "null"
               }
-            ],
-            "description": "Final structured error after exhausted retries, if any"
+            ]
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           }
         },
         "type": "object",
@@ -8967,19 +8953,6 @@
           "created_at"
         ],
         "title": "ApiCallInvocationWorkflowArtifact"
-      },
-      "ApiExperimentTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "api",
-            "title": "Type",
-            "default": "api"
-          }
-        },
-        "type": "object",
-        "title": "ApiExperimentTrigger",
-        "description": "Run started programmatically via the public API (legacy/back-compat).\n\nMigration 029 backfills this for legacy rows that lacked a trigger_source.\nNamed ``ApiExperimentTrigger`` to disambiguate from the workflow-run\n``ApiTrigger`` model that lives in ``workflows/models.py``; otherwise\nPydantic emits both under fully-qualified names that fail\n``test_public_component_names_are_language_portable``."
       },
       "ApiTrigger": {
         "properties": {
@@ -9321,31 +9294,6 @@
         "title": "AssertionSpec",
         "description": "Block-test assertion against one declared output handle.\n\n``target`` is the only supported shape: an output handle id and an\noptional relative path inside that handle's payload."
       },
-      "AutoRetryTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "auto_retry",
-            "title": "Type",
-            "default": "auto_retry"
-          },
-          "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source",
-            "description": "Original trigger source that requested the retry (e.g. 'metrics', 'mcp_metrics', 'content')."
-          }
-        },
-        "type": "object",
-        "title": "AutoRetryTrigger",
-        "description": "Run started by the auto-retry pipeline.\n\n``source`` records the upstream trigger that requested the retry\n(mirrors the storage ``auto_retry:<source>`` convention without leaking\nthe colon-prefixed encoding)."
-      },
       "AwaitingReviewRun": {
         "properties": {
           "status": {
@@ -9540,38 +9488,7 @@
             "title": "Id"
           },
           "lifecycle": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/PendingExperimentRun"
-              },
-              {
-                "$ref": "#/components/schemas/QueuedExperimentRun"
-              },
-              {
-                "$ref": "#/components/schemas/RunningExperimentRun"
-              },
-              {
-                "$ref": "#/components/schemas/CompletedExperimentRun"
-              },
-              {
-                "$ref": "#/components/schemas/ErrorExperimentRun"
-              },
-              {
-                "$ref": "#/components/schemas/CancelledExperimentRun"
-              }
-            ],
-            "title": "Lifecycle",
-            "discriminator": {
-              "propertyName": "status",
-              "mapping": {
-                "cancelled": "#/components/schemas/CancelledExperimentRun",
-                "completed": "#/components/schemas/CompletedExperimentRun",
-                "error": "#/components/schemas/ErrorExperimentRun",
-                "pending": "#/components/schemas/PendingExperimentRun",
-                "queued": "#/components/schemas/QueuedExperimentRun",
-                "running": "#/components/schemas/RunningExperimentRun"
-              }
-            }
+            "$ref": "#/components/schemas/ExperimentRunLifecycle"
           }
         },
         "type": "object",
@@ -9629,56 +9546,6 @@
         ],
         "title": "CancelWorkflowResponse",
         "description": "Response for cancel workflow endpoint."
-      },
-      "CancelledExperimentResult": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "cancelled",
-            "title": "Status",
-            "default": "cancelled"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason",
-            "description": "Human-readable cancellation reason, when known."
-          }
-        },
-        "type": "object",
-        "title": "CancelledExperimentResult",
-        "description": "The per-document result was cancelled (typically propagated from a cancelled run)."
-      },
-      "CancelledExperimentRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "cancelled",
-            "title": "Status",
-            "default": "cancelled"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason",
-            "description": "Human-readable cancellation reason, when known."
-          }
-        },
-        "type": "object",
-        "title": "CancelledExperimentRun",
-        "description": "The run was cancelled before reaching a natural terminal state."
       },
       "CancelledStepLifecycle": {
         "properties": {
@@ -10017,32 +9884,6 @@
         },
         "type": "object",
         "title": "CompleteFileUploadRequest"
-      },
-      "CompletedExperimentResult": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "completed",
-            "title": "Status",
-            "default": "completed"
-          }
-        },
-        "type": "object",
-        "title": "CompletedExperimentResult",
-        "description": "The per-document result finished successfully."
-      },
-      "CompletedExperimentRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "completed",
-            "title": "Status",
-            "default": "completed"
-          }
-        },
-        "type": "object",
-        "title": "CompletedExperimentRun",
-        "description": "The run finished successfully."
       },
       "CompletedSimulationLifecycle": {
         "properties": {
@@ -10416,7 +10257,8 @@
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           }
         },
         "type": "object",
@@ -10484,19 +10326,6 @@
           "expected"
         ],
         "title": "ContainsCondition"
-      },
-      "ContentTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "content",
-            "title": "Type",
-            "default": "content"
-          }
-        },
-        "type": "object",
-        "title": "ContentTrigger",
-        "description": "Run started by the experiment content endpoint's auto-retry path."
       },
       "CreateClassificationRequest": {
         "properties": {
@@ -12491,7 +12320,7 @@
               }
             ],
             "title": "Message",
-            "description": "Human-readable error message"
+            "description": "Human-readable error message. Free-text; the structured fields below are the machine-readable counterpart."
           },
           "stack_trace": {
             "anyOf": [
@@ -12557,79 +12386,7 @@
         },
         "type": "object",
         "title": "ErrorDetails",
-        "description": "Detailed error information for debugging.\n\nCaptures stack traces and context about where and why an error occurred.\nUsed everywhere we surface an ``error`` field on a public model so SDK\nconsumers can branch on ``error_code`` instead of parsing free text."
-      },
-      "ErrorExperimentResult": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "error",
-            "title": "Status",
-            "default": "error"
-          },
-          "message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message",
-            "description": "Human-readable error message, when known."
-          },
-          "details": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ErrorDetails"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Structured error details including stack trace."
-          }
-        },
-        "type": "object",
-        "title": "ErrorExperimentResult",
-        "description": "The per-document result failed. Carries the message and optional details."
-      },
-      "ErrorExperimentRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "error",
-            "title": "Status",
-            "default": "error"
-          },
-          "message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message",
-            "description": "Human-readable error message, when known."
-          },
-          "details": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ErrorDetails"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Structured error details including stack trace."
-          }
-        },
-        "type": "object",
-        "title": "ErrorExperimentRun",
-        "description": "The run failed. Carries the human-readable message and optional details."
+        "description": "Detailed error information for debugging.\n\nCaptures stack traces and context about where and why an error occurred."
       },
       "ErrorSimulationLifecycle": {
         "properties": {
@@ -13122,19 +12879,6 @@
         "title": "ExperimentConfusionSummaryAggregate",
         "description": "Split/classifier diagnostics attached to the summary response."
       },
-      "ExperimentDetailTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "experiment_detail",
-            "title": "Type",
-            "default": "experiment_detail"
-          }
-        },
-        "type": "object",
-        "title": "ExperimentDetailTrigger",
-        "description": "Run started by the experiment-detail page polling auto-retry path."
-      },
       "ExperimentDocumentCaptureRequest": {
         "properties": {
           "workflow_run_id": {
@@ -13328,6 +13072,27 @@
         "title": "ExperimentMetricsStaleError",
         "description": "Returned when the latest run's config or document set has drifted\nfrom the current draft, so its metrics no longer reflect the\nexperiment's definition."
       },
+      "ExperimentResultLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "queued",
+              "running",
+              "completed",
+              "error",
+              "cancelled"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ExperimentResultLifecycle"
+      },
       "ExperimentResultTiming": {
         "properties": {
           "created_at": {
@@ -13381,6 +13146,27 @@
         "type": "object",
         "title": "ExperimentResultTiming"
       },
+      "ExperimentRunLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "queued",
+              "running",
+              "completed",
+              "error",
+              "cancelled"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ExperimentRunLifecycle"
+      },
       "ExperimentRunTiming": {
         "properties": {
           "created_at": {
@@ -13425,10 +13211,24 @@
           }
         },
         "type": "object",
-        "required": [
-          "created_at"
-        ],
         "title": "ExperimentRunTiming"
+      },
+      "ExperimentRunTrigger": {
+        "properties": {
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "title": "ExperimentRunTrigger"
       },
       "ExperimentSummaryMetricDocument": {
         "properties": {
@@ -14232,13 +14032,13 @@
               {
                 "type": "null"
               }
-            ],
-            "description": "Structured error captured for this function invocation, if any"
+            ]
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           }
         },
         "type": "object",
@@ -14793,7 +14593,6 @@
           "id",
           "status",
           "endpoint",
-          "created_at",
           "expires_at"
         ],
         "title": "JobListItem",
@@ -15173,19 +14972,6 @@
         "title": "MIMEDataInput",
         "description": "Input format for documents from the frontend.\n\nThis accepts either inline base64 content or a URL-backed MIMEData reference."
       },
-      "ManualRunTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "manual_run",
-            "title": "Type",
-            "default": "manual_run"
-          }
-        },
-        "type": "object",
-        "title": "ManualRunTrigger",
-        "description": "Run started manually from the experiment detail page."
-      },
       "ManualTrigger": {
         "properties": {
           "type": {
@@ -15308,19 +15094,6 @@
         ],
         "title": "MaterializedDocument"
       },
-      "McpMetricsTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "mcp_metrics",
-            "title": "Type",
-            "default": "mcp_metrics"
-          }
-        },
-        "type": "object",
-        "title": "McpMetricsTrigger",
-        "description": "Run started by the MCP metrics tool's auto-retry path."
-      },
       "MetricsStaleErrorLastRun": {
         "properties": {
           "run_id": {
@@ -15367,19 +15140,6 @@
           "run_id"
         ],
         "title": "MetricsStaleErrorLastRun"
-      },
-      "MetricsTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "metrics",
-            "title": "Type",
-            "default": "metrics"
-          }
-        },
-        "type": "object",
-        "title": "MetricsTrigger",
-        "description": "Run started by the metrics-view auto-retry path."
       },
       "NotContainsCondition": {
         "properties": {
@@ -15994,32 +15754,6 @@
         ],
         "title": "PartitionWorkflowArtifact"
       },
-      "PendingExperimentResult": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "pending",
-            "title": "Status",
-            "default": "pending"
-          }
-        },
-        "type": "object",
-        "title": "PendingExperimentResult",
-        "description": "The per-document result has been created but execution has not started."
-      },
-      "PendingExperimentRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "pending",
-            "title": "Status",
-            "default": "pending"
-          }
-        },
-        "type": "object",
-        "title": "PendingExperimentRun",
-        "description": "The run has been created but execution has not started."
-      },
       "PendingRun": {
         "properties": {
           "status": {
@@ -16071,32 +15805,6 @@
         "type": "object",
         "title": "PublishWorkflowRequest",
         "description": "Optional request body for publishing a workflow."
-      },
-      "QueuedExperimentResult": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "queued",
-            "title": "Status",
-            "default": "queued"
-          }
-        },
-        "type": "object",
-        "title": "QueuedExperimentResult",
-        "description": "The per-document result is enqueued and waiting for a worker."
-      },
-      "QueuedExperimentRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "queued",
-            "title": "Status",
-            "default": "queued"
-          }
-        },
-        "type": "object",
-        "title": "QueuedExperimentRun",
-        "description": "The run is enqueued and waiting for a worker to pick it up."
       },
       "QueuedStepLifecycle": {
         "properties": {
@@ -16620,7 +16328,8 @@
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           }
         },
         "type": "object",
@@ -16830,19 +16539,6 @@
             "title": "Completed At",
             "description": "When the run finished executing"
           },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms",
-            "description": "Total wall-clock duration of the run in milliseconds. Populated when the run completes (``completed_at`` is set). Remains ``None`` while the run is still in flight."
-          },
           "review_waiting_started_at": {
             "anyOf": [
               {
@@ -16862,37 +16558,24 @@
             "title": "Accumulated Review Waiting Ms",
             "description": "Accumulated time spent waiting for review across the run",
             "default": 0
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "Total run duration in milliseconds. Backfilled from ``completed_at - started_at`` on read when not stored."
           }
         },
         "type": "object",
         "title": "RunTiming",
-        "description": "All timing information for a run."
-      },
-      "RunningExperimentResult": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "running",
-            "title": "Status",
-            "default": "running"
-          }
-        },
-        "type": "object",
-        "title": "RunningExperimentResult",
-        "description": "The per-document result is currently executing."
-      },
-      "RunningExperimentRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "running",
-            "title": "Status",
-            "default": "running"
-          }
-        },
-        "type": "object",
-        "title": "RunningExperimentRun",
-        "description": "The run is currently executing."
+        "description": "All timing information for a run.\n\n``duration_ms`` is backfilled at read time from\n``completed_at - started_at`` when both timestamps are present and the\nstored value is ``None``. The field is ``init=False`` so producers cannot\npass it through ``__init__`` — they must round-trip through\n``model_validate`` (or persist via the Mongo projection helpers in\n``run_duration.py``). Records that already store ``duration_ms`` are left\nuntouched (idempotent), so backfill cannot drift from the canonical value\nwritten by the projection."
       },
       "RunningRun": {
         "properties": {
@@ -16932,19 +16615,6 @@
         "type": "object",
         "title": "RunningWorkflowTestRun",
         "description": "The test run is executing assertions."
-      },
-      "RunsTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "runs",
-            "title": "Type",
-            "default": "runs"
-          }
-        },
-        "type": "object",
-        "title": "RunsTrigger",
-        "description": "Run started by the experiment runs endpoint's auto-retry path."
       },
       "ScheduleTrigger": {
         "properties": {
@@ -17419,19 +17089,6 @@
         ],
         "title": "Subdocument"
       },
-      "UnknownTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "unknown",
-            "title": "Type",
-            "default": "unknown"
-          }
-        },
-        "type": "object",
-        "title": "UnknownTrigger",
-        "description": "Catch-all for storage rows without a recognized ``trigger_source``."
-      },
       "UpdateEditTemplateRequest": {
         "properties": {
           "name": {
@@ -17902,7 +17559,8 @@
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           }
         },
         "type": "object",
@@ -18629,8 +18287,6 @@
           "block_id",
           "n_consensus",
           "name",
-          "created_at",
-          "updated_at",
           "block_type"
         ],
         "title": "WorkflowExperiment"
@@ -18654,38 +18310,7 @@
             "title": "Document Id"
           },
           "lifecycle": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/PendingExperimentResult"
-              },
-              {
-                "$ref": "#/components/schemas/QueuedExperimentResult"
-              },
-              {
-                "$ref": "#/components/schemas/RunningExperimentResult"
-              },
-              {
-                "$ref": "#/components/schemas/CompletedExperimentResult"
-              },
-              {
-                "$ref": "#/components/schemas/ErrorExperimentResult"
-              },
-              {
-                "$ref": "#/components/schemas/CancelledExperimentResult"
-              }
-            ],
-            "title": "Lifecycle",
-            "discriminator": {
-              "propertyName": "status",
-              "mapping": {
-                "cancelled": "#/components/schemas/CancelledExperimentResult",
-                "completed": "#/components/schemas/CompletedExperimentResult",
-                "error": "#/components/schemas/ErrorExperimentResult",
-                "pending": "#/components/schemas/PendingExperimentResult",
-                "queued": "#/components/schemas/QueuedExperimentResult",
-                "running": "#/components/schemas/RunningExperimentResult"
-              }
-            }
+            "$ref": "#/components/schemas/ExperimentResultLifecycle"
           },
           "timing": {
             "$ref": "#/components/schemas/ExperimentResultTiming"
@@ -18734,13 +18359,13 @@
           "error": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ErrorDetails"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Structured error details when the result failed. The human-readable message lives on ``lifecycle.message`` for the ``error`` lifecycle state."
+            "title": "Error"
           },
           "attempt": {
             "type": "integer",
@@ -18776,54 +18401,7 @@
             "$ref": "#/components/schemas/WorkflowSnapshotRef"
           },
           "trigger": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ManualRunTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/ExperimentDetailTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/ContentTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/RunsTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/AccessTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/MetricsTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/McpMetricsTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/ApiExperimentTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/AutoRetryTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/UnknownTrigger"
-              }
-            ],
-            "title": "Trigger",
-            "discriminator": {
-              "propertyName": "type",
-              "mapping": {
-                "access": "#/components/schemas/AccessTrigger",
-                "api": "#/components/schemas/ApiExperimentTrigger",
-                "auto_retry": "#/components/schemas/AutoRetryTrigger",
-                "content": "#/components/schemas/ContentTrigger",
-                "experiment_detail": "#/components/schemas/ExperimentDetailTrigger",
-                "manual_run": "#/components/schemas/ManualRunTrigger",
-                "mcp_metrics": "#/components/schemas/McpMetricsTrigger",
-                "metrics": "#/components/schemas/MetricsTrigger",
-                "runs": "#/components/schemas/RunsTrigger",
-                "unknown": "#/components/schemas/UnknownTrigger"
-              }
-            }
+            "$ref": "#/components/schemas/ExperimentRunTrigger"
           },
           "experiment_id": {
             "type": "string",
@@ -18853,38 +18431,7 @@
             "title": "N Consensus"
           },
           "lifecycle": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/PendingExperimentRun"
-              },
-              {
-                "$ref": "#/components/schemas/QueuedExperimentRun"
-              },
-              {
-                "$ref": "#/components/schemas/RunningExperimentRun"
-              },
-              {
-                "$ref": "#/components/schemas/CompletedExperimentRun"
-              },
-              {
-                "$ref": "#/components/schemas/ErrorExperimentRun"
-              },
-              {
-                "$ref": "#/components/schemas/CancelledExperimentRun"
-              }
-            ],
-            "title": "Lifecycle",
-            "discriminator": {
-              "propertyName": "status",
-              "mapping": {
-                "cancelled": "#/components/schemas/CancelledExperimentRun",
-                "completed": "#/components/schemas/CompletedExperimentRun",
-                "error": "#/components/schemas/ErrorExperimentRun",
-                "pending": "#/components/schemas/PendingExperimentRun",
-                "queued": "#/components/schemas/QueuedExperimentRun",
-                "running": "#/components/schemas/RunningExperimentRun"
-              }
-            }
+            "$ref": "#/components/schemas/ExperimentRunLifecycle"
           },
           "timing": {
             "$ref": "#/components/schemas/ExperimentRunTiming"
@@ -19368,7 +18915,8 @@
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When the review was created."
           },
           "decision": {
             "anyOf": [
@@ -19488,7 +19036,8 @@
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When the review version was created."
           }
         },
         "additionalProperties": false,
@@ -20160,9 +19709,7 @@
           "id",
           "workflow_id",
           "target",
-          "source",
-          "created_at",
-          "updated_at"
+          "source"
         ],
         "title": "WorkflowTest"
       },
@@ -20525,7 +20072,8 @@
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When the workflow-test run was created."
           },
           "started_at": {
             "anyOf": [
