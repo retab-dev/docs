@@ -27,7 +27,6 @@ LEGACY_EDIT_PATHS: set[str] = {
     "/v1/edit/templates/{template_id}",
     "/v1/edit/templates/{template_id}/duplicate",
     "/v1/edit/templates/{template_id}/empty-form",
-    "/v1/edit/templates/fill",
     "/v1/edit/templates/generate",
     "/v1/edit/templates/infer_form_bounding_boxes",
     "/v1/edit/templates/edits",
