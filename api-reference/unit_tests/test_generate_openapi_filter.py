@@ -515,9 +515,9 @@ def test_generated_list_responses_use_public_schema_names() -> None:
             "/v1/workflows/reviews/versions"
         ): ("WorkflowReviewVersionList", "WorkflowReviewVersion"),
         "/v1/workflows/runs": ("WorkflowRunList", "WorkflowRun"),
-        "/v1/workflows/simulations": (
-            "WorkflowSimulationList",
-            "WorkflowSimulation",
+        "/v1/workflows/blocks/executions": (
+            "BlockExecutionList",
+            "BlockExecution",
         ),
         "/v1/workflows/steps": ("WorkflowStepList", "WorkflowStep"),
         "/v1/workflows/tests": ("WorkflowTestList", "WorkflowTest"),

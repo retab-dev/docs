@@ -6400,15 +6400,15 @@
         }
       }
     },
-    "/v1/workflows/simulations": {
+    "/v1/workflows/blocks/executions": {
       "post": {
         "tags": [
           "Workflows",
-          "Workflow Simulations"
+          "Workflow Blocks Executions"
         ],
-        "summary": "Create Simulation",
-        "description": "Create a block simulation for ``block_id`` against the current draft.",
-        "operationId": "create_simulation",
+        "summary": "Create Block Execution",
+        "description": "Create a block execution for ``block_id`` against the current draft.",
+        "operationId": "create_block_execution",
         "security": [
           {
             "HTTPBearer": []
@@ -6425,7 +6425,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSimulationRequest"
+                "$ref": "#/components/schemas/CreateBlockExecutionRequest"
               }
             }
           }
@@ -6436,7 +6436,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowSimulation"
+                  "$ref": "#/components/schemas/BlockExecution"
                 }
               }
             }
@@ -6456,11 +6456,11 @@
       "get": {
         "tags": [
           "Workflows",
-          "Workflow Simulations"
+          "Workflow Blocks Executions"
         ],
-        "summary": "List Simulations",
-        "description": "List recent simulations for one workflow run block.",
-        "operationId": "list_simulations",
+        "summary": "List Block Executions",
+        "description": "List recent block executions for one workflow run block.",
+        "operationId": "list_block_executions",
         "security": [
           {
             "HTTPBearer": []
@@ -6510,7 +6510,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowSimulationList"
+                  "$ref": "#/components/schemas/BlockExecutionList"
                 }
               }
             }
@@ -9126,7 +9126,7 @@
           "outcome"
         ],
         "title": "AssertionResult",
-        "description": "Result of evaluating ONE assertion against a block's output.\n\n``outcome`` is a verdict only — pass / fail / blocked. An execution\nerror (the assertion couldn't be evaluated because of a type error,\ninvalid regex, schema validation crash, simulation crash, etc.) is\nexpressed by ``outcome=\"blocked\"`` with a populated ``failure`` whose\n``code`` identifies the specific failure mode (``execution_error``,\n``type_error``, ``invalid_regex``, ``schema_invalid``,\n``simulation_failed``, ...)."
+        "description": "Result of evaluating ONE assertion against a block's output.\n\n``outcome`` is a verdict only — pass / fail / blocked. An execution\nerror (the assertion couldn't be evaluated because of a type error,\ninvalid regex, schema validation crash, block execution crash, etc.) is\nexpressed by ``outcome=\"blocked\"`` with a populated ``failure`` whose\n``code`` identifies the specific failure mode (``execution_error``,\n``type_error``, ``invalid_regex``, ``schema_invalid``,\n``block_execution_failed``, ...)."
       },
       "AssertionSchemaDep": {
         "properties": {
@@ -9408,6 +9408,179 @@
           "upper"
         ],
         "title": "BetweenCondition"
+      },
+      "BlockExecution": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique block execution ID"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "Workflow the block belongs to"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "Run whose inputs were used"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id",
+            "description": "ID of the block that was executed"
+          },
+          "block_type": {
+            "type": "string",
+            "title": "Block Type",
+            "description": "Type of the block"
+          },
+          "lifecycle": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CompletedBlockExecutionLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorBlockExecutionLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/SkippedBlockExecutionLifecycle"
+              }
+            ],
+            "title": "Lifecycle",
+            "description": "Terminal lifecycle state for this block execution. One of ``{status: 'completed'}``, ``{status: 'error', message: ...}``, or ``{status: 'skipped', reason: ...}``.",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "completed": "#/components/schemas/CompletedBlockExecutionLifecycle",
+                "error": "#/components/schemas/ErrorBlockExecutionLifecycle",
+                "skipped": "#/components/schemas/SkippedBlockExecutionLifecycle"
+              }
+            }
+          },
+          "handle_inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Inputs",
+            "description": "Input payloads keyed by handle ID (file metadata for files, data for json)"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical persisted-ref artifact for this block execution (operation + id), if any"
+          },
+          "handle_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Outputs",
+            "description": "Output payloads keyed by handle ID"
+          },
+          "routing_decision": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Decision",
+            "description": "Active output handles for routing decisions"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "Duration of the block execution in milliseconds"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "block_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Config",
+            "description": "The draft block config used for this block execution"
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id",
+            "description": "The step ID that was used for inputs (includes iteration prefix if applicable)"
+          },
+          "available_iterations": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Iterations",
+            "description": "When the block has multiple iterations, lists all available ones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_id",
+          "run_id",
+          "block_id",
+          "block_type",
+          "lifecycle"
+        ],
+        "title": "BlockExecution",
+        "description": "Public block execution result for a single workflow block.\n\nTerminal state is carried by the discriminated ``lifecycle`` union. The\nlegacy flat ``success`` / ``error`` / ``skipped`` fields were removed in\nthe hard cutover — they let invalid combinations (``success=true`` with\na non-empty ``error``) be representable on the wire and forced consumers\nto know an undocumented field-precedence rule."
       },
       "BlockTestBatchExecutionCounts": {
         "properties": {
@@ -9966,7 +10139,7 @@
         "type": "object",
         "title": "CompleteFileUploadRequest"
       },
-      "CompletedSimulationLifecycle": {
+      "CompletedBlockExecutionLifecycle": {
         "properties": {
           "status": {
             "type": "string",
@@ -9976,8 +10149,8 @@
           }
         },
         "type": "object",
-        "title": "CompletedSimulationLifecycle",
-        "description": "Terminal: the simulated block executed successfully."
+        "title": "CompletedBlockExecutionLifecycle",
+        "description": "Terminal: the executed block executed successfully."
       },
       "CompletedStepLifecycle": {
         "properties": {
@@ -10433,6 +10606,58 @@
           "expected"
         ],
         "title": "ContainsCondition"
+      },
+      "CreateBlockExecutionRequest": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "Workflow run id that owns the step."
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id",
+            "description": "Workflow block id to execute."
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id",
+            "description": "Optional concrete step id whose inputs should be used. When omitted, the block id is used as the canonical step lookup key."
+          },
+          "n_consensus": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Consensus",
+            "description": "Optional override for n_consensus on extract / split / classifier blocks. Must be 3, 5, or 7."
+          },
+          "check_eligibility": {
+            "type": "boolean",
+            "title": "Check Eligibility",
+            "description": "Whether to verify the upstream subgraph hasn't drifted since the source run. Disable only for explicit force-rerun flows.",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "block_id"
+        ],
+        "title": "CreateBlockExecutionRequest",
+        "description": "Body for ``POST /v1/workflows/blocks/executions``.\n\n``block_id`` is the block to replay; ``run_id`` is the workflow run that\nsourced the original step's ``handle_inputs``. ``step_id`` optionally pins\na concrete step row whose inputs should be used, which is useful for\niteration-prefixed for_each body steps."
       },
       "CreateClassificationRequest": {
         "properties": {
@@ -11159,58 +11384,6 @@
         ],
         "title": "CreateReviewVersionRequest",
         "description": "POST /workflows/reviews/versions body.\n\nPublic callers create corrections, not seeds. ``parent_id`` must\nreference an existing version under the same ``review_id``; seed versions\nare created by the runtime through the store path."
-      },
-      "CreateSimulationRequest": {
-        "properties": {
-          "run_id": {
-            "type": "string",
-            "title": "Run Id",
-            "description": "Workflow run id that owns the step."
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id",
-            "description": "Workflow block id to simulate."
-          },
-          "step_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Step Id",
-            "description": "Optional concrete step id whose inputs should be used. When omitted, the block id is used as the canonical step lookup key."
-          },
-          "n_consensus": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "N Consensus",
-            "description": "Optional override for n_consensus on extract / split / classifier blocks. Must be 3, 5, or 7."
-          },
-          "check_eligibility": {
-            "type": "boolean",
-            "title": "Check Eligibility",
-            "description": "Whether to verify the upstream subgraph hasn't drifted since the source run. Disable only for explicit force-rerun flows.",
-            "default": true
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "run_id",
-          "block_id"
-        ],
-        "title": "CreateSimulationRequest",
-        "description": "Body for ``POST /v1/workflows/simulations``.\n\n``block_id`` is the block to replay; ``run_id`` is the workflow run that\nsourced the original step's ``handle_inputs``. ``step_id`` optionally pins\na concrete step row whose inputs should be used, which is useful for\niteration-prefixed for_each body steps."
       },
       "CreateSplitRequest": {
         "properties": {
@@ -12415,6 +12588,27 @@
         ],
         "title": "EqualsCondition"
       },
+      "ErrorBlockExecutionLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "error",
+            "title": "Status",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ErrorBlockExecutionLifecycle",
+        "description": "Terminal: the executed block raised. ``message`` is the executor's\nerror string."
+      },
       "ErrorDetails": {
         "properties": {
           "message": {
@@ -12494,27 +12688,6 @@
         "type": "object",
         "title": "ErrorDetails",
         "description": "Detailed error information for debugging.\n\nCaptures stack traces and context about where and why an error occurred."
-      },
-      "ErrorSimulationLifecycle": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "error",
-            "title": "Status",
-            "default": "error"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message",
-            "description": "Human-readable error message"
-          }
-        },
-        "type": "object",
-        "required": [
-          "message"
-        ],
-        "title": "ErrorSimulationLifecycle",
-        "description": "Terminal: the simulated block raised. ``message`` is the executor's\nerror string."
       },
       "ErrorStepLifecycle": {
         "properties": {
@@ -16872,7 +17045,7 @@
         ],
         "title": "SimilarityGteCondition"
       },
-      "SkippedSimulationLifecycle": {
+      "SkippedBlockExecutionLifecycle": {
         "properties": {
           "status": {
             "type": "string",
@@ -16890,7 +17063,7 @@
         "required": [
           "reason"
         ],
-        "title": "SkippedSimulationLifecycle",
+        "title": "SkippedBlockExecutionLifecycle",
         "description": "Terminal: the block declared its inputs unsatisfied via\n``should_skip_block`` and was skipped. ``reason`` is the skip rationale\nsurfaced by the block's input requirements registry."
       },
       "SkippedStepLifecycle": {
@@ -19405,179 +19578,6 @@
         "title": "WorkflowRun",
         "description": "Public workflow run response without tenant isolation fields.\n\nThis is the API response shape — distinct from the internal storage\nmodel (:class:`StoredWorkflowRun`), which carries persistence-only\nfields that never appear in API responses. Routes call\n:func:`serialize_workflow_run_response` to convert the storage shape\ninto this response shape; constructing this class directly for\npersistence would drop those storage-only fields silently. The two\nclasses were deliberately renamed to avoid the prior name collision."
       },
-      "WorkflowSimulation": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Unique simulation ID"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id",
-            "description": "Workflow the block belongs to"
-          },
-          "run_id": {
-            "type": "string",
-            "title": "Run Id",
-            "description": "Run whose inputs were used"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id",
-            "description": "ID of the block that was simulated"
-          },
-          "block_type": {
-            "type": "string",
-            "title": "Block Type",
-            "description": "Type of the block"
-          },
-          "lifecycle": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/CompletedSimulationLifecycle"
-              },
-              {
-                "$ref": "#/components/schemas/ErrorSimulationLifecycle"
-              },
-              {
-                "$ref": "#/components/schemas/SkippedSimulationLifecycle"
-              }
-            ],
-            "title": "Lifecycle",
-            "description": "Terminal lifecycle state for this simulation. One of ``{status: 'completed'}``, ``{status: 'error', message: ...}``, or ``{status: 'skipped', reason: ...}``.",
-            "discriminator": {
-              "propertyName": "status",
-              "mapping": {
-                "completed": "#/components/schemas/CompletedSimulationLifecycle",
-                "error": "#/components/schemas/ErrorSimulationLifecycle",
-                "skipped": "#/components/schemas/SkippedSimulationLifecycle"
-              }
-            }
-          },
-          "handle_inputs": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Handle Inputs",
-            "description": "Input payloads keyed by handle ID (file metadata for files, data for json)"
-          },
-          "artifact": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/StepArtifactRef"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Canonical persisted-ref artifact for this simulation (operation + id), if any"
-          },
-          "handle_outputs": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Handle Outputs",
-            "description": "Output payloads keyed by handle ID"
-          },
-          "routing_decision": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Routing Decision",
-            "description": "Active output handles for routing decisions"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms",
-            "description": "Duration of the simulation in milliseconds"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "block_config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Block Config",
-            "description": "The draft block config used for this simulation"
-          },
-          "step_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Step Id",
-            "description": "The step ID that was used for inputs (includes iteration prefix if applicable)"
-          },
-          "available_iterations": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Available Iterations",
-            "description": "When the block has multiple iterations, lists all available ones"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "workflow_id",
-          "run_id",
-          "block_id",
-          "block_type",
-          "lifecycle"
-        ],
-        "title": "WorkflowSimulation",
-        "description": "Public simulation result for a single workflow block.\n\nTerminal state is carried by the discriminated ``lifecycle`` union. The\nlegacy flat ``success`` / ``error`` / ``skipped`` fields were removed in\nthe hard cutover — they let invalid combinations (``success=true`` with\na non-empty ``error``) be representable on the wire and forced consumers\nto know an undocumented field-precedence rule."
-      },
       "WorkflowSnapshotRef": {
         "properties": {
           "workflow_id": {
@@ -20836,11 +20836,11 @@
         ],
         "title": "WorkflowRunList"
       },
-      "WorkflowSimulationList": {
+      "BlockExecutionList": {
         "properties": {
           "data": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowSimulation"
+              "$ref": "#/components/schemas/BlockExecution"
             },
             "type": "array",
             "title": "Data"
@@ -20854,7 +20854,7 @@
           "data",
           "list_metadata"
         ],
-        "title": "WorkflowSimulationList"
+        "title": "BlockExecutionList"
       },
       "WorkflowStepList": {
         "properties": {
