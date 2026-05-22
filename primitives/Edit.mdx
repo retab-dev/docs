@@ -58,19 +58,17 @@ The edit SDK exposes the same workflow in both clients:
 
 - `client.edits.create(...)` for direct document filling (pass `document=...`) or template-based filling (pass `template_id=...`)
 - `client.edits.templates.create(...)` to register a reusable PDF form template
-- `client.edits.templates.fill(...)` to fill a saved template with new instructions
 
 <Note>
-  In both SDKs, `color` is a top-level argument on `edits.create(...)` and
-  `edits.templates.fill(...)`.
+  In both SDKs, `color` is a top-level argument on `edits.create(...)`.
 </Note>
 
 ## Edit API
 
-The Edit API provides two main approaches:
+The Edit API provides two approaches, both served by `edits.create(...)`:
 
 - **Direct Fill** (`edits.create` with `document=...`): AI-powered document filling that automatically detects and fills form fields
-- **Template Fill** (`edits.templates.fill`): Optimized filling using pre-defined templates (PDF only)
+- **Template Fill** (`edits.create` with `template_id=...`): Optimized filling against a pre-registered PDF template (skips field detection)
 
 ### Direct Fill
 
@@ -111,7 +109,7 @@ An `Edit` resource with the filled document and form data.
       Unique identifier of the edit record.
     </ResponseField>
 
-    <ResponseField name="data" type="EditResult">
+    <ResponseField name="output" type="EditResult">
       Contains `form_data` (the filled `FormField` list, each with bbox, description, type, key, and value) and `filled_document` (the rendered PDF/DOCX/XLSX/PPTX as MIMEData).
     </ResponseField>
 
@@ -148,7 +146,7 @@ Register a reusable PDF form template with its empty PDF and a list of form fiel
   <Expandable title="properties">
 
     <ResponseField name="id" type="string">
-      Unique template identifier, used later by `edits.templates.fill(template_id=...)`.
+      Unique template identifier, used later by `edits.create(template_id=...)`.
     </ResponseField>
 
     <ResponseField name="form_fields" type="list[FormField]">
@@ -196,8 +194,8 @@ color="#000080", # Dark blue text (default)
 
 # Save the filled PDF
 
-if result.data.filled_document: # Extract base64 content from data URI
-base64_content = result.data.filled_document.url.split(",")[1]
+if result.output.filled_document: # Extract base64 content from data URI
+base64_content = result.output.filled_document.url.split(",")[1]
 filled_bytes = base64.b64decode(base64_content)
 with open("filled-application.pdf", "wb") as f:
 f.write(filled_bytes)
@@ -205,8 +203,8 @@ print("Filled form saved!")
 
 # Review what was filled
 
-print(f"Filled {len(result.data.form_data)} form fields:")
-for field in result.data.form_data:
+print(f"Filled {len(result.output.form_data)} form fields:")
+for field in result.output.form_data:
 if field.value:
 print(f" - {field.key}: {field.value}")
 
@@ -244,16 +242,16 @@ const result = await client.edits.create({
 });
 
 // Save the filled PDF
-if (result.data.filled_document) {
-    const base64Content = result.data.filled_document.url.split(",")[1];
+if (result.output.filled_document) {
+    const base64Content = result.output.filled_document.url.split(",")[1];
     const filledBuffer = Buffer.from(base64Content, 'base64');
     writeFileSync("filled-application.pdf", filledBuffer);
     console.log("Filled form saved!");
 }
 
 // Review what was filled
-console.log(`Filled ${result.data.form_data.length} form fields:`);
-result.data.form_data.forEach(field => {
+console.log(`Filled ${result.output.form_data.length} form fields:`);
+result.output.form_data.forEach(field => {
     if (field.value) {
         console.log(`  - ${field.key}: ${field.value}`);
     }
@@ -309,8 +307,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	data, _ := (*result)["data"].(map[string]any)
-	filled, _ := data["filled_document"].(map[string]any)
+	output, _ := (*result)["output"].(map[string]any)
+	filled, _ := output["filled_document"].(map[string]any)
 	if url, ok := filled["url"].(string); ok && url != "" {
 		parts := strings.SplitN(url, ",", 2)
 		if len(parts) == 2 {
@@ -325,7 +323,7 @@ func main() {
 		}
 	}
 
-	formData, _ := data["form_data"].([]any)
+	formData, _ := output["form_data"].([]any)
 	fmt.Printf("Filled %d form fields:\n", len(formData))
 	for _, raw := range formData {
 		field, _ := raw.(map[string]any)
@@ -369,16 +367,16 @@ const editRequest: EditRequest = {
 const result: Edit = await client.edits.create(editRequest);
 
 // Save the filled PDF
-if (result.data.filled_document) {
-  const base64Content = result.data.filled_document.url.split(",")[1];
+if (result.output.filled_document) {
+  const base64Content = result.output.filled_document.url.split(",")[1];
   const filledBuffer = Buffer.from(base64Content, "base64");
   writeFileSync("filled-application.pdf", filledBuffer);
   console.log("Filled form saved!");
 }
 
 // Review what was filled
-console.log(`Filled ${result.data.form_data.length} form fields:`);
-result.data.form_data.forEach((field) => {
+console.log(`Filled ${result.output.form_data.length} form fields:`);
+result.output.form_data.forEach((field) => {
   if (field.value) {
     console.log(`  - ${field.key}: ${field.value}`);
   }
@@ -513,9 +511,9 @@ import base64
 
 client = Retab()
 
-# Use the template fill endpoint for fast, consistent filling
+# Use edits.create with template_id for fast, consistent filling
 
-result = client.edits.templates.fill(
+result = client.edits.create(
 template_id="edittplt_abc123",
 instructions="""
 Full Name: Jane Smith
@@ -528,8 +526,8 @@ color="#000080", # Dark blue text (default)
 
 # Save the filled PDF
 
-if result.data.filled_document:
-base64_content = result.data.filled_document.url.split(",")[1]
+if result.output.filled_document:
+base64_content = result.output.filled_document.url.split(",")[1]
 with open("filled-from-template.pdf", "wb") as f:
 f.write(base64.b64decode(base64_content))
 print("Template-based form filled and saved!")
@@ -542,9 +540,9 @@ import { writeFileSync } from 'fs';
 
 const client = new Retab();
 
-// Use the template fill endpoint for fast, consistent filling
-const result = await client.edits.templates.fill({
-    template_id: "edittplt_abc123",
+// Use edits.create with templateId for fast, consistent filling
+const result = await client.edits.create({
+    templateId: "edittplt_abc123",
     instructions: `
         Full Name: Jane Smith
         Date of Birth: March 15, 1985
@@ -555,8 +553,8 @@ const result = await client.edits.templates.fill({
 });
 
 // Save the filled PDF
-if (result.data.filled_document) {
-    const base64Content = result.data.filled_document.url.split(",")[1];
+if (result.output.filled_document) {
+    const base64Content = result.output.filled_document.url.split(",")[1];
     writeFileSync("filled-from-template.pdf", Buffer.from(base64Content, 'base64'));
     console.log("Template-based form filled and saved!");
 }
@@ -584,7 +582,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Edits.Templates.Fill(ctx, retab.EditTemplateFillRequest{
+	result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
 		TemplateID: "edittplt_abc123",
 		Instructions: `
         Full Name: Jane Smith
@@ -598,8 +596,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	data, _ := (*result)["data"].(map[string]any)
-	filled, _ := data["filled_document"].(map[string]any)
+	output, _ := (*result)["output"].(map[string]any)
+	filled, _ := output["filled_document"].(map[string]any)
 	if url, ok := filled["url"].(string); ok && url != "" {
 		parts := strings.SplitN(url, ",", 2)
 		if len(parts) == 2 {
@@ -620,8 +618,8 @@ func main() {
 
 <Note>
 **When to use templates vs direct fill:**
-- Use `edits.templates.fill()` for batch processing the same PDF form with different data
-- Use `edits.create()` with `document=...` for one-off document filling or when you don't have a pre-defined template
+- Use `edits.create(template_id=...)` for batch processing the same PDF form with different data
+- Use `edits.create(document=...)` for one-off document filling or when you don't have a pre-defined template
 
 Templates skip the field detection step, making them faster and more consistent for repeated use.
 
@@ -661,7 +659,7 @@ applicants = [
 }
 ]
 
-# For batch processing, use templates.fill() with a pre-created template
+# For batch processing, use edits.create(template_id=...) with a pre-created template
 
 # This skips field detection for each document, making it much faster
 
@@ -673,15 +671,15 @@ Email Address: {applicant['email']}
 Phone Number: {applicant['phone']}
 """
 
-    result = client.edits.templates.fill(
+    result = client.edits.create(
         template_id="edittplt_your_template_id",
         instructions=instructions,
         model="retab-small"
     )
 
-    if result.data.filled_document:
+    if result.output.filled_document:
         output_filename = f"filled-form-{i+1}-{applicant['name'].replace(' ', '-')}.pdf"
-        base64_content = result.data.filled_document.url.split(",")[1]
+        base64_content = result.output.filled_document.url.split(",")[1]
         with open(output_filename, "wb") as f:
             f.write(base64.b64decode(base64_content))
         print(f"Created: {output_filename}")
