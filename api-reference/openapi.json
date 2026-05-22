@@ -2730,7 +2730,7 @@
           "Workflow Run Steps"
         ],
         "summary": "List Workflow Run Steps",
-        "description": "List steps with status and artifact summaries.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. Cursor pagination is not yet implemented for this\nendpoint — ``list_metadata`` is always ``{before: null, after: null}``.\n``run_id`` is an optional filter; when omitted, the list is scoped to\nthe caller's organization and bounded to 200 rows unless ``limit`` is\nprovided.",
+        "description": "List steps with status and artifact summaries.\n\nSorted by ``started_at`` ascending with ``step_id`` as the tiebreaker\n(the same compound key the underlying index uses). Pass ``after`` for\nthe next page, ``before`` for the previous page — mutually exclusive.\n``run_id`` is optional; when omitted the list is scoped to the caller's\norganization.",
         "operationId": "list_workflow_run_steps",
         "security": [
           {
@@ -2841,24 +2841,54 @@
             "description": "Optional step lifecycle status filter. Repeat the query parameter for multiple values."
           },
           {
-            "name": "limit",
+            "name": "before",
             "in": "query",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "type": "integer",
-                  "maximum": 1000,
-                  "minimum": 1
+                  "type": "string"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "Maximum number of steps to return. Defaults to all rows for a run-scoped query and 200 for cross-run queries.",
+              "description": "Step id cursor: return the page before this id (mutually exclusive with ``after``).",
+              "title": "Before"
+            },
+            "description": "Step id cursor: return the page before this id (mutually exclusive with ``after``)."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Step id cursor: return the page after this id (mutually exclusive with ``before``).",
+              "title": "After"
+            },
+            "description": "Step id cursor: return the page after this id (mutually exclusive with ``before``)."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "description": "Maximum number of steps to return per page (1-1000). Defaults to 200; raise it for run-scoped queries on large DAGs and rely on cursor pagination for the rest.",
+              "default": 200,
               "title": "Limit"
             },
-            "description": "Maximum number of steps to return. Defaults to all rows for a run-scoped query and 200 for cross-run queries."
+            "description": "Maximum number of steps to return per page (1-1000). Defaults to 200; raise it for run-scoped queries on large DAGs and rely on cursor pagination for the rest."
           }
         ],
         "responses": {
@@ -3064,9 +3094,6 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "default": "pending",
-              "title": "Decision Status",
               "enum": [
                 "pending",
                 "approved",
@@ -3074,7 +3101,10 @@
                 "decided",
                 "all"
               ],
-              "description": "Filter by decision state: pending, approved, rejected, decided, or all."
+              "type": "string",
+              "description": "Filter by decision state: pending, approved, rejected, decided, or all.",
+              "default": "pending",
+              "title": "Decision Status"
             },
             "description": "Filter by decision state: pending, approved, rejected, decided, or all."
           },
@@ -3133,7 +3163,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowReviewSummaryList"
+                  "$ref": "#/components/schemas/WorkflowReviewList"
                 }
               }
             }
@@ -3657,7 +3687,7 @@
           "Workflow Artifacts"
         ],
         "summary": "List Workflow Artifacts",
-        "description": "List artifacts produced by a workflow run.\n\nReturns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. Each ``data`` item is a flattened\n``WorkflowArtifact`` record (operation-tagged dereferenced artifact);\narbitrary operation-specific fields are preserved. Cursor pagination is\nnot yet implemented — ``list_metadata`` is always\n``{before: null, after: null}``.\n\nFilters: provide either ``run_id`` (list all artifacts in a run) or\n``step_id`` (single-step lookup). When both are absent the request is\nrejected with 400.",
+        "description": "List artifacts produced by a workflow run.\n\nPaginated by the producing step's ``step_id`` (sorted by ``started_at``\nascending). Pass ``after`` for the next page, ``before`` for the previous\npage — mutually exclusive. ``step_id`` short-circuits pagination and\nreturns the single attached artifact.\n\nFilters: provide either ``run_id`` (list all artifacts in a run) or\n``step_id`` (single-step lookup). When both are absent the request is\nrejected with 400.",
         "operationId": "list_workflow_artifacts",
         "security": [
           {
@@ -3755,6 +3785,56 @@
               "title": "Step Id"
             },
             "description": "Optional step id filter. When provided, returns the single artifact attached to that step (or an empty list if the step has no artifact). ``run_id`` is not required when ``step_id`` is set — it is resolved from the step record."
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Step id cursor: return the page before this step (mutually exclusive with ``after``). Ignored when ``step_id`` is set.",
+              "title": "Before"
+            },
+            "description": "Step id cursor: return the page before this step (mutually exclusive with ``after``). Ignored when ``step_id`` is set."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Step id cursor: return the page after this step (mutually exclusive with ``before``). Ignored when ``step_id`` is set.",
+              "title": "After"
+            },
+            "description": "Step id cursor: return the page after this step (mutually exclusive with ``before``). Ignored when ``step_id`` is set."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "Maximum number of artifacts to return per page (1-200). Ignored when ``step_id`` is set (that path returns the single attached artifact).",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Maximum number of artifacts to return per page (1-200). Ignored when ``step_id`` is set (that path returns the single attached artifact)."
           }
         ],
         "responses": {
@@ -4353,7 +4433,7 @@
           "Workflow Blocks"
         ],
         "summary": "List Blocks",
-        "description": "List all blocks for a workflow.\n\nReturns all blocks in the workflow draft wrapped in the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. ID pagination is not yet implemented for this\nendpoint — ``list_metadata`` is always ``{before: null, after: null}``.",
+        "description": "List blocks for a workflow with keyset cursor pagination.\n\nSorted by ``updated_at`` descending with ``id`` as the tiebreaker. Pass\n``after`` (the previous response's ``list_metadata.after``) for the next\npage, ``before`` for the previous page. They are mutually exclusive; the\n400 cleanly tells the caller which to drop.",
         "operationId": "list_blocks",
         "security": [
           {
@@ -4375,6 +4455,56 @@
               "type": "string",
               "title": "Workflow Id"
             }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Block id cursor: return the page before this id (mutually exclusive with ``after``).",
+              "title": "Before"
+            },
+            "description": "Block id cursor: return the page before this id (mutually exclusive with ``after``)."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Block id cursor: return the page after this id (mutually exclusive with ``before``).",
+              "title": "After"
+            },
+            "description": "Block id cursor: return the page after this id (mutually exclusive with ``before``)."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "Maximum number of blocks to return per page (1-200).",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Maximum number of blocks to return per page (1-200)."
           }
         ],
         "responses": {
@@ -4678,7 +4808,7 @@
           "Workflow Edges"
         ],
         "summary": "List Edges",
-        "description": "List all edges for a workflow.\n\nOptionally filter by source or target block ID. Returns the canonical\n``{\"data\": [...], \"list_metadata\": {\"before\": null, \"after\": null}}``\npagination envelope. ID pagination is not yet implemented for this\nendpoint — ``list_metadata`` is always ``{before: null, after: null}``.",
+        "description": "List edges for a workflow with keyset cursor pagination.\n\nOptionally filter by source or target block ID. Sorted by ``updated_at``\ndescending with ``id`` as the tiebreaker. Pass ``after`` for the next\npage, ``before`` for the previous page — mutually exclusive.",
         "operationId": "list_edges",
         "security": [
           {
@@ -4736,6 +4866,56 @@
               "title": "Target Block"
             },
             "description": "Filter by target block ID"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Edge id cursor: return the page before this id (mutually exclusive with ``after``).",
+              "title": "Before"
+            },
+            "description": "Edge id cursor: return the page before this id (mutually exclusive with ``after``)."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Edge id cursor: return the page after this id (mutually exclusive with ``before``).",
+              "title": "After"
+            },
+            "description": "Edge id cursor: return the page after this id (mutually exclusive with ``before``)."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "Maximum number of edges to return per page (1-200).",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Maximum number of edges to return per page (1-200)."
           }
         ],
         "responses": {
@@ -5338,6 +5518,7 @@
                 {
                   "enum": [
                     "pending",
+                    "queued",
                     "running",
                     "completed",
                     "error",
@@ -5377,6 +5558,7 @@
                 {
                   "enum": [
                     "pending",
+                    "queued",
                     "running",
                     "completed",
                     "error",
@@ -8356,6 +8538,19 @@
   },
   "components": {
     "schemas": {
+      "AccessTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "access",
+            "title": "Type",
+            "default": "access"
+          }
+        },
+        "type": "object",
+        "title": "AccessTrigger",
+        "description": "Run started by a generic access path (default auto-retry source)."
+      },
       "Actor": {
         "properties": {
           "kind": {
@@ -8677,13 +8872,13 @@
           "error": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/ErrorDetails"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Error"
+            "description": "Structured error captured for this attempt. ``message`` carries the human-readable text; ``error_code`` / ``stack_trace`` are populated when available."
           },
           "started_at": {
             "anyOf": [
@@ -8750,13 +8945,13 @@
           "error": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/ErrorDetails"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Error"
+            "description": "Final structured error after exhausted retries, if any"
           },
           "created_at": {
             "type": "string",
@@ -8772,6 +8967,19 @@
           "created_at"
         ],
         "title": "ApiCallInvocationWorkflowArtifact"
+      },
+      "ApiExperimentTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "api",
+            "title": "Type",
+            "default": "api"
+          }
+        },
+        "type": "object",
+        "title": "ApiExperimentTrigger",
+        "description": "Run started programmatically via the public API (legacy/back-compat).\n\nMigration 029 backfills this for legacy rows that lacked a trigger_source.\nNamed ``ApiExperimentTrigger`` to disambiguate from the workflow-run\n``ApiTrigger`` model that lives in ``workflows/models.py``; otherwise\nPydantic emits both under fully-qualified names that fail\n``test_public_component_names_are_language_portable``."
       },
       "ApiTrigger": {
         "properties": {
@@ -8868,15 +9076,14 @@
             "type": "string",
             "title": "Condition Kind"
           },
-          "status": {
+          "outcome": {
             "type": "string",
             "enum": [
               "passed",
               "failed",
-              "blocked",
-              "error"
+              "blocked"
             ],
-            "title": "Status"
+            "title": "Outcome"
           },
           "actual_value": {
             "title": "Actual Value"
@@ -8943,9 +9150,10 @@
         "required": [
           "assertion_id",
           "condition_kind",
-          "status"
+          "outcome"
         ],
-        "title": "AssertionResult"
+        "title": "AssertionResult",
+        "description": "Result of evaluating ONE assertion against a block's output.\n\n``outcome`` is a verdict only — pass / fail / blocked. An execution\nerror (the assertion couldn't be evaluated because of a type error,\ninvalid regex, schema validation crash, simulation crash, etc.) is\nexpressed by ``outcome=\"blocked\"`` with a populated ``failure`` whose\n``code`` identifies the specific failure mode (``execution_error``,\n``type_error``, ``invalid_regex``, ``schema_invalid``,\n``simulation_failed``, ...)."
       },
       "AssertionSchemaDep": {
         "properties": {
@@ -9113,6 +9321,31 @@
         "title": "AssertionSpec",
         "description": "Block-test assertion against one declared output handle.\n\n``target`` is the only supported shape: an output handle id and an\noptional relative path inside that handle's payload."
       },
+      "AutoRetryTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "auto_retry",
+            "title": "Type",
+            "default": "auto_retry"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Original trigger source that requested the retry (e.g. 'metrics', 'mcp_metrics', 'content')."
+          }
+        },
+        "type": "object",
+        "title": "AutoRetryTrigger",
+        "description": "Run started by the auto-retry pipeline.\n\n``source`` records the upstream trigger that requested the retry\n(mirrors the storage ``auto_retry:<source>`` convention without leaking\nthe colon-prefixed encoding)."
+      },
       "AwaitingReviewRun": {
         "properties": {
           "status": {
@@ -9133,6 +9366,19 @@
         "type": "object",
         "title": "AwaitingReviewRun",
         "description": "The run is paused on at least one gated block."
+      },
+      "AwaitingReviewStepLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "awaiting_review",
+            "title": "Status",
+            "default": "awaiting_review"
+          }
+        },
+        "type": "object",
+        "title": "AwaitingReviewStepLifecycle",
+        "description": "The step is paused on a human review decision."
       },
       "BBox": {
         "properties": {
@@ -9217,6 +9463,24 @@
       },
       "BlockTestBatchExecutionCounts": {
         "properties": {
+          "lifecycle_counts": {
+            "$ref": "#/components/schemas/BlockTestLifecycleCounts"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/BlockTestOutcomeCounts"
+          }
+        },
+        "type": "object",
+        "title": "BlockTestBatchExecutionCounts",
+        "description": "Denormalized counts surface, split along the canonical axes.\n\nEach individual run contributes to exactly one ``lifecycle_counts``\nbucket, and additionally to one ``outcome`` bucket when\n``lifecycle_counts.completed`` is incremented.\n\nThe ``lifecycle_counts`` name disambiguates from the API_DESIGN.md\n``lifecycle`` convention (which signals a discriminated union of\ntyped states). This field is a counts subdocument, not a union."
+      },
+      "BlockTestLifecycleCounts": {
+        "properties": {
+          "pending": {
+            "type": "integer",
+            "title": "Pending",
+            "default": 0
+          },
           "queued": {
             "type": "integer",
             "title": "Queued",
@@ -9227,19 +9491,9 @@
             "title": "Running",
             "default": 0
           },
-          "passed": {
+          "completed": {
             "type": "integer",
-            "title": "Passed",
-            "default": 0
-          },
-          "failed": {
-            "type": "integer",
-            "title": "Failed",
-            "default": 0
-          },
-          "blocked": {
-            "type": "integer",
-            "title": "Blocked",
+            "title": "Completed",
             "default": 0
           },
           "error": {
@@ -9254,7 +9508,30 @@
           }
         },
         "type": "object",
-        "title": "BlockTestBatchExecutionCounts"
+        "title": "BlockTestLifecycleCounts",
+        "description": "Per-lifecycle counts for a batch of block-test runs."
+      },
+      "BlockTestOutcomeCounts": {
+        "properties": {
+          "passed": {
+            "type": "integer",
+            "title": "Passed",
+            "default": 0
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "default": 0
+          },
+          "blocked": {
+            "type": "integer",
+            "title": "Blocked",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "BlockTestOutcomeCounts",
+        "description": "Per-outcome counts. Only completed runs contribute to these buckets."
       },
       "CancelWorkflowExperimentRunResponse": {
         "properties": {
@@ -9263,7 +9540,38 @@
             "title": "Id"
           },
           "lifecycle": {
-            "$ref": "#/components/schemas/ExperimentRunLifecycle"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PendingExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/QueuedExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/RunningExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledExperimentRun"
+              }
+            ],
+            "title": "Lifecycle",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "cancelled": "#/components/schemas/CancelledExperimentRun",
+                "completed": "#/components/schemas/CompletedExperimentRun",
+                "error": "#/components/schemas/ErrorExperimentRun",
+                "pending": "#/components/schemas/PendingExperimentRun",
+                "queued": "#/components/schemas/QueuedExperimentRun",
+                "running": "#/components/schemas/RunningExperimentRun"
+              }
+            }
           }
         },
         "type": "object",
@@ -9322,6 +9630,77 @@
         "title": "CancelWorkflowResponse",
         "description": "Response for cancel workflow endpoint."
       },
+      "CancelledExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Status",
+            "default": "cancelled"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Human-readable cancellation reason, when known."
+          }
+        },
+        "type": "object",
+        "title": "CancelledExperimentResult",
+        "description": "The per-document result was cancelled (typically propagated from a cancelled run)."
+      },
+      "CancelledExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Status",
+            "default": "cancelled"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Human-readable cancellation reason, when known."
+          }
+        },
+        "type": "object",
+        "title": "CancelledExperimentRun",
+        "description": "The run was cancelled before reaching a natural terminal state."
+      },
+      "CancelledStepLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Status",
+            "default": "cancelled"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason the step was cancelled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "CancelledStepLifecycle",
+        "description": "The step was cancelled."
+      },
       "CancelledTerminal": {
         "properties": {
           "status": {
@@ -9346,6 +9725,31 @@
         "type": "object",
         "title": "CancelledTerminal",
         "description": "The run was cancelled before reaching a natural terminal state."
+      },
+      "CancelledWorkflowTestRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Status",
+            "default": "cancelled"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Human-readable reason, when known"
+          }
+        },
+        "type": "object",
+        "title": "CancelledWorkflowTestRun",
+        "description": "The test run was cancelled before reaching a natural terminal state."
       },
       "Category": {
         "properties": {
@@ -9473,7 +9877,7 @@
             "title": "Choices",
             "description": "Alternative classification vote outputs used to build the consolidated result."
           },
-          "likelihood": {
+          "likelihoods": {
             "anyOf": [
               {
                 "type": "number"
@@ -9482,7 +9886,7 @@
                 "type": "null"
               }
             ],
-            "title": "Likelihood",
+            "title": "Likelihoods",
             "description": "Consensus likelihood score (0.0-1.0) of the winning classification."
           }
         },
@@ -9571,16 +9975,10 @@
             "description": "Usage information for the classification"
           },
           "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           },
           "operation": {
             "type": "string",
@@ -9596,7 +9994,8 @@
           "file",
           "model",
           "categories",
-          "output"
+          "output",
+          "created_at"
         ],
         "title": "ClassificationWorkflowArtifact"
       },
@@ -9619,6 +10018,58 @@
         "type": "object",
         "title": "CompleteFileUploadRequest"
       },
+      "CompletedExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "completed",
+            "title": "Status",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CompletedExperimentResult",
+        "description": "The per-document result finished successfully."
+      },
+      "CompletedExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "completed",
+            "title": "Status",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CompletedExperimentRun",
+        "description": "The run finished successfully."
+      },
+      "CompletedSimulationLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "completed",
+            "title": "Status",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CompletedSimulationLifecycle",
+        "description": "Terminal: the simulated block executed successfully."
+      },
+      "CompletedStepLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "completed",
+            "title": "Status",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CompletedStepLifecycle",
+        "description": "The step finished successfully."
+      },
       "CompletedTerminal": {
         "properties": {
           "status": {
@@ -9631,6 +10082,19 @@
         "type": "object",
         "title": "CompletedTerminal",
         "description": "The run finished successfully."
+      },
+      "CompletedWorkflowTestRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "completed",
+            "title": "Status",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CompletedWorkflowTestRun",
+        "description": "The test run finished. Per-test verdicts live on each result row."
       },
       "ConditionEvaluationDetails": {
         "properties": {
@@ -10020,6 +10484,19 @@
           "expected"
         ],
         "title": "ContainsCondition"
+      },
+      "ContentTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "content",
+            "title": "Type",
+            "default": "content"
+          }
+        },
+        "type": "object",
+        "title": "ContentTrigger",
+        "description": "Run started by the experiment content endpoint's auto-retry path."
       },
       "CreateClassificationRequest": {
         "properties": {
@@ -10447,6 +10924,54 @@
         ],
         "title": "CreateFileUploadResponse"
       },
+      "CreateFreshWorkflowRunRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "Workflow id for the fresh run."
+          },
+          "documents": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FileRef"
+                },
+                {
+                  "$ref": "#/components/schemas/MIMEDataInput"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Documents",
+            "description": "Mapping of start_document block IDs to their input documents. Only valid for fresh-run creation (``restart_of`` is None)."
+          },
+          "json_inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Inputs",
+            "description": "Mapping of start-json block IDs to their input JSON data. Only valid for fresh-run creation (``restart_of`` is None)."
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Workflow version to run: 'production', 'draft', or a pinned version id like 'ver_...'. Only valid for fresh-run creation.",
+            "default": "production",
+            "examples": [
+              "production",
+              "draft",
+              "ver_abc123def456"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "title": "CreateFreshWorkflowRunRequest",
+        "description": "Create a fresh workflow run from a workflow id, optional draft/version selector, and optional inputs."
+      },
       "CreateJobRequest": {
         "properties": {
           "endpoint": {
@@ -10622,6 +11147,42 @@
         ],
         "title": "CreatePartitionRequest",
         "description": "Public create-partition request body."
+      },
+      "CreateRestartWorkflowRunRequest": {
+        "properties": {
+          "restart_of": {
+            "type": "string",
+            "title": "Restart Of",
+            "description": "When present, the new run is created as a restart of this source run id (the source run's inputs are inherited)."
+          },
+          "config_source": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published"
+            ],
+            "title": "Config Source",
+            "description": "Required when ``restart_of`` is set. Config source for the restarted run."
+          },
+          "command_id": {
+            "type": "string",
+            "title": "Command Id",
+            "description": "Optional idempotency key for deduplicating restart commands. Only valid when ``restart_of`` is set."
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "Optional workflow id when the client already has it; otherwise inferred from restart_of."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "restart_of",
+          "config_source"
+        ],
+        "title": "CreateRestartWorkflowRunRequest",
+        "description": "Restart a workflow run from a previous run id. workflow_id may be supplied when the client already has it."
       },
       "CreateReviewVersionRequest": {
         "properties": {
@@ -10815,6 +11376,7 @@
           },
           "label": {
             "type": "string",
+            "maxLength": 200,
             "title": "Label",
             "description": "Display label",
             "default": ""
@@ -11028,6 +11590,71 @@
           "assertion"
         ],
         "title": "CreateWorkflowTestRequest"
+      },
+      "CreateWorkflowTestRunAllRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "title": "CreateWorkflowTestRunAllRequest",
+        "description": "Run every saved test in a workflow."
+      },
+      "CreateWorkflowTestRunForTargetRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "target": {
+            "$ref": "#/components/schemas/WorkflowTestBlockTarget"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "target"
+        ],
+        "title": "CreateWorkflowTestRunForTargetRequest",
+        "description": "Run every workflow test for one target in a workflow."
+      },
+      "CreateWorkflowTestRunForTestRequest": {
+        "properties": {
+          "test_id": {
+            "type": "string",
+            "title": "Test Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "n_consensus": {
+            "type": "integer",
+            "title": "N Consensus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "test_id"
+        ],
+        "title": "CreateWorkflowTestRunForTestRequest",
+        "description": "Run one saved workflow test by test id."
       },
       "CreateWorkflowTestRunRequest": {
         "oneOf": [
@@ -11310,7 +11937,31 @@
           },
           "type": {
             "type": "string",
-            "title": "Type"
+            "enum": [
+              "workflow",
+              "edge",
+              "start_document",
+              "start_json",
+              "note",
+              "parse",
+              "edit",
+              "extract",
+              "split",
+              "classifier",
+              "conditional",
+              "api_call",
+              "review",
+              "function",
+              "while_loop",
+              "for_each",
+              "merge_dicts",
+              "while_loop_sentinel_start",
+              "while_loop_sentinel_end",
+              "for_each_sentinel_start",
+              "for_each_sentinel_end"
+            ],
+            "title": "Type",
+            "description": "Resource kind for this plan entry. ``workflow`` and ``edge`` are flat singletons; for ``target='block'`` this carries the block's concrete type (e.g. ``extract``, ``api_call``) so the plan summary can render type-specific labels."
           },
           "actions": {
             "items": {
@@ -11522,9 +12173,16 @@
             "description": "Model used for the edit operation."
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Instructions",
-            "description": "Instructions supplied with the edit request."
+            "description": "Free-form instructions supplied with the edit request."
           },
           "config": {
             "$ref": "#/components/schemas/EditConfig",
@@ -11542,12 +12200,19 @@
             "title": "Template Id",
             "description": "Template id used when the edit was created from a template; null for direct-document edits."
           },
-          "data": {
+          "output": {
             "$ref": "#/components/schemas/EditResult",
             "description": "The edit result: filled form fields and the rendered PDF."
           },
           "usage": {
-            "$ref": "#/components/schemas/RetabUsage",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetabUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "Usage information for the edit operation."
           },
           "created_at": {
@@ -11568,10 +12233,8 @@
           "id",
           "file",
           "model",
-          "instructions",
           "config",
-          "data",
-          "usage"
+          "output"
         ],
         "title": "Edit"
       },
@@ -11679,9 +12342,16 @@
             "description": "Model used for the edit operation."
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Instructions",
-            "description": "Instructions supplied with the edit request."
+            "description": "Free-form instructions supplied with the edit request."
           },
           "config": {
             "$ref": "#/components/schemas/EditConfig",
@@ -11699,25 +12369,26 @@
             "title": "Template Id",
             "description": "Template id used when the edit was created from a template; null for direct-document edits."
           },
-          "data": {
+          "output": {
             "$ref": "#/components/schemas/EditResult",
             "description": "The edit result: filled form fields and the rendered PDF."
           },
           "usage": {
-            "$ref": "#/components/schemas/RetabUsage",
-            "description": "Usage information for the edit operation."
-          },
-          "created_at": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date-time"
+                "$ref": "#/components/schemas/RetabUsage"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Created At"
+            "description": "Usage information for the edit operation."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           },
           "operation": {
             "type": "string",
@@ -11732,10 +12403,9 @@
           "id",
           "file",
           "model",
-          "instructions",
           "config",
-          "data",
-          "usage"
+          "output",
+          "created_at"
         ],
         "title": "EditWorkflowArtifact"
       },
@@ -11811,6 +12481,18 @@
       },
       "ErrorDetails": {
         "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "description": "Human-readable error message"
+          },
           "stack_trace": {
             "anyOf": [
               {
@@ -11875,7 +12557,167 @@
         },
         "type": "object",
         "title": "ErrorDetails",
-        "description": "Detailed error information for debugging.\n\nCaptures stack traces and context about where and why an error occurred."
+        "description": "Detailed error information for debugging.\n\nCaptures stack traces and context about where and why an error occurred.\nUsed everywhere we surface an ``error`` field on a public model so SDK\nconsumers can branch on ``error_code`` instead of parsing free text."
+      },
+      "ErrorExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "error",
+            "title": "Status",
+            "default": "error"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "description": "Human-readable error message, when known."
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured error details including stack trace."
+          }
+        },
+        "type": "object",
+        "title": "ErrorExperimentResult",
+        "description": "The per-document result failed. Carries the message and optional details."
+      },
+      "ErrorExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "error",
+            "title": "Status",
+            "default": "error"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "description": "Human-readable error message, when known."
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured error details including stack trace."
+          }
+        },
+        "type": "object",
+        "title": "ErrorExperimentRun",
+        "description": "The run failed. Carries the human-readable message and optional details."
+      },
+      "ErrorSimulationLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "error",
+            "title": "Status",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ErrorSimulationLifecycle",
+        "description": "Terminal: the simulated block raised. ``message`` is the executor's\nerror string."
+      },
+      "ErrorStepLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "error",
+            "title": "Status",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "input_collection",
+                  "registry_lookup",
+                  "document_fetch",
+                  "execution",
+                  "output_storage",
+                  "routing",
+                  "history_payload"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "transient",
+                  "permanent",
+                  "quota"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ErrorStepLifecycle",
+        "description": "The step failed. Error details are bundled into lifecycle."
       },
       "ErrorTerminal": {
         "properties": {
@@ -11958,6 +12800,36 @@
         ],
         "title": "ErrorTerminal",
         "description": "The run failed. All loose error fields are bundled here."
+      },
+      "ErrorWorkflowTestRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "error",
+            "title": "Status",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message",
+            "default": "(no message)"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured error context including stack trace"
+          }
+        },
+        "type": "object",
+        "title": "ErrorWorkflowTestRun",
+        "description": "The test run failed. The error message lives on this variant.\n\nCarries the same structured ``details`` envelope as workflow runs so\nconsumers can branch on ``error_code`` / ``stage`` rather than parsing\na free-text message."
       },
       "ExistsCondition": {
         "properties": {
@@ -12250,6 +13122,19 @@
         "title": "ExperimentConfusionSummaryAggregate",
         "description": "Split/classifier diagnostics attached to the summary response."
       },
+      "ExperimentDetailTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "experiment_detail",
+            "title": "Type",
+            "default": "experiment_detail"
+          }
+        },
+        "type": "object",
+        "title": "ExperimentDetailTrigger",
+        "description": "Run started by the experiment-detail page polling auto-retry path."
+      },
       "ExperimentDocumentCaptureRequest": {
         "properties": {
           "workflow_run_id": {
@@ -12443,25 +13328,6 @@
         "title": "ExperimentMetricsStaleError",
         "description": "Returned when the latest run's config or document set has drifted\nfrom the current draft, so its metrics no longer reflect the\nexperiment's definition."
       },
-      "ExperimentResultLifecycle": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "completed",
-              "error"
-            ],
-            "title": "Status"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "ExperimentResultLifecycle"
-      },
       "ExperimentResultTiming": {
         "properties": {
           "created_at": {
@@ -12515,26 +13381,6 @@
         "type": "object",
         "title": "ExperimentResultTiming"
       },
-      "ExperimentRunLifecycle": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "completed",
-              "error",
-              "cancelled"
-            ],
-            "title": "Status"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "ExperimentRunLifecycle"
-      },
       "ExperimentRunTiming": {
         "properties": {
           "created_at": {
@@ -12583,23 +13429,6 @@
           "created_at"
         ],
         "title": "ExperimentRunTiming"
-      },
-      "ExperimentRunTrigger": {
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Type"
-          }
-        },
-        "type": "object",
-        "title": "ExperimentRunTrigger"
       },
       "ExperimentSummaryMetricDocument": {
         "properties": {
@@ -12675,7 +13504,7 @@
             ],
             "title": "Definition Fingerprint"
           },
-          "block_kind": {
+          "block_type": {
             "type": "string",
             "enum": [
               "extract",
@@ -12683,7 +13512,7 @@
               "split",
               "for_each"
             ],
-            "title": "Block Kind"
+            "title": "Block Type"
           },
           "score": {
             "anyOf": [
@@ -12744,7 +13573,7 @@
         "required": [
           "experiment_id",
           "run_id",
-          "block_kind"
+          "block_type"
         ],
         "title": "ExperimentSummaryMetricsResponse",
         "description": "Run-level summary plus block-specific diagnostics.\n\n``prior_run_id`` + ``prior_score`` populate when the request opts into\nprior-comparison and a completed prior run exists."
@@ -12782,8 +13611,69 @@
         "description": "Directional confusion slice for one split/classifier target."
       },
       "ExperimentVoteRow": {
-        "additionalProperties": true,
-        "type": "object"
+        "properties": {
+          "consensus": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus"
+          },
+          "votes": {
+            "items": {},
+            "type": "array",
+            "title": "Votes"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "row_presence_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Presence Score"
+          },
+          "present_voter_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Present Voter Count"
+          },
+          "total_voter_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Voter Count"
+          }
+        },
+        "type": "object",
+        "title": "ExperimentVoteRow",
+        "description": "Consensus and flat voter values for one selected target row."
       },
       "ExperimentVotesMetricDocument": {
         "properties": {
@@ -13110,16 +14000,10 @@
             "description": "Usage information for the extraction"
           },
           "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           },
           "operation": {
             "type": "string",
@@ -13135,7 +14019,8 @@
           "file",
           "model",
           "json_schema",
-          "output"
+          "output",
+          "created_at"
         ],
         "title": "ExtractionWorkflowArtifact"
       },
@@ -13146,144 +14031,6 @@
           "checkbox"
         ],
         "title": "FieldType"
-      },
-      "File": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "ID of the file"
-          },
-          "filename": {
-            "type": "string",
-            "title": "Filename",
-            "description": "Filename of the file"
-          },
-          "mime_type": {
-            "type": "string",
-            "title": "Mime Type",
-            "description": "MIME type of the file"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          },
-          "size_bytes": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Size Bytes",
-            "description": "Size of the stored file in bytes"
-          },
-          "sha256": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sha256",
-            "description": "Optional caller-supplied SHA-256 checksum"
-          },
-          "upload_status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "ready",
-              "failed",
-              "expired"
-            ],
-            "title": "Upload Status",
-            "description": "Direct upload lifecycle status",
-            "default": "ready"
-          },
-          "upload_expires_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Upload Expires At",
-            "description": "When a pending direct upload expires"
-          },
-          "page_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Page Count",
-            "description": "The number of pages in the file"
-          },
-          "ocr_result": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/OCR"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The OCR result of the file, if available"
-          },
-          "ocr_file_gcs": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ocr File Gcs",
-            "description": "OCR file location, if available"
-          },
-          "ocr_file_page_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ocr File Page Count",
-            "description": "Number of pages in the OCR file if available"
-          },
-          "ocr_is_chromadb_collection_initialized": {
-            "type": "boolean",
-            "title": "Ocr Is Chromadb Collection Initialized",
-            "description": "Whether the ChromaDB collection has been initialized for this file",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "filename",
-          "mime_type"
-        ],
-        "title": "File"
       },
       "FileHandleInput": {
         "properties": {
@@ -13480,13 +14227,13 @@
           "error": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/ErrorDetails"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Error"
+            "description": "Structured error captured for this function invocation, if any"
           },
           "created_at": {
             "type": "string",
@@ -14134,15 +14881,30 @@
           "status": {
             "type": "string",
             "enum": [
+              "pending",
               "queued",
               "running",
-              "passed",
-              "failed",
-              "blocked",
+              "completed",
               "error",
               "cancelled"
             ],
             "title": "Status"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "passed",
+                  "failed",
+                  "blocked"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
           },
           "started_at": {
             "type": "string",
@@ -14204,7 +14966,8 @@
           "status",
           "started_at"
         ],
-        "title": "LatestBlockTestRunSummary"
+        "title": "LatestBlockTestRunSummary",
+        "description": "Summary of the most recent block-test run.\n\nThe two harmonized axes — execution status and verdict outcome — are\nexposed as separate fields. The runner only writes the summary on\nterminal-state transitions, so in practice ``status`` is one of\n``completed | error | cancelled`` and ``outcome`` is populated when\n``status == \"completed\"``.\n\n``status`` is a flat enum — there's no per-state payload to carry on a\nsummary projection, so the API_DESIGN.md ``lifecycle`` vs ``status``\nconvention says use ``status`` here."
       },
       "LengthCompareCondition": {
         "properties": {
@@ -14350,18 +15113,6 @@
             "examples": [
               "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
             ]
-          },
-          "mime_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mime Type",
-            "description": "Explicit MIME type override when it cannot be inferred from the URL or filename"
           }
         },
         "type": "object",
@@ -14421,6 +15172,19 @@
         ],
         "title": "MIMEDataInput",
         "description": "Input format for documents from the frontend.\n\nThis accepts either inline base64 content or a URL-backed MIMEData reference."
+      },
+      "ManualRunTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "manual_run",
+            "title": "Type",
+            "default": "manual_run"
+          }
+        },
+        "type": "object",
+        "title": "ManualRunTrigger",
+        "description": "Run started manually from the experiment detail page."
       },
       "ManualTrigger": {
         "properties": {
@@ -14544,38 +15308,18 @@
         ],
         "title": "MaterializedDocument"
       },
-      "Matrix": {
+      "McpMetricsTrigger": {
         "properties": {
-          "rows": {
-            "type": "integer",
-            "title": "Rows",
-            "description": "Number of rows in the matrix"
-          },
-          "cols": {
-            "type": "integer",
-            "title": "Cols",
-            "description": "Number of columns in the matrix"
-          },
-          "type_": {
-            "type": "integer",
-            "title": "Type",
-            "description": "OpenCV data type (e.g., 0 for CV_8U)"
-          },
-          "data": {
+          "type": {
             "type": "string",
-            "title": "Data",
-            "description": "The matrix data compressed with gzip and encoded as base64 string for JSON serialization"
+            "const": "mcp_metrics",
+            "title": "Type",
+            "default": "mcp_metrics"
           }
         },
         "type": "object",
-        "required": [
-          "rows",
-          "cols",
-          "type_",
-          "data"
-        ],
-        "title": "Matrix",
-        "description": "Representation for transformation matrix, compatible with OpenCV format.\n\nThis represents transformation matrices that were applied to the original\ndocument image to produce the processed page image."
+        "title": "McpMetricsTrigger",
+        "description": "Run started by the MCP metrics tool's auto-retry path."
       },
       "MetricsStaleErrorLastRun": {
         "properties": {
@@ -14623,6 +15367,19 @@
           "run_id"
         ],
         "title": "MetricsStaleErrorLastRun"
+      },
+      "MetricsTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "metrics",
+            "title": "Type",
+            "default": "metrics"
+          }
+        },
+        "type": "object",
+        "title": "MetricsTrigger",
+        "description": "Run started by the metrics-view auto-retry path."
       },
       "NotContainsCondition": {
         "properties": {
@@ -14924,16 +15681,10 @@
             "description": "Usage information for the parse operation"
           },
           "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           },
           "operation": {
             "type": "string",
@@ -14950,7 +15701,8 @@
           "model",
           "table_parsing_format",
           "image_resolution_dpi",
-          "output"
+          "output",
+          "created_at"
         ],
         "title": "ParseWorkflowArtifact"
       },
@@ -15002,10 +15754,16 @@
             "description": "Partition key used for the run"
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Instructions",
-            "description": "Instructions supplied with the partition request",
-            "default": ""
+            "description": "Free-form instructions supplied with the partition request"
           },
           "n_consensus": {
             "type": "integer",
@@ -15166,10 +15924,16 @@
             "description": "Partition key used for the run"
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Instructions",
-            "description": "Instructions supplied with the partition request",
-            "default": ""
+            "description": "Free-form instructions supplied with the partition request"
           },
           "n_consensus": {
             "type": "integer",
@@ -15207,16 +15971,10 @@
             "description": "Usage information for the partition operation"
           },
           "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           },
           "operation": {
             "type": "string",
@@ -15231,9 +15989,36 @@
           "id",
           "file",
           "model",
-          "key"
+          "key",
+          "created_at"
         ],
         "title": "PartitionWorkflowArtifact"
+      },
+      "PendingExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "pending",
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "title": "PendingExperimentResult",
+        "description": "The per-document result has been created but execution has not started."
+      },
+      "PendingExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "pending",
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "title": "PendingExperimentRun",
+        "description": "The run has been created but execution has not started."
       },
       "PendingRun": {
         "properties": {
@@ -15248,23 +16033,31 @@
         "title": "PendingRun",
         "description": "The run has been created but execution has not started."
       },
-      "Point": {
+      "PendingStepLifecycle": {
         "properties": {
-          "x": {
-            "type": "integer",
-            "title": "X"
-          },
-          "y": {
-            "type": "integer",
-            "title": "Y"
+          "status": {
+            "type": "string",
+            "const": "pending",
+            "title": "Status",
+            "default": "pending"
           }
         },
         "type": "object",
-        "required": [
-          "x",
-          "y"
-        ],
-        "title": "Point"
+        "title": "PendingStepLifecycle",
+        "description": "The step has been created but execution has not started."
+      },
+      "PendingWorkflowTestRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "pending",
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "title": "PendingWorkflowTestRun",
+        "description": "The test run has been created but execution has not started."
       },
       "PublishWorkflowRequest": {
         "properties": {
@@ -15278,6 +16071,58 @@
         "type": "object",
         "title": "PublishWorkflowRequest",
         "description": "Optional request body for publishing a workflow."
+      },
+      "QueuedExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "title": "QueuedExperimentResult",
+        "description": "The per-document result is enqueued and waiting for a worker."
+      },
+      "QueuedExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "title": "QueuedExperimentRun",
+        "description": "The run is enqueued and waiting for a worker to pick it up."
+      },
+      "QueuedStepLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "title": "QueuedStepLifecycle",
+        "description": "The step is queued for execution."
+      },
+      "QueuedWorkflowTestRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "title": "QueuedWorkflowTestRun",
+        "description": "The test run is enqueued and waiting for a worker."
       },
       "RejectReviewRequest": {
         "properties": {
@@ -15735,8 +16580,7 @@
                 "type": "string",
                 "enum": [
                   "approved",
-                  "rejected",
-                  "needs_changes"
+                  "rejected"
                 ]
               },
               {
@@ -15755,6 +16599,11 @@
               }
             ],
             "title": "Review Notes"
+          },
+          "requested_revision": {
+            "type": "boolean",
+            "title": "Requested Revision",
+            "default": false
           },
           "reviewed_at": {
             "anyOf": [
@@ -15981,6 +16830,19 @@
             "title": "Completed At",
             "description": "When the run finished executing"
           },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "Total wall-clock duration of the run in milliseconds. Populated when the run completes (``completed_at`` is set). Remains ``None`` while the run is still in flight."
+          },
           "review_waiting_started_at": {
             "anyOf": [
               {
@@ -16004,7 +16866,33 @@
         },
         "type": "object",
         "title": "RunTiming",
-        "description": "All timing information for a run.\n\nDerive duration from ``completed_at - started_at`` when both timestamps are present."
+        "description": "All timing information for a run."
+      },
+      "RunningExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "running",
+            "title": "Status",
+            "default": "running"
+          }
+        },
+        "type": "object",
+        "title": "RunningExperimentResult",
+        "description": "The per-document result is currently executing."
+      },
+      "RunningExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "running",
+            "title": "Status",
+            "default": "running"
+          }
+        },
+        "type": "object",
+        "title": "RunningExperimentRun",
+        "description": "The run is currently executing."
       },
       "RunningRun": {
         "properties": {
@@ -16018,6 +16906,45 @@
         "type": "object",
         "title": "RunningRun",
         "description": "The run is currently executing."
+      },
+      "RunningStepLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "running",
+            "title": "Status",
+            "default": "running"
+          }
+        },
+        "type": "object",
+        "title": "RunningStepLifecycle",
+        "description": "The step is currently executing."
+      },
+      "RunningWorkflowTestRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "running",
+            "title": "Status",
+            "default": "running"
+          }
+        },
+        "type": "object",
+        "title": "RunningWorkflowTestRun",
+        "description": "The test run is executing assertions."
+      },
+      "RunsTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "runs",
+            "title": "Type",
+            "default": "runs"
+          }
+        },
+        "type": "object",
+        "title": "RunsTrigger",
+        "description": "Run started by the experiment runs endpoint's auto-retry path."
       },
       "ScheduleTrigger": {
         "properties": {
@@ -16071,6 +16998,48 @@
           "threshold"
         ],
         "title": "SimilarityGteCondition"
+      },
+      "SkippedSimulationLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "skipped",
+            "title": "Status",
+            "default": "skipped"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason the block was skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "SkippedSimulationLifecycle",
+        "description": "Terminal: the block declared its inputs unsatisfied via\n``should_skip_block`` and was skipped. ``reason`` is the skip rationale\nsurfaced by the block's input requirements registry."
+      },
+      "SkippedStepLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "skipped",
+            "title": "Status",
+            "default": "skipped"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason the step was skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "SkippedStepLifecycle",
+        "description": "The step was skipped."
       },
       "Split": {
         "properties": {
@@ -16347,16 +17316,10 @@
             "description": "Usage information for the split operation"
           },
           "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When this artifact was written by the orchestrator."
           },
           "operation": {
             "type": "string",
@@ -16372,7 +17335,8 @@
           "file",
           "model",
           "subdocuments",
-          "output"
+          "output",
+          "created_at"
         ],
         "title": "SplitWorkflowArtifact"
       },
@@ -16455,54 +17419,18 @@
         ],
         "title": "Subdocument"
       },
-      "TextBox": {
+      "UnknownTrigger": {
         "properties": {
-          "width": {
-            "type": "integer",
-            "title": "Width"
-          },
-          "height": {
-            "type": "integer",
-            "title": "Height"
-          },
-          "center": {
-            "$ref": "#/components/schemas/Point"
-          },
-          "vertices": {
-            "prefixItems": [
-              {
-                "$ref": "#/components/schemas/Point"
-              },
-              {
-                "$ref": "#/components/schemas/Point"
-              },
-              {
-                "$ref": "#/components/schemas/Point"
-              },
-              {
-                "$ref": "#/components/schemas/Point"
-              }
-            ],
-            "type": "array",
-            "maxItems": 4,
-            "minItems": 4,
-            "title": "Vertices",
-            "description": "(top-left, top-right, bottom-right, bottom-left)"
-          },
-          "text": {
+          "type": {
             "type": "string",
-            "title": "Text"
+            "const": "unknown",
+            "title": "Type",
+            "default": "unknown"
           }
         },
         "type": "object",
-        "required": [
-          "width",
-          "height",
-          "center",
-          "vertices",
-          "text"
-        ],
-        "title": "TextBox"
+        "title": "UnknownTrigger",
+        "description": "Catch-all for storage rows without a recognized ``trigger_source``."
       },
       "UpdateEditTemplateRequest": {
         "properties": {
@@ -16604,7 +17532,8 @@
           "label": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 200
               },
               {
                 "type": "null"
@@ -17038,7 +17967,7 @@
           "updated_at"
         ],
         "title": "Workflow",
-        "description": "Public workflow resource returned by workflow metadata endpoints."
+        "description": "Public workflow resource returned by workflow metadata endpoints.\n\nThis is the API response shape — distinct from the internal storage\nmodel (:class:`StoredWorkflow`), which carries persistence-only fields\nthat never appear in API responses. Routes call\n:func:`serialize_workflow_response` to convert the storage shape into\nthis response shape; constructing this class directly for persistence\nwould drop those storage-only fields silently. The two classes were\ndeliberately renamed to avoid the prior name collision."
       },
       "WorkflowArtifact": {
         "properties": {
@@ -17206,7 +18135,7 @@
           "updated_at"
         ],
         "title": "WorkflowBlock",
-        "description": "Stored block document for live editing.\n\nStored in workflow_blocks collection. Each block is independently\nupdatable, enabling targeted position and config updates without\nloading the entire workflow."
+        "description": "Public live workflow block object."
       },
       "WorkflowBlockPosition": {
         "properties": {
@@ -17644,7 +18573,7 @@
             "title": "Status",
             "default": "draft"
           },
-          "block_kind": {
+          "block_type": {
             "type": "string",
             "enum": [
               "extract",
@@ -17652,7 +18581,7 @@
               "split",
               "for_each"
             ],
-            "title": "Block Kind"
+            "title": "Block Type"
           },
           "score": {
             "anyOf": [
@@ -17702,7 +18631,7 @@
           "name",
           "created_at",
           "updated_at",
-          "block_kind"
+          "block_type"
         ],
         "title": "WorkflowExperiment"
       },
@@ -17725,12 +18654,43 @@
             "title": "Document Id"
           },
           "lifecycle": {
-            "$ref": "#/components/schemas/ExperimentResultLifecycle"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PendingExperimentResult"
+              },
+              {
+                "$ref": "#/components/schemas/QueuedExperimentResult"
+              },
+              {
+                "$ref": "#/components/schemas/RunningExperimentResult"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedExperimentResult"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorExperimentResult"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledExperimentResult"
+              }
+            ],
+            "title": "Lifecycle",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "cancelled": "#/components/schemas/CancelledExperimentResult",
+                "completed": "#/components/schemas/CompletedExperimentResult",
+                "error": "#/components/schemas/ErrorExperimentResult",
+                "pending": "#/components/schemas/PendingExperimentResult",
+                "queued": "#/components/schemas/QueuedExperimentResult",
+                "running": "#/components/schemas/RunningExperimentResult"
+              }
+            }
           },
           "timing": {
             "$ref": "#/components/schemas/ExperimentResultTiming"
           },
-          "block_kind": {
+          "block_type": {
             "type": "string",
             "enum": [
               "extract",
@@ -17738,7 +18698,7 @@
               "split",
               "for_each"
             ],
-            "title": "Block Kind"
+            "title": "Block Type"
           },
           "handle_inputs": {
             "additionalProperties": {
@@ -17774,13 +18734,13 @@
           "error": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/ErrorDetails"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Error"
+            "description": "Structured error details when the result failed. The human-readable message lives on ``lifecycle.message`` for the ``error`` lifecycle state."
           },
           "attempt": {
             "type": "integer",
@@ -17801,7 +18761,7 @@
           "document_id",
           "lifecycle",
           "timing",
-          "block_kind"
+          "block_type"
         ],
         "title": "WorkflowExperimentResult",
         "description": "Run-scoped per-document experiment result.\n\nThe storage row is still named ``experiment_jobs`` internally, but the\npublic contract is a result row addressed by ``run_id`` + ``document_id``."
@@ -17816,7 +18776,54 @@
             "$ref": "#/components/schemas/WorkflowSnapshotRef"
           },
           "trigger": {
-            "$ref": "#/components/schemas/ExperimentRunTrigger"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ManualRunTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/ExperimentDetailTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/ContentTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/RunsTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/AccessTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/MetricsTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/McpMetricsTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/ApiExperimentTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/AutoRetryTrigger"
+              },
+              {
+                "$ref": "#/components/schemas/UnknownTrigger"
+              }
+            ],
+            "title": "Trigger",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "access": "#/components/schemas/AccessTrigger",
+                "api": "#/components/schemas/ApiExperimentTrigger",
+                "auto_retry": "#/components/schemas/AutoRetryTrigger",
+                "content": "#/components/schemas/ContentTrigger",
+                "experiment_detail": "#/components/schemas/ExperimentDetailTrigger",
+                "manual_run": "#/components/schemas/ManualRunTrigger",
+                "mcp_metrics": "#/components/schemas/McpMetricsTrigger",
+                "metrics": "#/components/schemas/MetricsTrigger",
+                "runs": "#/components/schemas/RunsTrigger",
+                "unknown": "#/components/schemas/UnknownTrigger"
+              }
+            }
           },
           "experiment_id": {
             "type": "string",
@@ -17826,7 +18833,7 @@
             "type": "string",
             "title": "Block Id"
           },
-          "block_kind": {
+          "block_type": {
             "type": "string",
             "enum": [
               "extract",
@@ -17834,7 +18841,7 @@
               "split",
               "for_each"
             ],
-            "title": "Block Kind"
+            "title": "Block Type"
           },
           "n_consensus": {
             "type": "integer",
@@ -17846,7 +18853,38 @@
             "title": "N Consensus"
           },
           "lifecycle": {
-            "$ref": "#/components/schemas/ExperimentRunLifecycle"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PendingExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/QueuedExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/RunningExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledExperimentRun"
+              }
+            ],
+            "title": "Lifecycle",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "cancelled": "#/components/schemas/CancelledExperimentRun",
+                "completed": "#/components/schemas/CompletedExperimentRun",
+                "error": "#/components/schemas/ErrorExperimentRun",
+                "pending": "#/components/schemas/PendingExperimentRun",
+                "queued": "#/components/schemas/QueuedExperimentRun",
+                "running": "#/components/schemas/RunningExperimentRun"
+              }
+            }
           },
           "timing": {
             "$ref": "#/components/schemas/ExperimentRunTiming"
@@ -17909,7 +18947,7 @@
           "trigger",
           "experiment_id",
           "block_id",
-          "block_kind",
+          "block_type",
           "n_consensus",
           "lifecycle",
           "timing",
@@ -18359,172 +19397,50 @@
         "title": "WorkflowReview",
         "description": "Public API shape for one review. Strips internal fields."
       },
-      "WorkflowReviewSummary": {
+      "WorkflowReviewDecisionResponse": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "workflow_version_id": {
-            "type": "string",
-            "title": "Workflow Version Id"
-          },
-          "workflow_run_id": {
-            "type": "string",
-            "title": "Workflow Run Id"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          },
-          "step_id": {
-            "type": "string",
-            "title": "Step Id"
-          },
-          "parent_step_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Step Id"
-          },
-          "iteration_key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Iteration Key"
-          },
-          "block_type": {
+          "submission_status": {
             "type": "string",
             "enum": [
-              "extract",
-              "split",
-              "classifier",
-              "for_each"
+              "accepted",
+              "already_applied",
+              "conflict"
             ],
-            "title": "Block Type"
+            "title": "Submission Status",
+            "default": "accepted"
           },
-          "triggered_by": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ReviewAlways"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewValidationFailed"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewConfidenceLt"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewCategoryIn"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewTopMarginLt"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewSplitCountNeq"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewAnySplitPagesLt"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewBoundaryConfidenceLt"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewAnyRequiredFieldNull"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewFieldConfidenceLt"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewJsonCondition"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewBranchIn"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewAnyOf"
-              },
-              {
-                "$ref": "#/components/schemas/ReviewAllOf"
-              }
-            ],
-            "title": "Triggered By",
-            "discriminator": {
-              "propertyName": "kind",
-              "mapping": {
-                "all_of": "#/components/schemas/ReviewAllOf",
-                "always": "#/components/schemas/ReviewAlways",
-                "any_of": "#/components/schemas/ReviewAnyOf",
-                "any_required_field_null": "#/components/schemas/ReviewAnyRequiredFieldNull",
-                "any_split_pages_lt": "#/components/schemas/ReviewAnySplitPagesLt",
-                "boundary_confidence_lt": "#/components/schemas/ReviewBoundaryConfidenceLt",
-                "branch_in": "#/components/schemas/ReviewBranchIn",
-                "category_in": "#/components/schemas/ReviewCategoryIn",
-                "confidence_lt": "#/components/schemas/ReviewConfidenceLt",
-                "field_confidence_lt": "#/components/schemas/ReviewFieldConfidenceLt",
-                "json_condition": "#/components/schemas/ReviewJsonCondition",
-                "split_count_neq": "#/components/schemas/ReviewSplitCountNeq",
-                "top_margin_lt": "#/components/schemas/ReviewTopMarginLt",
-                "validation_failed": "#/components/schemas/ReviewValidationFailed"
-              }
-            }
+          "review": {
+            "$ref": "#/components/schemas/WorkflowReview"
           },
-          "created_at": {
+          "resume_status": {
             "type": "string",
-            "format": "date-time",
-            "title": "Created At"
+            "enum": [
+              "resumed",
+              "pending",
+              "skipped"
+            ],
+            "title": "Resume Status",
+            "default": "resumed"
           },
-          "decision": {
+          "resume_error": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Decision"
+                "type": "string"
               },
               {
                 "type": "null"
               }
-            ]
-          },
-          "seed_version_id": {
-            "type": "string",
-            "pattern": "^rvr_[A-Z2-7]{26}$",
-            "title": "Seed Version Id"
-          },
-          "version_count": {
-            "type": "integer",
-            "title": "Version Count"
+            ],
+            "title": "Resume Error"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "id",
-          "workflow_id",
-          "workflow_version_id",
-          "workflow_run_id",
-          "block_id",
-          "step_id",
-          "block_type",
-          "triggered_by",
-          "created_at",
-          "seed_version_id",
-          "version_count"
+          "review"
         ],
-        "title": "WorkflowReviewSummary",
-        "description": "Public API shape for one review queue row."
+        "title": "WorkflowReviewDecisionResponse",
+        "description": "Response from POST /workflows/reviews/{review_id}/approve | /reject.\n\nThe shape carries ``resume_status`` so callers can see whether the\nTemporal resume signal succeeded — meta-pattern §2 action-endpoint\ncriterion #4 (divergent response shape)."
       },
       "WorkflowReviewVersion": {
         "properties": {
@@ -18684,7 +19600,7 @@
           "trigger"
         ],
         "title": "WorkflowRun",
-        "description": "Public workflow run response without tenant isolation fields."
+        "description": "Public workflow run response without tenant isolation fields.\n\nThis is the API response shape — distinct from the internal storage\nmodel (:class:`StoredWorkflowRun`), which carries persistence-only\nfields that never appear in API responses. Routes call\n:func:`serialize_workflow_run_response` to convert the storage shape\ninto this response shape; constructing this class directly for\npersistence would drop those storage-only fields silently. The two\nclasses were deliberately renamed to avoid the prior name collision."
       },
       "WorkflowSimulation": {
         "properties": {
@@ -18713,10 +19629,28 @@
             "title": "Block Type",
             "description": "Type of the block"
           },
-          "success": {
-            "type": "boolean",
-            "title": "Success",
-            "description": "Whether simulation succeeded"
+          "lifecycle": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CompletedSimulationLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorSimulationLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/SkippedSimulationLifecycle"
+              }
+            ],
+            "title": "Lifecycle",
+            "description": "Terminal lifecycle state for this simulation. One of ``{status: 'completed'}``, ``{status: 'error', message: ...}``, or ``{status: 'skipped', reason: ...}``.",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "completed": "#/components/schemas/CompletedSimulationLifecycle",
+                "error": "#/components/schemas/ErrorSimulationLifecycle",
+                "skipped": "#/components/schemas/SkippedSimulationLifecycle"
+              }
+            }
           },
           "handle_inputs": {
             "anyOf": [
@@ -18770,18 +19704,6 @@
             "title": "Routing Decision",
             "description": "Active output handles for routing decisions"
           },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error",
-            "description": "Error message if simulation failed"
-          },
           "duration_ms": {
             "anyOf": [
               {
@@ -18793,12 +19715,6 @@
             ],
             "title": "Duration Ms",
             "description": "Duration of the simulation in milliseconds"
-          },
-          "skipped": {
-            "type": "boolean",
-            "title": "Skipped",
-            "description": "Whether the block was skipped due to missing inputs",
-            "default": false
           },
           "created_at": {
             "type": "string",
@@ -18854,10 +19770,10 @@
           "run_id",
           "block_id",
           "block_type",
-          "success"
+          "lifecycle"
         ],
         "title": "WorkflowSimulation",
-        "description": "Public simulation result for a single workflow block."
+        "description": "Public simulation result for a single workflow block.\n\nTerminal state is carried by the discriminated ``lifecycle`` union. The\nlegacy flat ``success`` / ``error`` / ``skipped`` fields were removed in\nthe hard cutover — they let invalid combinations (``success=true`` with\na non-empty ``error``) be representable on the wire and forced consumers\nto know an undocumented field-precedence rule."
       },
       "WorkflowSnapshotRef": {
         "properties": {
@@ -18962,21 +19878,21 @@
                 "$ref": "#/components/schemas/CancelledStepLifecycle"
               }
             ],
+            "title": "Lifecycle",
+            "description": "Current step lifecycle",
             "discriminator": {
               "propertyName": "status",
               "mapping": {
+                "awaiting_review": "#/components/schemas/AwaitingReviewStepLifecycle",
+                "cancelled": "#/components/schemas/CancelledStepLifecycle",
+                "completed": "#/components/schemas/CompletedStepLifecycle",
+                "error": "#/components/schemas/ErrorStepLifecycle",
                 "pending": "#/components/schemas/PendingStepLifecycle",
                 "queued": "#/components/schemas/QueuedStepLifecycle",
                 "running": "#/components/schemas/RunningStepLifecycle",
-                "completed": "#/components/schemas/CompletedStepLifecycle",
-                "awaiting_review": "#/components/schemas/AwaitingReviewStepLifecycle",
-                "error": "#/components/schemas/ErrorStepLifecycle",
-                "skipped": "#/components/schemas/SkippedStepLifecycle",
-                "cancelled": "#/components/schemas/CancelledStepLifecycle"
+                "skipped": "#/components/schemas/SkippedStepLifecycle"
               }
-            },
-            "title": "Lifecycle",
-            "description": "Current lifecycle state"
+            }
           },
           "started_at": {
             "anyOf": [
@@ -19086,7 +20002,7 @@
           "run_id"
         ],
         "title": "WorkflowStep",
-        "description": "Public step lifecycle object."
+        "description": "Public step status object."
       },
       "WorkflowTest": {
         "properties": {
@@ -19295,12 +20211,43 @@
           "lifecycle": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/WorkflowTestRunLifecycle"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/PendingWorkflowTestRun"
+                  },
+                  {
+                    "$ref": "#/components/schemas/QueuedWorkflowTestRun"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RunningWorkflowTestRun"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CompletedWorkflowTestRun"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ErrorWorkflowTestRun"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CancelledWorkflowTestRun"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "status",
+                  "mapping": {
+                    "cancelled": "#/components/schemas/CancelledWorkflowTestRun",
+                    "completed": "#/components/schemas/CompletedWorkflowTestRun",
+                    "error": "#/components/schemas/ErrorWorkflowTestRun",
+                    "pending": "#/components/schemas/PendingWorkflowTestRun",
+                    "queued": "#/components/schemas/QueuedWorkflowTestRun",
+                    "running": "#/components/schemas/RunningWorkflowTestRun"
+                  }
+                }
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Lifecycle"
           },
           "timing": {
             "anyOf": [
@@ -19315,14 +20262,19 @@
           "verdict": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string",
+                "enum": [
+                  "passed",
+                  "failed",
+                  "blocked"
+                ]
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Verdict"
+            "title": "Verdict",
+            "description": "Verdict label populated only when the underlying test reaches a terminal lifecycle state and the verdict could be determined. Execution-error details flow through `error` (an `ErrorDetails` envelope), not through this enum."
           },
           "workflow_id": {
             "type": "string",
@@ -19405,13 +20357,12 @@
           "error": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/ErrorDetails"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Error"
+            ]
           },
           "skipped": {
             "type": "boolean",
@@ -19493,7 +20444,38 @@
             }
           },
           "lifecycle": {
-            "$ref": "#/components/schemas/WorkflowTestRunLifecycle"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PendingWorkflowTestRun"
+              },
+              {
+                "$ref": "#/components/schemas/QueuedWorkflowTestRun"
+              },
+              {
+                "$ref": "#/components/schemas/RunningWorkflowTestRun"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedWorkflowTestRun"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorWorkflowTestRun"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledWorkflowTestRun"
+              }
+            ],
+            "title": "Lifecycle",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "cancelled": "#/components/schemas/CancelledWorkflowTestRun",
+                "completed": "#/components/schemas/CompletedWorkflowTestRun",
+                "error": "#/components/schemas/ErrorWorkflowTestRun",
+                "pending": "#/components/schemas/PendingWorkflowTestRun",
+                "queued": "#/components/schemas/QueuedWorkflowTestRun",
+                "running": "#/components/schemas/RunningWorkflowTestRun"
+              }
+            }
           },
           "timing": {
             "$ref": "#/components/schemas/WorkflowTestRunTiming"
@@ -19537,37 +20519,6 @@
           "total_tests"
         ],
         "title": "WorkflowTestRun"
-      },
-      "WorkflowTestRunLifecycle": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "completed",
-              "error",
-              "cancelled"
-            ],
-            "title": "Status"
-          },
-          "message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "WorkflowTestRunLifecycle"
       },
       "WorkflowTestRunTiming": {
         "properties": {
@@ -19618,346 +20569,57 @@
         ],
         "title": "WorkflowTestRunTiming"
       },
-      "PendingStepLifecycle": {
+      "File": {
         "properties": {
-          "status": {
-            "const": "pending",
-            "title": "Status",
-            "default": "pending"
-          }
-        },
-        "type": "object",
-        "title": "PendingStepLifecycle"
-      },
-      "QueuedStepLifecycle": {
-        "properties": {
-          "status": {
-            "const": "queued",
-            "title": "Status",
-            "default": "queued"
-          }
-        },
-        "type": "object",
-        "title": "QueuedStepLifecycle"
-      },
-      "RunningStepLifecycle": {
-        "properties": {
-          "status": {
-            "const": "running",
-            "title": "Status",
-            "default": "running"
-          }
-        },
-        "type": "object",
-        "title": "RunningStepLifecycle"
-      },
-      "CompletedStepLifecycle": {
-        "properties": {
-          "status": {
-            "const": "completed",
-            "title": "Status",
-            "default": "completed"
-          }
-        },
-        "type": "object",
-        "title": "CompletedStepLifecycle"
-      },
-      "AwaitingReviewStepLifecycle": {
-        "properties": {
-          "status": {
-            "const": "awaiting_review",
-            "title": "Status",
-            "default": "awaiting_review"
-          }
-        },
-        "type": "object",
-        "title": "AwaitingReviewStepLifecycle"
-      },
-      "ErrorStepLifecycle": {
-        "properties": {
-          "status": {
-            "const": "error",
-            "title": "Status",
-            "default": "error"
-          },
-          "message": {
+          "object": {
             "type": "string",
-            "title": "Message",
-            "description": "Human-readable error message"
+            "const": "file",
+            "title": "Object",
+            "default": "file"
           },
-          "stage": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "The unique identifier of the file"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "The name of the file"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the file was created"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "When the file was last updated"
+          },
+          "page_count": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Stage",
-            "description": "Which execution stage failed"
-          },
-          "category": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category",
-            "description": "Category of error for retry decisions"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ErrorDetails"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Structured error context"
+            "title": "Page Count",
+            "description": "Number of pages in the file"
           }
         },
         "type": "object",
         "required": [
-          "message"
+          "id",
+          "filename",
+          "created_at",
+          "updated_at"
         ],
-        "title": "ErrorStepLifecycle"
-      },
-      "SkippedStepLifecycle": {
-        "properties": {
-          "status": {
-            "const": "skipped",
-            "title": "Status",
-            "default": "skipped"
-          },
-          "reason": {
-            "type": "string",
-            "title": "Reason",
-            "description": "Reason the step was skipped"
-          }
-        },
-        "type": "object",
-        "required": [
-          "reason"
-        ],
-        "title": "SkippedStepLifecycle"
-      },
-      "CancelledStepLifecycle": {
-        "properties": {
-          "status": {
-            "const": "cancelled",
-            "title": "Status",
-            "default": "cancelled"
-          },
-          "reason": {
-            "type": "string",
-            "title": "Reason",
-            "description": "Reason the step was cancelled"
-          }
-        },
-        "type": "object",
-        "required": [
-          "reason"
-        ],
-        "title": "CancelledStepLifecycle"
-      },
-      "CreateFreshWorkflowRunRequest": {
-        "properties": {
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id",
-            "description": "Workflow id for the fresh run."
-          },
-          "documents": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/FileRef"
-                },
-                {
-                  "$ref": "#/components/schemas/MIMEDataInput"
-                }
-              ]
-            },
-            "type": "object",
-            "title": "Documents",
-            "description": "Mapping of start_document block IDs to their input documents. Only valid for fresh-run creation (``restart_of`` is None)."
-          },
-          "json_inputs": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Json Inputs",
-            "description": "Mapping of start-json block IDs to their input JSON data. Only valid for fresh-run creation (``restart_of`` is None)."
-          },
-          "version": {
-            "type": "string",
-            "title": "Version",
-            "description": "Workflow version to run: 'production', 'draft', or a pinned version id like 'ver_...'. Only valid for fresh-run creation.",
-            "default": "production",
-            "examples": [
-              "production",
-              "draft",
-              "ver_abc123def456"
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "workflow_id"
-        ],
-        "additionalProperties": false,
-        "title": "CreateFreshWorkflowRunRequest",
-        "description": "Create a fresh workflow run from a workflow id, optional draft/version selector, and optional inputs."
-      },
-      "CreateRestartWorkflowRunRequest": {
-        "properties": {
-          "restart_of": {
-            "type": "string",
-            "title": "Restart Of",
-            "description": "When present, the new run is created as a restart of this source run id (the source run's inputs are inherited)."
-          },
-          "config_source": {
-            "type": "string",
-            "enum": [
-              "draft",
-              "published"
-            ],
-            "title": "Config Source",
-            "description": "Required when ``restart_of`` is set. Config source for the restarted run."
-          },
-          "command_id": {
-            "type": "string",
-            "title": "Command Id",
-            "description": "Optional idempotency key for deduplicating restart commands. Only valid when ``restart_of`` is set."
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id",
-            "description": "Optional workflow id when the client already has it; otherwise inferred from restart_of."
-          }
-        },
-        "type": "object",
-        "required": [
-          "restart_of",
-          "config_source"
-        ],
-        "additionalProperties": false,
-        "title": "CreateRestartWorkflowRunRequest",
-        "description": "Restart a workflow run from a previous run id. workflow_id may be supplied when the client already has it."
-      },
-      "CreateWorkflowTestRunForTestRequest": {
-        "properties": {
-          "test_id": {
-            "type": "string",
-            "title": "Test Id"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "n_consensus": {
-            "type": "integer",
-            "title": "N Consensus"
-          }
-        },
-        "type": "object",
-        "required": [
-          "test_id"
-        ],
-        "additionalProperties": false,
-        "title": "CreateWorkflowTestRunForTestRequest",
-        "description": "Run one saved workflow test by test id."
-      },
-      "CreateWorkflowTestRunForTargetRequest": {
-        "properties": {
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "target": {
-            "$ref": "#/components/schemas/WorkflowTestBlockTarget"
-          },
-          "n_consensus": {
-            "type": "integer",
-            "title": "N Consensus"
-          }
-        },
-        "type": "object",
-        "required": [
-          "workflow_id",
-          "target"
-        ],
-        "additionalProperties": false,
-        "title": "CreateWorkflowTestRunForTargetRequest",
-        "description": "Run every workflow test for one target in a workflow."
-      },
-      "CreateWorkflowTestRunAllRequest": {
-        "properties": {
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "n_consensus": {
-            "type": "integer",
-            "title": "N Consensus"
-          }
-        },
-        "type": "object",
-        "required": [
-          "workflow_id"
-        ],
-        "additionalProperties": false,
-        "title": "CreateWorkflowTestRunAllRequest",
-        "description": "Run every saved test in a workflow."
-      },
-      "WorkflowReviewDecisionResponse": {
-        "properties": {
-          "submission_status": {
-            "type": "string",
-            "enum": [
-              "accepted",
-              "already_applied",
-              "conflict"
-            ],
-            "title": "Submission Status",
-            "default": "accepted"
-          },
-          "review": {
-            "$ref": "#/components/schemas/WorkflowReview"
-          },
-          "resume_status": {
-            "type": "string",
-            "enum": [
-              "resumed",
-              "pending",
-              "skipped"
-            ],
-            "title": "Resume Status",
-            "default": "resumed"
-          },
-          "resume_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Resume Error"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "review"
-        ],
-        "title": "WorkflowReviewDecisionResponse",
-        "description": "Response from POST /workflows/reviews/{review_id}/approve | /reject.\n\nThe shape carries ``resume_status`` so callers can see whether the\nTemporal resume signal succeeded — meta-pattern §2 action-endpoint\ncriterion #4 (divergent response shape)."
+        "title": "File"
       },
       "ExtractionSources": {
         "properties": {
@@ -20031,84 +20693,6 @@
         ],
         "title": "JobResult",
         "description": "Public response returned when job completes successfully."
-      },
-      "OCR": {
-        "properties": {
-          "pages": {
-            "items": {
-              "$ref": "#/components/schemas/Page"
-            },
-            "type": "array",
-            "title": "Pages"
-          }
-        },
-        "type": "object",
-        "required": [
-          "pages"
-        ],
-        "title": "OCR"
-      },
-      "Page": {
-        "properties": {
-          "page_number": {
-            "type": "integer",
-            "title": "Page Number"
-          },
-          "width": {
-            "type": "integer",
-            "title": "Width"
-          },
-          "height": {
-            "type": "integer",
-            "title": "Height"
-          },
-          "unit": {
-            "type": "string",
-            "title": "Unit",
-            "description": "The unit of the page dimensions",
-            "default": "pixels"
-          },
-          "blocks": {
-            "items": {
-              "$ref": "#/components/schemas/TextBox"
-            },
-            "type": "array",
-            "title": "Blocks"
-          },
-          "lines": {
-            "items": {
-              "$ref": "#/components/schemas/TextBox"
-            },
-            "type": "array",
-            "title": "Lines"
-          },
-          "tokens": {
-            "items": {
-              "$ref": "#/components/schemas/TextBox"
-            },
-            "type": "array",
-            "title": "Tokens"
-          },
-          "transforms": {
-            "items": {
-              "$ref": "#/components/schemas/Matrix"
-            },
-            "type": "array",
-            "title": "Transforms",
-            "description": "Transformation matrices applied to the original document image",
-            "default": []
-          }
-        },
-        "type": "object",
-        "required": [
-          "page_number",
-          "width",
-          "height",
-          "blocks",
-          "lines",
-          "tokens"
-        ],
-        "title": "Page"
       },
       "ClassificationList": {
         "properties": {
@@ -20390,11 +20974,11 @@
         ],
         "title": "WorkflowExperimentRunList"
       },
-      "WorkflowReviewSummaryList": {
+      "WorkflowReviewList": {
         "properties": {
           "data": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowReviewSummary"
+              "$ref": "#/components/schemas/WorkflowReview"
             },
             "type": "array",
             "title": "Data"
@@ -20408,7 +20992,7 @@
           "data",
           "list_metadata"
         ],
-        "title": "WorkflowReviewSummaryList"
+        "title": "WorkflowReviewList"
       },
       "WorkflowReviewVersionList": {
         "properties": {
@@ -20552,12 +21136,6 @@
       },
       "JobList": {
         "properties": {
-          "object": {
-            "type": "string",
-            "const": "list",
-            "title": "Object",
-            "default": "list"
-          },
           "data": {
             "items": {
               "$ref": "#/components/schemas/JobListItem"
@@ -20565,37 +21143,14 @@
             "type": "array",
             "title": "Data"
           },
-          "first_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "First Id"
-          },
-          "last_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Id"
-          },
-          "has_more": {
-            "type": "boolean",
-            "title": "Has More",
-            "default": false
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
           }
         },
         "type": "object",
         "required": [
-          "data"
+          "data",
+          "list_metadata"
         ],
         "title": "JobList",
         "description": "List response for GET /v1/jobs."

@@ -1,7 +1,6 @@
 import json
 import re
 import sys
-from copy import deepcopy
 from pathlib import Path
 
 
@@ -43,7 +42,6 @@ LEGACY_SCHEMA_NAMES: set[str] = {
     "Submit" + "H" + "IL" + "DecisionRequest",
     "Submit" + "H" + "IL" + "DecisionResponse",
 }
-REVIEW_DECISION_STATUS_VALUES = ["pending", "approved", "rejected", "decided", "all"]
 OPENAPI_HTTP_METHODS = {
     "get",
     "put",
@@ -185,14 +183,6 @@ def _strip_routes_not_in_api_reference_markdown(
     allowed_routes = _collect_api_reference_openapi_routes(
         _list_api_reference_markdown_files(docs_json_path, docs_root)
     )
-    backend_allowed_routes = set(allowed_routes)
-    if (
-        "get",
-        "/v1/workflows/reviews/versions/{version_id}",
-    ) in backend_allowed_routes:
-        backend_allowed_routes.add(
-            ("get", "/v1/workflows/reviews/versions/{rvr_id}")
-        )
     if not allowed_routes:
         raise RuntimeError(
             f"No API reference OpenAPI routes found from docs navigation: {docs_json_path}"
@@ -208,7 +198,7 @@ def _strip_routes_not_in_api_reference_markdown(
         for method in list(path_item.keys()):
             if method not in OPENAPI_HTTP_METHODS:
                 continue
-            if (method, path) not in backend_allowed_routes:
+            if (method, path) not in allowed_routes:
                 path_item.pop(method, None)
         if not any(method in OPENAPI_HTTP_METHODS for method in path_item):
             paths.pop(path, None)
@@ -272,450 +262,6 @@ def _strip_legacy_from_enums(node: object) -> None:
     elif isinstance(node, list):
         for item in node:
             _strip_legacy_from_enums(item)
-
-
-def _strip_public_workflow_internal_fields(spec: dict[str, object]) -> None:
-    """Hide workflow graph implementation fields from the published API docs."""
-    schemas = (
-        spec.get("components", {}).get("schemas")
-        if isinstance(spec.get("components"), dict)
-        else None
-    )
-    if not isinstance(schemas, dict):
-        return
-
-    internal_fields_by_schema = {
-        "WorkflowBlock": {"draft_version", "field_ref_snapshot", "organization_id"},
-        "WorkflowEdge": {"draft_version"},
-        "WorkflowConfigBlock": {"field_ref_snapshot"},
-    }
-    for schema_name, internal_fields in internal_fields_by_schema.items():
-        schema = schemas.get(schema_name)
-        if not isinstance(schema, dict):
-            continue
-        properties = schema.get("properties")
-        if isinstance(properties, dict):
-            for field_name in internal_fields:
-                properties.pop(field_name, None)
-        required = schema.get("required")
-        if isinstance(required, list):
-            schema["required"] = [
-                field_name
-                for field_name in required
-                if field_name not in internal_fields
-            ]
-
-
-def _strip_update_workflow_email_trigger_docs(spec: dict[str, object]) -> None:
-    """Hide private workflow email policy fields from the public update docs."""
-    schemas = (
-        spec.get("components", {}).get("schemas")
-        if isinstance(spec.get("components"), dict)
-        else None
-    )
-    if not isinstance(schemas, dict):
-        return
-
-    patch_workflow_schema = schemas.get("UpdateWorkflowRequest")
-    if not isinstance(patch_workflow_schema, dict):
-        patch_workflow_schema = schemas.get("PatchWorkflowRequest")
-    if not isinstance(patch_workflow_schema, dict):
-        return
-
-    properties = patch_workflow_schema.get("properties")
-    if isinstance(properties, dict):
-        properties.pop("email_trigger", None)
-
-    required = patch_workflow_schema.get("required")
-    if isinstance(required, list):
-        patch_workflow_schema["required"] = [
-            field_name for field_name in required if field_name != "email_trigger"
-        ]
-
-
-def _strip_stale_workflow_entities_reference(spec: dict[str, object]) -> None:
-    """Avoid publishing stale internal workflow graph route guidance."""
-    paths = spec.get("paths")
-    if not isinstance(paths, dict):
-        return
-
-    workflow_path = paths.get("/v1/workflows/{workflow_id}")
-    if not isinstance(workflow_path, dict):
-        return
-
-    get_operation = workflow_path.get("get")
-    if not isinstance(get_operation, dict):
-        return
-
-    description = get_operation.get("description")
-    if not isinstance(description, str):
-        return
-
-    stale_entities_guidance = (
-        "\nUse GET /{workflow_id}/"
-        + "entities for the live draft graph stored in\n"
-        "separate block and edge collections."
-    )
-    get_operation["description"] = description.replace(
-        stale_entities_guidance,
-        "\nUse the Blocks and Edges endpoints for the current draft graph.",
-    )
-
-
-def _hard_cutover_workflow_step_lifecycle(spec: dict[str, object]) -> None:
-    """Publish workflow steps with lifecycle, not status + terminal.
-
-    The backend service can lag the SDK/docs public contract during the hard
-    cutover. Keep the generated public OpenAPI aligned with the SDK surface.
-    """
-    schemas = (
-        spec.get("components", {}).get("schemas")
-        if isinstance(spec.get("components"), dict)
-        else None
-    )
-    if not isinstance(schemas, dict):
-        return
-
-    lifecycle_variants: dict[str, dict[str, object]] = {
-        "PendingStepLifecycle": {
-            "properties": {
-                "status": {"const": "pending", "title": "Status", "default": "pending"}
-            },
-            "type": "object",
-            "title": "PendingStepLifecycle",
-        },
-        "QueuedStepLifecycle": {
-            "properties": {
-                "status": {"const": "queued", "title": "Status", "default": "queued"}
-            },
-            "type": "object",
-            "title": "QueuedStepLifecycle",
-        },
-        "RunningStepLifecycle": {
-            "properties": {
-                "status": {"const": "running", "title": "Status", "default": "running"}
-            },
-            "type": "object",
-            "title": "RunningStepLifecycle",
-        },
-        "CompletedStepLifecycle": {
-            "properties": {
-                "status": {
-                    "const": "completed",
-                    "title": "Status",
-                    "default": "completed",
-                }
-            },
-            "type": "object",
-            "title": "CompletedStepLifecycle",
-        },
-        "AwaitingReviewStepLifecycle": {
-            "properties": {
-                "status": {
-                    "const": "awaiting_review",
-                    "title": "Status",
-                    "default": "awaiting_review",
-                }
-            },
-            "type": "object",
-            "title": "AwaitingReviewStepLifecycle",
-        },
-        "ErrorStepLifecycle": {
-            "properties": {
-                "status": {"const": "error", "title": "Status", "default": "error"},
-                "message": {
-                    "type": "string",
-                    "title": "Message",
-                    "description": "Human-readable error message",
-                },
-                "stage": {
-                    "anyOf": [{"type": "string"}, {"type": "null"}],
-                    "title": "Stage",
-                    "description": "Which execution stage failed",
-                },
-                "category": {
-                    "anyOf": [{"type": "string"}, {"type": "null"}],
-                    "title": "Category",
-                    "description": "Category of error for retry decisions",
-                },
-                "details": {
-                    "anyOf": [
-                        {"$ref": "#/components/schemas/ErrorDetails"},
-                        {"type": "null"},
-                    ],
-                    "description": "Structured error context",
-                },
-            },
-            "type": "object",
-            "required": ["message"],
-            "title": "ErrorStepLifecycle",
-        },
-        "SkippedStepLifecycle": {
-            "properties": {
-                "status": {"const": "skipped", "title": "Status", "default": "skipped"},
-                "reason": {
-                    "type": "string",
-                    "title": "Reason",
-                    "description": "Reason the step was skipped",
-                },
-            },
-            "type": "object",
-            "required": ["reason"],
-            "title": "SkippedStepLifecycle",
-        },
-        "CancelledStepLifecycle": {
-            "properties": {
-                "status": {
-                    "const": "cancelled",
-                    "title": "Status",
-                    "default": "cancelled",
-                },
-                "reason": {
-                    "type": "string",
-                    "title": "Reason",
-                    "description": "Reason the step was cancelled",
-                },
-            },
-            "type": "object",
-            "required": ["reason"],
-            "title": "CancelledStepLifecycle",
-        },
-    }
-    schemas.update(lifecycle_variants)
-
-    variant_names = list(lifecycle_variants)
-    lifecycle_schema = {
-        "oneOf": [
-            {"$ref": f"#/components/schemas/{schema_name}"}
-            for schema_name in variant_names
-        ],
-        "discriminator": {
-            "propertyName": "status",
-            "mapping": {
-                "pending": "#/components/schemas/PendingStepLifecycle",
-                "queued": "#/components/schemas/QueuedStepLifecycle",
-                "running": "#/components/schemas/RunningStepLifecycle",
-                "completed": "#/components/schemas/CompletedStepLifecycle",
-                "awaiting_review": "#/components/schemas/AwaitingReviewStepLifecycle",
-                "error": "#/components/schemas/ErrorStepLifecycle",
-                "skipped": "#/components/schemas/SkippedStepLifecycle",
-                "cancelled": "#/components/schemas/CancelledStepLifecycle",
-            },
-        },
-        "title": "Lifecycle",
-        "description": "Current lifecycle state",
-    }
-
-    for schema_name in ("StepResponse", "WorkflowStep"):
-        schema = schemas.get(schema_name)
-        if not isinstance(schema, dict):
-            continue
-        properties = schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("status", None)
-            properties.pop("terminal", None)
-            properties["lifecycle"] = lifecycle_schema
-        required = schema.get("required")
-        if isinstance(required, list):
-            schema["required"] = [
-                "lifecycle" if item == "status" else item for item in required
-            ]
-        description = schema.get("description")
-        if isinstance(description, str):
-            schema["description"] = description.replace("step status", "step lifecycle")
-
-    step_path = (
-        spec.get("paths", {}).get("/v1/workflows/steps/{step_id}")
-        if isinstance(spec.get("paths"), dict)
-        else None
-    )
-    if isinstance(step_path, dict):
-        get_operation = step_path.get("get")
-        if isinstance(get_operation, dict):
-            description = get_operation.get("description")
-            if isinstance(description, str):
-                get_operation["description"] = description.replace(
-                    "Get step status", "Get step lifecycle"
-                )
-
-
-def _without_null_variant(schema: object) -> dict[str, object]:
-    if not isinstance(schema, dict):
-        return {}
-
-    copied_schema = deepcopy(schema)
-    any_of = copied_schema.get("anyOf")
-    if not isinstance(any_of, list):
-        return copied_schema
-
-    non_null_variants = [
-        variant
-        for variant in any_of
-        if not (isinstance(variant, dict) and variant.get("type") == "null")
-    ]
-    if len(non_null_variants) != 1 or len(non_null_variants) == len(any_of):
-        return copied_schema
-
-    replacement = deepcopy(non_null_variants[0])
-    if not isinstance(replacement, dict):
-        return copied_schema
-
-    for metadata_key in ("title", "description", "default", "examples"):
-        if metadata_key in copied_schema and metadata_key not in replacement:
-            replacement[metadata_key] = copied_schema[metadata_key]
-    return replacement
-
-
-def _schema_property(
-    properties: dict[str, object],
-    name: str,
-    *,
-    nullable: bool = False,
-) -> dict[str, object]:
-    property_schema = properties.get(name)
-    if nullable:
-        return deepcopy(property_schema) if isinstance(property_schema, dict) else {}
-    return _without_null_variant(property_schema)
-
-
-def _schema_property_with_description(
-    properties: dict[str, object],
-    name: str,
-    description: str,
-) -> dict[str, object]:
-    property_schema = _schema_property(properties, name)
-    property_schema["description"] = description
-    return property_schema
-
-
-def _hard_cutover_workflow_create_request_shapes(spec: dict[str, object]) -> None:
-    """Publish workflow create requests as shape-enforced public contracts."""
-    schemas = (
-        spec.get("components", {}).get("schemas")
-        if isinstance(spec.get("components"), dict)
-        else None
-    )
-    if not isinstance(schemas, dict):
-        return
-
-    run_schema = schemas.get("CreateWorkflowRunRequest")
-    if isinstance(run_schema, dict):
-        properties = run_schema.get("properties")
-        if isinstance(properties, dict):
-            schemas["CreateFreshWorkflowRunRequest"] = {
-                "properties": {
-                    "workflow_id": _schema_property_with_description(
-                        properties,
-                        "workflow_id",
-                        "Workflow id for the fresh run.",
-                    ),
-                    "documents": _schema_property(
-                        properties, "documents", nullable=True
-                    ),
-                    "json_inputs": _schema_property(
-                        properties, "json_inputs", nullable=True
-                    ),
-                    "version": _schema_property(properties, "version"),
-                },
-                "type": "object",
-                "required": ["workflow_id"],
-                "additionalProperties": False,
-                "title": "CreateFreshWorkflowRunRequest",
-                "description": (
-                    "Create a fresh workflow run from a workflow id, optional "
-                    "draft/version selector, and optional inputs."
-                ),
-            }
-            schemas["CreateRestartWorkflowRunRequest"] = {
-                "properties": {
-                    "restart_of": _schema_property(properties, "restart_of"),
-                    "config_source": _schema_property(properties, "config_source"),
-                    "command_id": _schema_property(properties, "command_id"),
-                    "workflow_id": _schema_property_with_description(
-                        properties,
-                        "workflow_id",
-                        (
-                            "Optional workflow id when the client already has "
-                            "it; otherwise inferred from restart_of."
-                        ),
-                    ),
-                },
-                "type": "object",
-                "required": ["restart_of", "config_source"],
-                "additionalProperties": False,
-                "title": "CreateRestartWorkflowRunRequest",
-                "description": (
-                    "Restart a workflow run from a previous run id. workflow_id "
-                    "may be supplied when the client already has it."
-                ),
-            }
-            schemas["CreateWorkflowRunRequest"] = {
-                "oneOf": [
-                    {"$ref": "#/components/schemas/CreateFreshWorkflowRunRequest"},
-                    {"$ref": "#/components/schemas/CreateRestartWorkflowRunRequest"},
-                ],
-                "title": "CreateWorkflowRunRequest",
-                "description": (
-                    "Request body for POST /v1/workflows/runs. Use the fresh-run "
-                    "shape or the restart shape."
-                ),
-            }
-
-    test_run_schema = schemas.get("CreateWorkflowTestRunRequest")
-    if not isinstance(test_run_schema, dict):
-        return
-
-    properties = test_run_schema.get("properties")
-    if not isinstance(properties, dict):
-        return
-
-    schemas["CreateWorkflowTestRunForTestRequest"] = {
-        "properties": {
-            "test_id": _schema_property(properties, "test_id"),
-            "workflow_id": _schema_property(properties, "workflow_id"),
-            "n_consensus": _schema_property(properties, "n_consensus"),
-        },
-        "type": "object",
-        "required": ["test_id"],
-        "additionalProperties": False,
-        "title": "CreateWorkflowTestRunForTestRequest",
-        "description": "Run one saved workflow test by test id.",
-    }
-    schemas["CreateWorkflowTestRunForTargetRequest"] = {
-        "properties": {
-            "workflow_id": _schema_property(properties, "workflow_id"),
-            "target": _schema_property(properties, "target"),
-            "n_consensus": _schema_property(properties, "n_consensus"),
-        },
-        "type": "object",
-        "required": ["workflow_id", "target"],
-        "additionalProperties": False,
-        "title": "CreateWorkflowTestRunForTargetRequest",
-        "description": "Run every workflow test for one target in a workflow.",
-    }
-    schemas["CreateWorkflowTestRunAllRequest"] = {
-        "properties": {
-            "workflow_id": _schema_property(properties, "workflow_id"),
-            "n_consensus": _schema_property(properties, "n_consensus"),
-        },
-        "type": "object",
-        "required": ["workflow_id"],
-        "additionalProperties": False,
-        "title": "CreateWorkflowTestRunAllRequest",
-        "description": "Run every saved test in a workflow.",
-    }
-    schemas["CreateWorkflowTestRunRequest"] = {
-        "oneOf": [
-            {"$ref": "#/components/schemas/CreateWorkflowTestRunForTestRequest"},
-            {"$ref": "#/components/schemas/CreateWorkflowTestRunForTargetRequest"},
-            {"$ref": "#/components/schemas/CreateWorkflowTestRunAllRequest"},
-        ],
-        "title": "CreateWorkflowTestRunRequest",
-        "description": (
-            "Request body for POST /v1/workflows/tests/runs. Use exactly one "
-            "of the single-test, target, or all-tests shapes."
-        ),
-    }
 
 
 def _replace_schema_ref(
@@ -814,6 +360,16 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
         "CreateUploadResponse": "CreateFileUploadResponse",
         "EditConfig-Output": "EditConfigOutput",
         "EditTemplateRequest": "CreateEditTemplateRequest",
+        # FastAPI/pydantic emits the public File class with its module FQN
+        # because there are two same-named classes in the project (the
+        # storage `libs.db_models.FileRecord` and the public
+        # `types.files.File`). Map the FQN to the short name for the
+        # public response. The legacy `FileRecord → File` rename below
+        # used to handle this when FileRecord WAS the public response;
+        # keep it for defense-in-depth in case FileRecord ever leaks back
+        # into the spec (today it shouldn't — every file route projects
+        # through `_to_public_file` before serializing).
+        "main_server__types__files__File": "File",
         "FileRecord": "File",
         "GetSourcesResponse": "ExtractionSources",
         "JobResponse": "JobResult",
@@ -849,73 +405,6 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
 
     for old_schema_name, new_schema_name in schema_renames.items():
         _rename_schema(spec, old_schema_name, new_schema_name)
-
-
-def _hard_cutover_review_overlay_docs(spec: dict[str, object]) -> None:
-    """Normalize review overlay docs to the public hard-cutover contract."""
-    schemas = (
-        spec.get("components", {}).get("schemas")
-        if isinstance(spec.get("components"), dict)
-        else None
-    )
-    if not isinstance(schemas, dict):
-        return
-
-    _rename_schema(spec, "Submit" + "DecisionResponse", "WorkflowReviewDecisionResponse")
-
-    output_version_schema = schemas.get("OutputVersion")
-    if isinstance(output_version_schema, dict):
-        description = output_version_schema.get("description")
-        if isinstance(description, str):
-            output_version_schema["description"] = description.replace(
-                "ReviewOverlay.versions", "WorkflowReview.versions"
-            )
-
-    paths = spec.get("paths")
-    if not isinstance(paths, dict):
-        return
-
-    reviews_list_path = paths.get("/v1/workflows/reviews")
-    if isinstance(reviews_list_path, dict):
-        get_operation = reviews_list_path.get("get")
-        if isinstance(get_operation, dict):
-            parameters = get_operation.get("parameters")
-            if isinstance(parameters, list):
-                for parameter in parameters:
-                    if (
-                        isinstance(parameter, dict)
-                        and parameter.get("name") == "decision_status"
-                    ):
-                        schema = parameter.get("schema")
-                        if isinstance(schema, dict):
-                            schema.pop("pattern", None)
-                            schema["enum"] = REVIEW_DECISION_STATUS_VALUES
-                            schema["description"] = (
-                                "Filter by decision state: pending, approved, "
-                                "rejected, decided, or all."
-                            )
-                        parameter["description"] = (
-                            "Filter by decision state: pending, approved, "
-                            "rejected, decided, or all."
-                        )
-
-    for path, operations in paths.items():
-        if not isinstance(path, str) or not path.startswith("/v1/workflows/reviews"):
-            continue
-        if not isinstance(operations, dict):
-            continue
-        for operation in operations.values():
-            if not isinstance(operation, dict):
-                continue
-            parameters = operation.get("parameters")
-            if not isinstance(parameters, list):
-                continue
-            for parameter in parameters:
-                if isinstance(parameter, dict) and parameter.get("name") == "id":
-                    parameter["description"] = "Opaque review id."
-                    schema = parameter.get("schema")
-                    if isinstance(schema, dict):
-                        schema["description"] = "Opaque review id."
 
 
 def _workflow_paginated_schema(
@@ -971,8 +460,8 @@ PUBLIC_PAGINATED_LIST_ROUTES: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "/v1/workflows/reviews",
-        "WorkflowReviewSummaryList",
-        "WorkflowReviewSummary",
+        "WorkflowReviewList",
+        "WorkflowReview",
     ),
     (
         "/v1/workflows/reviews/versions",
@@ -1053,39 +542,6 @@ def _normalize_workflow_read_docs(spec: dict[str, object]) -> None:
 
     _normalize_public_list_response_docs(spec)
 
-    review_version_schema = schemas.get("WorkflowReviewVersion")
-    if isinstance(review_version_schema, dict):
-        properties = review_version_schema.get("properties")
-        if isinstance(properties, dict) and "Actor" in schemas:
-            properties["author"] = {
-                "$ref": "#/components/schemas/Actor",
-                "description": "Actor that created the version.",
-            }
-
-    rvr_path = paths.pop("/v1/workflows/reviews/versions/{rvr_id}", None)
-    if isinstance(rvr_path, dict):
-        paths["/v1/workflows/reviews/versions/{version_id}"] = rvr_path
-        get_operation = rvr_path.get("get")
-        if isinstance(get_operation, dict):
-            operation_id = get_operation.get("operationId")
-            if isinstance(operation_id, str):
-                get_operation["operationId"] = operation_id.replace(
-                    "rvr_id", "version_id"
-                )
-            parameters = get_operation.get("parameters")
-            if isinstance(parameters, list):
-                for parameter in parameters:
-                    if (
-                        isinstance(parameter, dict)
-                        and parameter.get("name") == "rvr_id"
-                    ):
-                        parameter["name"] = "version_id"
-                        parameter["description"] = "Opaque review version id."
-                        schema = parameter.get("schema")
-                        if isinstance(schema, dict):
-                            schema["title"] = "Version Id"
-                            schema["description"] = "Opaque review version id."
-
     for old_schema_name, new_schema_name in (
         ("AssertionSpec-Input", "AssertionSpecInput"),
         ("AssertionSpec-Output", "AssertionSpecOutput"),
@@ -1136,12 +592,6 @@ def generate_openapi() -> None:
     # Strip legacy URLs from any enum lists (e.g. Jobs endpoint enum)
     _strip_legacy_from_enums(spec)
 
-    _strip_public_workflow_internal_fields(spec)
-    _strip_update_workflow_email_trigger_docs(spec)
-    _strip_stale_workflow_entities_reference(spec)
-    _hard_cutover_workflow_step_lifecycle(spec)
-    _hard_cutover_workflow_create_request_shapes(spec)
-    _hard_cutover_review_overlay_docs(spec)
     _normalize_public_schema_names(spec)
     _normalize_workflow_read_docs(spec)
     _normalize_public_operation_ids(spec)

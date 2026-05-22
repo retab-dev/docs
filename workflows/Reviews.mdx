@@ -20,7 +20,7 @@ Reviews hold gate metadata and the terminal decision. Review versions hold immut
 | `decision` | Terminal verdict, or `null` while awaiting review. |
 | `triggered_by` | Review predicate that opened the gate. |
 
-Review queue items also include `seed_version_id` and `version_count` so you can open the runtime-created seed snapshot without embedding version history in the review object.
+Review queue items return the same `Review` shape. Fetch the version history for a given review with `reviews.versions.list(review_id=...)` — the runtime-created seed is the version whose `parent_id` is `null`.
 
 ## Version Shape
 
@@ -46,7 +46,7 @@ queue = client.workflows.reviews.list(
 )
 
 for item in queue.data:
-    print(item.id, item.workflow_run_id, item.block_id, item.seed_version_id)
+    print(item.id, item.workflow_run_id, item.block_id)
 ```
 
 ### 2. Inspect the output
@@ -54,7 +54,8 @@ for item in queue.data:
 ```python
 item = queue.data[0]
 review = client.workflows.reviews.get(item.id)
-seed_version = client.workflows.reviews.versions.get(item.seed_version_id)
+versions = client.workflows.reviews.versions.list(review_id=review.id)
+seed_version = next(v for v in versions.data if v.parent_id is None)
 
 print(review.workflow_run_id, review.step_id)
 print(seed_version.snapshot)

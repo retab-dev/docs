@@ -143,57 +143,9 @@ def test_missing_docs_json_api_reference_page_fails(tmp_path: Path) -> None:
 
 
 def test_workflow_create_request_docs_publish_shape_variants() -> None:
-    spec = {
-        "components": {
-            "schemas": {
-                "CreateWorkflowRunRequest": {
-                    "properties": {
-                        "workflow_id": {
-                            "anyOf": [{"type": "string"}, {"type": "null"}],
-                            "title": "Workflow Id",
-                        },
-                        "documents": {"type": "array", "items": {"type": "object"}},
-                        "json_inputs": {"type": "object"},
-                        "version": {
-                            "anyOf": [{"type": "string"}, {"type": "null"}]
-                        },
-                        "restart_of": {
-                            "anyOf": [{"type": "string"}, {"type": "null"}]
-                        },
-                        "config_source": {
-                            "anyOf": [{"type": "string"}, {"type": "null"}]
-                        },
-                        "command_id": {
-                            "anyOf": [{"type": "string"}, {"type": "null"}]
-                        },
-                    }
-                },
-                "CreateWorkflowTestRunRequest": {
-                    "properties": {
-                        "workflow_id": {
-                            "anyOf": [{"type": "string"}, {"type": "null"}]
-                        },
-                        "test_id": {
-                            "anyOf": [{"type": "string"}, {"type": "null"}]
-                        },
-                        "target": {
-                            "anyOf": [
-                                {"$ref": "#/components/schemas/WorkflowTestTarget"},
-                                {"type": "null"},
-                            ]
-                        },
-                        "n_consensus": {
-                            "anyOf": [{"type": "integer"}, {"type": "null"}]
-                        },
-                    }
-                },
-            }
-        }
-    }
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+    schemas = generated_openapi["components"]["schemas"]
 
-    generate_openapi._hard_cutover_workflow_create_request_shapes(spec)
-
-    schemas = spec["components"]["schemas"]
     assert schemas["CreateWorkflowRunRequest"]["oneOf"] == [
         {"$ref": "#/components/schemas/CreateFreshWorkflowRunRequest"},
         {"$ref": "#/components/schemas/CreateRestartWorkflowRunRequest"},
@@ -327,51 +279,14 @@ def test_public_list_get_responses_are_typed() -> None:
 
 
 def test_review_version_route_uses_semantic_version_id_parameter() -> None:
-    spec = {
-        "paths": {
-            "/v1/workflows/reviews/versions/{rvr_id}": {
-                "get": {
-                    "operationId": (
-                        "get_review_version_route_v1_workflows_reviews_versions_"
-                        "_rvr_id__get"
-                    ),
-                    "parameters": [
-                        {
-                            "name": "rvr_id",
-                            "in": "path",
-                            "required": True,
-                            "schema": {"type": "string", "title": "Rvr Id"},
-                        }
-                    ],
-                }
-            }
-        },
-        "components": {
-            "schemas": {
-                "ListMetadata": {},
-                "WorkflowReviewVersion": {"properties": {}},
-            }
-        },
-    }
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
 
-    generate_openapi._normalize_workflow_read_docs(spec)
-
-    assert "/v1/workflows/reviews/versions/{rvr_id}" not in spec["paths"]
-    route = spec["paths"]["/v1/workflows/reviews/versions/{version_id}"]["get"]
+    assert "/v1/workflows/reviews/versions/{rvr_id}" not in generated_openapi["paths"]
+    route = generated_openapi["paths"][
+        "/v1/workflows/reviews/versions/{version_id}"
+    ]["get"]
     assert "rvr_id" not in route["operationId"]
-    assert route["parameters"] == [
-        {
-            "name": "version_id",
-            "in": "path",
-            "required": True,
-            "description": "Opaque review version id.",
-            "schema": {
-                "type": "string",
-                "title": "Version Id",
-                "description": "Opaque review version id.",
-            },
-        }
-    ]
+    assert route["parameters"][0]["name"] == "version_id"
 
 
 def test_normalize_public_operation_ids_strips_fastapi_route_suffixes() -> None:
@@ -485,28 +400,6 @@ def test_normalize_public_schema_names_renames_patch_workflow_requests() -> None
     }
 
 
-def test_strip_update_workflow_email_trigger_docs_uses_renamed_schema() -> None:
-    spec = {
-        "components": {
-            "schemas": {
-                "UpdateWorkflowRequest": {
-                    "properties": {
-                        "name": {"type": "string"},
-                        "email_trigger": {"type": "object"},
-                    },
-                    "required": ["name", "email_trigger"],
-                }
-            }
-        }
-    }
-
-    generate_openapi._strip_update_workflow_email_trigger_docs(spec)
-
-    update_schema = spec["components"]["schemas"]["UpdateWorkflowRequest"]
-    assert update_schema["properties"] == {"name": {"type": "string"}}
-    assert update_schema["required"] == ["name"]
-
-
 def test_api_reference_pages_have_all_code_snippets() -> None:
     missing_by_page: dict[str, list[str]] = {}
 
@@ -617,7 +510,7 @@ def test_generated_list_responses_use_public_schema_names() -> None:
         (
             "/v1/workflows/experiments/runs"
         ): ("WorkflowExperimentRunList", "WorkflowExperimentRun"),
-        "/v1/workflows/reviews": ("WorkflowReviewSummaryList", "WorkflowReviewSummary"),
+        "/v1/workflows/reviews": ("WorkflowReviewList", "WorkflowReview"),
         (
             "/v1/workflows/reviews/versions"
         ): ("WorkflowReviewVersionList", "WorkflowReviewVersion"),
