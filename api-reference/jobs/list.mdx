@@ -93,9 +93,9 @@ func main() {
 	}
 
 	// Paginate through results
-	if filtered.HasMore {
+	if filtered.ListMetadata.After != "" {
 		nextPage, err := client.Jobs.List(ctx, &retab.ListJobsParams{
-			After: filtered.LastID,
+			After: filtered.ListMetadata.After,
 			Limit: 10,
 		})
 		if err != nil {
@@ -251,10 +251,10 @@ func main() {
 		}
 		allJobs = append(allJobs, response.Data...)
 
-		if !response.HasMore {
+		if response.ListMetadata.After == "" {
 			break
 		}
-		after = response.LastID
+		after = response.ListMetadata.After
 	}
 
 	fmt.Printf("Total jobs: %d\n", len(allJobs))
