@@ -9488,7 +9488,38 @@
             "title": "Id"
           },
           "lifecycle": {
-            "$ref": "#/components/schemas/ExperimentRunLifecycle"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PendingWorkflowExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/QueuedWorkflowExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/RunningWorkflowExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedWorkflowExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorWorkflowExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledWorkflowExperimentRun"
+              }
+            ],
+            "title": "Lifecycle",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "cancelled": "#/components/schemas/CancelledWorkflowExperimentRun",
+                "completed": "#/components/schemas/CompletedWorkflowExperimentRun",
+                "error": "#/components/schemas/ErrorWorkflowExperimentRun",
+                "pending": "#/components/schemas/PendingWorkflowExperimentRun",
+                "queued": "#/components/schemas/QueuedWorkflowExperimentRun",
+                "running": "#/components/schemas/RunningWorkflowExperimentRun"
+              }
+            }
           }
         },
         "type": "object",
@@ -9592,6 +9623,56 @@
         "type": "object",
         "title": "CancelledTerminal",
         "description": "The run was cancelled before reaching a natural terminal state."
+      },
+      "CancelledWorkflowExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Status",
+            "default": "cancelled"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Human-readable reason, when known"
+          }
+        },
+        "type": "object",
+        "title": "CancelledWorkflowExperimentResult",
+        "description": "The result row was cancelled (typically propagated from a cancelled run)."
+      },
+      "CancelledWorkflowExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Status",
+            "default": "cancelled"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Human-readable reason, when known"
+          }
+        },
+        "type": "object",
+        "title": "CancelledWorkflowExperimentRun",
+        "description": "The experiment run was cancelled before reaching a natural terminal state."
       },
       "CancelledWorkflowTestRun": {
         "properties": {
@@ -9923,6 +10004,32 @@
         "type": "object",
         "title": "CompletedTerminal",
         "description": "The run finished successfully."
+      },
+      "CompletedWorkflowExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "completed",
+            "title": "Status",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CompletedWorkflowExperimentResult",
+        "description": "The result row finished successfully."
+      },
+      "CompletedWorkflowExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "completed",
+            "title": "Status",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CompletedWorkflowExperimentRun",
+        "description": "The experiment run finished successfully."
       },
       "CompletedWorkflowTestRun": {
         "properties": {
@@ -12558,6 +12665,66 @@
         "title": "ErrorTerminal",
         "description": "The run failed. All loose error fields are bundled here."
       },
+      "ErrorWorkflowExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "error",
+            "title": "Status",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message",
+            "default": "(no message)"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured error context including stack trace"
+          }
+        },
+        "type": "object",
+        "title": "ErrorWorkflowExperimentResult",
+        "description": "The result row failed. Per-job error message is bundled into lifecycle."
+      },
+      "ErrorWorkflowExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "error",
+            "title": "Status",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message",
+            "default": "(no message)"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured error context including stack trace"
+          }
+        },
+        "type": "object",
+        "title": "ErrorWorkflowExperimentRun",
+        "description": "The experiment run failed.\n\nCarries a human-readable ``message`` and a structured ``details`` envelope\nconsumers can branch on instead of parsing free text."
+      },
       "ErrorWorkflowTestRun": {
         "properties": {
           "status": {
@@ -13072,27 +13239,6 @@
         "title": "ExperimentMetricsStaleError",
         "description": "Returned when the latest run's config or document set has drifted\nfrom the current draft, so its metrics no longer reflect the\nexperiment's definition."
       },
-      "ExperimentResultLifecycle": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "queued",
-              "running",
-              "completed",
-              "error",
-              "cancelled"
-            ],
-            "title": "Status"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "ExperimentResultLifecycle"
-      },
       "ExperimentResultTiming": {
         "properties": {
           "created_at": {
@@ -13145,27 +13291,6 @@
         },
         "type": "object",
         "title": "ExperimentResultTiming"
-      },
-      "ExperimentRunLifecycle": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "queued",
-              "running",
-              "completed",
-              "error",
-              "cancelled"
-            ],
-            "title": "Status"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "ExperimentRunLifecycle"
       },
       "ExperimentRunTiming": {
         "properties": {
@@ -15780,6 +15905,32 @@
         "title": "PendingStepLifecycle",
         "description": "The step has been created but execution has not started."
       },
+      "PendingWorkflowExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "pending",
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "title": "PendingWorkflowExperimentResult",
+        "description": "The result row has been created but execution has not started."
+      },
+      "PendingWorkflowExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "pending",
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "title": "PendingWorkflowExperimentRun",
+        "description": "The experiment run has been created but execution has not started."
+      },
       "PendingWorkflowTestRun": {
         "properties": {
           "status": {
@@ -15818,6 +15969,32 @@
         "type": "object",
         "title": "QueuedStepLifecycle",
         "description": "The step is queued for execution."
+      },
+      "QueuedWorkflowExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "title": "QueuedWorkflowExperimentResult",
+        "description": "The result row is enqueued and waiting for a worker."
+      },
+      "QueuedWorkflowExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "title": "QueuedWorkflowExperimentRun",
+        "description": "The experiment run is enqueued and waiting for a worker."
       },
       "QueuedWorkflowTestRun": {
         "properties": {
@@ -16602,6 +16779,32 @@
         "type": "object",
         "title": "RunningStepLifecycle",
         "description": "The step is currently executing."
+      },
+      "RunningWorkflowExperimentResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "running",
+            "title": "Status",
+            "default": "running"
+          }
+        },
+        "type": "object",
+        "title": "RunningWorkflowExperimentResult",
+        "description": "The result row is executing."
+      },
+      "RunningWorkflowExperimentRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "running",
+            "title": "Status",
+            "default": "running"
+          }
+        },
+        "type": "object",
+        "title": "RunningWorkflowExperimentRun",
+        "description": "The experiment run is executing."
       },
       "RunningWorkflowTestRun": {
         "properties": {
@@ -18310,7 +18513,38 @@
             "title": "Document Id"
           },
           "lifecycle": {
-            "$ref": "#/components/schemas/ExperimentResultLifecycle"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PendingWorkflowExperimentResult"
+              },
+              {
+                "$ref": "#/components/schemas/QueuedWorkflowExperimentResult"
+              },
+              {
+                "$ref": "#/components/schemas/RunningWorkflowExperimentResult"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedWorkflowExperimentResult"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorWorkflowExperimentResult"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledWorkflowExperimentResult"
+              }
+            ],
+            "title": "Lifecycle",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "cancelled": "#/components/schemas/CancelledWorkflowExperimentResult",
+                "completed": "#/components/schemas/CompletedWorkflowExperimentResult",
+                "error": "#/components/schemas/ErrorWorkflowExperimentResult",
+                "pending": "#/components/schemas/PendingWorkflowExperimentResult",
+                "queued": "#/components/schemas/QueuedWorkflowExperimentResult",
+                "running": "#/components/schemas/RunningWorkflowExperimentResult"
+              }
+            }
           },
           "timing": {
             "$ref": "#/components/schemas/ExperimentResultTiming"
@@ -18355,17 +18589,6 @@
                 "type": "null"
               }
             ]
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
           },
           "attempt": {
             "type": "integer",
@@ -18431,7 +18654,38 @@
             "title": "N Consensus"
           },
           "lifecycle": {
-            "$ref": "#/components/schemas/ExperimentRunLifecycle"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PendingWorkflowExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/QueuedWorkflowExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/RunningWorkflowExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedWorkflowExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorWorkflowExperimentRun"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledWorkflowExperimentRun"
+              }
+            ],
+            "title": "Lifecycle",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "cancelled": "#/components/schemas/CancelledWorkflowExperimentRun",
+                "completed": "#/components/schemas/CompletedWorkflowExperimentRun",
+                "error": "#/components/schemas/ErrorWorkflowExperimentRun",
+                "pending": "#/components/schemas/PendingWorkflowExperimentRun",
+                "queued": "#/components/schemas/QueuedWorkflowExperimentRun",
+                "running": "#/components/schemas/RunningWorkflowExperimentRun"
+              }
+            }
           },
           "timing": {
             "$ref": "#/components/schemas/ExperimentRunTiming"
