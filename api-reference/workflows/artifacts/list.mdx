@@ -37,10 +37,10 @@ for artifact in artifacts.data:
     print(artifact.matched_condition_ids)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const artifacts = await client.workflows.artifacts.list({
   runId: "run_abc123xyz",
@@ -48,8 +48,7 @@ const artifacts = await client.workflows.artifacts.list({
 });
 
 for (const artifact of artifacts.data) {
-  console.log(artifact.step_id);
-  console.log(artifact.matched_condition_ids);
+  console.log(artifact.operation, artifact.id);
 }
 ```
 
@@ -85,6 +84,68 @@ func main() {
 		fmt.Println(artifact["matched_condition_ids"])
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+artifacts = client.workflow_artifacts.list(
+  run_id: 'run_abc123xyz',
+  operation: 'conditional_evaluation',
+)
+
+artifacts.data.each do |artifact|
+  puts artifact.step_id
+  puts artifact.matched_condition_ids
+end
+```
+
+```rust rust
+use retab::enums::WorkflowArtifactsOperation;
+use retab::resources::workflow_artifacts::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let artifacts = client
+        .workflow_artifacts()
+        .list(ListParams {
+            run_id: Some("run_abc123xyz".into()),
+            operation: Some(WorkflowArtifactsOperation::ConditionalEvaluation),
+            ..Default::default()
+        })
+        .await?;
+    for artifact in &artifacts.data {
+        println!("{} {:?}", artifact.id, artifact.operation);
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowArtifacts()->list();
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowArtifacts.ListAsync(apiKey, new WorkflowArtifactsListOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

@@ -3,7 +3,7 @@ title: "List Workflows"
 openapi: "GET /v1/workflows"
 ---
 
-List workflows with id pagination. Use `before` or `after` to page through results, and `fields` to limit the returned fields.
+List workflows with id pagination. Use `before` or `after` to page through results.
 
 <RequestExample>
 
@@ -18,20 +18,19 @@ workflows = client.workflows.list(
     sort_by="updated_at",
 )
 
-filtered = client.workflows.list(
-    after="workflow_abc123xyz",
+next_page = client.workflows.list(
+    after=workflows.list_metadata.after,
     limit=5,
-    fields="id,name,updated_at",
 )
 
 print(workflows.list_metadata.after)
-print(filtered.data[0]["name"])
+print(next_page.data[0].name)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const workflows = await client.workflows.list({
   limit: 10,
@@ -39,14 +38,13 @@ const workflows = await client.workflows.list({
   sortBy: "updated_at",
 });
 
-const filtered = await client.workflows.list({
-  after: "workflow_abc123xyz",
+const nextPage = await client.workflows.list({
+  after: workflows.list_metadata.after ?? undefined,
   limit: 5,
-  fields: "id,name,updated_at",
 });
 
 console.log(workflows.list_metadata.after);
-console.log(filtered.data[0].name);
+console.log(nextPage.data[0]?.name);
 ```
 
 ```go go
@@ -89,6 +87,85 @@ func main() {
 	fmt.Println(workflows.ListMetadata.After)
 	fmt.Println(filtered.Data[0].Name)
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+workflows = client.workflows.list(
+  limit: 10,
+  order: 'desc',
+  sort_by: 'updated_at',
+)
+
+filtered = client.workflows.list(
+  after: 'workflow_abc123xyz',
+  limit: 5,
+  fields: 'id,name,updated_at',
+)
+
+puts workflows.list_metadata.after
+puts filtered.data[0].name
+```
+
+```rust rust
+use retab::enums::WorkflowsOrder;
+use retab::resources::workflows::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let workflows = client
+        .workflows()
+        .list(ListParams {
+            limit: Some(10),
+            order: Some(WorkflowsOrder::Desc),
+            sort_by: Some("updated_at".into()),
+            ..Default::default()
+        })
+        .await?;
+
+    let filtered = client
+        .workflows()
+        .list(ListParams {
+            after: Some("workflow_abc123xyz".into()),
+            limit: Some(5),
+            ..Default::default()
+        })
+        .await?;
+
+    println!("{:?}", workflows.list_metadata.after);
+    if let Some(first) = filtered.data.first() {
+        println!("{}", first.name.as_deref().unwrap_or(""));
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflows()->list();
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Workflows.ListAsync(apiKey, new WorkflowsListOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

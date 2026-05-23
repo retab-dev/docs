@@ -20,6 +20,22 @@ npm install @retab/node
 go get github.com/retab-dev/retab/clients/go
 ```
 
+```sh Ruby
+gem install retab
+```
+
+```sh PHP
+composer require retab/retab
+```
+
+```sh DotNet
+dotnet add package Retab
+```
+
+```sh Rust
+cargo add retab
+```
+
 </CodeGroup>
 
 ## Authenticate
@@ -38,7 +54,7 @@ client = Retab() # uses RETAB_API_KEY
 
 ````
 
-```javascript Node
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
@@ -48,6 +64,33 @@ const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 import retab "github.com/retab-dev/retab/clients/go"
 
 client, _ := retab.NewClient("")  // empty string → reads RETAB_API_KEY
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+```
+
+```csharp C#
+using Retab;
+
+var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+```
+
+```rust Rust
+use retab::Retab;
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 ```
 
 </CodeGroup>
@@ -85,27 +128,186 @@ edge = client.workflows.edges.create(
 )
 ````
 
-```javascript Node
-const block = await client.workflows.blocks.create("wf_abc123", {
-  id: "blk_extract_1",
-  type: "extract",
-  label: "Extract invoice",
-  config: {
+```typescript TypeScript
+const block = await client.workflows.blocks.create("wf_abc123", "extract", "blk_extract_1", "Extract invoice", undefined, undefined, undefined, undefined, {
     model: "retab-small",
     json_schema: {
       type: "object",
       properties: { invoice_number: { type: "string" } },
       required: ["invoice_number"],
     },
-  },
-});
+  });
 
-const edge = await client.workflows.edges.create("wf_abc123", {
-  id: "edge_start_extract",
-  source_block: "start",
-  target_block: block.id,
-});
+const edge = await client.workflows.edges.create("wf_abc123", "start", block.id, "edge_start_extract");
 ````
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+block = client.workflows.blocks.create(
+  workflow_id: 'wf_abc123',
+  id: 'blk_extract_1',
+  type: 'extract',
+  label: 'Extract invoice',
+  config: {
+    'model' => 'retab-small',
+    'json_schema' => {
+      'type' => 'object',
+      'properties' => { 'invoice_number' => { 'type' => 'string' } },
+      'required' => ['invoice_number'],
+    },
+  },
+)
+
+edge = client.workflows.edges.create(
+  workflow_id: 'wf_abc123',
+  id: 'edge_start_extract',
+  source_block: 'start',
+  target_block: block.id,
+)
+```
+
+```php PHP
+<?php
+use Retab\Resource\WorkflowBlockCreateRequestType;
+
+$block = $client->workflowBlocks()->create(
+    workflowId: 'wf_abc123',
+    type: WorkflowBlockCreateRequestType::Extract,
+    id: 'blk_extract_1',
+    label: 'Extract invoice',
+    config: [
+        'model' => 'retab-small',
+        'json_schema' => [
+            'type' => 'object',
+            'properties' => ['invoice_number' => ['type' => 'string']],
+            'required' => ['invoice_number'],
+        ],
+    ],
+);
+
+$edge = $client->workflowEdges()->create(
+    workflowId: 'wf_abc123',
+    sourceBlock: 'start',
+    targetBlock: $block->id,
+    id: 'edge_start_extract',
+);
+```
+
+```csharp C#
+using System.Collections.Generic;
+using Retab;
+
+var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+
+var block = await client.WorkflowBlocks.CreateAsync(
+    client.ApiKey,
+    new WorkflowBlocksCreateOptions
+    {
+        WorkflowId = "wf_abc123",
+        Id = "blk_extract_1",
+        Type = WorkflowBlockCreateRequestType.Extract,
+        Label = "Extract invoice",
+        Config = new Dictionary<string, object>
+        {
+            ["model"] = "retab-small",
+            ["json_schema"] = new Dictionary<string, object>
+            {
+                ["type"] = "object",
+                ["properties"] = new Dictionary<string, object>
+                {
+                    ["invoice_number"] = new Dictionary<string, object> { ["type"] = "string" },
+                },
+                ["required"] = new List<string> { "invoice_number" },
+            },
+        },
+    }
+);
+
+var edge = await client.WorkflowEdges.CreateAsync(
+    client.ApiKey,
+    new WorkflowEdgesCreateOptions
+    {
+        WorkflowId = "wf_abc123",
+        Id = "edge_start_extract",
+        SourceBlock = "start",
+        TargetBlock = block.Id,
+    }
+);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	block, err := client.Workflows.Blocks.Create(context.Background(), "wf_abc123", retab.WorkflowBlockCreateRequest{
+		ID:    "blk_extract_1",
+		Type:  "extract",
+		Label: "Extract invoice",
+		Config: map[string]any{
+			"model": "retab-small",
+			"json_schema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"invoice_number": map[string]any{"type": "string"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = client.Workflows.Edges.Create(context.Background(), retab.WorkflowEdgeCreateRequest{
+		WorkflowID:   "wf_abc123",
+		ID:           "edge_start_extract",
+		SourceBlock:  "start",
+		TargetBlock:  block.ID,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+```rust Rust
+use retab::{
+    enums::WorkflowBlockCreateRequestType,
+    models::{WorkflowBlockCreateRequest, WorkflowEdgeCreateRequest},
+    resources::{workflow_blocks, workflow_edges},
+    Retab,
+};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let mut block_request = WorkflowBlockCreateRequest::new("wf_abc123", WorkflowBlockCreateRequestType::Extract);
+block_request.id = Some("blk_extract_1".to_string());
+block_request.label = Some("Extract invoice".to_string());
+let block = client
+    .workflow_blocks()
+    .create(workflow_blocks::CreateParams::new(block_request))
+    .await?;
+
+let mut edge_request = WorkflowEdgeCreateRequest::new("wf_abc123", "start", &block.id);
+edge_request.id = Some("edge_start_extract".to_string());
+client
+    .workflow_edges()
+    .create(workflow_edges::CreateParams::new(edge_request))
+    .await?;
+```
 
 </CodeGroup>
 
@@ -134,23 +336,161 @@ decision = client.workflows.reviews.approve(
 )
 ````
 
-```javascript Node
+```typescript TypeScript
 const review = await client.workflows.reviews.get("rev_abc123");
 const versions = await client.workflows.reviews.versions.list({
   reviewId: review.id,
 });
 
-const corrected = await client.workflows.reviews.versions.create({
-  reviewId: review.id,
-  parentVersionId: versions.data[0].id,
-  snapshot: { invoice_number: "INV-1001", total: 1200 },
-  note: "fixed total",
-});
+const corrected = await client.workflows.reviews.versions.create(review.id, undefined, { invoice_number: "INV-1001", total: 1200 }, "fixed total");
 
-const decision = await client.workflows.reviews.approve(review.id, {
-  versionId: corrected.id,
-});
+const decision = await client.workflows.reviews.approve(review.id, corrected.id);
 ````
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+review = client.workflow_reviews.get(review_id: 'rev_abc123')
+versions = client.workflow_reviews.versions.list(review_id: review.id)
+
+corrected = client.workflow_reviews.versions.create(
+  review_id: review.id,
+  parent_id: versions.data[0].id,
+  snapshot: { 'invoice_number' => 'INV-1001', 'total' => 1200 },
+  note: 'fixed total',
+)
+
+decision = client.workflow_reviews.approve(
+  review_id: review.id,
+  version_id: corrected.id,
+)
+```
+
+```php PHP
+<?php
+$review = $client->workflowReviews()->get('rev_abc123');
+$versions = $client->workflowReviewVersions()->list(reviewId: $review->id);
+
+$corrected = $client->workflowReviewVersions()->create(
+    reviewId: $review->id,
+    parentId: $versions->data[0]->id,
+    snapshot: ['invoice_number' => 'INV-1001', 'total' => 1200],
+    note: 'fixed total',
+);
+
+$decision = $client->workflowReviews()->approve(
+    $review->id,
+    versionId: $corrected->id,
+);
+```
+
+```csharp C#
+using System.Collections.Generic;
+using Retab;
+
+var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+
+var review = await client.WorkflowReviews.GetAsync("rev_abc123", client.ApiKey);
+var versions = await client.WorkflowReviewVersions.ListAsync(
+    client.ApiKey,
+    new WorkflowReviewVersionsListOptions { ReviewId = review.Id }
+);
+
+var corrected = await client.WorkflowReviewVersions.CreateAsync(
+    client.ApiKey,
+    new WorkflowReviewVersionsCreateOptions
+    {
+        ReviewId = review.Id,
+        ParentId = versions.Items[0].Id,
+        Snapshot = new Dictionary<string, object>
+        {
+            ["invoice_number"] = "INV-1001",
+            ["total"] = 1200,
+        },
+        Note = "fixed total",
+    }
+);
+
+var decision = await client.WorkflowReviews.ApproveAsync(
+    review.Id,
+    client.ApiKey,
+    new WorkflowReviewsApproveOptions { VersionId = corrected.Id }
+);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	versions, err := client.Workflows.Reviews.Versions.List(context.Background(), &retab.ListReviewVersionsParams{ReviewID: review.ID})
+	if err != nil {
+		log.Fatal(err)
+	}
+	corrected, err := client.Workflows.Reviews.Versions.Create(context.Background(), retab.CreateReviewVersionRequest{
+		ReviewID: review.ID,
+		ParentID: versions.Data[0].ID,
+		Snapshot: map[string]any{"invoice_number": "INV-1001", "total": 1200},
+		Note: "fixed total",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = client.Workflows.Reviews.Approve(context.Background(), review.ID, retab.ApproveReviewRequest{VersionID: corrected.ID})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+```rust Rust
+use retab::{
+    models::{ApproveReviewRequest, CreateReviewVersionRequest},
+    resources::{workflow_review_versions, workflow_reviews},
+    Retab,
+};
+use std::collections::HashMap;
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let versions = client
+    .workflow_review_versions()
+    .list(workflow_review_versions::ListParams {
+        review_id: Some(review.id.clone()),
+        ..Default::default()
+    })
+    .await?;
+let mut snapshot = HashMap::new();
+snapshot.insert("invoice_number".to_string(), serde_json::json!("INV-1001"));
+snapshot.insert("total".to_string(), serde_json::json!(1200));
+let corrected = client
+    .workflow_review_versions()
+    .create(workflow_review_versions::CreateParams::new(CreateReviewVersionRequest::new(
+        &review.id,
+        &versions.data[0].id,
+        snapshot,
+    )))
+    .await?;
+let decision = client
+    .workflow_reviews()
+    .approve(
+        &review.id,
+        workflow_reviews::ApproveParams::new(ApproveReviewRequest::new(&corrected.id)),
+    )
+    .await?;
+```
 
 </CodeGroup>
 
@@ -182,7 +522,7 @@ view="summary",
 
 ````
 
-```javascript Node
+```typescript TypeScript
 const testRun = await client.workflows.tests.runs.create({
   workflowId: "wf_abc123",
   testId: "test_abc",
@@ -190,10 +530,7 @@ const testRun = await client.workflows.tests.runs.create({
 const currentTestRun = await client.workflows.tests.runs.get(testRun.id);
 const testResults = await client.workflows.tests.runs.results.list(testRun.id);
 
-const experimentRun = await client.workflows.experiments.runs.create({
-  workflowId: "wf_abc123",
-  experimentId: "exp_abc",
-});
+const experimentRun = await client.workflows.experiments.runs.create("exp_abc", "wf_abc123");
 const currentExperimentRun = await client.workflows.experiments.runs.get(experimentRun.id);
 const experimentResults = await client.workflows.experiments.runs.results.list(experimentRun.id);
 const metrics = await client.workflows.experiments.runs.metrics.get({
@@ -201,6 +538,157 @@ const metrics = await client.workflows.experiments.runs.metrics.get({
   view: "summary",
 });
 ````
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+test_run = client.workflows.tests.runs.create(
+  workflow_id: 'wf_abc123',
+  test_id: 'test_abc',
+)
+test_run = client.workflows.tests.runs.get(run_id: test_run.id)
+test_results = client.workflows.tests.runs.results.list(run_id: test_run.id)
+
+experiment_run = client.workflows.experiments.runs.create(
+  workflow_id: 'wf_abc123',
+  experiment_id: 'exp_abc',
+)
+experiment_run = client.workflows.experiments.runs.get(run_id: experiment_run.id)
+experiment_results = client.workflows.experiments.runs.results.list(run_id: experiment_run.id)
+metrics = client.workflows.experiments.runs.metrics.get(
+  run_id: experiment_run.id,
+  view: 'summary',
+)
+```
+
+```php PHP
+<?php
+use Retab\Resource\ExperimentRunMetricsView;
+
+$testRun = $client->workflowTestRuns()->create(
+    workflowId: 'wf_abc123',
+    testId: 'test_abc',
+);
+$testRun = $client->workflowTestRuns()->get($testRun->id);
+$testResults = $client->workflowTestRunResults()->list(runId: $testRun->id);
+
+$experimentRun = $client->experimentRuns()->create(
+    experimentId: 'exp_abc',
+    workflowId: 'wf_abc123',
+);
+$experimentRun = $client->experimentRuns()->get($experimentRun->id);
+$experimentResults = $client->experimentRunResults()->list(runId: $experimentRun->id);
+$metrics = $client->experimentRunMetrics()->get(
+    runId: $experimentRun->id,
+    view: ExperimentRunMetricsView::Summary,
+);
+```
+
+```csharp C#
+using Retab;
+
+var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+
+var testRun = await client.WorkflowTestRuns.CreateAsync(
+    client.ApiKey,
+    new WorkflowTestRunsCreateOptions
+    {
+        WorkflowId = "wf_abc123",
+        TestId = "test_abc",
+    }
+);
+testRun = await client.WorkflowTestRuns.GetAsync(testRun.Id, client.ApiKey);
+var testResults = await client.WorkflowTestRunResults.ListAsync(
+    client.ApiKey,
+    new WorkflowTestRunResultsListOptions { RunId = testRun.Id }
+);
+
+var experimentRun = await client.ExperimentRuns.CreateAsync(
+    client.ApiKey,
+    new ExperimentRunsCreateOptions
+    {
+        WorkflowId = "wf_abc123",
+        ExperimentId = "exp_abc",
+    }
+);
+experimentRun = await client.ExperimentRuns.GetAsync(experimentRun.Id, client.ApiKey);
+var experimentResults = await client.ExperimentRunResults.ListAsync(
+    client.ApiKey,
+    new ExperimentRunResultsListOptions { ExperimentRunId = experimentRun.Id }
+);
+var metrics = await client.ExperimentRunMetrics.GetAsync(experimentRun.Id, client.ApiKey);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	testRun, err := client.Workflows.Tests.Runs.Create(context.Background(), retab.CreateWorkflowTestRunRequest{TestID: "test_abc"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	testResults, err := client.Workflows.Tests.Results.List(context.Background(), retab.ListWorkflowTestRunResultsParams{RunID: testRun.ID})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	experimentRun, err := client.Workflows.Experiments.Runs.Create(context.Background(), retab.CreateExperimentRunRequest{
+		WorkflowID:    "wf_abc123",
+		ExperimentID: "exp_abc",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	metrics, err := client.Workflows.Experiments.Metrics.Get(context.Background(), experimentRun.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(testResults, metrics)
+}
+```
+
+```rust Rust
+use retab::{
+    models::{CreateExperimentRunRequest, CreateWorkflowTestRunForTestRequest},
+    resources::{experiment_runs, workflow_test_run_results, workflow_test_runs},
+    Retab,
+};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let test_run = client
+    .workflow_test_runs()
+    .create(workflow_test_runs::CreateParams::new(
+        CreateWorkflowTestRunForTestRequest::new("test_abc").into(),
+    ))
+    .await?;
+let test_results = client
+    .workflow_test_run_results()
+    .list(workflow_test_run_results::ListParams::new(&test_run.id))
+    .await?;
+let experiment_run = client
+    .experiment_runs()
+    .create(experiment_runs::CreateParams::new(CreateExperimentRunRequest::new("exp_abc")))
+    .await?;
+let metrics = client.experiment_run_metrics().get(&experiment_run.id).await?;
+
+println!("{test_results:#?} {metrics:#?}");
+```
 
 </CodeGroup>
 

@@ -116,24 +116,24 @@ from retab import Retab
 client = Retab()
 
 result = client.splits.create(
-document="property_portfolio.pdf",
-model="retab-small",
-subdocuments=[
-{
-"name": "property_listing",
-"description": "Property listing pages with photos, pricing, and listing details",
-"allow_multiple_instances": True,
-},
-{
-"name": "legal_notice",
-"description": "Legal notices, disclaimers, or policy pages",
-},
-],
-n_consensus=3,
+    document="property_portfolio.pdf",
+    model="retab-small",
+    subdocuments=[
+        {
+            "name": "property_listing",
+            "description": "Property listing pages with photos, pricing, and listing details",
+            "allow_multiple_instances": True,
+        },
+        {
+            "name": "legal_notice",
+            "description": "Legal notices, disclaimers, or policy pages",
+        },
+    ],
+    n_consensus=3,
 )
 
 for split in result.output:
-print(split.name, split.pages)
+    print(split.name, split.pages)
 
 print(result.consensus.likelihoods if result.consensus else None)
 
@@ -142,24 +142,19 @@ print(result.consensus.likelihoods if result.consensus else None)
 ```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const result = await client.splits.create({
-  document: "property_portfolio.pdf",
-  model: "retab-small",
-  subdocuments: [
+const result = await client.splits.create("property_portfolio.pdf", [
     {
       name: "property_listing",
       description: "Property listing pages with photos, pricing, and listing details",
-      allow_multiple_instances: true,
+      allowMultipleInstances: true,
     },
     {
       name: "legal_notice",
       description: "Legal notices, disclaimers, or policy pages",
     },
-  ],
-  n_consensus: 3,
-});
+  ], "retab-small", undefined, 3);
 
 for (const split of result.output) {
   console.log(split.name, split.pages);
@@ -219,6 +214,153 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+result = client.splits.create(
+  document: 'property_portfolio.pdf',
+  model: 'retab-small',
+  subdocuments: [
+    {
+      name: 'property_listing',
+      description: 'Property listing pages with photos, pricing, and listing details',
+      allow_multiple_instances: true,
+    },
+    {
+      name: 'legal_notice',
+      description: 'Legal notices, disclaimers, or policy pages',
+    },
+  ],
+  n_consensus: 3,
+)
+
+result.output.each do |split|
+  puts "#{split.name} #{split.pages}"
+end
+
+puts result.consensus&.likelihoods
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\Subdocument;
+
+$client = new Client();
+
+$result = $client->splits()->create(
+    document: 'property_portfolio.pdf',
+    subdocuments: [
+        new Subdocument(
+            name: 'property_listing',
+            description: 'Property listing pages with photos, pricing, and listing details',
+            allowMultipleInstances: true,
+        ),
+        new Subdocument(
+            name: 'legal_notice',
+            description: 'Legal notices, disclaimers, or policy pages',
+        ),
+    ],
+    model: 'retab-small',
+    nConsensus: 3,
+);
+
+foreach ($result->output as $split) {
+    echo $split->name . ': ' . implode(', ', $split->pages) . PHP_EOL;
+}
+
+print_r($result->consensus?->likelihoods);
+```
+
+```rust Rust
+use retab::models::Subdocument;
+use retab::resources::splits::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let subdocuments = vec![
+        Subdocument {
+            name: "property_listing".into(),
+            description: Some(
+                "Property listing pages with photos, pricing, and listing details".into(),
+            ),
+            allow_multiple_instances: Some(true),
+        },
+        Subdocument {
+            name: "legal_notice".into(),
+            description: Some("Legal notices, disclaimers, or policy pages".into()),
+            allow_multiple_instances: None,
+        },
+    ];
+
+    let mut params = CreateParams::new(PathBuf::from("property_portfolio.pdf"), subdocuments);
+    params.body.model = Some("retab-small".into());
+    params.body.n_consensus = Some(3);
+
+    let result = client.splits().create(params).await?;
+
+    for split in &result.output {
+        println!("{} {:?}", split.name, split.pages);
+    }
+
+    if let Some(consensus) = &result.consensus {
+        println!("{:?}", consensus.likelihoods);
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var result = await client.Splits.CreateAsync(
+    client.ApiKey,
+    new SplitsCreateOptions
+    {
+        Document = new FileInfo("property_portfolio.pdf"),
+        Model = "retab-small",
+        Subdocuments = new List<Subdocument>
+        {
+            new Subdocument
+            {
+                Name = "property_listing",
+                Description = "Property listing pages with photos, pricing, and listing details",
+                AllowMultipleInstances = true,
+            },
+            new Subdocument
+            {
+                Name = "legal_notice",
+                Description = "Legal notices, disclaimers, or policy pages",
+            },
+        },
+        NConsensus = 3,
+    }
+);
+
+foreach (var split in result.Output)
+{
+    Console.WriteLine($"{split.Name}: pages {string.Join(",", split.Pages)}");
+}
+
+if (result.Consensus?.Likelihoods != null)
+{
+    Console.WriteLine(result.Consensus.Likelihoods);
+}
+```
+
 </CodeGroup>
 
 ## Use Case: Processing Mixed Document Batches
@@ -232,38 +374,34 @@ from retab import Retab
 client = Retab()
 
 subdocuments = [
-{"name": "invoice", "description": "Invoice documents with billing details, line items, totals, and payment terms"},
-{"name": "receipt", "description": "Payment receipts showing transaction confirmation and amounts paid"},
-{"name": "contract", "description": "Legal contracts with terms, conditions, and signature blocks"},
-{"name": "cover_letter", "description": "Cover letters or transmittal documents"},
+    {"name": "invoice", "description": "Invoice documents with billing details, line items, totals, and payment terms"},
+    {"name": "receipt", "description": "Payment receipts showing transaction confirmation and amounts paid"},
+    {"name": "contract", "description": "Legal contracts with terms, conditions, and signature blocks"},
+    {"name": "cover_letter", "description": "Cover letters or transmittal documents"},
 ]
 
 result = client.splits.create(
-document="scanned_batch.pdf",
-model="retab-small",
-subdocuments=subdocuments,
+    document="scanned_batch.pdf",
+    model="retab-small",
+    subdocuments=subdocuments,
 )
 
 for split in result.output:
-print(f"{split.name}: pages {split.pages}")
+    print(f"{split.name}: pages {split.pages}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const result = await client.splits.create({
-  document: "scanned_batch.pdf",
-  model: "retab-small",
-  subdocuments: [
+const result = await client.splits.create("scanned_batch.pdf", [
     { name: "invoice", description: "Invoice documents with billing details, line items, totals, and payment terms" },
     { name: "receipt", description: "Payment receipts showing transaction confirmation and amounts paid" },
     { name: "contract", description: "Legal contracts with terms, conditions, and signature blocks" },
     { name: "cover_letter", description: "Cover letters or transmittal documents" },
-  ],
-});
+  ], "retab-small");
 
 result.output.forEach((split) => {
   console.log(`${split.name}: pages ${split.pages}`);
@@ -310,6 +448,139 @@ func main() {
 		split, _ := raw.(map[string]any)
 		fmt.Printf("%v: pages %v\n", split["name"], split["pages"])
 	}
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+subdocuments = [
+  { name: 'invoice', description: 'Invoice documents with billing details, line items, totals, and payment terms' },
+  { name: 'receipt', description: 'Payment receipts showing transaction confirmation and amounts paid' },
+  { name: 'contract', description: 'Legal contracts with terms, conditions, and signature blocks' },
+  { name: 'cover_letter', description: 'Cover letters or transmittal documents' },
+]
+
+result = client.splits.create(
+  document: 'scanned_batch.pdf',
+  model: 'retab-small',
+  subdocuments: subdocuments,
+)
+
+result.output.each do |split|
+  puts "#{split.name}: pages #{split.pages}"
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\Subdocument;
+
+$client = new Client();
+
+$subdocuments = [
+    new Subdocument(name: 'invoice', description: 'Invoice documents with billing details, line items, totals, and payment terms'),
+    new Subdocument(name: 'receipt', description: 'Payment receipts showing transaction confirmation and amounts paid'),
+    new Subdocument(name: 'contract', description: 'Legal contracts with terms, conditions, and signature blocks'),
+    new Subdocument(name: 'cover_letter', description: 'Cover letters or transmittal documents'),
+];
+
+$result = $client->splits()->create(
+    document: 'scanned_batch.pdf',
+    subdocuments: $subdocuments,
+    model: 'retab-small',
+);
+
+foreach ($result->output as $split) {
+    echo "{$split->name}: pages " . implode(', ', $split->pages) . PHP_EOL;
+}
+```
+
+```rust Rust
+use retab::models::Subdocument;
+use retab::resources::splits::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let subdocuments = vec![
+        Subdocument {
+            name: "invoice".into(),
+            description: Some(
+                "Invoice documents with billing details, line items, totals, and payment terms".into(),
+            ),
+            allow_multiple_instances: None,
+        },
+        Subdocument {
+            name: "receipt".into(),
+            description: Some(
+                "Payment receipts showing transaction confirmation and amounts paid".into(),
+            ),
+            allow_multiple_instances: None,
+        },
+        Subdocument {
+            name: "contract".into(),
+            description: Some(
+                "Legal contracts with terms, conditions, and signature blocks".into(),
+            ),
+            allow_multiple_instances: None,
+        },
+        Subdocument {
+            name: "cover_letter".into(),
+            description: Some("Cover letters or transmittal documents".into()),
+            allow_multiple_instances: None,
+        },
+    ];
+
+    let mut params = CreateParams::new(PathBuf::from("scanned_batch.pdf"), subdocuments);
+    params.body.model = Some("retab-small".into());
+
+    let result = client.splits().create(params).await?;
+
+    for split in &result.output {
+        println!("{}: pages {:?}", split.name, split.pages);
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var subdocuments = new List<Subdocument>
+{
+    new Subdocument { Name = "invoice",      Description = "Invoice documents with billing details, line items, totals, and payment terms" },
+    new Subdocument { Name = "receipt",      Description = "Payment receipts showing transaction confirmation and amounts paid" },
+    new Subdocument { Name = "contract",     Description = "Legal contracts with terms, conditions, and signature blocks" },
+    new Subdocument { Name = "cover_letter", Description = "Cover letters or transmittal documents" },
+};
+
+var result = await client.Splits.CreateAsync(
+    client.ApiKey,
+    new SplitsCreateOptions
+    {
+        Document = new FileInfo("scanned_batch.pdf"),
+        Model = "retab-small",
+        Subdocuments = subdocuments,
+    }
+);
+
+foreach (var split in result.Output)
+{
+    Console.WriteLine($"{split.Name}: pages {string.Join(",", split.Pages)}");
 }
 ```
 

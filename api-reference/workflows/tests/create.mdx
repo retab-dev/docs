@@ -64,26 +64,28 @@ test = client.workflows.tests.create(
 print(f"Test created: {test.id}")
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const test = await client.workflows.tests.create({
-  workflowId: "wf_abc123xyz",
-  target: { type: "block", block_id: "block_extract_invoice" },
-  source: {
+const test = await client.workflows.tests.create("wf_abc123xyz", { type: "block", blockId: "block_extract_invoice" }, {
     type: "manual",
-    handle_inputs: {
-      "input-document-0": { type: "file", file_id: "file_invoice_q1" },
+    handleInputs: {
+      "input-document-0": {
+        type: "file",
+        document: {
+          originalId: "file_invoice_q1",
+          filename: "invoice.pdf",
+          mimeType: "application/pdf",
+          gcsUri: "gs://retab-user-files/file_invoice_q1",
+        },
+      },
     },
-  },
-  assertion: {
-    target: { output_handle_id: "output-json-0", path: "total" },
+  }, {
+    target: { outputHandleId: "output-json-0", path: "total" },
     condition: { kind: "equals", expected: 1234.56 },
-  },
-  name: "Q1 invoice total",
-});
+  }, "Q1 invoice total");
 
 console.log(`Test created: ${test.id}`);
 ```
@@ -157,6 +159,124 @@ func main() {
 	fmt.Printf("Test created: %s\n", (*test)["id"])
 	_ = runStepTest
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Manual inputs: hand-write the handle inputs the block should run with.
+test = client.workflow_tests.create(
+  workflow_id: 'wf_abc123xyz',
+  target: { type: 'block', block_id: 'block_extract_invoice' },
+  source: {
+    type: 'manual',
+    handle_inputs: {
+      'input-document-0' => { type: 'file', file_id: 'file_invoice_q1' },
+    },
+  },
+  assertion: {
+    target: { output_handle_id: 'output-json-0', path: 'total' },
+    condition: { kind: 'equals', expected: 1234.56 },
+  },
+  name: 'Q1 invoice total',
+)
+
+# Run-step inputs: replay the inputs the block ACTUALLY received in a run.
+test = client.workflow_tests.create(
+  workflow_id: 'wf_abc123xyz',
+  target: { type: 'block', block_id: 'block_extract_invoice' },
+  source: {
+    type: 'run_step',
+    run_id: 'wfrun_def456',
+    step_id: 'block_extract_invoice',
+  },
+  assertion: {
+    target: { output_handle_id: 'output-json-0', path: 'vendor.name' },
+    condition: { kind: 'contains', expected: 'Acme' },
+  },
+)
+
+puts "Test created: #{test.id}"
+```
+
+```rust rust
+use retab::models::{
+    AssertionSpec, ContainCondition, CreateWorkflowTestRequest, OutputTarget,
+    RunStepWorkflowTestSource, WorkflowTestBlockTarget,
+};
+use retab::resources::workflow_tests::CreateParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut source = RunStepWorkflowTestSource::new("wfrun_def456");
+    source.step_id = Some("block_extract_invoice".into());
+
+    let mut target = OutputTarget::new("output-json-0");
+    target.path = Some("vendor.name".into());
+
+    let condition = ContainCondition {
+        kind: None,
+        expected: serde_json::json!("Acme"),
+    };
+
+    let body = CreateWorkflowTestRequest::new(
+        "wf_abc123xyz",
+        WorkflowTestBlockTarget::new("block_extract_invoice"),
+        source.into(),
+        AssertionSpec::new(target, condition.into()),
+    );
+
+    let test = client
+        .workflow_tests()
+        .create(CreateParams::new(body))
+        .await?;
+    println!("Test created: {}", test.id);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\AssertionSpec;
+use Retab\Resource\ExistCondition;
+use Retab\Resource\JsonHandleInput;
+use Retab\Resource\ManualWorkflowTestSource;
+use Retab\Resource\OutputTarget;
+use Retab\Resource\WorkflowTestBlockTarget;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowTests()->create(
+    workflowId: 'wf_abc123',
+    target: new WorkflowTestBlockTarget(blockId: 'block_extract_invoice'),
+    source: new ManualWorkflowTestSource(handleInputs: [
+        'input-json-0' => new JsonHandleInput(data: ['invoice_number' => 'INV-001']),
+    ]),
+    assertion: new AssertionSpec(
+        target: new OutputTarget(outputHandleId: 'output-json-0', path: 'invoice_number'),
+        condition: new ExistCondition(),
+    ),
+    name: 'Invoice number exists',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowTests.CreateAsync(apiKey, new WorkflowTestsCreateOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

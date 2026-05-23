@@ -25,18 +25,20 @@ print(f"Filename: {extraction.file.filename}")
 print(extraction.output)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const extraction = await client.extractions.create({
-  document: "Invoice.pdf",
-  json_schema: "Invoice_schema.json",
-  model: "retab-small",
-  n_consensus: 1,
-  metadata: { source: "docs" },
-});
+const extraction = await client.extractions.create(
+  "Invoice.pdf",
+  { type: "object", properties: {} },
+  "retab-small",
+  undefined,
+  undefined,
+  1,
+  { source: "docs" }
+);
 
 console.log(`Extraction ID: ${extraction.id}`);
 console.log(extraction.output);
@@ -87,6 +89,83 @@ func main() {
 	fmt.Printf("Extraction ID: %v\n", (*extraction)["id"])
 	fmt.Println((*extraction)["output"])
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+extraction = client.extractions.create(
+  document: 'Invoice.pdf',
+  json_schema: 'Invoice_schema.json',
+  model: 'retab-small',
+  n_consensus: 1,
+  metadata: { 'source' => 'docs' },
+)
+
+puts "Extraction ID: #{extraction.id}"
+puts "Filename: #{extraction.file.filename}"
+puts extraction.output
+```
+
+```rust rust
+use retab::resources::extractions::CreateParams;
+use retab::Retab;
+use serde_json::json;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "invoice_number": {"type": "string"},
+            "total": {"type": "number"},
+        },
+        "required": ["invoice_number", "total"],
+    });
+    let schema_map = schema.as_object().unwrap().clone().into_iter().collect();
+
+    let mut params = CreateParams::new(PathBuf::from("Invoice.pdf"), schema_map);
+    params.body.model = Some("retab-small".into());
+    params.body.n_consensus = Some(1);
+    params.body.metadata = Some([("source".to_string(), "docs".to_string())].into_iter().collect());
+
+    let extraction = client.extractions().create(params).await?;
+
+    println!("Extraction ID: {}", extraction.id);
+    println!("Filename: {}", extraction.file.filename);
+    println!("{:?}", extraction.output);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->extractions()->create(
+    document: 'invoice.pdf',
+    jsonSchema: ['type' => 'object', 'properties' => []],
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Extractions.CreateAsync(apiKey, new ExtractionsCreateOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

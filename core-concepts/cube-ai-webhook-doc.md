@@ -82,7 +82,7 @@ Your backend should be able to receive this payload and process the extracted da
 
 ### 🟦 Node.js (Express)
 
-```js
+```typescript
 app.post("/webhook", (req, res) => {
   const body = req.body;
   const content = body?.completion?.choices?.[0]?.message?.content || "{}";

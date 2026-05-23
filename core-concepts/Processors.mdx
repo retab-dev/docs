@@ -173,6 +173,107 @@ func main() {
 }
 ```
 
+```ruby Ruby
+# The Ruby SDK does not yet model the processors API. Call /v1/processors directly.
+require 'json'
+require 'net/http'
+require 'uri'
+
+schema = {
+  'type' => 'object',
+  'properties' => {
+    'invoice_number' => { 'type' => 'string' },
+    'total_amount' => { 'type' => 'number' },
+  },
+}
+
+uri = URI('https://api.retab.com/v1/processors')
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+
+req = Net::HTTP::Post.new(uri.request_uri)
+req['Api-Key'] = ENV['RETAB_API_KEY']
+req['Content-Type'] = 'application/json'
+req.body = JSON.generate(
+  'name' => 'Invoice Processor',
+  'json_schema' => schema,
+  'model' => 'retab-small',
+  'n_consensus' => 3,
+  'image_resolution_dpi' => 150,
+)
+
+response = http.request(req)
+processor = JSON.parse(response.body)
+```
+
+```php Request
+<?php
+// The PHP SDK does not yet model the processors API. Call /v1/processors directly.
+require 'vendor/autoload.php';
+
+use GuzzleHttp\Client as HttpClient;
+
+$schema = [
+    'type' => 'object',
+    'properties' => [
+        'invoice_number' => ['type' => 'string'],
+        'total_amount' => ['type' => 'number'],
+    ],
+];
+
+$http = new HttpClient(['base_uri' => 'https://api.retab.com/']);
+$response = $http->post('v1/processors', [
+    'headers' => ['Api-Key' => getenv('RETAB_API_KEY')],
+    'json' => [
+        'name' => 'Invoice Processor',
+        'json_schema' => $schema,
+        'model' => 'retab-small',
+        'n_consensus' => 3,
+        'image_resolution_dpi' => 150,
+    ],
+]);
+$processor = json_decode((string) $response->getBody(), true);
+```
+
+```rust Rust
+// The Rust SDK does not yet model the processors API. Call /v1/processors directly.
+use serde_json::json;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let api_key = std::env::var("RETAB_API_KEY")?;
+
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "invoice_number": {"type": "string"},
+            "total_amount": {"type": "number"}
+        }
+    });
+
+    let body = json!({
+        "name": "Invoice Processor",
+        "json_schema": schema,
+        "model": "retab-small",
+        "n_consensus": 3,
+        "image_resolution_dpi": 150,
+    });
+
+    let http = reqwest::Client::new();
+    let response = http
+        .post("https://api.retab.com/v1/processors")
+        .header("Api-Key", api_key)
+        .json(&body)
+        .send()
+        .await?
+        .error_for_status()?;
+
+    let processor: serde_json::Value = response.json().await?;
+    println!("{processor}");
+    Ok(())
+}
+```
+
 ```json Response
 {
   "object": "processor",
@@ -208,6 +309,63 @@ func main() {
   "schema_data_id": "schema_data_...",
   "updated_at": "2025-01-21T12:34:56Z"
 }
+```
+
+```csharp Request
+// The .NET SDK does not yet model the processors API. Call /v1/processors directly.
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+
+var schema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["invoice_number"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["total_amount"] = new Dictionary<string, object> { ["type"] = "number" },
+    },
+};
+
+using var http = new HttpClient();
+http.DefaultRequestHeaders.Add("Api-Key", apiKey);
+
+var payload = JsonConvert.SerializeObject(new Dictionary<string, object>
+{
+    ["name"] = "Invoice Processor",
+    ["json_schema"] = schema,
+    ["model"] = "retab-small",
+    ["n_consensus"] = 3,
+    ["image_resolution_dpi"] = 150,
+});
+
+var response = await http.PostAsync(
+    "https://api.retab.com/v1/processors",
+    new StringContent(payload, Encoding.UTF8, "application/json")
+);
+response.EnsureSuccessStatusCode();
+var processor = JsonConvert.DeserializeObject<Dictionary<string, object>>(
+    await response.Content.ReadAsStringAsync()
+);
+```
+
+```typescript TypeScript
+const response = await fetch("https://api.retab.com/v1/processors", {
+  method: "POST",
+  headers: {
+    "Api-Key": process.env.RETAB_API_KEY!,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({}),
+});
+
+const result = await response.json();
+console.log(result);
 ```
 
 </CodeGroup>
@@ -296,6 +454,79 @@ func main() {
 }
 ```
 
+```ruby Ruby
+# The Ruby SDK does not yet model the processors API. Submit documents as multipart form data.
+require 'json'
+require 'net/http'
+require 'uri'
+
+uri = URI('https://api.retab.com/v1/processors/proc_01G34H8J2K/submit')
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+
+req = Net::HTTP::Post.new(uri.request_uri)
+req['Api-Key'] = ENV['RETAB_API_KEY']
+File.open('invoice.pdf', 'rb') do |io|
+  req.set_form([['document', io, { filename: 'invoice.pdf', content_type: 'application/pdf' }]], 'multipart/form-data')
+  response = http.request(req)
+  completion = JSON.parse(response.body)
+  puts completion['data']
+end
+```
+
+```php Request
+<?php
+// The PHP SDK does not yet model the processors API. Submit documents as multipart form data.
+require 'vendor/autoload.php';
+
+use GuzzleHttp\Client as HttpClient;
+
+$http = new HttpClient(['base_uri' => 'https://api.retab.com/']);
+$response = $http->post('v1/processors/proc_01G34H8J2K/submit', [
+    'headers' => ['Api-Key' => getenv('RETAB_API_KEY')],
+    'multipart' => [
+        [
+            'name' => 'document',
+            'contents' => fopen('invoice.pdf', 'rb'),
+            'filename' => 'invoice.pdf',
+            'headers' => ['Content-Type' => 'application/pdf'],
+        ],
+    ],
+]);
+$completion = json_decode((string) $response->getBody(), true);
+print_r($completion['data']);
+```
+
+```rust Rust
+// The Rust SDK does not yet model the processors API. Submit documents as multipart form data.
+use reqwest::multipart::{Form, Part};
+use std::fs;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let api_key = std::env::var("RETAB_API_KEY")?;
+
+    let bytes = fs::read("invoice.pdf")?;
+    let part = Part::bytes(bytes)
+        .file_name("invoice.pdf")
+        .mime_str("application/pdf")?;
+    let form = Form::new().part("document", part);
+
+    let http = reqwest::Client::new();
+    let response = http
+        .post("https://api.retab.com/v1/processors/proc_01G34H8J2K/submit")
+        .header("Api-Key", api_key)
+        .multipart(form)
+        .send()
+        .await?
+        .error_for_status()?;
+
+    let completion: serde_json::Value = response.json().await?;
+    println!("{:?}", completion.get("data"));
+    Ok(())
+}
+```
+
 ```json Response
 {
   "id": "chatcmpl_...",
@@ -319,6 +550,50 @@ func main() {
     "total_amount": 1576.75
   }
 }
+```
+
+```csharp Request
+// The .NET SDK does not yet model the processors API. Submit documents as multipart form data.
+using System;
+using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+
+using var http = new HttpClient();
+http.DefaultRequestHeaders.Add("Api-Key", apiKey);
+
+using var form = new MultipartFormDataContent();
+var bytes = await File.ReadAllBytesAsync("invoice.pdf");
+var fileContent = new ByteArrayContent(bytes);
+fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+form.Add(fileContent, "document", "invoice.pdf");
+
+var response = await http.PostAsync(
+    "https://api.retab.com/v1/processors/proc_01G34H8J2K/submit",
+    form
+);
+response.EnsureSuccessStatusCode();
+var completion = JsonConvert.DeserializeObject<Dictionary<string, object>>(
+    await response.Content.ReadAsStringAsync()
+)!;
+Console.WriteLine(completion["data"]);
+```
+
+```typescript TypeScript
+const response = await fetch("https://api.retab.com/v1/processors/proc_01G34H8J2K/submit", {
+  method: "POST",
+  headers: {
+    "Api-Key": process.env.RETAB_API_KEY!,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({}),
+});
+
+const result = await response.json();
+console.log(result);
 ```
 
 </CodeGroup>

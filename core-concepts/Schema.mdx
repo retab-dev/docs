@@ -27,23 +27,17 @@ print(schema["json_schema"])
 
 ````
 
-```javascript Node.js
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const schema = await client.schemas.generate({
-  documents: [
+const schema = await client.schemas.generate([
     "freight/booking_confirmation_1.jpg",
     "freight/booking_confirmation_2.jpg",
-  ],
-  model: "retab-small",
-  reasoning_effort: "minimal",
-  image_resolution_dpi: 192,
-  instructions: "Capture shipment dates, parties, and reference numbers.",
-});
+  ], "retab-small", "minimal", "Capture shipment dates, parties, and reference numbers.", 192);
 
-console.log(schema.json_schema);
+console.log(schema.jsonSchema);
 ````
 
 ```go Go
@@ -84,6 +78,48 @@ func main() {
 
 	fmt.Println((*schema)["json_schema"])
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+schema = client.schemas.generate(
+  documents: [
+    'freight/booking_confirmation_1.jpg',
+    'freight/booking_confirmation_2.jpg',
+  ],
+  model: 'retab-small',
+  reasoning_effort: 'minimal',
+  image_resolution_dpi: 192,
+  instructions: 'Capture shipment dates, parties, and reference numbers.',
+)
+
+puts schema.json_schema
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\GenerateSchemaRequestReasoningEffort;
+
+$client = new Client();
+
+$schema = $client->schemas()->generate(
+    documents: [
+        'freight/booking_confirmation_1.jpg',
+        'freight/booking_confirmation_2.jpg',
+    ],
+    model: 'retab-small',
+    reasoningEffort: GenerateSchemaRequestReasoningEffort::Minimal,
+    instructions: 'Capture shipment dates, parties, and reference numbers.',
+    imageResolutionDpi: 192,
+);
+
+print_r($schema->jsonSchema);
 ```
 
 ```bash cURL
@@ -128,6 +164,49 @@ curl https://api.retab.com/v1/schemas/generate \
   },
   "strict": true
 }
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var schema = await client.Schemas.GenerateAsync(
+    client.ApiKey,
+    new SchemasGenerateOptions
+    {
+        Documents = new List<MimeData>
+        {
+            new FileInfo("freight/booking_confirmation_1.jpg"),
+            new FileInfo("freight/booking_confirmation_2.jpg"),
+        },
+        Model = "retab-small",
+        ReasoningEffort = GenerateSchemaRequestReasoningEffort.Minimal,
+        ImageResolutionDpi = 192,
+        Instructions = "Capture shipment dates, parties, and reference numbers.",
+    }
+);
+
+Console.WriteLine(schema.JsonSchema);
+```
+
+```rust Rust
+use retab::{resources::schemas::GenerateParams, Retab};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let schema = client
+    .schemas()
+    .generate(GenerateParams::new([
+        "freight/booking_confirmation_1.jpg",
+        "freight/booking_confirmation_2.jpg",
+    ]))
+    .await?;
+
+println!("{:#?}", schema.json_schema);
 ```
 
 </CodeGroup>

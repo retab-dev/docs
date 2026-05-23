@@ -35,15 +35,13 @@ print(f"Job ID: {job.id}")
 print(f"Status: {job.status}")
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Create an async extraction job
-const job = await client.jobs.create({
-  endpoint: "/v1/extractions",
-  request: {
+const job = await client.jobs.create("/v1/extractions", {
     document: {
       filename: "invoice.pdf",
       url: "data:application/pdf;base64,JVBERi0xLjQK...",
@@ -57,9 +55,7 @@ const job = await client.jobs.create({
       required: ["invoice_number", "total"],
     },
     model: "retab-small",
-  },
-  metadata: { batch_id: "batch_001", source: "api" },
-});
+  }, { batch_id: "batch_001", source: "api" });
 
 console.log(`Job ID: ${job.id}`);
 console.log(`Status: ${job.status}`);
@@ -111,6 +107,109 @@ func main() {
 	fmt.Printf("Job ID: %s\n", (*job)["id"])
 	fmt.Printf("Status: %s\n", (*job)["status"])
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Create an async extraction job
+job = client.jobs.create(
+  endpoint: '/v1/extractions',
+  request: {
+    'document' => {
+      'filename' => 'invoice.pdf',
+      'url' => 'data:application/pdf;base64,JVBERi0xLjQK...',
+    },
+    'json_schema' => {
+      'type' => 'object',
+      'properties' => {
+        'invoice_number' => { 'type' => 'string' },
+        'total' => { 'type' => 'number' },
+      },
+      'required' => ['invoice_number', 'total'],
+    },
+    'model' => 'retab-small',
+  },
+  metadata: { 'batch_id' => 'batch_001', 'source' => 'api' },
+)
+
+puts "Job ID: #{job.id}"
+puts "Status: #{job.status}"
+```
+
+```rust rust
+use retab::enums::CreateJobRequestEndpoint;
+use retab::models::CreateJobRequest;
+use retab::resources::jobs::CreateParams;
+use retab::Retab;
+use serde_json::json;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let request = json!({
+        "document": {
+            "filename": "invoice.pdf",
+            "url": "data:application/pdf;base64,JVBERi0xLjQK...",
+        },
+        "json_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_number": {"type": "string"},
+                "total": {"type": "number"},
+            },
+            "required": ["invoice_number", "total"],
+        },
+        "model": "retab-small",
+    });
+    let request_map = request.as_object().unwrap().clone().into_iter().collect();
+
+    let body = CreateJobRequest {
+        endpoint: CreateJobRequestEndpoint::V1Extractions,
+        request: request_map,
+        metadata: Some(
+            [
+                ("batch_id".to_string(), "batch_001".to_string()),
+                ("source".to_string(), "api".to_string()),
+            ]
+            .into_iter()
+            .collect(),
+        ),
+    };
+
+    let job = client.jobs().create(CreateParams::new(body)).await?;
+    println!("Job ID: {}", job.id.as_deref().unwrap_or(""));
+    println!("Status: {:?}", job.status);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->jobs()->create(
+    endpoint: \Retab\Resource\JobsEndpoint::V1Extractions,
+    request: [],
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Jobs.CreateAsync(apiKey, new JobsCreateOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

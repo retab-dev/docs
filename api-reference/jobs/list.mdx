@@ -29,10 +29,10 @@ if jobs_response.has_more:
     )
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // List all jobs
 const jobsResponse = await client.jobs.list();
@@ -104,6 +104,112 @@ func main() {
 		_ = nextPage
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# List all jobs
+jobs_response = client.jobs.list
+jobs_response.data.each do |job|
+  puts "#{job.id}: #{job.status} - #{job.endpoint}"
+end
+
+# List with filters and pagination
+filtered_jobs = client.jobs.list(
+  status: 'completed',
+  limit: 10,
+)
+
+# Paginate through results
+if filtered_jobs.list_metadata.after
+  next_page = client.jobs.list(
+    after: filtered_jobs.list_metadata.after,
+    limit: 10,
+  )
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\JobStatus;
+
+$client = new Client();
+
+// List all jobs
+$jobsResponse = $client->jobs()->list();
+foreach ($jobsResponse->data as $job) {
+    echo "{$job->id}: " . $job->status?->value . " - " . $job->endpoint->value . PHP_EOL;
+}
+
+// List with filters and pagination
+$filteredJobs = $client->jobs()->list(
+    status: JobStatus::Completed,
+    limit: 10,
+);
+
+// Paginate through results
+$nextPage = $filteredJobs->nextPage();
+```
+
+```rust rust
+use retab::enums::JobsStatus;
+use retab::resources::jobs::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // List all jobs
+    let jobs_response = client.jobs().list(ListParams::default()).await?;
+    for job in &jobs_response.data {
+        println!(
+            "{}: {:?} - {}",
+            job.id.as_deref().unwrap_or(""),
+            job.status,
+            job.endpoint
+        );
+    }
+
+    // List with filters and pagination
+    let filtered = client
+        .jobs()
+        .list(ListParams {
+            status: Some(JobsStatus::Completed),
+            limit: Some(10),
+            ..Default::default()
+        })
+        .await?;
+
+    // Paginate through results
+    if let Some(after) = filtered.list_metadata.after.clone() {
+        let _next_page = client
+            .jobs()
+            .list(ListParams {
+                after: Some(after),
+                limit: Some(10),
+                ..Default::default()
+            })
+            .await?;
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Jobs.ListAsync(apiKey, new JobsListOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl
@@ -202,7 +308,7 @@ print(f"Total jobs: {len(all_jobs)}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 const allJobs = [];
 let after = undefined;
 
@@ -261,6 +367,78 @@ func main() {
 }
 ```
 
+```ruby Ruby
+all_jobs = []
+after = nil
+
+loop do
+  response = client.jobs.list(after: after, limit: 100)
+  all_jobs.concat(response.data)
+
+  break unless response.list_metadata.after
+  after = response.list_metadata.after
+end
+
+puts "Total jobs: #{all_jobs.length}"
+```
+
+```rust Rust
+use retab::resources::jobs::ListParams;
+use retab::Retab;
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let mut all_jobs = Vec::new();
+let mut after = None;
+
+loop {
+    let response = client.jobs().list(ListParams {
+        after,
+        limit: Some(100),
+        ..Default::default()
+    }).await?;
+
+    all_jobs.extend(response.data);
+    after = response.list_metadata.after;
+    if after.is_none() {
+        break;
+    }
+}
+
+println!("Total jobs: {}", all_jobs.len());
+```
+
+```php PHP
+<?php
+$allJobs = [];
+$page = $client->jobs()->list(limit: 100);
+while ($page !== null) {
+    foreach ($page->data as $job) {
+        $allJobs[] = $job;
+    }
+    $page = $page->nextPage();
+}
+
+echo 'Total jobs: ' . count($allJobs) . PHP_EOL;
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var allJobs = new List<Job>();
+var page = await client.Jobs.ListAsync(client.ApiKey, new JobsListOptions { Limit = 100 });
+await foreach (var job in page)
+{
+    allJobs.Add(job);
+}
+
+Console.WriteLine($"Total jobs: {allJobs.Count}");
+```
+
 </CodeGroup>
 
 ## Filtering Examples
@@ -278,7 +456,7 @@ print(f"Queued: {len(queued.data)}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 // Get all jobs currently processing
 const inProgress = await client.jobs.list({ status: "in_progress" });
 const queued = await client.jobs.list({ status: "queued" });
@@ -305,6 +483,63 @@ fmt.Printf("In progress: %d\n", len(inProgress.Data))
 fmt.Printf("Queued: %d\n", len(queued.Data))
 ```
 
+```ruby Ruby
+# Get all jobs currently processing
+in_progress = client.jobs.list(status: 'in_progress')
+queued = client.jobs.list(status: 'queued')
+
+puts "In progress: #{in_progress.data.length}"
+puts "Queued: #{queued.data.length}"
+```
+
+```rust Rust
+use retab::enums::JobsStatus;
+use retab::resources::jobs::ListParams;
+use retab::Retab;
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+let in_progress = client.jobs().list(ListParams {
+    status: Some(JobsStatus::InProgress),
+    ..Default::default()
+}).await?;
+
+let queued = client.jobs().list(ListParams {
+    status: Some(JobsStatus::Queued),
+    ..Default::default()
+}).await?;
+
+println!("In progress: {}", in_progress.data.len());
+println!("Queued: {}", queued.data.len());
+```
+
+```php PHP
+<?php
+use Retab\Resource\JobStatus;
+
+// Get all jobs currently processing
+$inProgress = $client->jobs()->list(status: JobStatus::InProgress);
+$queued = $client->jobs()->list(status: JobStatus::Queued);
+
+echo 'In progress: ' . count($inProgress->data) . PHP_EOL;
+echo 'Queued: ' . count($queued->data) . PHP_EOL;
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+// Get all jobs currently processing
+var inProgress = await client.Jobs.ListAsync(client.ApiKey, new JobsListOptions { Status = JobStatus.InProgress });
+var queued = await client.Jobs.ListAsync(client.ApiKey, new JobsListOptions { Status = JobStatus.Queued });
+
+Console.WriteLine($"In progress: {inProgress.Items.Count}");
+Console.WriteLine($"Queued: {queued.Items.Count}");
+```
+
 </CodeGroup>
 
 ### Find Failed Jobs
@@ -319,7 +554,7 @@ print(f"{job.id}: {job.error.code} - {job.error.message}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 // List failed jobs to investigate errors
 const failedJobs = await client.jobs.list({ status: "failed", limit: 50 });
 
@@ -348,6 +583,66 @@ for _, job := range failedJobs.Data {
 }
 ```
 
+```ruby Ruby
+# List failed jobs to investigate errors
+failed_jobs = client.jobs.list(status: 'failed', limit: 50)
+
+failed_jobs.data.each do |job|
+  puts "#{job.id}: #{job.error.code} - #{job.error.message}"
+end
+```
+
+```rust Rust
+use retab::enums::JobsStatus;
+use retab::resources::jobs::ListParams;
+use retab::Retab;
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+let failed_jobs = client.jobs().list(ListParams {
+    status: Some(JobsStatus::Failed),
+    limit: Some(50),
+    ..Default::default()
+}).await?;
+
+for job in failed_jobs.data {
+    if let Some(error) = job.error {
+        println!("{}: {} - {}", job.id.unwrap_or_default(), error.code, error.message);
+    }
+}
+```
+
+```php PHP
+<?php
+use Retab\Resource\JobStatus;
+
+// List failed jobs to investigate errors
+$failedJobs = $client->jobs()->list(status: JobStatus::Failed, limit: 50);
+
+foreach ($failedJobs->data as $job) {
+    echo "{$job->id}: " . ($job->error?->code ?? '') . ' - ' . ($job->error?->message ?? '') . PHP_EOL;
+}
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+// List failed jobs to investigate errors
+var failedJobs = await client.Jobs.ListAsync(
+    client.ApiKey,
+    new JobsListOptions { Status = JobStatus.Failed, Limit = 50 }
+);
+
+await foreach (var job in failedJobs)
+{
+    Console.WriteLine($"{job.Id}: {job.Error?.Code} - {job.Error?.Message}");
+}
+```
+
 </CodeGroup>
 
 ### Filter by Metadata
@@ -369,7 +664,7 @@ print(f"Jobs in {batch_id}: {len(batch_jobs)}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 // Find jobs from a specific batch
 const batchId = "batch_001";
 const batchJobs = [];
@@ -407,6 +702,83 @@ for _, job := range response.Data {
 }
 
 fmt.Printf("Jobs in %s: %d\n", batchID, len(batchJobs))
+```
+
+```ruby Ruby
+# Find jobs from a specific batch
+batch_id = 'batch_001'
+batch_jobs = []
+
+response = client.jobs.list(limit: 100)
+response.data.each do |job|
+  if job.metadata && job.metadata['batch_id'] == batch_id
+    batch_jobs << job
+  end
+end
+
+puts "Jobs in #{batch_id}: #{batch_jobs.length}"
+```
+
+```rust Rust
+use retab::resources::jobs::ListParams;
+use retab::Retab;
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+let batch_id = "batch_001";
+let response = client.jobs().list(ListParams {
+    limit: Some(100),
+    ..Default::default()
+}).await?;
+
+let batch_jobs: Vec<_> = response
+    .data
+    .into_iter()
+    .filter(|job| job.metadata.as_ref().and_then(|m| m.get("batch_id")) == Some(&batch_id.to_string()))
+    .collect();
+
+println!("Jobs in {batch_id}: {}", batch_jobs.len());
+```
+
+```php PHP
+<?php
+$batchId = 'batch_001';
+$batchJobs = [];
+
+$response = $client->jobs()->list(limit: 100);
+foreach ($response->data as $job) {
+    if (($job->metadata['batch_id'] ?? null) === $batchId) {
+        $batchJobs[] = $job;
+    }
+}
+
+echo "Jobs in {$batchId}: " . count($batchJobs) . PHP_EOL;
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+// Find jobs from a specific batch
+var batchId = "batch_001";
+var batchJobs = new List<Job>();
+
+var response = await client.Jobs.ListAsync(client.ApiKey, new JobsListOptions { Limit = 100 });
+foreach (var job in response.Items)
+{
+    if (job.Metadata != null
+        && job.Metadata.TryGetValue("batch_id", out var value)
+        && value == batchId)
+    {
+        batchJobs.Add(job);
+    }
+}
+
+Console.WriteLine($"Jobs in {batchId}: {batchJobs.Count}");
 ```
 
 </CodeGroup>

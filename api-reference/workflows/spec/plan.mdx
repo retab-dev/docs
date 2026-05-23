@@ -22,17 +22,17 @@ for change in plan.resource_changes:
     print(change.actions, change.target, change.target_id)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const plan = await client.workflows.spec.plan(yamlDefinition);
+const plan = await client.workflows.specs.plan(yamlDefinition);
 
 console.log(plan.action);
-console.log(plan.rendered_plan);
-for (const change of plan.resource_changes) {
-  console.log(change.actions, change.target, change.target_id);
+console.log(plan.renderedPlan);
+for (const change of plan.resourceChanges) {
+  console.log(change.actions, change.target, change.targetId);
 }
 ```
 
@@ -65,6 +65,70 @@ func main() {
 	fmt.Println((*plan)["rendered_plan"])
 	fmt.Println((*plan)["resource_changes"])
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+plan = client.workflow_specs.plan(yaml_definition: yaml_definition)
+
+puts plan.action
+puts plan.rendered_plan
+plan.resource_changes.each do |change|
+  puts "#{change.actions} #{change.target} #{change.target_id}"
+end
+```
+
+```rust rust
+use retab::models::DeclarativeWorkflowRequest;
+use retab::resources::workflow_specs::PlanParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let yaml_definition = "<workflow-yaml>";
+    let plan = client
+        .workflow_specs()
+        .plan(PlanParams::new(DeclarativeWorkflowRequest::new(
+            yaml_definition,
+        )))
+        .await?;
+
+    println!("{}", plan.action);
+    println!("{}", plan.rendered_plan.as_deref().unwrap_or(""));
+    for change in plan.resource_changes.unwrap_or_default() {
+        println!("{:?} {} {}", change.actions, change.target, change.target_id);
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowSpecs()->plan(
+    yamlDefinition: 'value',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowSpecs.PlanAsync(apiKey, new WorkflowSpecsPlanOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

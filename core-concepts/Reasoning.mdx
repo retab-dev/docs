@@ -46,7 +46,7 @@ conditions: str
 # If you need a json_schema, you can call TemperatureReport.model_json_schema()
 
 ````
-```typescript JavaScript {10-12}
+```typescript TypeScript {10-12}
 import { z } from "zod";
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-openapi";
 
@@ -120,6 +120,84 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+require 'json'
+
+# Build the JSON schema as a Hash. The X-ReasoningPrompt key is preserved
+# verbatim when the schema is sent to the Retab API.
+schema = {
+  'type' => 'object',
+  'properties' => {
+    'date' => { 'type' => 'string', 'format' => 'date' },
+    'location' => { 'type' => 'string' },
+    'temperature' => {
+      'type' => 'number',
+      'description' => 'temperature in Fahrenheit',
+      'X-ReasoningPrompt' => 'If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.',
+    },
+    'humidity' => { 'type' => 'number' },
+    'conditions' => { 'type' => 'string' },
+  },
+  'required' => ['date', 'location', 'temperature', 'humidity', 'conditions'],
+  'title' => 'TemperatureReport',
+}
+
+puts JSON.pretty_generate(schema)
+```
+
+```php PHP
+<?php
+// Build the JSON schema as an array. The X-ReasoningPrompt key is preserved
+// verbatim when the schema is sent to the Retab API.
+$schema = [
+    'type' => 'object',
+    'properties' => [
+        'date' => ['type' => 'string', 'format' => 'date'],
+        'location' => ['type' => 'string'],
+        'temperature' => [
+            'type' => 'number',
+            'description' => 'temperature in Fahrenheit',
+            'X-ReasoningPrompt' => 'If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.',
+        ],
+        'humidity' => ['type' => 'number'],
+        'conditions' => ['type' => 'string'],
+    ],
+    'required' => ['date', 'location', 'temperature', 'humidity', 'conditions'],
+    'title' => 'TemperatureReport',
+];
+
+echo json_encode($schema, JSON_PRETTY_PRINT) . PHP_EOL;
+```
+
+```rust Rust
+// Build the JSON schema as a serde_json value. The X-ReasoningPrompt key is
+// preserved verbatim when the schema is sent to the Retab API.
+use serde_json::json;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "date": {"type": "string", "format": "date"},
+            "location": {"type": "string"},
+            "temperature": {
+                "type": "number",
+                "description": "temperature in Fahrenheit",
+                "X-ReasoningPrompt": "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is."
+            },
+            "humidity": {"type": "number"},
+            "conditions": {"type": "string"}
+        },
+        "required": ["date", "location", "temperature", "humidity", "conditions"],
+        "title": "TemperatureReport"
+    });
+
+    println!("{}", serde_json::to_string_pretty(&schema)?);
+    Ok(())
+}
+```
+
 ```json json_schema.json {13}
 {
   "properties": {
@@ -153,6 +231,36 @@ func main() {
 }
 ```
 
+```csharp C#
+using System;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+
+// Build the JSON schema as Dictionary<string, object>. The X-ReasoningPrompt key
+// is preserved verbatim when the schema is sent to the Retab API.
+var schema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["title"] = "TemperatureReport",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["date"] = new Dictionary<string, object> { ["type"] = "string", ["format"] = "date" },
+        ["location"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["temperature"] = new Dictionary<string, object>
+        {
+            ["type"] = "number",
+            ["description"] = "temperature in Fahrenheit",
+            ["X-ReasoningPrompt"] = "If the temperature is given in Celsius, make the explicit computation to convert it to Fahrenheit. If the temperature is given in Fahrenheit, leave it as is.",
+        },
+        ["humidity"] = new Dictionary<string, object> { ["type"] = "number" },
+        ["conditions"] = new Dictionary<string, object> { ["type"] = "string" },
+    },
+    ["required"] = new List<string> { "date", "location", "temperature", "humidity", "conditions" },
+};
+
+Console.WriteLine(JsonConvert.SerializeObject(schema, Formatting.Indented));
+```
+
 </CodeGroup>
 
 Without reasoning, the LLM might incorrectly use 22.5°F instead of converting from Celsius. With reasoning, it produces:
@@ -177,6 +285,12 @@ Without reasoning, the LLM might incorrectly use 22.5°F instead of converting f
   "conditions": "Partly Cloudy"
 }
 ```
+
+
+
+
+
+
 </CodeGroup>
 
 As you can see, the "reasoning\_\_\_" fields help the LLM show its work while the final output follows your schema structure.

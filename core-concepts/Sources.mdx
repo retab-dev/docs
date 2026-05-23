@@ -31,7 +31,7 @@ print(result.extraction)
 print(result.sources)
 ```
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
@@ -74,11 +74,68 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new
+
+result = client.extractions.sources(extraction_id: 'extr_01G34H8J2K')
+
+# Access the original extraction
+puts result.extraction
+
+# Access the sourced version (same shape, leaves wrapped with source info)
+puts result.sources
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$result = $client->extractions()->sources('extr_01G34H8J2K');
+
+// Access the original extraction
+print_r($result->extraction);
+
+// Access the sourced version (same shape, leaves wrapped with source info)
+print_r($result->sources);
+```
+
 ```bash cURL
 curl -X 'GET' \
   'https://api.retab.com/v1/extractions/extr_01G34H8J2K/sources' \
   -H 'accept: application/json' \
   -H 'Api-Key: <your-api-key>'
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var result = await client.Extractions.SourcesAsync("extr_01G34H8J2K", client.ApiKey);
+
+// Access the original extraction
+Console.WriteLine(result.Extraction);
+
+// Access the sourced version (same shape, leaves wrapped with source info)
+Console.WriteLine(result.Sources);
+```
+
+```rust Rust
+use retab::Retab;
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let result = client.extractions().sources("extr_01G34H8J2K").await?;
+
+println!("{:#?}", result.extraction);
+println!("{:#?}", result.sources);
 ```
 
 </CodeGroup>
@@ -430,11 +487,9 @@ client = Retab()
 
 # 1. Extract data from a document
 result = client.extractions.create(
-    ExtractionRequest(
-        document="invoices/invoice_001.pdf",
-        model="retab-small",
-        json_schema=my_schema,
-    )
+    document="invoices/invoice_001.pdf",
+    model="retab-small",
+    json_schema=my_schema,
 )
 
 # 2. Get sources for the extraction
@@ -450,25 +505,34 @@ for field, leaf in sources.sources.items():
                   f"{anchor['width']:.2f}, {anchor['height']:.2f})")
 ```
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // 1. Extract data from a document
-const result = await client.extractions.create({
-  document: "invoices/invoice_001.pdf",
-  model: "retab-small",
-  json_schema: mySchema,
-});
+const result = await client.extractions.create("invoices/invoice_001.pdf", mySchema, "retab-small");
 
 // 2. Get sources for the extraction
 const sources = await client.extractions.sources(result.id);
 
 // 3. Use anchors to highlight values in a PDF viewer
 for (const [field, leaf] of Object.entries(sources.sources)) {
-  if (leaf?.source?.anchor?.kind === "pdf_bbox") {
-    const { page, left, top, width, height } = leaf.source.anchor;
+  const sourceLeaf = leaf as {
+    source?: {
+      anchor?: {
+        kind?: string;
+        page?: number;
+        left?: number;
+        top?: number;
+        width?: number;
+        height?: number;
+      };
+    };
+  };
+
+  if (sourceLeaf.source?.anchor?.kind === "pdf_bbox") {
+    const { page, left, top, width, height } = sourceLeaf.source.anchor;
     console.log(
       `${field}: page ${page}, bbox (${left}, ${top}, ${width}, ${height})`,
     );
@@ -535,6 +599,134 @@ func main() {
 		}
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new
+
+# 1. Extract data from a document
+result = client.extractions.create(
+  document: 'invoices/invoice_001.pdf',
+  model: 'retab-small',
+  json_schema: my_schema,
+)
+
+# 2. Get sources for the extraction
+sources = client.extractions.sources(extraction_id: result.id)
+
+# 3. Use anchors to highlight values in a PDF viewer
+sources.sources.each do |field, leaf|
+  next unless leaf.is_a?(Hash) && leaf['source']
+  anchor = leaf['source']['anchor']
+  if anchor && anchor['kind'] == 'pdf_bbox'
+    puts format(
+      '%s: page %d, bbox (%.2f, %.2f, %.2f, %.2f)',
+      field,
+      anchor['page'],
+      anchor['left'],
+      anchor['top'],
+      anchor['width'],
+      anchor['height'],
+    )
+  end
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+// 1. Extract data from a document
+$result = $client->extractions()->create(
+    document: 'invoices/invoice_001.pdf',
+    jsonSchema: $mySchema,
+    model: 'retab-small',
+);
+
+// 2. Get sources for the extraction
+$sources = $client->extractions()->sources($result->id);
+
+// 3. Use anchors to highlight values in a PDF viewer
+foreach ($sources->sources as $field => $leaf) {
+    $anchor = $leaf['source']['anchor'] ?? null;
+    if (is_array($anchor) && ($anchor['kind'] ?? null) === 'pdf_bbox') {
+        printf(
+            "%s: page %d, bbox (%.2f, %.2f, %.2f, %.2f)\n",
+            $field,
+            $anchor['page'],
+            $anchor['left'],
+            $anchor['top'],
+            $anchor['width'],
+            $anchor['height'],
+        );
+    }
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using Retab;
+using Newtonsoft.Json.Linq;
+
+var client = new Retab("YOUR_API_KEY");
+
+// 1. Extract data from a document
+var result = await client.Extractions.CreateAsync(
+    client.ApiKey,
+    new ExtractionsCreateOptions
+    {
+        Document = new FileInfo("invoices/invoice_001.pdf"),
+        Model = "retab-small",
+        JsonSchema = mySchema,
+    }
+);
+
+// 2. Get sources for the extraction
+var sources = await client.Extractions.SourcesAsync(result.Id, client.ApiKey);
+
+// 3. Use anchors to highlight values in a PDF viewer
+foreach (var kv in sources.Sources)
+{
+    if (kv.Value is JObject leaf && leaf["source"] is JObject source
+        && source["anchor"] is JObject anchor
+        && (string?)anchor["kind"] == "pdf_bbox")
+    {
+        Console.WriteLine(
+            $"{kv.Key}: page {anchor["page"]}, bbox " +
+            $"({anchor["left"]}, {anchor["top"]}, {anchor["width"]}, {anchor["height"]})"
+        );
+    }
+}
+```
+
+```rust Rust
+use retab::{resources::extractions::CreateParams, Retab};
+use std::collections::HashMap;
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let mut schema = HashMap::new();
+schema.insert("type".to_string(), serde_json::json!("object"));
+schema.insert(
+    "properties".to_string(),
+    serde_json::json!({ "total": { "type": "number" } }),
+);
+
+let extraction = client
+    .extractions()
+    .create(CreateParams::new("invoice.pdf", schema))
+    .await?;
+let sources = client.extractions().sources(&extraction.id).await?;
+
+println!("{:#?}", sources.sources);
 ```
 
 </CodeGroup>

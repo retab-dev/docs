@@ -26,17 +26,12 @@ for i, page in enumerate(parse.output.pages):
     print(f"Page {i + 1}: {page}")
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const parse = await client.parses.create({
-  document: "document.pdf",
-  model: "retab-small",
-  table_parsing_format: "markdown",
-  image_resolution_dpi: 192,
-});
+const parse = await client.parses.create("document.pdf", "retab-small", "markdown", 192);
 
 console.log(`Parse ID: ${parse.id}`);
 console.log(`Filename: ${parse.file.filename}`);
@@ -89,6 +84,77 @@ func main() {
 		}
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+parse = client.parses.create(
+  document: 'document.pdf',
+  model: 'retab-small',
+  table_parsing_format: 'markdown',
+  image_resolution_dpi: 192,
+)
+
+puts "Parse ID: #{parse.id}"
+puts "Filename: #{parse.file.filename}"
+puts "Full text: #{parse.output.text}"
+parse.output.pages.each_with_index do |page, i|
+  puts "Page #{i + 1}: #{page}"
+end
+```
+
+```rust rust
+use retab::enums::ParseRequestTableParsingFormat;
+use retab::resources::parses::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut params = CreateParams::new(PathBuf::from("document.pdf"));
+    params.body.model = Some("retab-small".into());
+    params.body.table_parsing_format = Some(ParseRequestTableParsingFormat::Markdown);
+    params.body.image_resolution_dpi = Some(192);
+
+    let parse = client.parses().create(params).await?;
+
+    println!("Parse ID: {}", parse.id);
+    println!("Filename: {}", parse.file.filename);
+    println!("Full text: {}", parse.output.text);
+    for (i, page) in parse.output.pages.iter().enumerate() {
+        println!("Page {}: {}", i + 1, page);
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->parses()->create(
+    document: 'invoice.pdf',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Parses.CreateAsync(apiKey, new ParsesCreateOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

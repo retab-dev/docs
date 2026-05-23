@@ -21,18 +21,12 @@ result = client.workflows.reviews.reject(
 print(result.review.decision.verdict)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const result = await client.workflows.reviews.reject(
-  "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
-  {
-    versionId: "rvr_HQ6ZZBQTJLSGLZQCWBSI25SCOQ",
-    reason: "Source document is illegible; cannot verify totals.",
-  },
-);
+const result = await client.workflows.reviews.reject("rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY", "rvr_HQ6ZZBQTJLSGLZQCWBSI25SCOQ", "Source document is illegible; cannot verify totals.");
 
 console.log(result.review.decision?.verdict);
 ```
@@ -68,6 +62,80 @@ func main() {
 		fmt.Println(result.Review.Decision.Verdict)
 	}
 }
+```
+
+```rust rust
+use retab::models::RejectReviewRequest;
+use retab::resources::workflow_reviews::RejectParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let body = RejectReviewRequest::new(
+        "rvr_HQ6ZZBQTJLSGLZQCWBSI25SCOQ",
+        "Source document is illegible; cannot verify totals.",
+    );
+    let result = client
+        .workflow_reviews()
+        .reject(
+            "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
+            RejectParams::new(body),
+        )
+        .await?;
+    if let Some(decision) = result.review.decision.as_ref() {
+        println!("{:?}", decision.verdict);
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowReviews()->reject(
+    reviewId: 'rev_abc123',
+    versionId: 'ver_abc123',
+    reason: 'value',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowReviews.RejectAsync(
+    "rev_abc123",
+    apiKey,
+    new WorkflowReviewsRejectOptions
+    {
+        VersionId = "ver_abc123",
+        Reason = "Source document is illegible; cannot verify totals.",
+    }
+);
+Console.WriteLine(result);
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+result = client.workflow_reviews.reject(
+  review_id: 'rev_abc123',
+  version_id: 'ver_abc123',
+  reason: 'Source document is illegible; cannot verify totals.',
+)
+puts result
 ```
 
 ```bash curl

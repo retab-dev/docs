@@ -121,7 +121,6 @@ from retab.types.extractions import ExtractionRequest
 client = Retab()
 
 extraction = client.extractions.create(
-ExtractionRequest(
 document="freight/booking_confirmation.jpg",
 model="retab-micro",
 json_schema={
@@ -144,22 +143,18 @@ json_schema={
 },
 n_consensus=1, # 1 means disabled (default); if > 1 the extraction runs in consensus mode
 )
-)
 
 print(extraction.output)
 print(extraction.consensus.likelihoods)
 print(extraction.id)
 
 ````
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const extraction = await client.extractions.create({
-    document: "freight/booking_confirmation.jpg",
-    model: "retab-micro",
-    json_schema: {
+const extraction = await client.extractions.create("freight/booking_confirmation.jpg", {
         "X-SystemPrompt": "You are a useful assistant.",
         properties: {
             name: {
@@ -177,8 +172,11 @@ const extraction = await client.extractions.create({
         title: "CalendarEvent",
         type: "object"
     },
-    n_consensus: 1 // 1 means disabled (default); if > 1 the extraction runs in consensus mode
-});
+    "retab-micro",
+    undefined,
+    undefined,
+    1 // 1 means disabled (default); if > 1 the extraction runs in consensus mode
+);
 
 console.log(extraction.output);
 console.log(extraction.consensus?.likelihoods);
@@ -236,6 +234,120 @@ func main() {
 		fmt.Println(consensus["likelihoods"])
 	}
 	fmt.Println((*extraction)["id"])
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+extraction = client.extractions.create(
+  document: 'freight/booking_confirmation.jpg',
+  model: 'retab-micro',
+  json_schema: {
+    'X-SystemPrompt' => 'You are a useful assistant.',
+    'properties' => {
+      'name' => {
+        'description' => 'The name of the calendar event.',
+        'title' => 'Name',
+        'type' => 'string',
+      },
+      'date' => {
+        'description' => 'The date of the calendar event in ISO 8601 format.',
+        'title' => 'Date',
+        'type' => 'string',
+      },
+    },
+    'required' => ['name', 'date'],
+    'title' => 'CalendarEvent',
+    'type' => 'object',
+  },
+  n_consensus: 1, # 1 means disabled (default); if > 1 the extraction runs in consensus mode
+)
+
+puts extraction.output
+puts extraction.consensus&.likelihoods
+puts extraction.id
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$extraction = $client->extractions()->create(
+    document: 'freight/booking_confirmation.jpg',
+    jsonSchema: [
+        'X-SystemPrompt' => 'You are a useful assistant.',
+        'properties' => [
+            'name' => [
+                'description' => 'The name of the calendar event.',
+                'title' => 'Name',
+                'type' => 'string',
+            ],
+            'date' => [
+                'description' => 'The date of the calendar event in ISO 8601 format.',
+                'title' => 'Date',
+                'type' => 'string',
+            ],
+        ],
+        'required' => ['name', 'date'],
+        'title' => 'CalendarEvent',
+        'type' => 'object',
+    ],
+    model: 'retab-micro',
+    nConsensus: 1, // 1 means disabled (default); if > 1 the extraction runs in consensus mode
+);
+
+print_r($extraction->output);
+print_r($extraction->consensus?->likelihoods);
+echo $extraction->id . PHP_EOL;
+```
+
+```rust Rust
+use retab::resources::extractions::CreateParams;
+use retab::Retab;
+use std::collections::HashMap;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let json_schema: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "X-SystemPrompt": "You are a useful assistant.",
+        "properties": {
+            "name": {
+                "description": "The name of the calendar event.",
+                "title": "Name",
+                "type": "string"
+            },
+            "date": {
+                "description": "The date of the calendar event in ISO 8601 format.",
+                "title": "Date",
+                "type": "string"
+            }
+        },
+        "required": ["name", "date"],
+        "title": "CalendarEvent",
+        "type": "object"
+    }))?;
+
+    let mut params = CreateParams::new("freight/booking_confirmation.jpg", json_schema);
+    params.body.model = Some("retab-micro".into());
+    params.body.n_consensus = Some(1); // 1 means disabled (default); if > 1 the extraction runs in consensus mode
+
+    let extraction = client.extractions().create(params).await?;
+
+    println!("{:?}", extraction.output);
+    if let Some(consensus) = &extraction.consensus {
+        println!("{:?}", consensus.likelihoods);
+    }
+    println!("{}", extraction.id);
+    Ok(())
 }
 ```
 
@@ -301,6 +413,62 @@ curl -X POST https://api.retab.com/v1/extractions \
 }
 ```
 
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var schema = new Dictionary<string, object>
+{
+    ["X-SystemPrompt"] = "You are a useful assistant.",
+    ["title"] = "CalendarEvent",
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["name"] = new Dictionary<string, object>
+        {
+            ["description"] = "The name of the calendar event.",
+            ["title"] = "Name",
+            ["type"] = "string",
+        },
+        ["date"] = new Dictionary<string, object>
+        {
+            ["description"] = "The date of the calendar event in ISO 8601 format.",
+            ["title"] = "Date",
+            ["type"] = "string",
+        },
+    },
+    ["required"] = new List<string> { "name", "date" },
+};
+
+var extraction = await client.Extractions.CreateAsync(
+    client.ApiKey,
+    new ExtractionsCreateOptions
+    {
+        Document = new FileInfo("freight/booking_confirmation.jpg"),
+        Model = "retab-micro",
+        JsonSchema = schema,
+        NConsensus = 1, // 1 means disabled (default); if > 1 the extraction runs in consensus mode
+    }
+);
+
+foreach (var kv in extraction.Output)
+{
+    Console.WriteLine($"{kv.Key}: {kv.Value}");
+}
+if (extraction.Consensus?.Likelihoods != null)
+{
+    foreach (var kv in extraction.Consensus.Likelihoods)
+    {
+        Console.WriteLine($"{kv.Key}: {kv.Value}");
+    }
+}
+Console.WriteLine(extraction.Id);
+```
+
 </CodeGroup>
 
 ## Build Your Schema
@@ -357,12 +525,10 @@ initial_schema = {
 }
 
 result = client.extractions.create(
-ExtractionRequest(
 document="event_flyer.pdf",
 model="retab-small",
 json_schema=initial_schema,
 n_consensus=4,
-)
 )
 
 print(result.output)
@@ -370,10 +536,10 @@ print(result.consensus.likelihoods if result.consensus else None)
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const initialSchema = {
   title: "CalendarEvent",
@@ -386,12 +552,7 @@ const initialSchema = {
   required: ["name", "date", "address"],
 };
 
-const result = await client.extractions.create({
-  document: "event_flyer.pdf",
-  model: "retab-small",
-  json_schema: initialSchema,
-  n_consensus: 4,
-});
+const result = await client.extractions.create("event_flyer.pdf", initialSchema, "retab-small", undefined, undefined, 4);
 
 console.log(result.output);
 console.log(result.consensus?.likelihoods);
@@ -444,6 +605,142 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+initial_schema = {
+  'title' => 'CalendarEvent',
+  'type' => 'object',
+  'properties' => {
+    'name' => { 'type' => 'string' },
+    'date' => { 'type' => 'string' },
+    'address' => { 'type' => 'string' },
+  },
+  'required' => ['name', 'date', 'address'],
+}
+
+result = client.extractions.create(
+  document: 'event_flyer.pdf',
+  model: 'retab-small',
+  json_schema: initial_schema,
+  n_consensus: 4,
+)
+
+puts result.output
+puts result.consensus&.likelihoods
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$initialSchema = [
+    'title' => 'CalendarEvent',
+    'type' => 'object',
+    'properties' => [
+        'name' => ['type' => 'string'],
+        'date' => ['type' => 'string'],
+        'address' => ['type' => 'string'],
+    ],
+    'required' => ['name', 'date', 'address'],
+];
+
+$result = $client->extractions()->create(
+    document: 'event_flyer.pdf',
+    jsonSchema: $initialSchema,
+    model: 'retab-small',
+    nConsensus: 4,
+);
+
+print_r($result->output);
+print_r($result->consensus?->likelihoods);
+```
+
+```rust Rust
+use retab::resources::extractions::CreateParams;
+use retab::Retab;
+use std::collections::HashMap;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let initial_schema: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "title": "CalendarEvent",
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "date": {"type": "string"},
+            "address": {"type": "string"}
+        },
+        "required": ["name", "date", "address"]
+    }))?;
+
+    let mut params = CreateParams::new("event_flyer.pdf", initial_schema);
+    params.body.model = Some("retab-small".into());
+    params.body.n_consensus = Some(4);
+
+    let result = client.extractions().create(params).await?;
+
+    println!("{:?}", result.output);
+    if let Some(consensus) = &result.consensus {
+        println!("{:?}", consensus.likelihoods);
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var initialSchema = new Dictionary<string, object>
+{
+    ["title"] = "CalendarEvent",
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["name"]    = new Dictionary<string, object> { ["type"] = "string" },
+        ["date"]    = new Dictionary<string, object> { ["type"] = "string" },
+        ["address"] = new Dictionary<string, object> { ["type"] = "string" },
+    },
+    ["required"] = new List<string> { "name", "date", "address" },
+};
+
+var result = await client.Extractions.CreateAsync(
+    client.ApiKey,
+    new ExtractionsCreateOptions
+    {
+        Document = new FileInfo("event_flyer.pdf"),
+        Model = "retab-small",
+        JsonSchema = initialSchema,
+        NConsensus = 4,
+    }
+);
+
+foreach (var kv in result.Output)
+{
+    Console.WriteLine($"{kv.Key}: {kv.Value}");
+}
+if (result.Consensus?.Likelihoods != null)
+{
+    foreach (var kv in result.Consensus.Likelihoods)
+    {
+        Console.WriteLine($"{kv.Key}: {kv.Value}");
+    }
+}
+```
+
 </CodeGroup>
 
 Example interpretation:
@@ -492,7 +789,7 @@ print(TemperatureReport.model_json_schema())
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { z } from 'zod';
 
 const TemperatureReportSchema = z.object({
@@ -535,6 +832,97 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+require 'json'
+
+temperature_report_schema = {
+  'title' => 'TemperatureReport',
+  'type' => 'object',
+  'properties' => {
+    'temperature' => {
+      'type' => 'number',
+      'description' => 'temperature in Fahrenheit',
+      'X-ReasoningPrompt' => 'If the temperature is given in Celsius, explicitly convert it ' \
+                             'to Fahrenheit. If it is already in Fahrenheit, leave it unchanged.',
+    },
+  },
+  'required' => ['temperature'],
+}
+
+puts JSON.pretty_generate(temperature_report_schema)
+```
+
+```php PHP
+<?php
+$temperatureReportSchema = [
+    'title' => 'TemperatureReport',
+    'type' => 'object',
+    'properties' => [
+        'temperature' => [
+            'type' => 'number',
+            'description' => 'temperature in Fahrenheit',
+            'X-ReasoningPrompt' => 'If the temperature is given in Celsius, explicitly convert it '
+                . 'to Fahrenheit. If it is already in Fahrenheit, leave it unchanged.',
+        ],
+    ],
+    'required' => ['temperature'],
+];
+
+echo json_encode($temperatureReportSchema, JSON_PRETTY_PRINT) . PHP_EOL;
+```
+
+```rust Rust
+use serde_json::json;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let temperature_report_schema = json!({
+        "title": "TemperatureReport",
+        "type": "object",
+        "properties": {
+            "temperature": {
+                "type": "number",
+                "description": "temperature in Fahrenheit",
+                "X-ReasoningPrompt": "If the temperature is given in Celsius, explicitly convert it to Fahrenheit. If it is already in Fahrenheit, leave it unchanged."
+            }
+        },
+        "required": ["temperature"]
+    });
+
+    println!("{}", serde_json::to_string_pretty(&temperature_report_schema)?);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+
+var temperatureReportSchema = new Dictionary<string, object>
+{
+    ["title"] = "TemperatureReport",
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["temperature"] = new Dictionary<string, object>
+        {
+            ["type"] = "number",
+            ["description"] = "temperature in Fahrenheit",
+            ["X-ReasoningPrompt"] =
+                "If the temperature is given in Celsius, explicitly convert it " +
+                "to Fahrenheit. If it is already in Fahrenheit, leave it unchanged.",
+        },
+    },
+    ["required"] = new List<string> { "temperature" },
+};
+
+Console.WriteLine(JsonSerializer.Serialize(
+    temperatureReportSchema,
+    new JsonSerializerOptions { WriteIndented = true }
+));
+```
+
 </CodeGroup>
 
 Without reasoning, a model may copy `22.5` directly. With reasoning enabled, it is more likely to compute `72.5` and explain the conversion in `reasoning___temperature`.
@@ -570,10 +958,10 @@ print(sources.sources)
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const sources = await client.extractions.sources("extr_01G34H8J2K");
 
@@ -608,6 +996,58 @@ func main() {
 	fmt.Println((*sources)["extraction"])
 	fmt.Println((*sources)["sources"])
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+sources = client.extractions.sources(extraction_id: 'extr_01G34H8J2K')
+
+puts sources.extraction
+puts sources.sources
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$sources = $client->extractions()->sources('extr_01G34H8J2K');
+
+print_r($sources->extraction);
+print_r($sources->sources);
+```
+
+```rust Rust
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let sources = client.extractions().sources("extr_01G34H8J2K").await?;
+
+    println!("{:?}", sources.extraction);
+    println!("{:?}", sources.sources);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var sources = await client.Extractions.SourcesAsync("extr_01G34H8J2K", client.ApiKey);
+
+Console.WriteLine(sources.Extraction);
+Console.WriteLine(sources.Sources);
 ```
 
 </CodeGroup>
@@ -676,10 +1116,10 @@ to_date=datetime(2024, 12, 31),
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const recent = await client.extractions.list({
   limit: 10,
@@ -687,13 +1127,13 @@ const recent = await client.extractions.list({
 });
 
 const customerSpecific = await client.extractions.list({
-  metadata: { customer_id: "cust_acme_corp" },
+  metadata: JSON.stringify({ customer_id: "cust_acme_corp" }),
   limit: 50,
 });
 
 const dateFiltered = await client.extractions.list({
-  from_date: new Date("2024-01-01"),
-  to_date: new Date("2024-12-31"),
+  fromDate: new Date("2024-01-01").toISOString(),
+  toDate: new Date("2024-12-31").toISOString(),
 });
 ````
 
@@ -746,6 +1186,129 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+require 'date'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+recent = client.extractions.list(
+  limit: 10,
+  order: 'desc',
+)
+
+customer_specific = client.extractions.list(
+  metadata: { customer_id: 'cust_acme_corp' },
+  limit: 50,
+)
+
+date_filtered = client.extractions.list(
+  from_date: DateTime.new(2024, 1, 1),
+  to_date: DateTime.new(2024, 12, 31),
+)
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\JobsOrder;
+
+$client = new Client();
+
+$recent = $client->extractions()->list(
+    limit: 10,
+    order: JobsOrder::Desc,
+);
+
+$customerSpecific = $client->extractions()->list(
+    limit: 50,
+    metadata: json_encode(['customer_id' => 'cust_acme_corp']),
+);
+
+$dateFiltered = $client->extractions()->list(
+    fromDate: '2024-01-01',
+    toDate: '2024-12-31',
+);
+```
+
+```rust Rust
+use retab::enums::ExtractionsOrder;
+use retab::resources::extractions::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let recent = client
+        .extractions()
+        .list(ListParams {
+            limit: Some(10),
+            order: Some(ExtractionsOrder::Desc),
+            ..Default::default()
+        })
+        .await?;
+    println!("{:?}", recent.data);
+
+    let customer_specific = client
+        .extractions()
+        .list(ListParams {
+            limit: Some(50),
+            metadata: Some(r#"{"customer_id":"cust_acme_corp"}"#.into()),
+            ..Default::default()
+        })
+        .await?;
+    println!("{:?}", customer_specific.data);
+
+    let date_filtered = client
+        .extractions()
+        .list(ListParams {
+            from_date: Some("2024-01-01".into()),
+            to_date: Some("2024-12-31".into()),
+            ..Default::default()
+        })
+        .await?;
+    println!("{:?}", date_filtered.data);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var recent = await client.Extractions.ListAsync(
+    client.ApiKey,
+    new ExtractionsListOptions { Limit = 10, Order = "desc" }
+);
+foreach (var e in recent.Items) Console.WriteLine(e.Id);
+
+var customerSpecific = await client.Extractions.ListAsync(
+    client.ApiKey,
+    new ExtractionsListOptions
+    {
+        Limit = 50,
+        Metadata = new Dictionary<string, string> { ["customer_id"] = "cust_acme_corp" },
+    }
+);
+foreach (var e in customerSpecific.Items) Console.WriteLine(e.Id);
+
+var dateFiltered = await client.Extractions.ListAsync(
+    client.ApiKey,
+    new ExtractionsListOptions
+    {
+        FromDate = "2024-01-01",
+        ToDate = "2024-12-31",
+    }
+);
+foreach (var e in dateFiltered.Items) Console.WriteLine(e.Id);
+```
+
 </CodeGroup>
 
 Useful list filters:
@@ -769,10 +1332,10 @@ print(extraction)
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const extraction = await client.extractions.get("extr_01G34H8J2K");
 console.log(extraction);
@@ -805,6 +1368,54 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+extraction = client.extractions.get(extraction_id: 'extr_01G34H8J2K')
+puts extraction
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$extraction = $client->extractions()->get('extr_01G34H8J2K');
+print_r($extraction);
+```
+
+```rust Rust
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let extraction = client.extractions().get("extr_01G34H8J2K").await?;
+    println!("{:?}", extraction);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var extraction = await client.Extractions.GetAsync("extr_01G34H8J2K", client.ApiKey);
+Console.WriteLine(extraction.Id);
+foreach (var kv in extraction.Output)
+{
+    Console.WriteLine($"{kv.Key}: {kv.Value}");
+}
+```
+
 </CodeGroup>
 
 ### Filtering by metadata
@@ -824,13 +1435,13 @@ limit=100,
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const customerExtractions = await client.extractions.list({
-  metadata: { customer_id: "cust_acme_corp" },
+  metadata: JSON.stringify({ customer_id: "cust_acme_corp" }),
   limit: 100,
 });
 ````
@@ -865,6 +1476,74 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+customer_extractions = client.extractions.list(
+  metadata: { customer_id: 'cust_acme_corp' },
+  limit: 100,
+)
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$customerExtractions = $client->extractions()->list(
+    limit: 100,
+    metadata: json_encode(['customer_id' => 'cust_acme_corp']),
+);
+```
+
+```rust Rust
+use retab::resources::extractions::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let customer_extractions = client
+        .extractions()
+        .list(ListParams {
+            limit: Some(100),
+            metadata: Some(r#"{"customer_id":"cust_acme_corp"}"#.into()),
+            ..Default::default()
+        })
+        .await?;
+    println!("{:?}", customer_extractions.data);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var customerExtractions = await client.Extractions.ListAsync(
+    client.ApiKey,
+    new ExtractionsListOptions
+    {
+        Limit = 100,
+        Metadata = new Dictionary<string, string> { ["customer_id"] = "cust_acme_corp" },
+    }
+);
+
+foreach (var e in customerExtractions.Items)
+{
+    Console.WriteLine(e.Id);
+}
+```
+
 </CodeGroup>
 
 For full request and response details, see the extraction endpoints in the API Reference.
@@ -880,32 +1559,29 @@ from retab.types.extractions import ExtractionRequest
 
 client = Retab()
 
-# Extract data
-
+# Extract data.
 result = client.extractions.create(
-ExtractionRequest(
-document="freight/booking_confirmation.jpg",
-model="retab-micro",
-json_schema={
-'X-SystemPrompt': 'You are a useful assistant.',
-'properties': {
-'name': {
-'description': 'The name of the calendar event.',
-'title': 'Name',
-'type': 'string'
-},
-'date': {
-'description': 'The date of the calendar event in ISO 8601 format.',
-'title': 'Date',
-'type': 'string'
-}
-},
-'required': ['name', 'date'],
-'title': 'CalendarEvent',
-'type': 'object'
-},
-n_consensus=1,
-)
+    document="freight/booking_confirmation.jpg",
+    model="retab-micro",
+    json_schema={
+        'X-SystemPrompt': 'You are a useful assistant.',
+        'properties': {
+            'name': {
+                'description': 'The name of the calendar event.',
+                'title': 'Name',
+                'type': 'string',
+            },
+            'date': {
+                'description': 'The date of the calendar event in ISO 8601 format.',
+                'title': 'Date',
+                'type': 'string',
+            },
+        },
+        'required': ['name', 'date'],
+        'title': 'CalendarEvent',
+        'type': 'object',
+    },
+    n_consensus=1,
 )
 
 extracted_data = result.output
@@ -914,16 +1590,16 @@ likelihoods = (result.consensus.likelihoods or {}) if result.consensus else {}
 print(f"Extracted Event: {extracted_data.get('name')} on {extracted_data.get('date')}")
 
 if likelihoods and all(score > 0.7 for score in likelihoods.values()):
-print("High likelihood extraction - Saving to DB...")
+    print("High likelihood extraction - Saving to DB...")
 else:
-print("Low likelihood - Review manually")
+    print("Low likelihood - Review manually")
 
 if result.usage:
-print(f"Processed with {result.usage.total_tokens} tokens")
+    print(f"Processed using {result.usage.credits} credits")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 import { z } from 'zod';
 
@@ -937,12 +1613,14 @@ const CalendarEventSchema = z.object({
 });
 
 // Extract data
-const result = await client.extractions.create({
-    document: "freight/booking_confirmation.jpg",
-    model: "retab-micro",
-    json_schema: CalendarEventSchema,
-    n_consensus: 1
-});
+const result = await client.extractions.create(
+    "freight/booking_confirmation.jpg",
+    CalendarEventSchema as unknown as Record<string, unknown>,
+    "retab-micro",
+    undefined,
+    undefined,
+    1
+);
 
 // Access extracted data
 const extractedData = result.output;
@@ -955,7 +1633,7 @@ if (validation.success) {
     console.log(`Extracted Event: ${event.name} on ${event.date}`);
 
     // Check likelihoods
-    const scores = Object.values(likelihoods);
+    const scores = Object.values(likelihoods) as number[];
     if (scores.length > 0 && Math.min(...scores) > 0.7) {
         console.log("High likelihood extraction - Saving to DB...");
         // db.save(event);  // Pseudo-code for DB integration
@@ -966,7 +1644,7 @@ if (validation.success) {
     console.log("Validation failed:", validation.error);
 }
 
-console.log(`Processed with ${result.usage?.total_tokens} tokens`);
+console.log(`Processed using ${result.usage?.credits ?? 0} credits`);
 ````
 
 ```go Go
@@ -1045,6 +1723,231 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Extract data
+result = client.extractions.create(
+  document: 'freight/booking_confirmation.jpg',
+  model: 'retab-micro',
+  json_schema: {
+    'X-SystemPrompt' => 'You are a useful assistant.',
+    'properties' => {
+      'name' => {
+        'description' => 'The name of the calendar event.',
+        'title' => 'Name',
+        'type' => 'string',
+      },
+      'date' => {
+        'description' => 'The date of the calendar event in ISO 8601 format.',
+        'title' => 'Date',
+        'type' => 'string',
+      },
+    },
+    'required' => ['name', 'date'],
+    'title' => 'CalendarEvent',
+    'type' => 'object',
+  },
+  n_consensus: 1,
+)
+
+extracted_data = result.output
+likelihoods = (result.consensus&.likelihoods) || {}
+
+puts "Extracted Event: #{extracted_data['name']} on #{extracted_data['date']}"
+
+if !likelihoods.empty? && likelihoods.values.all? { |score| score > 0.7 }
+  puts 'High likelihood extraction - Saving to DB...'
+else
+  puts 'Low likelihood - Review manually'
+end
+
+if result.usage
+  puts "Processed with #{result.usage.credits} credits"
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+// Extract data
+$result = $client->extractions()->create(
+    document: 'freight/booking_confirmation.jpg',
+    jsonSchema: [
+        'X-SystemPrompt' => 'You are a useful assistant.',
+        'properties' => [
+            'name' => [
+                'description' => 'The name of the calendar event.',
+                'title' => 'Name',
+                'type' => 'string',
+            ],
+            'date' => [
+                'description' => 'The date of the calendar event in ISO 8601 format.',
+                'title' => 'Date',
+                'type' => 'string',
+            ],
+        ],
+        'required' => ['name', 'date'],
+        'title' => 'CalendarEvent',
+        'type' => 'object',
+    ],
+    model: 'retab-micro',
+    nConsensus: 1,
+);
+
+$extractedData = $result->output;
+$likelihoods = $result->consensus?->likelihoods ?? [];
+
+echo "Extracted Event: {$extractedData['name']} on {$extractedData['date']}" . PHP_EOL;
+
+if (!empty($likelihoods) && min($likelihoods) > 0.7) {
+    echo 'High likelihood extraction - Saving to DB...' . PHP_EOL;
+} else {
+    echo 'Low likelihood - Review manually' . PHP_EOL;
+}
+
+if ($result->usage !== null) {
+    echo "Processed with {$result->usage->credits} credits" . PHP_EOL;
+}
+```
+
+```rust Rust
+use retab::resources::extractions::CreateParams;
+use retab::Retab;
+use std::collections::HashMap;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let json_schema: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "X-SystemPrompt": "You are a useful assistant.",
+        "properties": {
+            "name": {
+                "description": "The name of the calendar event.",
+                "title": "Name",
+                "type": "string"
+            },
+            "date": {
+                "description": "The date of the calendar event in ISO 8601 format.",
+                "title": "Date",
+                "type": "string"
+            }
+        },
+        "required": ["name", "date"],
+        "title": "CalendarEvent",
+        "type": "object"
+    }))?;
+
+    let mut params = CreateParams::new("freight/booking_confirmation.jpg", json_schema);
+    params.body.model = Some("retab-micro".into());
+    params.body.n_consensus = Some(1);
+
+    let result = client.extractions().create(params).await?;
+
+    let extracted_data = &result.output;
+    let likelihoods = result
+        .consensus
+        .as_ref()
+        .and_then(|c| c.likelihoods.as_ref())
+        .cloned()
+        .unwrap_or_default();
+
+    println!(
+        "Extracted Event: {:?} on {:?}",
+        extracted_data.get("name"),
+        extracted_data.get("date"),
+    );
+
+    let all_high = !likelihoods.is_empty()
+        && likelihoods
+            .values()
+            .filter_map(|v| v.as_f64())
+            .all(|score| score > 0.7);
+    if all_high {
+        println!("High likelihood extraction - Saving to DB...");
+    } else {
+        println!("Low likelihood - Review manually");
+    }
+
+    if let Some(usage) = &result.usage {
+        println!("Processed with {} credits", usage.credits);
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var schema = new Dictionary<string, object>
+{
+    ["X-SystemPrompt"] = "You are a useful assistant.",
+    ["title"] = "CalendarEvent",
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["name"] = new Dictionary<string, object>
+        {
+            ["description"] = "The name of the calendar event.",
+            ["title"] = "Name",
+            ["type"] = "string",
+        },
+        ["date"] = new Dictionary<string, object>
+        {
+            ["description"] = "The date of the calendar event in ISO 8601 format.",
+            ["title"] = "Date",
+            ["type"] = "string",
+        },
+    },
+    ["required"] = new List<string> { "name", "date" },
+};
+
+// Extract data
+var result = await client.Extractions.CreateAsync(
+    client.ApiKey,
+    new ExtractionsCreateOptions
+    {
+        Document = new FileInfo("freight/booking_confirmation.jpg"),
+        Model = "retab-micro",
+        JsonSchema = schema,
+        NConsensus = 1,
+    }
+);
+
+var name = result.GetOutputAttribute<string>("name");
+var date = result.GetOutputAttribute<string>("date");
+Console.WriteLine($"Extracted Event: {name} on {date}");
+
+var likelihoods = result.Consensus?.Likelihoods;
+if (likelihoods != null && likelihoods.Count > 0 && likelihoods.Values.All(score => score > 0.7))
+{
+    Console.WriteLine("High likelihood extraction - Saving to DB...");
+}
+else
+{
+    Console.WriteLine("Low likelihood - Review manually");
+}
+
+if (result.Usage != null)
+{
+    Console.WriteLine($"Processed with {result.Usage.TotalTokens} tokens");
+}
+```
+
 </CodeGroup>
 
 ## Use Case: Passing Extra Instructions
@@ -1059,7 +1962,6 @@ from retab.types.extractions import ExtractionRequest
 client = Retab()
 
 result = client.extractions.create(
-ExtractionRequest(
 document="invoices/invoice_001.pdf",
 model="retab-micro",
 json_schema={
@@ -1078,21 +1980,17 @@ instructions=(
 "Extract values exactly as written; do not infer a missing currency."
 ),
 )
-)
 
 print(result.output)
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const result = await client.extractions.create({
-    document: "invoices/invoice_001.pdf",
-    model: "retab-micro",
-    json_schema: {
+const result = await client.extractions.create("invoices/invoice_001.pdf", {
         properties: {
             vendor_name: { type: "string", description: "Name of the vendor" },
             invoice_number: { type: "string", description: "Invoice number" },
@@ -1101,9 +1999,7 @@ const result = await client.extractions.create({
         },
         required: ["vendor_name", "invoice_number", "total_amount"],
         type: "object"
-    },
-    instructions: "This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise. Extract values exactly as written; do not infer a missing currency."
-});
+    }, "retab-micro", undefined, "This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise. Extract values exactly as written; do not infer a missing currency.");
 
 console.log(result.output);
 ````
@@ -1152,6 +2048,97 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+result = client.extractions.create(
+  document: 'invoices/invoice_001.pdf',
+  model: 'retab-micro',
+  json_schema: {
+    'properties' => {
+      'vendor_name' => { 'type' => 'string', 'description' => 'Name of the vendor' },
+      'invoice_number' => { 'type' => 'string', 'description' => 'Invoice number' },
+      'total_amount' => { 'type' => 'number', 'description' => 'Total amount due' },
+      'currency' => { 'type' => 'string', 'description' => 'Currency code (e.g., USD, EUR)' },
+    },
+    'required' => ['vendor_name', 'invoice_number', 'total_amount'],
+    'type' => 'object',
+  },
+  instructions: 'This invoice is from our European supplier. ' \
+                'Amounts should be in EUR unless explicitly stated otherwise. ' \
+                'Extract values exactly as written; do not infer a missing currency.',
+)
+
+puts result.output
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->extractions()->create(
+    document: 'invoices/invoice_001.pdf',
+    jsonSchema: [
+        'properties' => [
+            'vendor_name' => ['type' => 'string', 'description' => 'Name of the vendor'],
+            'invoice_number' => ['type' => 'string', 'description' => 'Invoice number'],
+            'total_amount' => ['type' => 'number', 'description' => 'Total amount due'],
+            'currency' => ['type' => 'string', 'description' => 'Currency code (e.g., USD, EUR)'],
+        ],
+        'required' => ['vendor_name', 'invoice_number', 'total_amount'],
+        'type' => 'object',
+    ],
+    model: 'retab-micro',
+    instructions: 'This invoice is from our European supplier. '
+        . 'Amounts should be in EUR unless explicitly stated otherwise. '
+        . 'Extract values exactly as written; do not infer a missing currency.',
+);
+
+print_r($result->output);
+```
+
+```rust Rust
+use retab::resources::extractions::CreateParams;
+use retab::Retab;
+use std::collections::HashMap;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let json_schema: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "properties": {
+            "vendor_name": {"type": "string", "description": "Name of the vendor"},
+            "invoice_number": {"type": "string", "description": "Invoice number"},
+            "total_amount": {"type": "number", "description": "Total amount due"},
+            "currency": {"type": "string", "description": "Currency code (e.g., USD, EUR)"}
+        },
+        "required": ["vendor_name", "invoice_number", "total_amount"],
+        "type": "object"
+    }))?;
+
+    let mut params = CreateParams::new("invoices/invoice_001.pdf", json_schema);
+    params.body.model = Some("retab-micro".into());
+    params.body.instructions = Some(
+        "This invoice is from our European supplier. \
+         Amounts should be in EUR unless explicitly stated otherwise. \
+         Extract values exactly as written; do not infer a missing currency."
+            .into(),
+    );
+
+    let result = client.extractions().create(params).await?;
+
+    println!("{:?}", result.output);
+    Ok(())
+}
+```
+
 ```curl cURL
 curl -X POST https://api.retab.com/v1/extractions \
 -H "Api-Key: $RETAB_API_KEY" \
@@ -1176,6 +2163,47 @@ curl -X POST https://api.retab.com/v1/extractions \
 }'
 ```
 
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var schema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["vendor_name"]    = new Dictionary<string, object> { ["type"] = "string", ["description"] = "Name of the vendor" },
+        ["invoice_number"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "Invoice number" },
+        ["total_amount"]   = new Dictionary<string, object> { ["type"] = "number", ["description"] = "Total amount due" },
+        ["currency"]       = new Dictionary<string, object> { ["type"] = "string", ["description"] = "Currency code (e.g., USD, EUR)" },
+    },
+    ["required"] = new List<string> { "vendor_name", "invoice_number", "total_amount" },
+};
+
+var result = await client.Extractions.CreateAsync(
+    client.ApiKey,
+    new ExtractionsCreateOptions
+    {
+        Document = new FileInfo("invoices/invoice_001.pdf"),
+        Model = "retab-micro",
+        JsonSchema = schema,
+        Instructions =
+            "This invoice is from our European supplier. " +
+            "Amounts should be in EUR unless explicitly stated otherwise. " +
+            "Extract values exactly as written; do not infer a missing currency.",
+    }
+);
+
+foreach (var kv in result.Output)
+{
+    Console.WriteLine($"{kv.Key}: {kv.Value}");
+}
+```
+
 </CodeGroup>
 
 ## Metadata Filters
@@ -1194,7 +2222,6 @@ from retab.types.extractions import ExtractionRequest
 client = Retab()
 
 result = client.extractions.create(
-ExtractionRequest(
 document="freight/booking_confirmation.jpg",
 model="retab-small",
 json_schema=my_schema,
@@ -1204,25 +2231,19 @@ metadata={
 "project_id": "project_abc",
 },
 )
-)
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const result = await client.extractions.create({
-  document: "freight/booking_confirmation.jpg",
-  model: "retab-small",
-  json_schema: mySchema,
-  metadata: {
+const result = await client.extractions.create("freight/booking_confirmation.jpg", mySchema, "retab-small", undefined, undefined, undefined, {
     customer_id: "cust_123",
     source: "sinari_jobs",
     project_id: "project_abc",
-  },
-});
+  });
 ````
 
 ```go Go
@@ -1264,6 +2285,98 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+result = client.extractions.create(
+  document: 'freight/booking_confirmation.jpg',
+  model: 'retab-small',
+  json_schema: my_schema,
+  metadata: {
+    'customer_id' => 'cust_123',
+    'source' => 'sinari_jobs',
+    'project_id' => 'project_abc',
+  },
+)
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$result = $client->extractions()->create(
+    document: 'freight/booking_confirmation.jpg',
+    jsonSchema: $mySchema,
+    model: 'retab-small',
+    metadata: [
+        'customer_id' => 'cust_123',
+        'source' => 'sinari_jobs',
+        'project_id' => 'project_abc',
+    ],
+);
+```
+
+```rust Rust
+use retab::resources::extractions::CreateParams;
+use retab::Retab;
+use std::collections::HashMap;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let my_schema: HashMap<String, serde_json::Value> =
+        serde_json::from_value(serde_json::json!({"type": "object"}))?;
+
+    let mut params = CreateParams::new("freight/booking_confirmation.jpg", my_schema);
+    params.body.model = Some("retab-small".into());
+    params.body.metadata = Some(HashMap::from([
+        ("customer_id".to_string(), "cust_123".to_string()),
+        ("source".to_string(), "sinari_jobs".to_string()),
+        ("project_id".to_string(), "project_abc".to_string()),
+    ]));
+
+    let result = client.extractions().create(params).await?;
+    println!("{:?}", result);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var mySchema = new Dictionary<string, object> { ["type"] = "object" };
+
+var result = await client.Extractions.CreateAsync(
+    client.ApiKey,
+    new ExtractionsCreateOptions
+    {
+        Document = new FileInfo("freight/booking_confirmation.jpg"),
+        Model = "retab-small",
+        JsonSchema = mySchema,
+        Metadata = new Dictionary<string, string>
+        {
+            ["customer_id"] = "cust_123",
+            ["source"]      = "sinari_jobs",
+            ["project_id"]  = "project_abc",
+        },
+    }
+);
+
+Console.WriteLine(result.Id);
+```
+
 </CodeGroup>
 
 ### 2. Filter extractions by metadata
@@ -1284,17 +2397,17 @@ metadata={
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const customerExtractions = await client.extractions.list({
   limit: 50,
-  metadata: {
+  metadata: JSON.stringify({
     customer_id: "cust_123",
     source: "sinari_jobs",
-  },
+  }),
 });
 ````
 
@@ -1331,11 +2444,89 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+customer_extractions = client.extractions.list(
+  limit: 50,
+  metadata: {
+    'customer_id' => 'cust_123',
+    'source' => 'sinari_jobs',
+  },
+)
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$customerExtractions = $client->extractions()->list(
+    limit: 50,
+    metadata: json_encode([
+        'customer_id' => 'cust_123',
+        'source' => 'sinari_jobs',
+    ]),
+);
+```
+
+```rust Rust
+use retab::resources::extractions::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let customer_extractions = client
+        .extractions()
+        .list(ListParams {
+            limit: Some(50),
+            metadata: Some(r#"{"customer_id":"cust_123","source":"sinari_jobs"}"#.into()),
+            ..Default::default()
+        })
+        .await?;
+    println!("{:?}", customer_extractions.data);
+    Ok(())
+}
+```
+
 ```curl cURL
 curl -G 'https://api.retab.com/v1/extractions' \
   -H 'Api-Key: $RETAB_API_KEY' \
   --data-urlencode 'limit=50' \
   --data-urlencode 'metadata={"customer_id":"cust_123","source":"sinari_jobs"}'
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var customerExtractions = await client.Extractions.ListAsync(
+    client.ApiKey,
+    new ExtractionsListOptions
+    {
+        Limit = 50,
+        Metadata = new Dictionary<string, string>
+        {
+            ["customer_id"] = "cust_123",
+            ["source"]      = "sinari_jobs",
+        },
+    }
+);
+
+foreach (var e in customerExtractions.Items)
+{
+    Console.WriteLine(e.Id);
+}
 ```
 
 </CodeGroup>
@@ -1371,11 +2562,9 @@ When multiple metadata keys are provided, all keys are applied together as exact
 from retab.types.extractions import ExtractionRequest
 
 result = client.extractions.create(
-    ExtractionRequest(
-        document="invoices/invoice_001.pdf",
-        json_schema=my_schema,
-        model="retab-small",
-        instructions="This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise.",
-    )
+    document="invoices/invoice_001.pdf",
+    json_schema=my_schema,
+    model="retab-small",
+    instructions="This invoice is from our European supplier. Amounts should be in EUR unless explicitly stated otherwise.",
 )
 ```

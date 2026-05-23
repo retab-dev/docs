@@ -38,7 +38,7 @@ document = {
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import fs from 'fs';
 
 // Load and encode your document
@@ -76,6 +76,62 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'base64'
+
+# Load and encode your document
+content = Base64.strict_encode64(File.binread('invoice.pdf'))
+document = {
+  filename: 'invoice.pdf',
+  url: "data:application/pdf;base64,#{content}",
+}
+```
+
+```php PHP
+<?php
+// Load and encode your document
+$content = base64_encode(file_get_contents('invoice.pdf'));
+$document = [
+    'filename' => 'invoice.pdf',
+    'url' => "data:application/pdf;base64,{$content}",
+];
+```
+
+```rust Rust
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use retab::MimeData;
+use std::fs;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Load and encode your document
+    let content = fs::read("invoice.pdf")?;
+    let encoded = STANDARD.encode(&content);
+    let document = MimeData::new(
+        "invoice.pdf",
+        format!("data:application/pdf;base64,{encoded}"),
+    );
+    let _ = document;
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using Retab;
+
+// Load your document — MimeData accepts a FileInfo directly,
+// or build a data URL by hand if you need to inline base64.
+var document = (MimeData)new FileInfo("invoice.pdf");
+
+// Equivalent inline base64 form:
+// var bytes = await File.ReadAllBytesAsync("invoice.pdf");
+// var dataUrl = $"data:application/pdf;base64,{Convert.ToBase64String(bytes)}";
+// var document = MimeData.FromDataUrl(dataUrl, "invoice.pdf");
+```
+
 </CodeGroup>
 
 ### 2. Create the Job
@@ -102,19 +158,16 @@ print(f"Status: {job.status}") # "queued"
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const job = await client.jobs.create({
-    endpoint: "/v1/extractions",
-    request: {
+const job = await client.jobs.create("/v1/extractions", {
         document: document,
         json_schema: schema,
         model: "retab-small",
-    },
-});
+    });
 
 console.log(`Job created: ${job.id}`);
 console.log(`Status: ${job.status}`);  // "queued"
@@ -156,6 +209,77 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+job = client.jobs.create(
+  endpoint: '/v1/extractions',
+  request: {
+    document: document,
+    json_schema: schema,
+    model: 'retab-small',
+  },
+)
+
+puts "Job created: #{job.id}"
+puts "Status: #{job.status}" # "queued"
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\JobsEndpoint;
+
+$client = new Client();
+
+$job = $client->jobs()->create(
+    endpoint: JobsEndpoint::V1Extractions,
+    request: [
+        'document' => $document,
+        'json_schema' => $schema,
+        'model' => 'retab-small',
+    ],
+);
+
+echo "Job created: {$job->id}" . PHP_EOL;
+echo 'Status: ' . $job->status?->value . PHP_EOL; // "queued"
+```
+
+```rust Rust
+use retab::enums::CreateJobRequestEndpoint;
+use retab::models::CreateJobRequest;
+use retab::resources::jobs::CreateParams;
+use retab::Retab;
+use std::collections::HashMap;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let request: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "document": { "filename": "invoice.pdf", "url": "data:application/pdf;base64,..." },
+        "json_schema": { "type": "object" },
+        "model": "retab-small"
+    }))?;
+
+    let job = client
+        .jobs()
+        .create(CreateParams::new(CreateJobRequest::new(
+            CreateJobRequestEndpoint::V1Extractions,
+            request,
+        )))
+        .await?;
+
+    println!("Job created: {:?}", job.id);
+    println!("Status: {:?}", job.status); // "queued"
+    Ok(())
+}
+```
+
 ```bash cURL
 curl -X POST https://api.retab.com/v1/jobs \
   -H "Api-Key: $RETAB_API_KEY" \
@@ -173,6 +297,32 @@ curl -X POST https://api.retab.com/v1/jobs \
   }'
 ```
 
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY")!);
+
+var job = await client.Jobs.CreateAsync(
+    client.ApiKey,
+    new JobsCreateOptions
+    {
+        Endpoint = CreateJobRequestEndpoint.V1Extractions,
+        Request = new Dictionary<string, object>
+        {
+            ["document"] = document,
+            ["json_schema"] = schema,
+            ["model"] = "retab-small",
+        },
+    }
+);
+
+Console.WriteLine($"Job created: {job.Id}");
+Console.WriteLine($"Status: {job.Status}"); // "queued"
+```
+
 </CodeGroup>
 
 ### 3. Check Job Status
@@ -185,17 +335,17 @@ import time
 
 while job.status not in ("completed", "failed", "cancelled", "expired"):
 time.sleep(2)
-job = client.jobs.retrieve(job.id)
+job = client.jobs.get(job.id)
 print(f"Status: {job.status}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 const terminalStatuses = ["completed", "failed", "cancelled", "expired"];
 
 while (!terminalStatuses.includes(job.status)) {
     await new Promise(resolve => setTimeout(resolve, 2000));
-    job = await client.jobs.retrieve(job.id);
+    job = await client.jobs.get(job.id);
     console.log(`Status: ${job.status}`);
 }
 ````
@@ -223,9 +373,81 @@ for {
 }
 ```
 
+```ruby Ruby
+terminal_statuses = ['completed', 'failed', 'cancelled', 'expired']
+
+until terminal_statuses.include?(job.status)
+  sleep 2
+  job = client.jobs.get(job_id: job.id)
+  puts "Status: #{job.status}"
+end
+```
+
 ```bash cURL
 curl https://api.retab.com/v1/jobs/{job_id} \
   -H "Api-Key: $RETAB_API_KEY"
+```
+
+```php PHP
+<?php
+$terminalStatuses = ['completed', 'failed', 'cancelled', 'expired'];
+
+while (!in_array($job->status?->value, $terminalStatuses, true)) {
+    sleep(2);
+    $job = $client->jobs()->get($job->id);
+    echo 'Status: ' . $job->status?->value . PHP_EOL;
+}
+```
+
+```rust Rust
+use retab::enums::JobStatus;
+use retab::resources::jobs::GetParams;
+use retab::Retab;
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut job = client.jobs().get("job_id", GetParams::default()).await?;
+    let job_id = job.id.clone().unwrap_or_default();
+
+    loop {
+        let status = job.status.clone();
+        let terminal = matches!(
+            status,
+            Some(JobStatus::Completed | JobStatus::Failed | JobStatus::Cancelled | JobStatus::Expired),
+        );
+        if terminal {
+            break;
+        }
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        job = client.jobs().get(&job_id, GetParams::default()).await?;
+        println!("Status: {:?}", job.status);
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var terminalStatuses = new HashSet<JobStatus>
+{
+    JobStatus.Completed,
+    JobStatus.Failed,
+    JobStatus.Cancelled,
+    JobStatus.Expired,
+};
+
+while (job.Status is null || !terminalStatuses.Contains(job.Status.Value))
+{
+    await Task.Delay(TimeSpan.FromSeconds(2));
+    job = await client.Jobs.GetAsync(job.Id, client.ApiKey);
+    Console.WriteLine($"Status: {job.Status}");
+}
 ```
 
 </CodeGroup>
@@ -243,7 +465,7 @@ completed_job = client.jobs.wait_for_completion(
 )
 ```
 
-```javascript JavaScript
+```typescript TypeScript
 const completedJob = await client.jobs.waitForCompletion(job.id, {
   poll_interval_ms: 2000,
   timeout_ms: 300_000,
@@ -261,6 +483,97 @@ if err != nil {
 _ = completedJob
 ```
 
+```ruby Ruby
+# The Ruby SDK does not currently expose a built-in helper; poll with client.jobs.get(...).
+terminal_statuses = ['completed', 'failed', 'cancelled', 'expired']
+deadline = Time.now + 300
+
+until terminal_statuses.include?(job.status)
+  raise 'Timed out waiting for job to complete' if Time.now > deadline
+  sleep 2
+  job = client.jobs.get(job_id: job.id)
+end
+
+completed_job = job
+```
+
+```php PHP
+<?php
+// The PHP SDK does not currently expose a built-in helper; poll with $client->jobs()->get(...).
+$terminalStatuses = ['completed', 'failed', 'cancelled', 'expired'];
+$deadline = time() + 300;
+while (!in_array($job->status?->value, $terminalStatuses, true)) {
+    if (time() > $deadline) {
+        throw new RuntimeException('Timed out waiting for job to complete');
+    }
+    sleep(2);
+    $job = $client->jobs()->get($job->id);
+}
+$completedJob = $job;
+```
+
+```rust Rust
+use retab::enums::JobStatus;
+use retab::resources::jobs::GetParams;
+use retab::Retab;
+use std::time::{Duration, Instant};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // The Rust SDK does not currently expose a built-in helper; poll with client.jobs().get(...).
+    let mut job = client.jobs().get("job_id", GetParams::default()).await?;
+    let job_id = job.id.clone().unwrap_or_default();
+    let deadline = Instant::now() + Duration::from_secs(300);
+
+    loop {
+        let terminal = matches!(
+            job.status,
+            Some(JobStatus::Completed | JobStatus::Failed | JobStatus::Cancelled | JobStatus::Expired),
+        );
+        if terminal {
+            break;
+        }
+        if Instant::now() > deadline {
+            return Err("Timed out waiting for job to complete".into());
+        }
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        job = client.jobs().get(&job_id, GetParams::default()).await?;
+    }
+
+    let _completed_job = job;
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Retab;
+
+// The .NET SDK does not currently expose a built-in helper; poll with client.Jobs.GetAsync(...).
+var terminalStatuses = new HashSet<JobStatus>
+{
+    JobStatus.Completed,
+    JobStatus.Failed,
+    JobStatus.Cancelled,
+    JobStatus.Expired,
+};
+
+var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(300);
+while (job.Status is null || !terminalStatuses.Contains(job.Status.Value))
+{
+    if (DateTime.UtcNow > deadline)
+        throw new TimeoutException("Timed out waiting for job to complete");
+    await Task.Delay(TimeSpan.FromSeconds(2));
+    job = await client.Jobs.GetAsync(job.Id, client.ApiKey);
+}
+
+var completedJob = job;
+```
+
 </CodeGroup>
 
 ### 4. Retrieve Results
@@ -270,16 +583,16 @@ If you used lightweight polling with `jobs.retrieve(...)`, fetch response payloa
 <CodeGroup>
 ```python Python
 if job.status == "completed":
-    job = client.jobs.retrieve(job.id, include_response=True)
+    job = client.jobs.get(job.id, include_response=True)
     result = job.response.body
     print(result)
 elif job.status == "failed":
     print(f"Error: {job.error.message}")
 ```
 
-```javascript JavaScript
+```typescript TypeScript
 if (job.status === "completed") {
-  job = await client.jobs.retrieve(job.id, { include_response: true });
+  job = await client.jobs.get(job.id, { includeResponse: true });
   const result = job.response.body;
   console.log(result);
 } else if (job.status === "failed") {
@@ -304,6 +617,87 @@ if status == "completed" {
 }
 ```
 
+```ruby Ruby
+if job.status == 'completed'
+  job = client.jobs.get(job_id: job.id, include_response: true)
+  result = job.response.body
+  puts result
+elsif job.status == 'failed'
+  puts "Error: #{job.error.message}"
+end
+```
+
+```php PHP
+<?php
+if ($job->status?->value === 'completed') {
+    $job = $client->jobs()->get($job->id, includeResponse: true);
+    $result = $job->response?->body;
+    print_r($result);
+} elseif ($job->status?->value === 'failed') {
+    echo 'Error: ' . ($job->error?->message ?? '') . PHP_EOL;
+}
+```
+
+```rust Rust
+use retab::enums::JobStatus;
+use retab::resources::jobs::GetParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut job = client.jobs().get("job_id", GetParams::default()).await?;
+    let job_id = job.id.clone().unwrap_or_default();
+
+    match job.status {
+        Some(JobStatus::Completed) => {
+            job = client
+                .jobs()
+                .get(
+                    &job_id,
+                    GetParams {
+                        include_response: Some(true),
+                        ..Default::default()
+                    },
+                )
+                .await?;
+            if let Some(response) = &job.response {
+                println!("{:?}", response.body);
+            }
+        }
+        Some(JobStatus::Failed) => {
+            if let Some(err) = &job.error {
+                println!("Error: {}", err.message);
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+if (job.Status == JobStatus.Completed)
+{
+    job = await client.Jobs.GetAsync(
+        job.Id,
+        client.ApiKey,
+        new JobsGetOptions { IncludeResponse = true }
+    );
+    var result = job.Response?.Body;
+    Console.WriteLine(result);
+}
+else if (job.Status == JobStatus.Failed)
+{
+    Console.WriteLine($"Error: {job.Error?.Message}");
+}
+```
+
 </CodeGroup>
 
 ### 5. Cancel a Job (Optional)
@@ -316,7 +710,7 @@ cancelled_job = client.jobs.cancel(job.id)
 print(f"Status: {cancelled_job.status}")  # "cancelled"
 ```
 
-```javascript JavaScript
+```typescript TypeScript
 const cancelledJob = await client.jobs.cancel(job.id);
 console.log(`Status: ${cancelledJob.status}`); // "cancelled"
 ```
@@ -329,9 +723,42 @@ if err != nil {
 fmt.Printf("Status: %s\n", (*cancelledJob)["status"]) // "cancelled"
 ```
 
+```ruby Ruby
+cancelled_job = client.jobs.cancel(job_id: job.id)
+puts "Status: #{cancelled_job.status}" # "cancelled"
+```
+
 ```bash cURL
 curl -X POST https://api.retab.com/v1/jobs/{job_id}/cancel \
   -H "Api-Key: $RETAB_API_KEY"
+```
+
+```php PHP
+<?php
+$cancelledJob = $client->jobs()->cancel($job->id);
+echo 'Status: ' . $cancelledJob->status?->value . PHP_EOL; // "cancelled"
+```
+
+```rust Rust
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let cancelled_job = client.jobs().cancel("job_id").await?;
+    println!("Status: {:?}", cancelled_job.status); // "cancelled"
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var cancelledJob = await client.Jobs.CancelAsync(job.Id, client.ApiKey);
+Console.WriteLine($"Status: {cancelledJob.Status}"); // "cancelled"
 ```
 
 </CodeGroup>
@@ -365,7 +792,7 @@ next_page = client.jobs.list(after=jobs_response.last_id)
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 // List all jobs
 const jobsResponse = await client.jobs.list({ limit: 20 });
 for (const job of jobsResponse.data) {
@@ -408,6 +835,22 @@ if jobsResponse.HasMore {
 }
 ```
 
+```ruby Ruby
+# List all jobs
+jobs_response = client.jobs.list(limit: 20)
+jobs_response.data.each do |job|
+  puts "#{job.id}: #{job.status}"
+end
+
+# Filter by status
+queued_jobs = client.jobs.list(status: 'queued')
+
+# Paginate through results
+if jobs_response.has_more
+  next_page = client.jobs.list(after: jobs_response.last_id)
+end
+```
+
 ```bash cURL
 # Lightweight list (default)
 curl https://api.retab.com/v1/jobs?limit=20 \
@@ -416,6 +859,96 @@ curl https://api.retab.com/v1/jobs?limit=20 \
 # Include full request/response payloads
 curl "https://api.retab.com/v1/jobs?limit=20&include_request=true&include_response=true" \
   -H "Api-Key: $RETAB_API_KEY"
+```
+
+```php PHP
+<?php
+use Retab\Resource\JobStatus;
+
+// List all jobs
+$jobsResponse = $client->jobs()->list(limit: 20);
+foreach ($jobsResponse->data as $job) {
+    echo "{$job->id}: " . $job->status?->value . PHP_EOL;
+}
+
+// Filter by status
+$queuedJobs = $client->jobs()->list(status: JobStatus::Queued);
+
+// Paginate through results
+$nextPage = $jobsResponse->nextPage();
+```
+
+```rust Rust
+use retab::enums::JobsStatus;
+use retab::resources::jobs::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // List all jobs
+    let jobs_response = client
+        .jobs()
+        .list(ListParams {
+            limit: Some(20),
+            ..Default::default()
+        })
+        .await?;
+    for job in &jobs_response.data {
+        println!("{:?}: {:?}", job.id, job.status);
+    }
+
+    // Filter by status
+    let queued_jobs = client
+        .jobs()
+        .list(ListParams {
+            status: Some(JobsStatus::Queued),
+            ..Default::default()
+        })
+        .await?;
+    let _ = queued_jobs;
+
+    // Paginate through results
+    if let Some(after) = &jobs_response.list_metadata.after {
+        let _next_page = client
+            .jobs()
+            .list(ListParams {
+                after: Some(after.clone()),
+                ..Default::default()
+            })
+            .await?;
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+// List all jobs (first page)
+var jobsResponse = await client.Jobs.ListAsync(
+    client.ApiKey,
+    new JobsListOptions { Limit = 20 }
+);
+foreach (var job in jobsResponse.Items)
+{
+    Console.WriteLine($"{job.Id}: {job.Status}");
+}
+
+// Filter by status
+var queuedJobs = await client.Jobs.ListAsync(
+    client.ApiKey,
+    new JobsListOptions { Status = JobStatus.Queued }
+);
+
+// Iterate every page automatically
+await foreach (var job in jobsResponse)
+{
+    Console.WriteLine($"{job.Id}: {job.Status}");
+}
 ```
 
 </CodeGroup>
@@ -435,64 +968,59 @@ from retab import Retab
 
 client = Retab()
 
-# Load document
-
+# Load document.
 with open("invoice.pdf", "rb") as f:
-content = base64.b64encode(f.read()).decode()
+    content = base64.b64encode(f.read()).decode()
 document = {
-"filename": "invoice.pdf",
-"url": f"data:application/pdf;base64,{content}",
+    "filename": "invoice.pdf",
+    "url": f"data:application/pdf;base64,{content}",
 }
 
-# Define extraction schema
-
+# Define extraction schema.
 schema = {
-"type": "object",
-"properties": {
-"invoice_number": {"type": "string"},
-"date": {"type": "string"},
-"total_amount": {"type": "number"},
-"vendor_name": {"type": "string"},
-},
-"required": ["invoice_number", "total_amount"],
+    "type": "object",
+    "properties": {
+        "invoice_number": {"type": "string"},
+        "date": {"type": "string"},
+        "total_amount": {"type": "number"},
+        "vendor_name": {"type": "string"},
+    },
+    "required": ["invoice_number", "total_amount"],
 }
 
-# Create extraction job
-
+# Create extraction job.
 job = client.jobs.create(
-endpoint="/v1/extractions",
-request={
-"document": document,
-"json_schema": schema,
-"model": "retab-small",
-},
+    endpoint="/v1/extractions",
+    request={
+        "document": document,
+        "json_schema": schema,
+        "model": "retab-small",
+    },
 )
 print(f"Job created: {job.id}")
 
-# Poll until complete
-
+# Poll until complete.
 while job.status not in ("completed", "failed", "cancelled", "expired"):
-time.sleep(2)
-job = client.jobs.retrieve(job.id)
-print(f"Status: {job.status}")
+    time.sleep(2)
+    job = client.jobs.get(job.id)
+    print(f"Status: {job.status}")
 
-# Get extracted data
-
+# Get extracted data.
 if job.status == "completed":
-job = client.jobs.retrieve(job.id, include_response=True)
-extracted = job.response.body["output"]
-print(f"Invoice: {extracted['invoice_number']}")
-print(f"Total: ${extracted['total_amount']}")
+    job = client.jobs.get(job.id, include_response=True)
+    extracted = job.response.body["output"]
+    print(f"Invoice: {extracted['invoice_number']}")
+    print(f"Total: ${extracted['total_amount']}")
 else:
-print(f"Job failed: {job.error.message}")
+    print(f"Job failed: {job.error.message}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import fs from 'fs';
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Load document
 const content = fs.readFileSync('invoice.pdf').toString('base64');
@@ -514,28 +1042,25 @@ const schema = {
 };
 
 // Create extraction job
-let job = await client.jobs.create({
-    endpoint: "/v1/extractions",
-    request: {
+let job = await client.jobs.create("/v1/extractions", {
         document: document,
         json_schema: schema,
         model: "retab-small",
-    },
-});
+    });
 console.log(`Job created: ${job.id}`);
 
 // Poll until complete
 const terminalStatuses = ["completed", "failed", "cancelled", "expired"];
 while (!terminalStatuses.includes(job.status)) {
     await new Promise(resolve => setTimeout(resolve, 2000));
-    job = await client.jobs.retrieve(job.id);
+    job = await client.jobs.get(job.id);
     console.log(`Status: ${job.status}`);
 }
 
 // Get extracted data
 if (job.status === "completed") {
-    job = await client.jobs.retrieve(job.id, { include_response: true });
-    const extracted = job.response.body.output;
+    job = await client.jobs.get(job.id, { includeResponse: true });
+    const extracted = (job.response.body as { output: { invoice_number?: string; total_amount?: number } }).output;
     console.log(`Invoice: ${extracted.invoice_number}`);
     console.log(`Total: $${extracted.total_amount}`);
 } else {
@@ -637,6 +1162,285 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'base64'
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Load document.
+content = Base64.strict_encode64(File.binread('invoice.pdf'))
+document = {
+  filename: 'invoice.pdf',
+  url: "data:application/pdf;base64,#{content}",
+}
+
+# Define extraction schema.
+schema = {
+  type: 'object',
+  properties: {
+    invoice_number: { type: 'string' },
+    date: { type: 'string' },
+    total_amount: { type: 'number' },
+    vendor_name: { type: 'string' },
+  },
+  required: ['invoice_number', 'total_amount'],
+}
+
+# Create extraction job.
+job = client.jobs.create(
+  endpoint: '/v1/extractions',
+  request: {
+    document: document,
+    json_schema: schema,
+    model: 'retab-small',
+  },
+)
+puts "Job created: #{job.id}"
+
+# Poll until complete.
+terminal_statuses = ['completed', 'failed', 'cancelled', 'expired']
+until terminal_statuses.include?(job.status)
+  sleep 2
+  job = client.jobs.get(job_id: job.id)
+  puts "Status: #{job.status}"
+end
+
+# Get extracted data.
+if job.status == 'completed'
+  job = client.jobs.get(job_id: job.id, include_response: true)
+  extracted = job.response.body['output']
+  puts "Invoice: #{extracted['invoice_number']}"
+  puts "Total: $#{extracted['total_amount']}"
+else
+  puts "Job failed: #{job.error.message}"
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\JobsEndpoint;
+
+$client = new Client();
+
+// Load document.
+$content = base64_encode(file_get_contents('invoice.pdf'));
+$document = [
+    'filename' => 'invoice.pdf',
+    'url' => "data:application/pdf;base64,{$content}",
+];
+
+// Define extraction schema.
+$schema = [
+    'type' => 'object',
+    'properties' => [
+        'invoice_number' => ['type' => 'string'],
+        'date' => ['type' => 'string'],
+        'total_amount' => ['type' => 'number'],
+        'vendor_name' => ['type' => 'string'],
+    ],
+    'required' => ['invoice_number', 'total_amount'],
+];
+
+// Create extraction job.
+$job = $client->jobs()->create(
+    endpoint: JobsEndpoint::V1Extractions,
+    request: [
+        'document' => $document,
+        'json_schema' => $schema,
+        'model' => 'retab-small',
+    ],
+);
+echo "Job created: {$job->id}" . PHP_EOL;
+
+// Poll until complete.
+$terminalStatuses = ['completed', 'failed', 'cancelled', 'expired'];
+while (!in_array($job->status?->value, $terminalStatuses, true)) {
+    sleep(2);
+    $job = $client->jobs()->get($job->id);
+    echo 'Status: ' . $job->status?->value . PHP_EOL;
+}
+
+// Get extracted data.
+if ($job->status?->value === 'completed') {
+    $job = $client->jobs()->get($job->id, includeResponse: true);
+    $extracted = $job->response?->body['output'] ?? [];
+    echo "Invoice: {$extracted['invoice_number']}" . PHP_EOL;
+    echo "Total: \${$extracted['total_amount']}" . PHP_EOL;
+} else {
+    echo 'Job failed: ' . ($job->error?->message ?? '') . PHP_EOL;
+}
+```
+
+```rust Rust
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use retab::enums::{CreateJobRequestEndpoint, JobStatus};
+use retab::models::CreateJobRequest;
+use retab::resources::jobs::{CreateParams, GetParams};
+use retab::Retab;
+use std::collections::HashMap;
+use std::fs;
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // Load document.
+    let content = fs::read("invoice.pdf")?;
+    let encoded = STANDARD.encode(&content);
+    let document = serde_json::json!({
+        "filename": "invoice.pdf",
+        "url": format!("data:application/pdf;base64,{encoded}"),
+    });
+
+    // Define extraction schema.
+    let schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "invoice_number": {"type": "string"},
+            "date": {"type": "string"},
+            "total_amount": {"type": "number"},
+            "vendor_name": {"type": "string"}
+        },
+        "required": ["invoice_number", "total_amount"]
+    });
+
+    let request: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "document": document,
+        "json_schema": schema,
+        "model": "retab-small"
+    }))?;
+
+    // Create extraction job.
+    let mut job = client
+        .jobs()
+        .create(CreateParams::new(CreateJobRequest::new(
+            CreateJobRequestEndpoint::V1Extractions,
+            request,
+        )))
+        .await?;
+    let job_id = job.id.clone().unwrap_or_default();
+    println!("Job created: {job_id}");
+
+    // Poll until complete.
+    loop {
+        let terminal = matches!(
+            job.status,
+            Some(JobStatus::Completed | JobStatus::Failed | JobStatus::Cancelled | JobStatus::Expired),
+        );
+        if terminal {
+            break;
+        }
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        job = client.jobs().get(&job_id, GetParams::default()).await?;
+        println!("Status: {:?}", job.status);
+    }
+
+    if matches!(job.status, Some(JobStatus::Completed)) {
+        job = client
+            .jobs()
+            .get(
+                &job_id,
+                GetParams {
+                    include_response: Some(true),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        if let Some(response) = &job.response {
+            if let Some(extracted) = response.body.get("output") {
+                println!("Invoice: {:?}", extracted.get("invoice_number"));
+                println!("Total: ${:?}", extracted.get("total_amount"));
+            }
+        }
+    } else if let Some(err) = &job.error {
+        println!("Job failed: {}", err.message);
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY")!);
+
+// Load document.
+var document = (MimeData)new FileInfo("invoice.pdf");
+
+// Define extraction schema.
+var schema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["invoice_number"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["date"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["total_amount"] = new Dictionary<string, object> { ["type"] = "number" },
+        ["vendor_name"] = new Dictionary<string, object> { ["type"] = "string" },
+    },
+    ["required"] = new List<string> { "invoice_number", "total_amount" },
+};
+
+// Create extraction job.
+var job = await client.Jobs.CreateAsync(
+    client.ApiKey,
+    new JobsCreateOptions
+    {
+        Endpoint = CreateJobRequestEndpoint.V1Extractions,
+        Request = new Dictionary<string, object>
+        {
+            ["document"] = document,
+            ["json_schema"] = schema,
+            ["model"] = "retab-small",
+        },
+    }
+);
+Console.WriteLine($"Job created: {job.Id}");
+
+// Poll until complete.
+var terminalStatuses = new HashSet<JobStatus>
+{
+    JobStatus.Completed,
+    JobStatus.Failed,
+    JobStatus.Cancelled,
+    JobStatus.Expired,
+};
+while (job.Status is null || !terminalStatuses.Contains(job.Status.Value))
+{
+    await Task.Delay(TimeSpan.FromSeconds(2));
+    job = await client.Jobs.GetAsync(job.Id, client.ApiKey);
+    Console.WriteLine($"Status: {job.Status}");
+}
+
+// Get extracted data.
+if (job.Status == JobStatus.Completed)
+{
+    job = await client.Jobs.GetAsync(
+        job.Id,
+        client.ApiKey,
+        new JobsGetOptions { IncludeResponse = true }
+    );
+    var body = job.Response?.Body as IDictionary<string, object>;
+    var extracted = body?["output"] as IDictionary<string, object>;
+    Console.WriteLine($"Invoice: {extracted?["invoice_number"]}");
+    Console.WriteLine($"Total: ${extracted?["total_amount"]}");
+}
+else
+{
+    Console.WriteLine($"Job failed: {job.Error?.Message}");
+}
+```
+
 </CodeGroup>
 
 ### Parse Document to Text
@@ -651,49 +1455,43 @@ from retab import Retab
 
 client = Retab()
 
-# Load document
-
+# Load document.
 with open("document.pdf", "rb") as f:
-content = base64.b64encode(f.read()).decode()
+    content = base64.b64encode(f.read()).decode()
 document = {
-"filename": "document.pdf",
-"url": f"data:application/pdf;base64,{content}",
+    "filename": "document.pdf",
+    "url": f"data:application/pdf;base64,{content}",
 }
 
-# Create parse job
-
+# Create parse job.
 job = client.jobs.create(
-endpoint="/v1/parses",
-request={
-"document": document,
-},
+    endpoint="/v1/parses",
+    request={"document": document},
 )
 print(f"Job created: {job.id}")
 
-# Poll until complete
-
+# Poll until complete.
 while job.status not in ("completed", "failed", "cancelled", "expired"):
-time.sleep(2)
-job = client.jobs.retrieve(job.id)
-print(f"Status: {job.status}")
+    time.sleep(2)
+    job = client.jobs.get(job.id)
+    print(f"Status: {job.status}")
 
-# Get parsed content
-
+# Get parsed content.
 if job.status == "completed":
-job = client.jobs.retrieve(job.id, include_response=True)
-result = job.response.body
-print(f"Parsed text:\n{result['output']['text']}")
-print(f"Total pages: {len(result['output']['pages'])}")
+    job = client.jobs.get(job.id, include_response=True)
+    result = job.response.body
+    print(f"Parsed text:\n{result['output']['text']}")
+    print(f"Total pages: {len(result['output']['pages'])}")
 else:
-print(f"Job failed: {job.error.message}")
+    print(f"Job failed: {job.error.message}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import fs from 'fs';
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Load document
 const content = fs.readFileSync('document.pdf').toString('base64');
@@ -703,26 +1501,23 @@ const document = {
 };
 
 // Create parse job
-let job = await client.jobs.create({
-    endpoint: "/v1/parses",
-    request: {
+let job = await client.jobs.create("/v1/parses", {
         document: document,
-    },
-});
+    });
 console.log(`Job created: ${job.id}`);
 
 // Poll until complete
 const terminalStatuses = ["completed", "failed", "cancelled", "expired"];
 while (!terminalStatuses.includes(job.status)) {
     await new Promise(resolve => setTimeout(resolve, 2000));
-    job = await client.jobs.retrieve(job.id);
+    job = await client.jobs.get(job.id);
     console.log(`Status: ${job.status}`);
 }
 
 // Get parsed content
 if (job.status === "completed") {
-    job = await client.jobs.retrieve(job.id, { include_response: true });
-    const result = job.response.body;
+    job = await client.jobs.get(job.id, { includeResponse: true });
+    const result = job.response.body as { output: { text: string; pages: unknown[] } };
     console.log(`Parsed text:\n${result.output.text}`);
     console.log(`Total pages: ${result.output.pages.length}`);
 } else {
@@ -811,6 +1606,224 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'base64'
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Load document.
+content = Base64.strict_encode64(File.binread('document.pdf'))
+document = {
+  filename: 'document.pdf',
+  url: "data:application/pdf;base64,#{content}",
+}
+
+# Create parse job.
+job = client.jobs.create(
+  endpoint: '/v1/parses',
+  request: { document: document },
+)
+puts "Job created: #{job.id}"
+
+# Poll until complete.
+terminal_statuses = ['completed', 'failed', 'cancelled', 'expired']
+until terminal_statuses.include?(job.status)
+  sleep 2
+  job = client.jobs.get(job_id: job.id)
+  puts "Status: #{job.status}"
+end
+
+# Get parsed content.
+if job.status == 'completed'
+  job = client.jobs.get(job_id: job.id, include_response: true)
+  result = job.response.body
+  puts "Parsed text:\n#{result['output']['text']}"
+  puts "Total pages: #{result['output']['pages'].length}"
+else
+  puts "Job failed: #{job.error.message}"
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\JobsEndpoint;
+
+$client = new Client();
+
+// Load document.
+$content = base64_encode(file_get_contents('document.pdf'));
+$document = [
+    'filename' => 'document.pdf',
+    'url' => "data:application/pdf;base64,{$content}",
+];
+
+// Create parse job.
+$job = $client->jobs()->create(
+    endpoint: JobsEndpoint::V1Parses,
+    request: ['document' => $document],
+);
+echo "Job created: {$job->id}" . PHP_EOL;
+
+// Poll until complete.
+$terminalStatuses = ['completed', 'failed', 'cancelled', 'expired'];
+while (!in_array($job->status?->value, $terminalStatuses, true)) {
+    sleep(2);
+    $job = $client->jobs()->get($job->id);
+    echo 'Status: ' . $job->status?->value . PHP_EOL;
+}
+
+// Get parsed content.
+if ($job->status?->value === 'completed') {
+    $job = $client->jobs()->get($job->id, includeResponse: true);
+    $result = $job->response?->body ?? [];
+    echo "Parsed text:\n" . ($result['output']['text'] ?? '') . PHP_EOL;
+    echo 'Total pages: ' . count($result['output']['pages'] ?? []) . PHP_EOL;
+} else {
+    echo 'Job failed: ' . ($job->error?->message ?? '') . PHP_EOL;
+}
+```
+
+```rust Rust
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use retab::enums::{CreateJobRequestEndpoint, JobStatus};
+use retab::models::CreateJobRequest;
+use retab::resources::jobs::{CreateParams, GetParams};
+use retab::Retab;
+use std::collections::HashMap;
+use std::fs;
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let content = fs::read("document.pdf")?;
+    let encoded = STANDARD.encode(&content);
+    let document = serde_json::json!({
+        "filename": "document.pdf",
+        "url": format!("data:application/pdf;base64,{encoded}"),
+    });
+
+    let request: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "document": document,
+        "model": "retab-small",
+        "table_parsing_format": "markdown"
+    }))?;
+
+    let mut job = client
+        .jobs()
+        .create(CreateParams::new(CreateJobRequest::new(
+            CreateJobRequestEndpoint::V1Parses,
+            request,
+        )))
+        .await?;
+    let job_id = job.id.clone().unwrap_or_default();
+    println!("Job created: {job_id}");
+
+    loop {
+        let terminal = matches!(
+            job.status,
+            Some(JobStatus::Completed | JobStatus::Failed | JobStatus::Cancelled | JobStatus::Expired),
+        );
+        if terminal {
+            break;
+        }
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        job = client.jobs().get(&job_id, GetParams::default()).await?;
+        println!("Status: {:?}", job.status);
+    }
+
+    if matches!(job.status, Some(JobStatus::Completed)) {
+        job = client
+            .jobs()
+            .get(
+                &job_id,
+                GetParams {
+                    include_response: Some(true),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        if let Some(response) = &job.response {
+            if let Some(output) = response.body.get("output") {
+                if let Some(text) = output.get("text").and_then(|v| v.as_str()) {
+                    println!("Parsed text:\n{text}");
+                }
+                if let Some(pages) = output.get("pages").and_then(|v| v.as_array()) {
+                    println!("Total pages: {}", pages.len());
+                }
+            }
+        }
+    } else if let Some(err) = &job.error {
+        println!("Job failed: {}", err.message);
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY")!);
+
+// Load document.
+var document = (MimeData)new FileInfo("document.pdf");
+
+// Create parse job.
+var job = await client.Jobs.CreateAsync(
+    client.ApiKey,
+    new JobsCreateOptions
+    {
+        Endpoint = CreateJobRequestEndpoint.V1Parses,
+        Request = new Dictionary<string, object> { ["document"] = document },
+    }
+);
+Console.WriteLine($"Job created: {job.Id}");
+
+// Poll until complete.
+var terminalStatuses = new HashSet<JobStatus>
+{
+    JobStatus.Completed,
+    JobStatus.Failed,
+    JobStatus.Cancelled,
+    JobStatus.Expired,
+};
+while (job.Status is null || !terminalStatuses.Contains(job.Status.Value))
+{
+    await Task.Delay(TimeSpan.FromSeconds(2));
+    job = await client.Jobs.GetAsync(job.Id, client.ApiKey);
+    Console.WriteLine($"Status: {job.Status}");
+}
+
+// Get parsed content.
+if (job.Status == JobStatus.Completed)
+{
+    job = await client.Jobs.GetAsync(
+        job.Id,
+        client.ApiKey,
+        new JobsGetOptions { IncludeResponse = true }
+    );
+    var body = job.Response?.Body as IDictionary<string, object>;
+    var output = body?["output"] as IDictionary<string, object>;
+    Console.WriteLine($"Parsed text:\n{output?["text"]}");
+    var pages = output?["pages"] as System.Collections.IList;
+    Console.WriteLine($"Total pages: {pages?.Count ?? 0}");
+}
+else
+{
+    Console.WriteLine($"Job failed: {job.Error?.Message}");
+}
+```
+
 </CodeGroup>
 
 ### Classify Documents
@@ -825,62 +1838,57 @@ from retab import Retab
 
 client = Retab()
 
-# Load document
-
+# Load document.
 with open("document.pdf", "rb") as f:
-content = base64.b64encode(f.read()).decode()
+    content = base64.b64encode(f.read()).decode()
 document = {
-"filename": "document.pdf",
-"url": f"data:application/pdf;base64,{content}",
+    "filename": "document.pdf",
+    "url": f"data:application/pdf;base64,{content}",
 }
 
-# Define categories
-
+# Define categories.
 categories = [
-{"name": "Invoice", "description": "Invoice or bill documents"},
-{"name": "Bank Statement", "description": "Bank account statements"},
-{"name": "Receipt", "description": "Payment receipts"},
-{"name": "Contract", "description": "Legal contracts or agreements"},
-{"name": "ID Document", "description": "Identity documents"},
-{"name": "Other", "description": "Other document types"},
+    {"name": "Invoice", "description": "Invoice or bill documents"},
+    {"name": "Bank Statement", "description": "Bank account statements"},
+    {"name": "Receipt", "description": "Payment receipts"},
+    {"name": "Contract", "description": "Legal contracts or agreements"},
+    {"name": "ID Document", "description": "Identity documents"},
+    {"name": "Other", "description": "Other document types"},
 ]
 
-# Create classification job
-
+# Create classification job.
 job = client.jobs.create(
-endpoint="/v1/classifications",
-request={
-"document": document,
-"model": "retab-small",
-"categories": categories,
-},
+    endpoint="/v1/classifications",
+    request={
+        "document": document,
+        "model": "retab-small",
+        "categories": categories,
+    },
 )
 print(f"Job created: {job.id}")
 
-# Poll until complete
-
+# Poll until complete.
 while job.status not in ("completed", "failed", "cancelled", "expired"):
-time.sleep(2)
-job = client.jobs.retrieve(job.id)
-print(f"Status: {job.status}")
+    time.sleep(2)
+    job = client.jobs.get(job.id)
+    print(f"Status: {job.status}")
 
-# Get classification result
-
+# Get classification result.
 if job.status == "completed":
-job = client.jobs.retrieve(job.id, include_response=True)
-result = job.response.body["output"]
-print(f"Classification: {result['category']}")
-print(f"Reasoning: {result['reasoning']}")
+    job = client.jobs.get(job.id, include_response=True)
+    result = job.response.body["output"]
+    print(f"Classification: {result['category']}")
+    print(f"Reasoning: {result['reasoning']}")
 else:
-print(f"Job failed: {job.error.message}")
+    print(f"Job failed: {job.error.message}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import fs from 'fs';
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Load document
 const content = fs.readFileSync('document.pdf').toString('base64');
@@ -900,28 +1908,25 @@ const categories = [
 ];
 
 // Create classification job
-let job = await client.jobs.create({
-    endpoint: "/v1/classifications",
-    request: {
+let job = await client.jobs.create("/v1/classifications", {
         document: document,
         model: "retab-small",
         categories: categories,
-    },
-});
+    });
 console.log(`Job created: ${job.id}`);
 
 // Poll until complete
 const terminalStatuses = ["completed", "failed", "cancelled", "expired"];
 while (!terminalStatuses.includes(job.status)) {
     await new Promise(resolve => setTimeout(resolve, 2000));
-    job = await client.jobs.retrieve(job.id);
+    job = await client.jobs.get(job.id);
     console.log(`Status: ${job.status}`);
 }
 
 // Get classification result
 if (job.status === "completed") {
-    job = await client.jobs.retrieve(job.id, { include_response: true });
-    const result = job.response.body.output;
+    job = await client.jobs.get(job.id, { includeResponse: true });
+    const result = (job.response.body as { output: { category?: string; reasoning?: string } }).output;
     console.log(`Classification: ${result.category}`);
     console.log(`Reasoning: ${result.reasoning}`);
 } else {
@@ -1019,6 +2024,208 @@ func main() {
 		fmt.Printf("Job failed: %v\n", errInfo["message"])
 	}
 }
+```
+
+```ruby Ruby
+require 'base64'
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Load document.
+content = Base64.strict_encode64(File.binread('document.pdf'))
+document = {
+  filename: 'document.pdf',
+  url: "data:application/pdf;base64,#{content}",
+}
+
+# Define categories.
+categories = [
+  { name: 'Invoice', description: 'Invoice or bill documents' },
+  { name: 'Bank Statement', description: 'Bank account statements' },
+  { name: 'Receipt', description: 'Payment receipts' },
+  { name: 'Contract', description: 'Legal contracts or agreements' },
+  { name: 'ID Document', description: 'Identity documents' },
+  { name: 'Other', description: 'Other document types' },
+]
+
+# Create classification job.
+job = client.jobs.create(
+  endpoint: '/v1/classifications',
+  request: {
+    document: document,
+    model: 'retab-small',
+    categories: categories,
+  },
+)
+puts "Job created: #{job.id}"
+
+# Poll until complete.
+terminal_statuses = ['completed', 'failed', 'cancelled', 'expired']
+until terminal_statuses.include?(job.status)
+  sleep 2
+  job = client.jobs.get(job_id: job.id)
+  puts "Status: #{job.status}"
+end
+
+# Get classification result.
+if job.status == 'completed'
+  job = client.jobs.get(job_id: job.id, include_response: true)
+  result = job.response.body['output']
+  puts "Classification: #{result['category']}"
+  puts "Reasoning: #{result['reasoning']}"
+else
+  puts "Job failed: #{job.error.message}"
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\JobsEndpoint;
+
+$client = new Client();
+
+// Load document.
+$content = base64_encode(file_get_contents('document.pdf'));
+$document = [
+    'filename' => 'document.pdf',
+    'url' => "data:application/pdf;base64,{$content}",
+];
+
+// Define categories.
+$categories = [
+    ['name' => 'Invoice', 'description' => 'Invoice or bill documents'],
+    ['name' => 'Bank Statement', 'description' => 'Bank account statements'],
+    ['name' => 'Receipt', 'description' => 'Payment receipts'],
+    ['name' => 'Contract', 'description' => 'Legal contracts or agreements'],
+    ['name' => 'ID Document', 'description' => 'Identity documents'],
+    ['name' => 'Other', 'description' => 'Other document types'],
+];
+
+// Create classification job.
+$job = $client->jobs()->create(
+    endpoint: JobsEndpoint::V1Classifications,
+    request: [
+        'document' => $document,
+        'model' => 'retab-small',
+        'categories' => $categories,
+    ],
+);
+echo "Job created: {$job->id}" . PHP_EOL;
+
+// Poll until complete.
+$terminalStatuses = ['completed', 'failed', 'cancelled', 'expired'];
+while (!in_array($job->status?->value, $terminalStatuses, true)) {
+    sleep(2);
+    $job = $client->jobs()->get($job->id);
+    echo 'Status: ' . $job->status?->value . PHP_EOL;
+}
+
+// Get classification result.
+if ($job->status?->value === 'completed') {
+    $job = $client->jobs()->get($job->id, includeResponse: true);
+    $result = $job->response?->body['output'] ?? [];
+    echo "Classification: {$result['category']}" . PHP_EOL;
+    echo "Reasoning: {$result['reasoning']}" . PHP_EOL;
+} else {
+    echo 'Job failed: ' . ($job->error?->message ?? '') . PHP_EOL;
+}
+```
+
+```rust Rust
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use retab::enums::{CreateJobRequestEndpoint, JobStatus};
+use retab::models::CreateJobRequest;
+use retab::resources::jobs::{CreateParams, GetParams};
+use retab::Retab;
+use std::collections::HashMap;
+use std::fs;
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let content = fs::read("contract.pdf")?;
+    let encoded = STANDARD.encode(&content);
+    let document = serde_json::json!({
+        "filename": "contract.pdf",
+        "url": format!("data:application/pdf;base64,{encoded}"),
+    });
+
+    let categories = serde_json::json!([
+        {"name": "contract", "description": "Legal agreements and contracts"},
+        {"name": "invoice", "description": "Billing documents and invoices"},
+        {"name": "report", "description": "Business or financial reports"}
+    ]);
+
+    let request: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "document": document,
+        "model": "retab-small",
+        "categories": categories
+    }))?;
+
+    let mut job = client
+        .jobs()
+        .create(CreateParams::new(CreateJobRequest::new(
+            CreateJobRequestEndpoint::V1Classifications,
+            request,
+        )))
+        .await?;
+    let job_id = job.id.clone().unwrap_or_default();
+    println!("Job created: {job_id}");
+
+    loop {
+        let terminal = matches!(
+            job.status,
+            Some(JobStatus::Completed | JobStatus::Failed | JobStatus::Cancelled | JobStatus::Expired),
+        );
+        if terminal {
+            break;
+        }
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        job = client.jobs().get(&job_id, GetParams::default()).await?;
+        println!("Status: {:?}", job.status);
+    }
+
+    if matches!(job.status, Some(JobStatus::Completed)) {
+        job = client
+            .jobs()
+            .get(
+                &job_id,
+                GetParams {
+                    include_response: Some(true),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        if let Some(response) = &job.response {
+            if let Some(output) = response.body.get("output") {
+                println!("Classification: {:?}", output.get("category"));
+                println!("Reasoning: {:?}", output.get("reasoning"));
+            }
+        }
+    } else if let Some(err) = &job.error {
+        println!("Job failed: {}", err.message);
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System.Net.Http.Json;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+using var http = new HttpClient();
+http.DefaultRequestHeaders.Add("Api-Key", apiKey);
+
+var response = await http.PostAsJsonAsync("https://api.retab.com/v1/jobs", new { });
+response.EnsureSuccessStatusCode();
+Console.WriteLine(await response.Content.ReadAsStringAsync());
 ```
 
 </CodeGroup>
@@ -1151,7 +2358,7 @@ print(f"Details: {job.error.details}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 const job = await client.jobs.waitForCompletion(jobId);
 
 if (job.status === "failed") {
@@ -1178,6 +2385,64 @@ if status, _ := (*job)["status"].(string); status == "failed" {
         }
     }
 }
+```
+
+```ruby Ruby
+# The Ruby SDK does not currently expose a built-in helper; poll with client.jobs.get(...).
+if job.status == 'failed'
+  puts "Error code: #{job.error.code}"
+  puts "Error message: #{job.error.message}"
+  puts "Details: #{job.error.details}" if job.error.details
+end
+```
+
+```php PHP
+<?php
+// The PHP SDK does not currently expose a built-in helper; poll with $client->jobs()->get(...).
+if ($job->status?->value === 'failed') {
+    echo 'Error code: ' . ($job->error?->code ?? '') . PHP_EOL;
+    echo 'Error message: ' . ($job->error?->message ?? '') . PHP_EOL;
+    if (!empty($job->error?->details)) {
+        echo 'Details: ' . json_encode($job->error->details) . PHP_EOL;
+    }
+}
+```
+
+```rust Rust
+use retab::enums::JobStatus;
+use retab::resources::jobs::GetParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // The Rust SDK does not currently expose a built-in helper; poll with client.jobs().get(...).
+    let job = client.jobs().get("job_id", GetParams::default()).await?;
+
+    if matches!(job.status, Some(JobStatus::Failed)) {
+        if let Some(err) = &job.error {
+            println!("Error code: {}", err.code);
+            println!("Error message: {}", err.message);
+            if let Some(details) = &err.details {
+                println!("Details: {:?}", details);
+            }
+        }
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System.Net.Http.Json;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+using var http = new HttpClient();
+http.DefaultRequestHeaders.Add("Api-Key", apiKey);
+
+var response = await http.PostAsJsonAsync("https://api.retab.com/v1/jobs", new { });
+response.EnsureSuccessStatusCode();
+Console.WriteLine(await response.Content.ReadAsStringAsync());
 ```
 
 </CodeGroup>

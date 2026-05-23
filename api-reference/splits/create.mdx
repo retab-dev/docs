@@ -33,27 +33,20 @@ for sub in split.output:
     print(f"{sub.name}: pages {sub.pages}")
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const split = await client.splits.create({
-  document: "invoice_batch.pdf",
-  model: "retab-small",
-  subdocuments: [
+const split = await client.splits.create("invoice_batch.pdf", [
     {
       name: "invoice",
       description: "Invoice documents with billing information",
-      allow_multiple_instances: true,
+      allowMultipleInstances: true,
     },
     { name: "receipt", description: "Receipt documents for payments" },
     { name: "contract", description: "Legal contract documents" },
-  ],
-  instructions: "Processing Q4 2024 vendor document batch",
-  n_consensus: 3,
-  bust_cache: false,
-});
+  ], "retab-small", "Processing Q4 2024 vendor document batch", 3, false);
 
 split.output.forEach((sub) => {
   console.log(`${sub.name}: pages ${sub.pages}`);
@@ -107,6 +100,101 @@ func main() {
 		}
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+split = client.splits.create(
+  document: 'invoice_batch.pdf',
+  model: 'retab-small',
+  subdocuments: [
+    {
+      'name' => 'invoice',
+      'description' => 'Invoice documents with billing information',
+      'allow_multiple_instances' => true,
+    },
+    { 'name' => 'receipt', 'description' => 'Receipt documents for payments' },
+    { 'name' => 'contract', 'description' => 'Legal contract documents' },
+  ],
+  instructions: 'Processing Q4 2024 vendor document batch',
+  n_consensus: 3,
+  bust_cache: false,
+)
+
+split.output.each do |sub|
+  puts "#{sub.name}: pages #{sub.pages}"
+end
+```
+
+```rust rust
+use retab::models::Subdocument;
+use retab::resources::splits::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let subdocuments = vec![
+        Subdocument {
+            name: "invoice".into(),
+            description: Some("Invoice documents with billing information".into()),
+            allow_multiple_instances: Some(true),
+        },
+        Subdocument {
+            name: "receipt".into(),
+            description: Some("Receipt documents for payments".into()),
+            allow_multiple_instances: None,
+        },
+        Subdocument {
+            name: "contract".into(),
+            description: Some("Legal contract documents".into()),
+            allow_multiple_instances: None,
+        },
+    ];
+
+    let mut params = CreateParams::new(PathBuf::from("invoice_batch.pdf"), subdocuments);
+    params.body.model = Some("retab-small".into());
+    params.body.instructions = Some("Processing Q4 2024 vendor document batch".into());
+    params.body.n_consensus = Some(3);
+    params.body.bust_cache = Some(false);
+
+    let split = client.splits().create(params).await?;
+
+    for sub in &split.output {
+        println!("{}: pages {:?}", sub.name, sub.pages);
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->splits()->create(
+    document: 'invoice.pdf',
+    subdocuments: 'invoice.pdf',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Splits.CreateAsync(apiKey, new SplitsCreateOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

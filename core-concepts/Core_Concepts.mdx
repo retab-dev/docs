@@ -16,39 +16,40 @@ Here's how you can use both:
 
 <CodeGroup>
 ```python Python
-# Async client
+# Async client.
 from retab import AsyncRetab
 
+
 async def parse_document(document):
-client = AsyncRetab()
-result = await client.parses.create(document=document)
-print(result.output.text)
+    client = AsyncRetab()
+    result = await client.parses.create(document=document, model="retab-small")
+    print(result.output.text)
 
-# Sync client
 
+# Sync client.
 from retab import Retab
 
 client = Retab()
 
-result = client.parses.create(document="invoice.pdf")
+result = client.parses.create(document="invoice.pdf", model="retab-small")
 print(result.output.text)
 
 ````
 
-```javascript Node.js
+```typescript TypeScript
 // Async client (default)
 import { Retab } from '@retab/node';
 
 async function parseDocument(document) {
-    const client = new Retab();
-    const result = await client.parses.create({ document });
+    const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+    const result = await client.parses.create(undefined, "retab-small");
     console.log(result.output.text);
 }
 
 // Using promises
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-client.parses.create({ document: "invoice.pdf" })
+client.parses.create("invoice.pdf", "retab-small")
     .then(result => console.log(result.output.text));
 ````
 
@@ -80,6 +81,67 @@ func main() {
 	}
 	fmt.Println((*result)["output"])
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+# Ruby SDK is synchronous; for concurrent requests use Thread or a concurrency gem
+client = Retab::Client.new
+
+result = client.parses.create(document: 'invoice.pdf')
+puts result.output.text
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+// PHP SDK is synchronous; for concurrent requests use Guzzle's promise/pool APIs
+$client = new Client();
+
+$result = $client->parses()->create(document: 'invoice.pdf');
+echo $result->output->text . PHP_EOL;
+```
+
+```rust Rust
+use retab::resources::parses::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+// The Rust SDK is async; for concurrent requests spawn multiple tasks with tokio.
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let params = CreateParams::new(PathBuf::from("invoice.pdf"));
+    let result = client.parses().create(params).await?;
+    println!("{}", result.output.text);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using Retab;
+
+// The .NET SDK is async by design; every method returns Task<T>.
+var client = new Retab("YOUR_API_KEY");
+
+var result = await client.Parses.CreateAsync(
+    client.ApiKey,
+    new ParsesCreateOptions
+    {
+        Document = new FileInfo("invoice.pdf"),
+        Model = "retab-small",
+    }
+);
+
+Console.WriteLine(result.Output.Text);
 ```
 
 </CodeGroup>
@@ -135,22 +197,20 @@ from retab import Retab
 from retab.types.extractions import ExtractionRequest
 
 with open("booking_confirmation_json_schema.json", "r") as f:
-json_schema = json.load(f)
+    json_schema = json.load(f)
 
 client = Retab()
 
 response = client.extractions.create(
-ExtractionRequest(
-document="booking_confirmation.jpg",
-model="retab-micro",
-json_schema=json_schema,
-n_consensus=10, # This will run and combine the results of 10 calls to the same LLM
-)
+    document="booking_confirmation.jpg",
+    model="retab-micro",
+    json_schema=json_schema,
+    n_consensus=10,  # >1 combines results from multiple LLM calls
 )
 
 ````
 
-```javascript Node.js
+```typescript TypeScript
 import { Retab } from '@retab/node';
 import { readFileSync } from 'fs';
 
@@ -158,14 +218,16 @@ const jsonSchema = JSON.parse(
     readFileSync('booking_confirmation_json_schema.json', 'utf-8')
 );
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const response = await client.extractions.create({
-    document: 'booking_confirmation.jpg',
-    model: 'retab-micro',
-    json_schema: jsonSchema,
-    n_consensus: 10  // This will run and combine the results of 10 calls to the same LLM
-});
+const response = await client.extractions.create(
+    'booking_confirmation.jpg',
+    jsonSchema,
+    'retab-micro',
+    undefined,
+    undefined,
+    10  // This will run and combine the results of 10 calls to the same LLM
+);
 ````
 
 ```go Go
@@ -209,6 +271,91 @@ func main() {
 	}
 	fmt.Println(response)
 }
+```
+
+```ruby Ruby
+require 'retab'
+require 'json'
+
+json_schema = JSON.parse(File.read('booking_confirmation_json_schema.json'))
+
+client = Retab::Client.new
+
+response = client.extractions.create(
+  document: 'booking_confirmation.jpg',
+  model: 'retab-micro',
+  json_schema: json_schema,
+  n_consensus: 10, # >1 combines results from multiple LLM calls
+)
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$jsonSchema = json_decode(file_get_contents('booking_confirmation_json_schema.json'), true);
+
+$client = new Client();
+
+$response = $client->extractions()->create(
+    document: 'booking_confirmation.jpg',
+    jsonSchema: $jsonSchema,
+    model: 'retab-micro',
+    nConsensus: 10, // >1 combines results from multiple LLM calls
+);
+```
+
+```rust Rust
+use retab::resources::extractions::CreateParams;
+use retab::Retab;
+use std::collections::HashMap;
+use std::fs;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let schema_bytes = fs::read("booking_confirmation_json_schema.json")?;
+    let json_schema: HashMap<String, serde_json::Value> = serde_json::from_slice(&schema_bytes)?;
+
+    let mut params = CreateParams::new("booking_confirmation.jpg", json_schema);
+    params.body.model = Some("retab-micro".into());
+    params.body.n_consensus = Some(10); // >1 combines results from multiple LLM calls
+
+    let response = client.extractions().create(params).await?;
+    println!("{:?}", response);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using Retab;
+using Newtonsoft.Json;
+
+var jsonSchema = JsonConvert.DeserializeObject<Dictionary<string, object>>(
+    await File.ReadAllTextAsync("booking_confirmation_json_schema.json")
+)!;
+
+var client = new Retab("YOUR_API_KEY");
+
+var response = await client.Extractions.CreateAsync(
+    client.ApiKey,
+    new ExtractionsCreateOptions
+    {
+        Document = new FileInfo("booking_confirmation.jpg"),
+        Model = "retab-micro",
+        JsonSchema = jsonSchema,
+        NConsensus = 10, // >1 combines results from multiple LLM calls
+    }
+);
+
+Console.WriteLine(response.Output);
 ```
 
 ```JSON Extracted JSON

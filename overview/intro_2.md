@@ -59,7 +59,7 @@ model="gpt-5.4",
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
@@ -84,6 +84,32 @@ const completion = await openai.chat.completions.parse({
 
 const researchPaper = completion.choices[0].message.parsed;
 ````
+
+```ruby Ruby
+require 'openai'
+
+client = OpenAI::Client.new
+
+research_paper_extraction = {
+  'type' => 'object',
+  'properties' => {
+    'title' => { 'type' => 'string' },
+    'authors' => { 'type' => 'array', 'items' => { 'type' => 'string' } },
+    'abstract' => { 'type' => 'string' },
+    'keywords' => { 'type' => 'array', 'items' => { 'type' => 'string' } },
+  },
+  'required' => ['title', 'authors', 'abstract', 'keywords'],
+}
+
+completion = client.completions.parse(
+  json_schema: research_paper_extraction,
+  messages: [
+    { role: 'system', content: 'You are an expert at structured data extraction. You will be given unstructured text from a research paper and should convert it into the given structure.' },
+    { role: 'user', content: '...' },
+  ],
+  model: 'gpt-5.4',
+)
+```
 
 ```json json_schema.json
 {

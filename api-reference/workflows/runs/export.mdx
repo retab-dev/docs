@@ -46,24 +46,16 @@ export = client.workflows.runs.export(
 )
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 import { writeFileSync } from "node:fs";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const exportResult = await client.workflows.runs.export({
-  workflowId: "wf_abc123xyz",
-  blockId: "extract-1",
-  exportSource: "outputs",
-  status: "completed",
-  fromDate: "2026-04-01",
-  toDate: "2026-04-30",
-  preferredColumns: ["invoice_number", "total", "vendor.name"],
-});
+const exportResult = await client.workflows.runs.export("wf_abc123xyz", "extract-1", "outputs", undefined, undefined, "completed", undefined, "2026-04-01", "2026-04-30", undefined, ["invoice_number", "total", "vendor.name"]);
 
 console.log(`${exportResult.rows} rows, ${exportResult.columns} columns`);
-writeFileSync("invoices.csv", exportResult.csv_data);
+writeFileSync("invoices.csv", exportResult.csvData);
 ```
 
 ```go go
@@ -104,6 +96,83 @@ func main() {
 		log.Fatal(err)
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+export = client.workflow_runs.export(
+  workflow_id: 'wf_abc123xyz',
+  block_id: 'extract-1',
+  export_source: 'outputs',
+  status: 'completed',
+  from_date: '2026-04-01',
+  to_date: '2026-04-30',
+  preferred_columns: ['invoice_number', 'total', 'vendor.name'],
+)
+
+puts "#{export.rows} rows, #{export.columns} columns"
+File.write('invoices.csv', export.csv_data)
+```
+
+```rust rust
+use retab::enums::{WorkflowExportPayloadRequestExportSource, WorkflowExportPayloadRequestStatus};
+use retab::models::WorkflowExportPayloadRequest;
+use retab::resources::workflow_runs::ExportParams;
+use retab::Retab;
+use std::fs::write;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut body = WorkflowExportPayloadRequest::new("wf_abc123xyz", "extract-1");
+    body.export_source = Some(WorkflowExportPayloadRequestExportSource::Outputs);
+    body.status = Some(WorkflowExportPayloadRequestStatus::Completed);
+    body.from_date = Some("2026-04-01".into());
+    body.to_date = Some("2026-04-30".into());
+    body.preferred_columns = Some(vec![
+        "invoice_number".into(),
+        "total".into(),
+        "vendor.name".into(),
+    ]);
+
+    let export = client
+        .workflow_runs()
+        .export(ExportParams::new(body))
+        .await?;
+
+    println!("{} rows, {} columns", export.rows, export.columns);
+    write("invoices.csv", export.csv_data)?;
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowRuns()->export(
+    workflowId: 'wf_abc123',
+    blockId: 'blk_extract_1',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowRuns.ExportAsync(apiKey, new WorkflowRunsExportOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl
