@@ -105,14 +105,114 @@ The SDK exposes the spec lifecycle under `client.workflows.spec`:
 validation = client.workflows.spec.validate(yaml_definition)
 plan = client.workflows.spec.plan(yaml_definition)
 result = client.workflows.spec.apply(yaml_definition)
-exported = client.workflows.spec.export(result.workflow_id)
+exported = client.workflows.spec.get(result.workflow_id)
 ```
 
-```javascript JavaScript
-const validation = await client.workflows.spec.validate(yamlDefinition);
-const plan = await client.workflows.spec.plan(yamlDefinition);
-const result = await client.workflows.spec.apply(yamlDefinition);
-const exported = await client.workflows.spec.export(result.workflow_id);
+```typescript TypeScript
+const validation = await client.workflows.specs.validate(yamlDefinition);
+const plan = await client.workflows.specs.plan(yamlDefinition);
+const result = await client.workflows.specs.apply(yamlDefinition);
+const exported = await client.workflows.specs.get(result.workflowId);
+```
+
+```php PHP
+$validation = $client->workflowSpecs()->validate($yamlDefinition);
+$plan = $client->workflowSpecs()->plan($yamlDefinition);
+$result = $client->workflowSpecs()->apply($yamlDefinition);
+$exported = $client->workflowSpecs()->get($result->workflowId);
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+validation = client.workflow_specs.validate(yaml_definition: yaml_definition)
+plan = client.workflow_specs.plan(yaml_definition: yaml_definition)
+result = client.workflow_specs.apply(yaml_definition: yaml_definition)
+exported = client.workflow_specs.get(workflow_id: result.workflow_id)
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var validation = await client.WorkflowSpecs.ValidateAsync(
+    client.ApiKey,
+    new WorkflowSpecsValidateOptions { YamlDefinition = yamlDefinition }
+);
+var plan = await client.WorkflowSpecs.PlanAsync(
+    client.ApiKey,
+    new WorkflowSpecsPlanOptions { YamlDefinition = yamlDefinition }
+);
+var result = await client.WorkflowSpecs.ApplyAsync(
+    client.ApiKey,
+    new WorkflowSpecsApplyOptions { YamlDefinition = yamlDefinition }
+);
+var exported = await client.WorkflowSpecs.GetAsync(result.WorkflowId, client.ApiKey);
+```
+
+```go Go
+package main
+
+import (
+	"fmt"
+	"log"
+	"context"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	validation, err := client.Workflows.Spec.Validate(context.Background(), yamlDefinition)
+	if err != nil {
+		log.Fatal(err)
+	}
+	plan, err := client.Workflows.Spec.Plan(context.Background(), yamlDefinition)
+	if err != nil {
+		log.Fatal(err)
+	}
+	result, err := client.Workflows.Spec.Apply(context.Background(), yamlDefinition)
+	if err != nil {
+		log.Fatal(err)
+	}
+	workflowID, _ := (*result)["workflow_id"].(string)
+	exported, err := client.Workflows.Spec.Get(context.Background(), workflowID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(validation, plan, result, exported)
+}
+```
+
+```rust Rust
+use retab::{models::DeclarativeWorkflowRequest, resources::workflow_specs, Retab};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let validation = client
+    .workflow_specs()
+    .validate(workflow_specs::ValidateParams::new(DeclarativeWorkflowRequest::new(yaml_definition.clone())))
+    .await?;
+let plan = client
+    .workflow_specs()
+    .plan(workflow_specs::PlanParams::new(DeclarativeWorkflowRequest::new(yaml_definition.clone())))
+    .await?;
+let result = client
+    .workflow_specs()
+    .apply(workflow_specs::ApplyParams::new(DeclarativeWorkflowRequest::new(yaml_definition)))
+    .await?;
+let exported = client.workflow_specs().get(&result.workflow_id).await?;
+
+println!("{validation:#?} {plan:#?} {exported:#?}");
 ```
 
 </CodeGroup>
@@ -198,12 +298,12 @@ json_start_id = next(block.id for block in blocks.data if block.type == "start_j
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const blocks = await client.workflows.blocks.list("wf_abc123");
+const blocks = await client.workflows.blocks.list({ workflowId: "wf_abc123" });
 
 const documentStartId = blocks.data.find((block) => block.type === "start_document")?.id;
 const jsonStartId = blocks.data.find((block) => block.type === "start_json")?.id;
@@ -253,6 +353,106 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+blocks = client.workflow_blocks.list(workflow_id: 'wf_abc123')
+
+document_start_id = blocks.data.find { |block| block.type == 'start_document' }&.id
+json_start_id = blocks.data.find { |block| block.type == 'start_json' }&.id
+
+if document_start_id.nil? || json_start_id.nil?
+  raise 'Workflow is missing a required input block'
+end
+
+puts document_start_id
+puts json_start_id
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\WorkflowBlockType;
+
+$client = new Client();
+
+$blocks = $client->workflowBlocks()->list('wf_abc123');
+
+$documentStartId = null;
+$jsonStartId = null;
+foreach ($blocks->data as $block) {
+    if ($block->type === WorkflowBlockType::StartDocument) {
+        $documentStartId = $block->id;
+    } elseif ($block->type === WorkflowBlockType::StartJson) {
+        $jsonStartId = $block->id;
+    }
+}
+
+if ($documentStartId === null || $jsonStartId === null) {
+    throw new RuntimeException('Workflow is missing a required input block');
+}
+```
+
+```csharp C#
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var blocks = await client.WorkflowBlocks.ListAsync(
+    client.ApiKey,
+    new WorkflowBlocksListOptions { WorkflowId = "wf_abc123" }
+);
+
+string? documentStartId = null;
+string? jsonStartId = null;
+await foreach (var block in blocks)
+{
+    if (block.Type == WorkflowBlockType.StartDocument)
+    {
+        documentStartId = block.Id;
+    }
+    else if (block.Type == WorkflowBlockType.StartJson)
+    {
+        jsonStartId = block.Id;
+    }
+}
+
+if (documentStartId is null || jsonStartId is null)
+{
+    throw new InvalidOperationException("Workflow is missing a required input block");
+}
+```
+
+```rust Rust
+use retab::{enums::WorkflowBlockType, resources::workflow_blocks::ListParams, Retab};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let blocks = client
+    .workflow_blocks()
+    .list(ListParams::new("wf_abc123"))
+    .await?;
+
+let document_start_id = blocks
+    .data
+    .iter()
+    .find(|block| block.type_ == WorkflowBlockType::StartDocument)
+    .map(|block| block.id.clone());
+let json_start_id = blocks
+    .data
+    .iter()
+    .find(|block| block.type_ == WorkflowBlockType::StartJson)
+    .map(|block| block.id.clone());
+
+println!("{document_start_id:?} {json_start_id:?}");
+```
+
 </CodeGroup>
 
 #### Run and wait for completion
@@ -277,42 +477,42 @@ document_start_id = next(block.id for block in blocks.data if block.type == "sta
 json_start_id = next(block.id for block in blocks.data if block.type == "start_json")
 
 run = client.workflows.runs.create(
-workflow_id=workflow.id,
-documents={
-document_start_id: Path("path/to/invoice.pdf"),
-},
-json_inputs={
-json_start_id: {"customer_id": "cust_123", "priority": "high"},
-},
+    workflow_id=workflow.id,
+    documents={
+        document_start_id: Path("path/to/invoice.pdf"),
+    },
+    json_inputs={
+        json_start_id: {"customer_id": "cust_123", "priority": "high"},
+    },
 )
 
 terminal_statuses = {"completed", "error", "cancelled"}
 while run.lifecycle.status not in terminal_statuses and run.lifecycle.status != "awaiting_review":
-time.sleep(1)
-run = client.workflows.runs.get(run.id)
+    time.sleep(1)
+    run = client.workflows.runs.get(run.id)
 
 print(run.lifecycle.status)
 if run.lifecycle.status == "awaiting_review":
-print(run.lifecycle.waiting_for_block_ids)
+    print(run.lifecycle.waiting_for_block_ids)
 elif run.lifecycle.status == "error":
-raise RuntimeError(run.lifecycle.message)
+    raise RuntimeError(run.lifecycle.message)
 elif run.lifecycle.status == "cancelled":
-raise RuntimeError(run.lifecycle.reason or "Workflow run was cancelled")
+    raise RuntimeError(run.lifecycle.reason or "Workflow run was cancelled")
 else:
-for step_summary in client.workflows.steps.list(run.id):
-step = client.workflows.steps.get(run.id, step_summary.block_id)
-if step.handle_outputs:
-print(step.block_id, step.handle_outputs)
+    for step_summary in client.workflows.steps.list(run.id):
+        step = client.workflows.steps.get(step_summary.step_id)
+        if step.handle_outputs:
+            print(step.block_id, step.handle_outputs)
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const workflow = await client.workflows.get("wf_abc123");
-const blocks = await client.workflows.blocks.list(workflow.id);
+const blocks = await client.workflows.blocks.list({ workflowId: workflow.id });
 const documentStartId = blocks.data.find((block) => block.type === "start_document")?.id;
 const jsonStartId = blocks.data.find((block) => block.type === "start_json")?.id;
 
@@ -338,17 +538,17 @@ while (!terminalStatuses.has(run.lifecycle.status) && run.lifecycle.status !== "
 
 console.log(run.lifecycle.status);
 if (run.lifecycle.status === "awaiting_review") {
-  console.log(run.lifecycle.waiting_for_block_ids);
+  console.log(run.lifecycle.waitingForBlockIds);
 } else if (run.lifecycle.status === "error") {
   throw new Error(run.lifecycle.message);
 } else if (run.lifecycle.status === "cancelled") {
   throw new Error(run.lifecycle.reason ?? "Workflow run was cancelled");
 } else {
-  const steps = await client.workflows.steps.list(run.id);
-  for (const stepSummary of steps) {
-    const step = await client.workflows.steps.get(run.id, stepSummary.block_id);
-    if (Object.keys(step.handle_outputs).length > 0) {
-      console.log(step.block_id, step.handle_outputs);
+  const steps = await client.workflows.steps.list({ runId: run.id });
+  for (const stepSummary of steps.data) {
+    const step = await client.workflows.steps.get(stepSummary.stepId);
+    if (step.handleOutputs && Object.keys(step.handleOutputs).length > 0) {
+      console.log(step.blockId, step.handleOutputs);
     }
   }
 }
@@ -448,6 +648,157 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+workflow = client.workflows.get(workflow_id: 'wf_abc123')
+blocks = client.workflow_blocks.list(workflow_id: workflow.id)
+document_start_id = blocks.data.find { |block| block.type == 'start_document' }&.id
+json_start_id = blocks.data.find { |block| block.type == 'start_json' }&.id
+
+run = client.workflow_runs.create(
+  workflow_id: workflow.id,
+  documents: {
+    document_start_id => { filename: 'invoice.pdf', url: 'path/to/invoice.pdf' },
+  },
+  json_inputs: {
+    json_start_id => { customer_id: 'cust_123', priority: 'high' },
+  },
+)
+
+terminal_statuses = ['completed', 'error', 'cancelled']
+until terminal_statuses.include?(run.lifecycle.status) || run.lifecycle.status == 'awaiting_review'
+  sleep 1
+  run = client.workflow_runs.get(run_id: run.id)
+end
+
+puts run.lifecycle.status
+case run.lifecycle.status
+when 'awaiting_review'
+  puts run.lifecycle.waiting_for_block_ids
+when 'error'
+  raise run.lifecycle.message
+when 'cancelled'
+  raise(run.lifecycle.reason || 'Workflow run was cancelled')
+else
+  client.workflow_steps.list(run_id: run.id).data.each do |step_summary|
+    step = client.workflow_steps.get(step_id: step_summary.step_id, run_id: run.id)
+    next if step.handle_outputs.nil? || step.handle_outputs.empty?
+    puts "#{step.block_id} #{step.handle_outputs}"
+  end
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\WorkflowBlockType;
+
+$client = new Client();
+
+$workflow = $client->workflows()->get('wf_abc123');
+$blocks = $client->workflowBlocks()->list($workflow->id);
+
+$documentStartId = null;
+$jsonStartId = null;
+foreach ($blocks->data as $block) {
+    if ($block->type === WorkflowBlockType::StartDocument) {
+        $documentStartId = $block->id;
+    } elseif ($block->type === WorkflowBlockType::StartJson) {
+        $jsonStartId = $block->id;
+    }
+}
+
+$run = $client->workflowRuns()->create(
+    workflowId: $workflow->id,
+    documents: [
+        $documentStartId => ['url' => 'path/to/invoice.pdf'],
+    ],
+    jsonInputs: [
+        $jsonStartId => ['customer_id' => 'cust_123', 'priority' => 'high'],
+    ],
+);
+
+$terminalStatuses = ['completed', 'error', 'cancelled'];
+$deadline = time() + 600;
+while (!in_array($run->lifecycle->status, $terminalStatuses, true)
+    && $run->lifecycle->status !== 'awaiting_review') {
+    if (time() > $deadline) {
+        throw new RuntimeException("Timed out waiting for workflow run {$run->id}");
+    }
+    sleep(1);
+    $run = $client->workflowRuns()->get($run->id);
+}
+
+echo $run->lifecycle->status . PHP_EOL;
+if ($run->lifecycle->status === 'awaiting_review') {
+    print_r($run->lifecycle->waitingForBlockIds ?? []);
+} elseif ($run->lifecycle->status === 'error') {
+    throw new RuntimeException($run->lifecycle->message ?? 'error');
+} elseif ($run->lifecycle->status === 'cancelled') {
+    throw new RuntimeException($run->lifecycle->reason ?? 'Workflow run was cancelled');
+} else {
+    foreach ($client->workflowSteps()->list(runId: $run->id)->data as $stepSummary) {
+        $step = $client->workflowSteps()->get($stepSummary->stepId, runId: $run->id);
+        if (!empty($step->handleOutputs)) {
+            echo $step->blockId . PHP_EOL;
+            print_r($step->handleOutputs);
+        }
+    }
+}
+```
+
+```rust Rust
+use retab::{models::CreateFreshWorkflowRunRequest, resources::workflow_runs, Retab};
+use std::time::{Duration, Instant};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let mut run = client
+    .workflow_runs()
+    .create(workflow_runs::CreateParams::new(
+        CreateFreshWorkflowRunRequest::new("wf_abc123").into(),
+    ))
+    .await?;
+
+let deadline = Instant::now() + Duration::from_secs(600);
+while !matches!(run.lifecycle.status.as_deref(), Some("completed" | "error" | "cancelled" | "awaiting_review")) {
+    if Instant::now() > deadline {
+        return Err("timed out waiting for workflow run".into());
+    }
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    run = client.workflow_runs().get(&run.id).await?;
+}
+
+println!("{}", run.id);
+```
+
+```csharp C#
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+var run = await client.WorkflowRuns.CreateAsync(
+    client.ApiKey,
+    new WorkflowRunsCreateOptions { WorkflowId = "wf_abc123" }
+);
+
+var deadline = DateTimeOffset.UtcNow.AddMinutes(10);
+while (run.Lifecycle.Status is not ("completed" or "error" or "cancelled" or "awaiting_review"))
+{
+    if (DateTimeOffset.UtcNow > deadline)
+    {
+        throw new TimeoutException($"Timed out waiting for workflow run {run.Id}");
+    }
+    await Task.Delay(TimeSpan.FromSeconds(1));
+    run = await client.WorkflowRuns.GetAsync(run.Id, client.ApiKey);
+}
+
+Console.WriteLine(run.Lifecycle.Status);
+```
+
 </CodeGroup>
 
 `steps.list(run.id)` returns the step roster for a run. For the full execution record for one block, including typed inputs and outputs, use `steps.get(run.id, block_id)`.
@@ -475,11 +826,11 @@ print(step.extracted_data)
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 // Step roster:
-const steps = await client.workflows.steps.list(run.id);
+const steps = await client.workflows.steps.list({ runId: run.id });
 for (const step of steps) {
-  console.log(step.block_id, step.lifecycle.status);
+  console.log(step.blockId, step.lifecycle.status);
   if (step.artifact) {
     console.log(step.artifact.operation, step.artifact.id);
   }
@@ -488,7 +839,7 @@ for (const step of steps) {
 // Full execution record for one step:
 const step = await client.workflows.steps.get(run.id, "extract-block-id");
 console.log(step.lifecycle.status);
-const extractedData = step.handle_outputs["output-json-0"]?.data;
+const extractedData = step.handleOutputs["output-json-0"]?.data;
 if (extractedData) {
   console.log(extractedData);
 }
@@ -516,6 +867,86 @@ fmt.Println(step.Lifecycle["status"])
 if extractedData := step.ExtractedData(); extractedData != nil {
 	fmt.Println(extractedData)
 }
+```
+
+```ruby Ruby
+# Step roster:
+client.workflow_steps.list(run_id: run.id).data.each do |step|
+  puts "#{step.block_id} #{step.lifecycle.status}"
+  if step.artifact
+    puts "#{step.artifact.operation} #{step.artifact.id}"
+  end
+end
+
+# Full execution record for one step:
+step = client.workflow_steps.get(step_id: 'extract-step-id', run_id: run.id)
+puts step.lifecycle.status
+extracted_data = step.handle_outputs['output-json-0']&.data
+puts extracted_data if extracted_data
+```
+
+```php PHP
+<?php
+// Step roster
+foreach ($client->workflowSteps()->list(runId: $run->id)->data as $step) {
+    echo $step->blockId . ' ' . ($step->lifecycle->status ?? '') . PHP_EOL;
+    if ($step->artifact !== null) {
+        echo $step->artifact->operation . ' ' . $step->artifact->id . PHP_EOL;
+    }
+}
+
+// Full execution record for one step:
+$step = $client->workflowSteps()->get('extract-block-id', runId: $run->id);
+echo ($step->lifecycle->status ?? '') . PHP_EOL;
+$extractedData = $step->handleOutputs['output-json-0']->data ?? null;
+if ($extractedData !== null) {
+    print_r($extractedData);
+}
+```
+
+```rust Rust
+use retab::{resources::workflow_steps::ListParams, Retab};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let steps = client
+    .workflow_steps()
+    .list(ListParams {
+        run_id: Some(run.id.clone()),
+        ..Default::default()
+    })
+    .await?;
+
+for summary in steps.data {
+    println!("{} {:?}", summary.block_id, summary.lifecycle);
+    if let Some(artifact) = summary.artifact {
+        println!("{} {}", artifact.operation, artifact.id);
+    }
+}
+
+let step = client.workflow_steps().get("extract-step-id").await?;
+println!("{:?}", step.handle_outputs);
+```
+
+```csharp C#
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+var steps = await client.WorkflowSteps.ListAsync(
+    client.ApiKey,
+    new WorkflowStepsListOptions { RunId = run.Id }
+);
+
+await foreach (var summary in steps)
+{
+    Console.WriteLine($"{summary.BlockId} {summary.Lifecycle.Status}");
+    if (summary.Artifact is not null)
+    {
+        Console.WriteLine($"{summary.Artifact.Operation} {summary.Artifact.Id}");
+    }
+}
+
+var step = await client.WorkflowSteps.GetAsync("extract-step-id", client.ApiKey);
+Console.WriteLine(step.HandleOutputs);
 ```
 
 </CodeGroup>
@@ -546,13 +977,89 @@ if step.artifact:
     print(artifact.evaluations)
 ```
 
-```javascript JavaScript
+```typescript TypeScript
 const step = await client.workflows.steps.get(run.id, "function-block-id");
 if (step.artifact) {
   const artifact = await client.workflows.artifacts.get(step.artifact);
   console.log(artifact.operation);
   console.log(artifact.output);
   console.log(artifact.error);
+}
+```
+
+```ruby Ruby
+step = client.workflow_steps.get(step_id: 'conditional-step-id', run_id: run.id)
+if step.artifact
+  artifact = client.workflow_artifacts.get(artifact_id: step.artifact.id)
+  puts artifact['operation']
+  puts artifact['matched_condition_ids']
+  puts artifact['evaluations']
+end
+```
+
+```php PHP
+$step = $client->workflowSteps()->get('conditional-block-id', runId: $run->id);
+if ($step->artifact !== null) {
+    $artifact = $client->workflowArtifacts()->get($step->artifact->id);
+    echo $artifact->operation->value . PHP_EOL;
+    print_r($artifact->matchedConditionIds ?? null);
+    print_r($artifact->evaluations ?? null);
+}
+```
+
+```go Go
+package main
+
+import (
+	"fmt"
+	"log"
+	"context"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	step, err := client.Workflows.Steps.Get(context.Background(), "conditional-step-id")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if step.Artifact != nil {
+		artifact, err := client.Workflows.Artifacts.Get(context.Background(), step.Artifact.ID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println((*artifact)["operation"])
+		fmt.Println((*artifact)["matched_condition_ids"])
+	}
+}
+```
+
+```rust Rust
+use retab::Retab;
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let step = client.workflow_steps().get("conditional-step-id").await?;
+if let Some(artifact_ref) = step.artifact {
+    let artifact = client.workflow_artifacts().get(&artifact_ref.id).await?;
+    println!("{artifact:#?}");
+}
+```
+
+```csharp C#
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+var step = await client.WorkflowSteps.GetAsync("conditional-step-id", client.ApiKey);
+if (step.Artifact is not null)
+{
+    var artifact = await client.WorkflowArtifacts.GetAsync(step.Artifact.Id, client.ApiKey);
+    Console.WriteLine(artifact);
 }
 ```
 
@@ -569,11 +1076,88 @@ condition_records = client.workflows.artifacts.list(
 )
 ```
 
-```javascript JavaScript
+```typescript TypeScript
 const conditionRecords = await client.workflows.artifacts.list({
   runId: run.id,
   operation: "conditional_evaluation",
 });
+```
+
+```ruby Ruby
+condition_records = client.workflow_artifacts.list(
+  run_id: run.id,
+  operation: 'conditional_evaluation',
+)
+```
+
+```php PHP
+use Retab\Resource\StepArtifactRefOperation;
+
+$conditionRecords = $client->workflowArtifacts()->list(
+    runId: $run->id,
+    operation: StepArtifactRefOperation::ConditionalEvaluation,
+);
+```
+
+```go Go
+package main
+
+import (
+	"fmt"
+	"log"
+	"context"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	records, err := client.Workflows.Artifacts.List(context.Background(), retab.ListWorkflowArtifactsParams{
+		RunID:     run.ID,
+		Operation: "conditional_evaluation",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(records.Data)
+}
+```
+
+```rust Rust
+use retab::{enums::WorkflowArtifactsOperation, resources::workflow_artifacts::ListParams, Retab};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let condition_records = client
+    .workflow_artifacts()
+    .list(ListParams {
+        run_id: Some(run.id.clone()),
+        operation: Some(WorkflowArtifactsOperation::ConditionalEvaluation),
+        ..Default::default()
+    })
+    .await?;
+
+println!("{:#?}", condition_records.data);
+```
+
+```csharp C#
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+var conditionRecords = await client.WorkflowArtifacts.ListAsync(
+    client.ApiKey,
+    new WorkflowArtifactsListOptions
+    {
+        RunId = run.Id,
+        Operation = WorkflowArtifactsOperation.ConditionalEvaluation,
+    }
+);
+
+Console.WriteLine(conditionRecords);
 ```
 
 </CodeGroup>
@@ -632,22 +1216,16 @@ client.workflows.publish(workflow.id, description="Initial version")
 
 ````
 
-```javascript JavaScript
-const workflow = await client.workflows.create({ name: "Invoice Pipeline" });
-const blocks = await client.workflows.blocks.list(workflow.id);
+```typescript TypeScript
+const workflow = await client.workflows.create("Invoice Pipeline");
+const blocks = await client.workflows.blocks.list({ workflowId: workflow.id });
 const startDocumentBlock = blocks.data.find((block) => block.type === "start_document");
 
 if (!startDocumentBlock) {
   throw new Error("Workflow is missing a start_document block");
 }
 
-const extractBlock = await client.workflows.blocks.create(workflow.id, {
-  id: "extract-invoice",
-  type: "extract",
-  label: "Extract Invoice",
-  positionX: 320,
-  positionY: 0,
-  config: {
+const extractBlock = await client.workflows.blocks.create(workflow.id, "extract", "extract-invoice", "Extract Invoice", 320, 0, undefined, undefined, {
     json_schema: {
       type: "object",
       properties: {
@@ -655,18 +1233,11 @@ const extractBlock = await client.workflows.blocks.create(workflow.id, {
         total_amount: { type: "number" },
       },
     },
-  },
-});
+  });
 
-await client.workflows.edges.create(workflow.id, {
-  id: "edge-start-to-extract",
-  sourceBlock: startDocumentBlock.id,
-  targetBlock: extractBlock.id,
-  sourceHandle: "output-file-0",
-  targetHandle: "input-file-0",
-});
+await client.workflows.edges.create(workflow.id, startDocumentBlock.id, extractBlock.id, "edge-start-to-extract", "output-file-0", "input-file-0");
 
-await client.workflows.publish(workflow.id, { description: "Initial version" });
+await client.workflows.publish(workflow.id, "Initial version");
 ````
 
 ```go Go
@@ -727,6 +1298,216 @@ _, err = client.Workflows.Publish(ctx, workflow.ID, retab.PublishWorkflowRequest
 if err != nil {
 	log.Fatal(err)
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+workflow = client.workflows.create(name: 'Invoice Pipeline')
+blocks = client.workflow_blocks.list(workflow_id: workflow.id)
+start_document_block = blocks.data.find { |block| block.type == 'start_document' }
+
+raise 'Workflow is missing a start_document block' if start_document_block.nil?
+
+extract_block = client.workflow_blocks.create(
+  workflow_id: workflow.id,
+  id: 'extract-invoice',
+  type: 'extract',
+  label: 'Extract Invoice',
+  position_x: 320,
+  position_y: 0,
+  config: {
+    json_schema: {
+      type: 'object',
+      properties: {
+        invoice_number: { type: 'string' },
+        total_amount: { type: 'number' },
+      },
+    },
+  },
+)
+
+client.workflow_edges.create(
+  workflow_id: workflow.id,
+  id: 'edge-start-to-extract',
+  source_block: start_document_block.id,
+  target_block: extract_block.id,
+  source_handle: 'output-file-0',
+  target_handle: 'input-file-0',
+)
+
+client.workflows.publish(workflow_id: workflow.id, description: 'Initial version')
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\WorkflowBlockCreateRequestType;
+use Retab\Resource\WorkflowBlockType;
+
+$client = new Client();
+
+$workflow = $client->workflows()->create(name: 'Invoice Pipeline');
+$blocks = $client->workflowBlocks()->list($workflow->id);
+
+$startDocumentBlock = null;
+foreach ($blocks->data as $block) {
+    if ($block->type === WorkflowBlockType::StartDocument) {
+        $startDocumentBlock = $block;
+        break;
+    }
+}
+
+if ($startDocumentBlock === null) {
+    throw new RuntimeException('Workflow is missing a start_document block');
+}
+
+$extractBlock = $client->workflowBlocks()->create(
+    workflowId: $workflow->id,
+    type: WorkflowBlockCreateRequestType::Extract,
+    id: 'extract-invoice',
+    label: 'Extract Invoice',
+    positionX: 320,
+    positionY: 0,
+    config: [
+        'json_schema' => [
+            'type' => 'object',
+            'properties' => [
+                'invoice_number' => ['type' => 'string'],
+                'total_amount' => ['type' => 'number'],
+            ],
+        ],
+    ],
+);
+
+$client->workflowEdges()->create(
+    workflowId: $workflow->id,
+    sourceBlock: $startDocumentBlock->id,
+    targetBlock: $extractBlock->id,
+    sourceHandle: 'output-file-0',
+    targetHandle: 'input-file-0',
+    id: 'edge-start-to-extract',
+);
+
+$client->workflows()->publish($workflow->id, description: 'Initial version');
+```
+
+```rust Rust
+use retab::{
+    enums::{WorkflowBlockCreateRequestType, WorkflowBlockType},
+    models::{CreateWorkflowRequest, WorkflowBlockCreateRequest, WorkflowEdgeCreateRequest},
+    resources::{workflow_blocks, workflow_edges, workflows},
+    Retab,
+};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let workflow = client
+    .workflows()
+    .create(workflows::CreateParams::new(CreateWorkflowRequest {
+        name: Some("Invoice Pipeline".to_string()),
+        ..Default::default()
+    }))
+    .await?;
+let blocks = client
+    .workflow_blocks()
+    .list(workflow_blocks::ListParams::new(&workflow.id))
+    .await?;
+let start = blocks
+    .data
+    .iter()
+    .find(|block| block.type_ == WorkflowBlockType::StartDocument)
+    .expect("workflow is missing a start_document block");
+
+let mut request = WorkflowBlockCreateRequest::new(&workflow.id, WorkflowBlockCreateRequestType::Extract);
+request.id = Some("extract-invoice".to_string());
+request.label = Some("Extract Invoice".to_string());
+request.position_x = Some(320.0);
+request.config = Some([(
+    "json_schema".to_string(),
+    serde_json::json!({
+        "type": "object",
+        "properties": {
+            "invoice_number": { "type": "string" },
+            "total_amount": { "type": "number" }
+        }
+    }),
+)]
+.into_iter()
+.collect());
+let extract = client
+    .workflow_blocks()
+    .create(workflow_blocks::CreateParams::new(request))
+    .await?;
+
+let mut edge = WorkflowEdgeCreateRequest::new(&workflow.id, &start.id, &extract.id);
+edge.id = Some("edge-start-to-extract".to_string());
+edge.source_handle = Some("output-file-0".to_string());
+edge.target_handle = Some("input-file-0".to_string());
+client
+    .workflow_edges()
+    .create(workflow_edges::CreateParams::new(edge))
+    .await?;
+client
+    .workflows()
+    .publish(&workflow.id, workflows::PublishParams::default())
+    .await?;
+```
+
+```csharp C#
+using System.Collections.Generic;
+using System.Linq;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+var workflow = await client.Workflows.CreateAsync(
+    client.ApiKey,
+    new WorkflowsCreateOptions { Name = "Invoice Pipeline" }
+);
+var blocks = await client.WorkflowBlocks.ListAsync(
+    client.ApiKey,
+    new WorkflowBlocksListOptions { WorkflowId = workflow.Id }
+);
+var start = blocks.Items.First(block => block.Type == WorkflowBlockType.StartDocument);
+var extract = await client.WorkflowBlocks.CreateAsync(
+    client.ApiKey,
+    new WorkflowBlocksCreateOptions
+    {
+        WorkflowId = workflow.Id,
+        Id = "extract-invoice",
+        Type = WorkflowBlockCreateRequestType.Extract,
+        Label = "Extract Invoice",
+        PositionX = 320,
+        Config = new Dictionary<string, object>
+        {
+            ["json_schema"] = new Dictionary<string, object>
+            {
+                ["type"] = "object",
+                ["properties"] = new Dictionary<string, object>
+                {
+                    ["invoice_number"] = new Dictionary<string, object> { ["type"] = "string" },
+                    ["total_amount"] = new Dictionary<string, object> { ["type"] = "number" },
+                },
+            },
+        },
+    }
+);
+await client.WorkflowEdges.CreateAsync(
+    client.ApiKey,
+    new WorkflowEdgesCreateOptions
+    {
+        WorkflowId = workflow.Id,
+        SourceBlock = start.Id,
+        TargetBlock = extract.Id,
+        SourceHandle = "output-file-0",
+        TargetHandle = "input-file-0",
+        Id = "edge-start-to-extract",
+    }
+);
+await client.Workflows.PublishAsync(workflow.Id, client.ApiKey, new WorkflowsPublishOptions());
 ```
 
 </CodeGroup>

@@ -40,10 +40,10 @@ target_view = client.workflows.experiments.metrics.get(
 )
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const summary = await client.workflows.experiments.metrics.get({
   runId: "exprun_2",
@@ -99,6 +99,68 @@ func main() {
 
 	fmt.Println(summary["score"], targetView["view"])
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+summary = client.experiment_run_metrics.get(
+  run_id: 'exprun_2',
+  view: 'summary',
+)
+
+target_view = client.experiment_run_metrics.get(
+  run_id: 'exprun_2',
+  view: 'by_target',
+  target_path: 'line_items.*.unit_price',
+)
+```
+
+```rust rust
+use retab::enums::ExperimentRunMetricsView;
+use retab::resources::experiment_run_metrics::GetParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut summary_params = GetParams::new("exprun_2");
+    summary_params.view = Some(ExperimentRunMetricsView::Summary);
+    let _summary = client.experiment_run_metrics().get(summary_params).await?;
+
+    let mut target_params = GetParams::new("exprun_2");
+    target_params.view = Some(ExperimentRunMetricsView::ByTarget);
+    target_params.target_path = Some("line_items.*.unit_price".into());
+    let _target_view = client.experiment_run_metrics().get(target_params).await?;
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->experimentRunMetrics()->get(
+    runId: 'run_abc123',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.ExperimentRunMetrics.GetAsync(apiKey, new ExperimentRunMetricsGetOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

@@ -70,7 +70,7 @@ class CalendarEvent(BaseModel):
     address: str
 ```
 
-```javascript JavaScript
+```typescript TypeScript
 import { z } from "zod";
 
 const CalendarEvent = z.object({
@@ -98,6 +98,62 @@ calendarEventSchema := map[string]any{
 }
 ```
 
+```ruby Ruby
+calendar_event_schema = {
+  'type' => 'object',
+  'properties' => {
+    'name' => { 'type' => 'string' },
+    'date' => { 'type' => 'string' },
+    'address' => { 'type' => 'string' },
+  },
+  'required' => ['name', 'date', 'address'],
+}
+```
+
+```php PHP
+<?php
+$calendarEventSchema = [
+    'type' => 'object',
+    'properties' => [
+        'name' => ['type' => 'string'],
+        'date' => ['type' => 'string'],
+        'address' => ['type' => 'string'],
+    ],
+    'required' => ['name', 'date', 'address'],
+];
+```
+
+```csharp C#
+using System.Collections.Generic;
+
+var calendarEventSchema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["name"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["date"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["address"] = new Dictionary<string, object> { ["type"] = "string" },
+    },
+    ["required"] = new List<string> { "name", "date", "address" },
+};
+```
+
+
+```rust Rust
+use serde_json::json;
+
+let calendar_event_schema = json!({
+    "type": "object",
+    "properties": {
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "address": { "type": "string" }
+    },
+    "required": ["name", "date", "address"]
+});
+```
+
 </CodeGroup>
 
 ---
@@ -112,30 +168,23 @@ from retab.types.extractions import ExtractionRequest
 client = Retab()
 
 result = client.extractions.create(
-ExtractionRequest(
 document="event_flyer.pdf",
 model="retab-small",
 json_schema=CalendarEvent.model_json_schema(),
 n_consensus=4,
-)
 )
 
 print(json.dumps(result.consensus.likelihoods, indent=2))
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const result = await client.extractions.create({
-    document: "event_flyer.pdf",
-    model: "retab-small",
-    json_schema: zodToJsonSchema(CalendarEvent),
-    n_consensus: 5,
-});
+const result = await client.extractions.create("event_flyer.pdf", zodToJsonSchema(CalendarEvent), "retab-small", undefined, undefined, 5);
 
 console.log(JSON.stringify(result.consensus?.likelihoods, null, 2));
 ````
@@ -189,6 +238,113 @@ func main() {
 
 	fmt.Println(string(pretty))
 }
+```
+
+```ruby Ruby
+require 'retab'
+require 'json'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+calendar_event_schema = {
+  'type' => 'object',
+  'properties' => {
+    'name' => { 'type' => 'string' },
+    'date' => { 'type' => 'string' },
+    'address' => { 'type' => 'string' },
+  },
+  'required' => ['name', 'date', 'address'],
+}
+
+result = client.extractions.create(
+  document: 'event_flyer.pdf',
+  model: 'retab-small',
+  json_schema: calendar_event_schema,
+  n_consensus: 4,
+)
+
+puts JSON.pretty_generate(result.consensus.likelihoods)
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$calendarEventSchema = [
+    'type' => 'object',
+    'properties' => [
+        'name' => ['type' => 'string'],
+        'date' => ['type' => 'string'],
+        'address' => ['type' => 'string'],
+    ],
+    'required' => ['name', 'date', 'address'],
+];
+
+$result = $client->extractions()->create(
+    document: 'event_flyer.pdf',
+    jsonSchema: $calendarEventSchema,
+    model: 'retab-small',
+    nConsensus: 4,
+);
+
+echo json_encode($result->consensus?->likelihoods, JSON_PRETTY_PRINT) . PHP_EOL;
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+using Retab;
+
+var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+
+var calendarEventSchema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["name"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["date"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["address"] = new Dictionary<string, object> { ["type"] = "string" },
+    },
+    ["required"] = new List<string> { "name", "date", "address" },
+};
+
+var result = await client.Extractions.CreateAsync(
+    client.ApiKey,
+    new ExtractionsCreateOptions
+    {
+        Document = new FileInfo("event_flyer.pdf"),
+        Model = "retab-small",
+        JsonSchema = calendarEventSchema,
+        NConsensus = 4,
+    }
+);
+
+Console.WriteLine(JsonSerializer.Serialize(
+    result.Consensus?.Likelihoods,
+    new JsonSerializerOptions { WriteIndented = true }
+));
+```
+
+
+```rust Rust
+use serde_json::json;
+
+let calendar_event_schema = json!({
+    "type": "object",
+    "properties": {
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "address": { "type": "string" }
+    },
+    "required": ["name", "date", "address"]
+});
 ```
 
 </CodeGroup>
@@ -249,6 +405,12 @@ func main() {
 }
 ```
 
+
+
+
+
+
+
 </CodeGroup>
 
 **Interpretation of the consensus likelihoods:**
@@ -296,7 +458,7 @@ address: Address
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { z } from 'zod';
 
 const Address = z.object({
@@ -345,6 +507,95 @@ calendarEventSchema := map[string]any{
 	},
 	"required": []string{"name", "date", "address"},
 }
+```
+
+```ruby Ruby
+calendar_event_schema = {
+  'type' => 'object',
+  'properties' => {
+    'name' => { 'type' => 'string' },
+    'date' => { 'type' => 'string', 'format' => 'date' },
+    'address' => {
+      'type' => 'object',
+      'properties' => {
+        'street' => { 'type' => 'string' },
+        'city' => { 'type' => 'string' },
+        'zip_code' => { 'type' => 'string' },
+        'country' => { 'type' => 'string' },
+      },
+      'required' => ['street', 'city', 'zip_code', 'country'],
+    },
+  },
+  'required' => ['name', 'date', 'address'],
+}
+```
+
+```php PHP
+<?php
+$calendarEventSchema = [
+    'type' => 'object',
+    'properties' => [
+        'name' => ['type' => 'string'],
+        'date' => ['type' => 'string', 'format' => 'date'],
+        'address' => [
+            'type' => 'object',
+            'properties' => [
+                'street' => ['type' => 'string'],
+                'city' => ['type' => 'string'],
+                'zip_code' => ['type' => 'string'],
+                'country' => ['type' => 'string'],
+            ],
+            'required' => ['street', 'city', 'zip_code', 'country'],
+        ],
+    ],
+    'required' => ['name', 'date', 'address'],
+];
+```
+
+```csharp C#
+using System.Collections.Generic;
+
+var calendarEventSchema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["name"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["date"] = new Dictionary<string, object>
+        {
+            ["type"] = "string",
+            ["format"] = "date",
+        },
+        ["address"] = new Dictionary<string, object>
+        {
+            ["type"] = "object",
+            ["properties"] = new Dictionary<string, object>
+            {
+                ["street"] = new Dictionary<string, object> { ["type"] = "string" },
+                ["city"] = new Dictionary<string, object> { ["type"] = "string" },
+                ["zip_code"] = new Dictionary<string, object> { ["type"] = "string" },
+                ["country"] = new Dictionary<string, object> { ["type"] = "string" },
+            },
+            ["required"] = new List<string> { "street", "city", "zip_code", "country" },
+        },
+    },
+    ["required"] = new List<string> { "name", "date", "address" },
+};
+```
+
+
+```rust Rust
+use serde_json::json;
+
+let calendar_event_schema = json!({
+    "type": "object",
+    "properties": {
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "address": { "type": "string" }
+    },
+    "required": ["name", "date", "address"]
+});
 ```
 
 </CodeGroup>
@@ -433,6 +684,12 @@ calendarEventSchema := map[string]any{
   }
 }
 ```
+
+
+
+
+
+
 
 </CodeGroup>
 

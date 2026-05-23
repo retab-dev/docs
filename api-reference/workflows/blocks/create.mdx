@@ -46,18 +46,12 @@ block = client.workflows.blocks.create(
 print(block.id)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const block = await client.workflows.blocks.create("wf_abc123xyz", {
-  id: "extract-1",
-  type: "extract",
-  label: "Extract Invoice Fields",
-  positionX: 320,
-  positionY: 0,
-  config: {
+const block = await client.workflows.blocks.create("wf_abc123xyz", "extract", "extract-1", "Extract Invoice Fields", 320, 0, undefined, undefined, {
     model: "retab-small",
     json_schema: {
       type: "object",
@@ -66,8 +60,7 @@ const block = await client.workflows.blocks.create("wf_abc123xyz", {
         total: { type: "number" },
       },
     },
-  },
-});
+  });
 
 console.log(block.id);
 ```
@@ -114,6 +107,104 @@ func main() {
 
 	fmt.Println(block.ID)
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+block = client.workflow_blocks.create(
+  workflow_id: 'wf_abc123xyz',
+  id: 'extract-1',
+  type: 'extract',
+  label: 'Extract Invoice Fields',
+  position_x: 320,
+  position_y: 0,
+  config: {
+    model: 'gpt-5',
+    json_schema: {
+      type: 'object',
+      properties: {
+        invoice_number: { type: 'string' },
+        total: { type: 'number' },
+      },
+    },
+  },
+)
+
+puts block.id
+```
+
+```rust rust
+use retab::enums::WorkflowBlockCreateRequestType;
+use retab::models::WorkflowBlockCreateRequest;
+use retab::resources::workflow_blocks::CreateParams;
+use retab::Retab;
+use serde_json::json;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let config = serde_json::from_value(json!({
+        "model": "gpt-5",
+        "json_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_number": {"type": "string"},
+                "total": {"type": "number"},
+            },
+        },
+    }))?;
+
+    let block = client
+        .workflow_blocks()
+        .create(CreateParams::new(WorkflowBlockCreateRequest {
+            workflow_id: "wf_abc123xyz".into(),
+            id: Some("extract-1".into()),
+            type_: WorkflowBlockCreateRequestType::Extract,
+            label: Some("Extract Invoice Fields".into()),
+            position_x: Some(320.0),
+            position_y: Some(0.0),
+            width: None,
+            height: None,
+            config: Some(config),
+            parent_id: None,
+        }))
+        .await?;
+
+    println!("{}", block.id);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\WorkflowBlockCreateRequestType;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowBlocks()->create(
+    workflowId: 'wf_abc123',
+    type: WorkflowBlockCreateRequestType::Extract,
+    id: 'extract-1',
+    label: 'Extract Invoice Fields',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowBlocks.CreateAsync(apiKey, new WorkflowBlocksCreateOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

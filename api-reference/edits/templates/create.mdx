@@ -34,23 +34,19 @@ template = client.edits.templates.create(
 print(f"Template ID: {template.id}")
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const template = await client.edits.templates.create({
-  name: "W-9 Form",
-  document: "w9_empty.pdf",
-  form_fields: [
+const template = await client.edits.templates.create("W-9 Form", "w9_empty.pdf", [
     {
       key: "full_name",
       description: "Full legal name of the taxpayer",
       type: "text",
       bbox: { left: 0.15, top: 0.2, width: 0.35, height: 0.03, page: 1 },
     },
-  ],
-});
+  ]);
 
 console.log(`Template ID: ${template.id}`);
 ```
@@ -107,6 +103,95 @@ func main() {
 
 	fmt.Printf("Template ID: %v\n", (*template)["id"])
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+template = client.edit_templates.create(
+  name: 'W-9 Form',
+  document: 'w9_empty.pdf',
+  form_fields: [
+    {
+      'key' => 'full_name',
+      'description' => 'Full legal name of the taxpayer',
+      'type' => 'text',
+      'bbox' => { 'left' => 0.15, 'top' => 0.20, 'width' => 0.35, 'height' => 0.03, 'page' => 1 },
+    },
+    {
+      'key' => 'tax_id',
+      'description' => 'Taxpayer Identification Number',
+      'type' => 'text',
+      'bbox' => { 'left' => 0.15, 'top' => 0.28, 'width' => 0.25, 'height' => 0.03, 'page' => 1 },
+    },
+  ],
+)
+
+puts "Template ID: #{template.id}"
+```
+
+```rust rust
+use retab::enums::FieldType;
+use retab::models::{BBox, FormField};
+use retab::resources::edit_templates::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let form_fields = vec![
+        FormField {
+            bbox: BBox { left: 0.15, top: 0.20, width: 0.35, height: 0.03, page: 1 },
+            description: "Full legal name of the taxpayer".into(),
+            type_: FieldType::Text,
+            key: "full_name".into(),
+            value: None,
+        },
+        FormField {
+            bbox: BBox { left: 0.15, top: 0.28, width: 0.25, height: 0.03, page: 1 },
+            description: "Taxpayer Identification Number".into(),
+            type_: FieldType::Text,
+            key: "tax_id".into(),
+            value: None,
+        },
+    ];
+
+    let params = CreateParams::new("W-9 Form", PathBuf::from("w9_empty.pdf"), form_fields);
+    let template = client.edit_templates().create(params).await?;
+
+    println!("Template ID: {}", template.id);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->editTemplates()->create(
+    name: 'value',
+    document: 'invoice.pdf',
+    formFields: [],
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.EditTemplates.CreateAsync(apiKey, new EditTemplatesCreateOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

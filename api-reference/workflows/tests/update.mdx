@@ -49,23 +49,17 @@ test = client.workflows.tests.update(
 )
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const renamed = await client.workflows.tests.update({
-  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
-  name: "Q1 invoice — vendor name check",
-});
+const renamed = await client.workflows.tests.update("wfnodetest_hsLEQiM61ez9Piv147MWk", "Q1 invoice — vendor name check");
 
-const reAsserted = await client.workflows.tests.update({
-  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
-  assertion: {
-    target: { output_handle_id: "output-json-0", path: "vendor.name" },
-    condition: { kind: "matches_regex", expected: "^Acme.*" },
-  },
-});
+const reAsserted = await client.workflows.tests.update("wfnodetest_hsLEQiM61ez9Piv147MWk", undefined, {
+    target: { outputHandleId: "output-json-0", path: "vendor.name" },
+    condition: { kind: "matches_regex", pattern: "^Acme.*" },
+  });
 ```
 
 ```go go
@@ -116,6 +110,96 @@ func main() {
 		log.Fatal(err)
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Rename only.
+test = client.workflow_tests.update(
+  test_id: 'wfnodetest_hsLEQiM61ez9Piv147MWk',
+  name: 'Q1 invoice — vendor name check',
+)
+
+# Replace the assertion.
+test = client.workflow_tests.update(
+  test_id: 'wfnodetest_hsLEQiM61ez9Piv147MWk',
+  assertion: {
+    target: { output_handle_id: 'output-json-0', path: 'vendor.name' },
+    condition: { kind: 'matches_regex', expected: '^Acme.*' },
+  },
+)
+
+# Re-capture inputs from a different run.
+test = client.workflow_tests.update(
+  test_id: 'wfnodetest_hsLEQiM61ez9Piv147MWk',
+  source: {
+    type: 'run_step',
+    run_id: 'wfrun_new789',
+    step_id: 'block_extract_invoice',
+  },
+)
+```
+
+```rust rust
+use retab::models::{RunStepWorkflowTestSource, UpdateWorkflowTestRequest};
+use retab::resources::workflow_tests::UpdateParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+    let test_id = "wfnodetest_hsLEQiM61ez9Piv147MWk";
+
+    // Rename only.
+    let renamed_body = UpdateWorkflowTestRequest {
+        name: Some("Q1 invoice — vendor name check".into()),
+        ..Default::default()
+    };
+    let _renamed = client
+        .workflow_tests()
+        .update(test_id, UpdateParams::new(renamed_body))
+        .await?;
+
+    // Re-capture inputs from a different run.
+    let mut source = RunStepWorkflowTestSource::new("wfrun_new789");
+    source.step_id = Some("block_extract_invoice".into());
+    let resource_body = UpdateWorkflowTestRequest {
+        source: Some(source.into()),
+        ..Default::default()
+    };
+    let _rebound = client
+        .workflow_tests()
+        .update(test_id, UpdateParams::new(resource_body))
+        .await?;
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowTests()->update(
+    testId: 'test_abc123',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowTests.UpdateAsync("test_abc123", apiKey, new WorkflowTestsUpdateOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

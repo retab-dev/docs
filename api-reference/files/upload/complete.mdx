@@ -8,10 +8,9 @@ Complete a direct-to-storage upload after the file bytes have been written to th
 Retab verifies that the object exists, matches the expected size from the upload session, and belongs to the authenticated organization. The response is a `MIMEData` object that can be passed directly to later document requests.
 
 <Note>
-Most callers use the SDK's high-level `client.files.upload(...)` instead of
-calling this endpoint directly. `files.upload` runs the entire three-step
-direct-upload flow (request signed URL → PUT bytes to storage → complete
-session) end-to-end and returns the same `MIMEData` you'd get back here.
+Use `client.files.create_upload(...)` to request a signed upload URL, PUT the
+bytes to that URL, then call `client.files.complete_upload(...)` to receive the
+durable `MIMEData` reference.
 
 Reach for this endpoint when you want to drive the PUT yourself (e.g. browser-side
 upload that bypasses your backend) and need to call `complete` from your server
@@ -27,18 +26,26 @@ from pathlib import Path
 
 client = Retab()
 
-# Recommended — SDK runs the full upload + complete flow.
-mime = client.files.upload(Path("invoice.pdf"))
+# Create an upload session, PUT bytes to the signed URL yourself,
+# then complete the upload.
+invoice_path = Path("invoice.pdf")
+session = client.files.create_upload(
+    filename=invoice_path.name,
+    size_bytes=invoice_path.stat().st_size,
+    content_type="application/pdf",
+)
+mime = client.files.complete_upload(session.file_id)
 print(mime.url)  # https://storage.retab.com/...
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-// Recommended — SDK runs the full upload + complete flow.
-const mime = await client.files.upload("./invoice.pdf");
+// Create an upload session, PUT bytes to upload.uploadUrl yourself,
+// then complete the upload.
+const mime = await client.files.complete_upload((await client.files.create_upload("./invoice.pdf", 1024, "application/pdf")).fileId);
 console.log(mime.url); // https://storage.retab.com/...
 ```
 
@@ -77,6 +84,63 @@ func main() {
 	}
 	fmt.Println(completed.URL)
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Lower-level — only when you've handled the PUT yourself.
+# complete_upload finalizes a direct-to-storage upload after the
+# bytes have already been written to the signed uploadUrl.
+completed = client.files.complete_upload(file_id: 'file_a1b2c3d4e5f6')
+puts completed.url # https://storage.retab.com/...
+```
+
+```rust rust
+use retab::models::CompleteFileUploadRequest;
+use retab::resources::files::CompleteUploadParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let completed = client
+        .files()
+        .complete_upload(
+            "file_a1b2c3d4e5f6",
+            CompleteUploadParams::new(CompleteFileUploadRequest { sha_256: None }),
+        )
+        .await?;
+    println!("{}", completed.url);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->files()->completeUpload(
+    fileId: 'file_6dd6eb00688ad8d1',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Files.CompleteUploadAsync("file_6dd6eb00688ad8d1", apiKey, new FilesCompleteUploadOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

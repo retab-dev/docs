@@ -20,10 +20,10 @@ for edit in edits.data:
 edits = client.edits.list(template_id="edittplt_abc123", limit=50)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const edits = await client.edits.list({ limit: 20, order: "desc" });
 for (const edit of edits.data) {
@@ -70,6 +70,76 @@ func main() {
 	}
 	fmt.Println(filtered)
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+edits = client.edits.list(limit: 20, order: 'desc')
+edits.data.each do |edit|
+  puts "#{edit.id}: #{edit.file.filename}"
+end
+
+# Filter by template
+edits = client.edits.list(template_id: 'edittplt_abc123', limit: 50)
+```
+
+```rust rust
+use retab::enums::EditsOrder;
+use retab::resources::edits::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let edits = client
+        .edits()
+        .list(ListParams {
+            limit: Some(20),
+            order: Some(EditsOrder::Desc),
+            ..Default::default()
+        })
+        .await?;
+    for edit in &edits.data {
+        println!("{}: {}", edit.id, edit.file.filename);
+    }
+
+    // Filter by template
+    let _filtered = client
+        .edits()
+        .list(ListParams {
+            template_id: Some("edittplt_abc123".into()),
+            limit: Some(50),
+            ..Default::default()
+        })
+        .await?;
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->edits()->list();
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Edits.ListAsync(apiKey, new EditsListOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

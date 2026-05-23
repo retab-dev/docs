@@ -178,13 +178,11 @@ import base64
 
 client = Retab()
 
-# Fill the form with natural language instructions
-
-# The SDK accepts file paths directly
-
+# Fill the form with natural language instructions.
+# The SDK accepts file paths directly.
 result = client.edits.create(
-document="application-form.pdf",
-instructions="""
+    document="application-form.pdf",
+    instructions="""
 Full Name: Jane Smith
 Date of Birth: March 15, 1985
 Email: jane.smith@example.com
@@ -195,45 +193,38 @@ State: California
 ZIP Code: 94102
 I agree to the terms and conditions: checked
 """,
-model="retab-small",
-color="#000080", # Dark blue text (default)
+    model="retab-small",
+    color="#000080",  # Dark blue text (default)
 )
 
-# Save the filled PDF
+# Save the filled PDF.
+if result.output.filled_document:
+    # Extract base64 content from the data URI.
+    base64_content = result.output.filled_document.url.split(",")[1]
+    filled_bytes = base64.b64decode(base64_content)
+    with open("filled-application.pdf", "wb") as f:
+        f.write(filled_bytes)
+    print("Filled form saved!")
 
-if result.output.filled_document: # Extract base64 content from data URI
-base64_content = result.output.filled_document.url.split(",")[1]
-filled_bytes = base64.b64decode(base64_content)
-with open("filled-application.pdf", "wb") as f:
-f.write(filled_bytes)
-print("Filled form saved!")
-
-# Review what was filled
-
+# Review what was filled.
 print(f"Filled {len(result.output.form_data)} form fields:")
 for field in result.output.form_data:
-if field.value:
-print(f" - {field.key}: {field.value}")
+    if field.value:
+        print(f"  - {field.key}: {field.value}")
+```
 
-````
-
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 import { readFileSync, writeFileSync } from 'fs';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Read the PDF form
 const pdfBuffer = readFileSync("application-form.pdf");
 const pdfBase64 = pdfBuffer.toString('base64');
 
 // Fill the form with natural language instructions
-const result = await client.edits.create({
-    document: {
-        filename: "application-form.pdf",
-        url: `data:application/pdf;base64,${pdfBase64}`
-    },
-    instructions: `
+const result = await client.edits.create(`
         Full Name: Jane Smith
         Date of Birth: March 15, 1985
         Email: jane.smith@example.com
@@ -243,22 +234,22 @@ const result = await client.edits.create({
         State: California
         ZIP Code: 94102
         I agree to the terms and conditions: checked
-    `,
-    model: "retab-small",
-    color: "#000080",  // Dark blue text (default)
-});
+    `, {
+        filename: "application-form.pdf",
+        url: `data:application/pdf;base64,${pdfBase64}`
+    }, undefined, "retab-small", { color: "#000080" });
 
 // Save the filled PDF
-if (result.output.filled_document) {
-    const base64Content = result.output.filled_document.url.split(",")[1];
+if (result.output.filledDocument) {
+    const base64Content = result.output.filledDocument.url.split(",")[1];
     const filledBuffer = Buffer.from(base64Content, 'base64');
     writeFileSync("filled-application.pdf", filledBuffer);
     console.log("Filled form saved!");
 }
 
 // Review what was filled
-console.log(`Filled ${result.output.form_data.length} form fields:`);
-result.output.form_data.forEach(field => {
+console.log(`Filled ${result.output.formData.length} form fields:`);
+result.output.formData.forEach(field => {
     if (field.value) {
         console.log(`  - ${field.key}: ${field.value}`);
     }
@@ -341,11 +332,51 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+require 'base64'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Fill the form with natural language instructions
+# The SDK accepts file paths directly
+result = client.edits.create(
+  document: 'application-form.pdf',
+  instructions: <<~INSTRUCTIONS,
+    Full Name: Jane Smith
+    Date of Birth: March 15, 1985
+    Email: jane.smith@example.com
+    Phone: (555) 123-4567
+    Address: 456 Oak Avenue, Suite 200
+    City: San Francisco
+    State: California
+    ZIP Code: 94102
+    I agree to the terms and conditions: checked
+  INSTRUCTIONS
+  model: 'retab-small',
+  color: '#000080', # Dark blue text (default)
+)
+
+# Save the filled PDF
+if result.output.filled_document
+  base64_content = result.output.filled_document.url.split(',', 2)[1]
+  filled_bytes = Base64.decode64(base64_content)
+  File.binwrite('filled-application.pdf', filled_bytes)
+  puts 'Filled form saved!'
+end
+
+# Review what was filled
+puts "Filled #{result.output.form_data.length} form fields:"
+result.output.form_data.each do |field|
+  puts "  - #{field.key}: #{field.value}" if field.value && !field.value.to_s.empty?
+end
+```
+
 ```typescript TypeScript
 import { Retab, type EditRequest, type Edit } from "@retab/node";
 import { readFileSync, writeFileSync } from "fs";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Read the PDF form
 const pdfBuffer = readFileSync("application-form.pdf");
@@ -368,26 +399,185 @@ const editRequest: EditRequest = {
         I agree to the terms and conditions: checked
     `,
   model: "retab-small",
-  color: "#000080", // Dark blue text (default)
+  config: { color: "#000080" }, // Dark blue text (default)
 };
 
-const result: Edit = await client.edits.create(editRequest);
+const result: Edit = await client.edits.create(
+  editRequest.instructions,
+  editRequest.document as Parameters<typeof client.edits.create>[1],
+  editRequest.templateId,
+  editRequest.model,
+  editRequest.config
+);
 
 // Save the filled PDF
-if (result.output.filled_document) {
-  const base64Content = result.output.filled_document.url.split(",")[1];
+if (result.output.filledDocument) {
+  const base64Content = result.output.filledDocument.url.split(",")[1];
   const filledBuffer = Buffer.from(base64Content, "base64");
   writeFileSync("filled-application.pdf", filledBuffer);
   console.log("Filled form saved!");
 }
 
 // Review what was filled
-console.log(`Filled ${result.output.form_data.length} form fields:`);
-result.output.form_data.forEach((field) => {
+console.log(`Filled ${result.output.formData.length} form fields:`);
+result.output.formData.forEach((field) => {
   if (field.value) {
     console.log(`  - ${field.key}: ${field.value}`);
   }
 });
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\EditConfig;
+
+$client = new Client();
+
+// Fill the form with natural language instructions
+// The SDK accepts file paths directly
+$result = $client->edits()->create(
+    instructions: <<<TXT
+Full Name: Jane Smith
+Date of Birth: March 15, 1985
+Email: jane.smith@example.com
+Phone: (555) 123-4567
+Address: 456 Oak Avenue, Suite 200
+City: San Francisco
+State: California
+ZIP Code: 94102
+I agree to the terms and conditions: checked
+TXT,
+    document: 'application-form.pdf',
+    model: 'retab-small',
+    config: new EditConfig(color: '#000080'), // Dark blue text (default)
+);
+
+// Save the filled PDF
+$base64Content = explode(',', $result->output->filledDocument->url, 2)[1] ?? '';
+$filledBytes = base64_decode($base64Content);
+file_put_contents('filled-application.pdf', $filledBytes);
+echo 'Filled form saved!' . PHP_EOL;
+
+// Review what was filled
+echo 'Filled ' . count($result->output->formData) . ' form fields:' . PHP_EOL;
+foreach ($result->output->formData as $field) {
+    if ($field->value !== null && $field->value !== '') {
+        echo "  - {$field->key}: {$field->value}" . PHP_EOL;
+    }
+}
+```
+
+```rust Rust
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use retab::resources::edits::CreateParams;
+use retab::Retab;
+use std::fs;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // Fill the form with natural language instructions.
+    // The SDK accepts file paths directly.
+    let mut params = CreateParams::new(
+        "\
+Full Name: Jane Smith
+Date of Birth: March 15, 1985
+Email: jane.smith@example.com
+Phone: (555) 123-4567
+Address: 456 Oak Avenue, Suite 200
+City: San Francisco
+State: California
+ZIP Code: 94102
+I agree to the terms and conditions: checked
+",
+    );
+    let document: retab::MimeData = PathBuf::from("application-form.pdf").into();
+    params.body.document = Some(
+        retab::models::ClassificationRequestDocumentOneOf::MimeData(Box::new(document)),
+    );
+    params.body.model = Some("retab-small".into());
+    params.body.config = Some(retab::models::EditConfig {
+        color: Some("#000080".into()), // Dark blue text (default)
+    });
+
+    let result = client.edits().create(params).await?;
+
+    // Save the filled PDF.
+    let url = &result.output.filled_document.url;
+    if let Some((_, b64)) = url.split_once(',') {
+        let filled_bytes = STANDARD.decode(b64)?;
+        fs::write("filled-application.pdf", filled_bytes)?;
+        println!("Filled form saved!");
+    }
+
+    // Review what was filled.
+    println!("Filled {} form fields:", result.output.form_data.len());
+    for field in &result.output.form_data {
+        if let Some(value) = &field.value {
+            if !value.is_empty() {
+                println!("  - {}: {}", field.key, value);
+            }
+        }
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+// Fill the form with natural language instructions.
+// FileInfo implicitly converts to MimeData.
+var result = await client.Edits.CreateAsync(
+    client.ApiKey,
+    new EditsCreateOptions
+    {
+        Document = new FileInfo("application-form.pdf"),
+        Instructions = @"
+Full Name: Jane Smith
+Date of Birth: March 15, 1985
+Email: jane.smith@example.com
+Phone: (555) 123-4567
+Address: 456 Oak Avenue, Suite 200
+City: San Francisco
+State: California
+ZIP Code: 94102
+I agree to the terms and conditions: checked
+",
+        Model = "retab-small",
+        Color = "#000080", // Dark blue text (default)
+    }
+);
+
+// Save the filled PDF.
+if (result.Output.FilledDocument != null)
+{
+    var dataUrl = result.Output.FilledDocument.Url;
+    var base64Content = dataUrl.Split(',', 2)[1];
+    var filledBytes = Convert.FromBase64String(base64Content);
+    await File.WriteAllBytesAsync("filled-application.pdf", filledBytes);
+    Console.WriteLine("Filled form saved!");
+}
+
+// Review what was filled.
+Console.WriteLine($"Filled {result.Output.FormData.Count} form fields:");
+foreach (var field in result.Output.FormData)
+{
+    if (!string.IsNullOrEmpty(field.Value))
+    {
+        Console.WriteLine($"  - {field.Key}: {field.Value}");
+    }
+}
 ```
 
 </CodeGroup>
@@ -427,15 +617,12 @@ print(f"Template {template.id} with {template.field_count} fields ready for fill
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const template = await client.edits.templates.create({
-    name: "Application Form",
-    document: "blank-form.pdf",
-    form_fields: [
+const template = await client.edits.templates.create("Application Form", "blank-form.pdf", [
         {
             key: "full_name",
             description: "Applicant's full legal name",
@@ -448,10 +635,9 @@ const template = await client.edits.templates.create({
             type: "text",
             bbox: { left: 0.15, top: 0.18, width: 0.25, height: 0.03, page: 1 },
         },
-    ],
-});
+    ]);
 
-console.log(`Template ${template.id} with ${template.field_count} fields ready for fill calls`);
+console.log(`Template ${template.id} with ${template.fieldCount} fields ready for fill calls`);
 ````
 
 ```go Go
@@ -499,6 +685,149 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Register a reusable template (document + form_fields)
+template = client.edit_templates.create(
+  name: 'Application Form',
+  document: 'blank-form.pdf',
+  form_fields: [
+    {
+      key: 'full_name',
+      description: "Applicant's full legal name",
+      type: 'text',
+      bbox: { left: 0.15, top: 0.12, width: 0.35, height: 0.03, page: 1 },
+    },
+    {
+      key: 'date_of_birth',
+      description: 'Date of birth, ISO 8601',
+      type: 'text',
+      bbox: { left: 0.15, top: 0.18, width: 0.25, height: 0.03, page: 1 },
+    },
+  ],
+)
+
+puts "Template #{template.id} with #{template.field_count} fields ready for fill calls"
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\BBox;
+use Retab\Resource\FieldType;
+use Retab\Resource\FormField;
+
+$client = new Client();
+
+$template = $client->editTemplates()->create(
+    name: 'Application Form',
+    document: 'blank-form.pdf',
+    formFields: [
+        new FormField(
+            bbox: new BBox(left: 0.15, top: 0.12, width: 0.35, height: 0.03, page: 1),
+            description: "Applicant's full legal name",
+            type: FieldType::Text,
+            key: 'full_name',
+        ),
+        new FormField(
+            bbox: new BBox(left: 0.15, top: 0.18, width: 0.25, height: 0.03, page: 1),
+            description: 'Date of birth, ISO 8601',
+            type: FieldType::Text,
+            key: 'date_of_birth',
+        ),
+    ],
+);
+
+echo "Template {$template->id} with {$template->fieldCount} fields ready for fill calls" . PHP_EOL;
+```
+
+```rust Rust
+use retab::enums::FieldType;
+use retab::models::{BBox, FormField};
+use retab::resources::edit_templates::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let form_fields = vec![
+        FormField {
+            bbox: BBox::new(0.15, 0.12, 0.35, 0.03, 1),
+            description: "Applicant's full legal name".into(),
+            type_: FieldType::Text,
+            key: "full_name".into(),
+            value: None,
+        },
+        FormField {
+            bbox: BBox::new(0.15, 0.18, 0.25, 0.03, 1),
+            description: "Date of birth, ISO 8601".into(),
+            type_: FieldType::Text,
+            key: "date_of_birth".into(),
+            value: None,
+        },
+    ];
+
+    let params = CreateParams::new(
+        "Application Form",
+        PathBuf::from("blank-form.pdf"),
+        form_fields,
+    );
+
+    let template = client.edit_templates().create(params).await?;
+
+    println!(
+        "Template {} with {} fields ready for fill calls",
+        template.id,
+        template.field_count.unwrap_or_default(),
+    );
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var template = await client.EditTemplates.CreateAsync(
+    client.ApiKey,
+    new EditTemplatesCreateOptions
+    {
+        Name = "Application Form",
+        Document = new FileInfo("blank-form.pdf"),
+        FormFields = new List<FormField>
+        {
+            new FormField
+            {
+                Key = "full_name",
+                Description = "Applicant's full legal name",
+                Type = FieldType.Text,
+                Bbox = new BBox { Left = 0.15, Top = 0.12, Width = 0.35, Height = 0.03, Page = 1 },
+            },
+            new FormField
+            {
+                Key = "date_of_birth",
+                Description = "Date of birth, ISO 8601",
+                Type = FieldType.Text,
+                Bbox = new BBox { Left = 0.15, Top = 0.18, Width = 0.25, Height = 0.03, Page = 1 },
+            },
+        },
+    }
+);
+
+Console.WriteLine($"Template {template.Id} with {template.FieldCount} fields ready for fill calls");
+```
+
 </CodeGroup>
 
 <Note>
@@ -518,50 +847,43 @@ import base64
 
 client = Retab()
 
-# Use edits.create with template_id for fast, consistent filling
-
+# Use edits.create with template_id for fast, consistent filling.
 result = client.edits.create(
-template_id="edittplt_abc123",
-instructions="""
+    template_id="edittplt_abc123",
+    instructions="""
 Full Name: Jane Smith
 Date of Birth: March 15, 1985
 Email: jane.smith@example.com
 """,
-model="retab-small",
-color="#000080", # Dark blue text (default)
+    model="retab-small",
+    color="#000080",  # Dark blue text (default)
 )
 
-# Save the filled PDF
-
+# Save the filled PDF.
 if result.output.filled_document:
-base64_content = result.output.filled_document.url.split(",")[1]
-with open("filled-from-template.pdf", "wb") as f:
-f.write(base64.b64decode(base64_content))
-print("Template-based form filled and saved!")
+    base64_content = result.output.filled_document.url.split(",")[1]
+    with open("filled-from-template.pdf", "wb") as f:
+        f.write(base64.b64decode(base64_content))
+    print("Template-based form filled and saved!")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 import { writeFileSync } from 'fs';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Use edits.create with templateId for fast, consistent filling
-const result = await client.edits.create({
-    templateId: "edittplt_abc123",
-    instructions: `
+const result = await client.edits.create(`
         Full Name: Jane Smith
         Date of Birth: March 15, 1985
         Email: jane.smith@example.com
-    `,
-    model: "retab-small",
-    color: "#000080",  // Dark blue text (default)
-});
+    `, undefined, "edittplt_abc123", "retab-small", { color: "#000080" });
 
 // Save the filled PDF
-if (result.output.filled_document) {
-    const base64Content = result.output.filled_document.url.split(",")[1];
+if (result.output.filledDocument) {
+    const base64Content = result.output.filledDocument.url.split(",")[1];
     writeFileSync("filled-from-template.pdf", Buffer.from(base64Content, 'base64'));
     console.log("Template-based form filled and saved!");
 }
@@ -621,6 +943,127 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+require 'base64'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Use edits.create with template_id for fast, consistent filling
+result = client.edits.create(
+  template_id: 'edittplt_abc123',
+  instructions: <<~INSTRUCTIONS,
+    Full Name: Jane Smith
+    Date of Birth: March 15, 1985
+    Email: jane.smith@example.com
+  INSTRUCTIONS
+  model: 'retab-small',
+  color: '#000080', # Dark blue text (default)
+)
+
+# Save the filled PDF
+if result.output.filled_document
+  base64_content = result.output.filled_document.url.split(',', 2)[1]
+  File.binwrite('filled-from-template.pdf', Base64.decode64(base64_content))
+  puts 'Template-based form filled and saved!'
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\EditConfig;
+
+$client = new Client();
+
+// Use edits.create with templateId for fast, consistent filling
+$result = $client->edits()->create(
+    instructions: <<<TXT
+Full Name: Jane Smith
+Date of Birth: March 15, 1985
+Email: jane.smith@example.com
+TXT,
+    templateId: 'edittplt_abc123',
+    model: 'retab-small',
+    config: new EditConfig(color: '#000080'),
+);
+
+$base64Content = explode(',', $result->output->filledDocument->url, 2)[1] ?? '';
+file_put_contents('filled-from-template.pdf', base64_decode($base64Content));
+echo 'Template-based form filled and saved!' . PHP_EOL;
+```
+
+```rust Rust
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use retab::resources::edits::CreateParams;
+use retab::Retab;
+use std::fs;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // Use edits.create with template_id for fast, consistent filling
+    let mut params = CreateParams::new(
+        "\
+Full Name: Jane Smith
+Date of Birth: March 15, 1985
+Email: jane.smith@example.com
+",
+    );
+    params.body.template_id = Some("edittplt_abc123".into());
+    params.body.model = Some("retab-small".into());
+    params.body.config = Some(retab::models::EditConfig {
+        color: Some("#000080".into()), // Dark blue text (default)
+    });
+
+    let result = client.edits().create(params).await?;
+
+    let url = &result.output.filled_document.url;
+    if let Some((_, b64)) = url.split_once(',') {
+        let filled_bytes = STANDARD.decode(b64)?;
+        fs::write("filled-from-template.pdf", filled_bytes)?;
+        println!("Template-based form filled and saved!");
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+// Use Edits.CreateAsync with TemplateId for fast, consistent filling.
+var result = await client.Edits.CreateAsync(
+    client.ApiKey,
+    new EditsCreateOptions
+    {
+        TemplateId = "edittplt_abc123",
+        Instructions = @"
+Full Name: Jane Smith
+Date of Birth: March 15, 1985
+Email: jane.smith@example.com
+",
+        Model = "retab-small",
+        Color = "#000080", // Dark blue text (default)
+    }
+);
+
+if (result.Output.FilledDocument != null)
+{
+    var dataUrl = result.Output.FilledDocument.Url;
+    var base64Content = dataUrl.Split(',', 2)[1];
+    await File.WriteAllBytesAsync("filled-from-template.pdf", Convert.FromBase64String(base64Content));
+    Console.WriteLine("Template-based form filled and saved!");
+}
+```
+
 </CodeGroup>
 
 <Note>
@@ -643,35 +1086,32 @@ from retab import Retab
 
 client = Retab()
 
-# Sample data for multiple applicants
-
+# Sample data for multiple applicants.
 applicants = [
-{
-"name": "John Doe",
-"dob": "January 10, 1990",
-"email": "john.doe@example.com",
-"phone": "(555) 111-2222"
-},
-{
-"name": "Alice Johnson",
-"dob": "July 22, 1988",
-"email": "alice.j@example.com",
-"phone": "(555) 333-4444"
-},
-{
-"name": "Bob Williams",
-"dob": "December 5, 1995",
-"email": "bob.w@example.com",
-"phone": "(555) 555-6666"
-}
+    {
+        "name": "John Doe",
+        "dob": "January 10, 1990",
+        "email": "john.doe@example.com",
+        "phone": "(555) 111-2222",
+    },
+    {
+        "name": "Alice Johnson",
+        "dob": "July 22, 1988",
+        "email": "alice.j@example.com",
+        "phone": "(555) 333-4444",
+    },
+    {
+        "name": "Bob Williams",
+        "dob": "December 5, 1995",
+        "email": "bob.w@example.com",
+        "phone": "(555) 555-6666",
+    },
 ]
 
-# For batch processing, use edits.create(template_id=...) with a pre-created template
-
-# This skips field detection for each document, making it much faster
-
+# For batch processing, use edits.create(template_id=...) with a pre-created
+# template. This skips field detection for each document, making it much faster.
 for i, applicant in enumerate(applicants):
-instructions = f"""
+    instructions = f"""
 Full Name: {applicant['name']}
 Date of Birth: {applicant['dob']}
 Email Address: {applicant['email']}
@@ -681,7 +1121,7 @@ Phone Number: {applicant['phone']}
     result = client.edits.create(
         template_id="edittplt_your_template_id",
         instructions=instructions,
-        model="retab-small"
+        model="retab-small",
     )
 
     if result.output.filled_document:
@@ -695,11 +1135,11 @@ print(f"Processed {len(applicants)} forms successfully!")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 import { writeFileSync } from 'fs';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Sample data for multiple applicants
 const applicants = [
@@ -734,15 +1174,11 @@ for (let i = 0; i < applicants.length; i++) {
         Phone Number: ${applicant.phone}
     `;
 
-    const result = await client.edits.create({
-        templateId: "edittplt_your_template_id",
-        instructions: instructions,
-        model: "retab-small"
-    });
+    const result = await client.edits.create(instructions, undefined, "edittplt_your_template_id", "retab-small");
 
-    if (result.output.filled_document) {
+    if (result.output.filledDocument) {
         const outputFilename = `filled-form-${i+1}-${applicant.name.replace(/ /g, '-')}.pdf`;
-        const base64Content = result.output.filled_document.url.split(",")[1];
+        const base64Content = result.output.filledDocument.url.split(",")[1];
         writeFileSync(outputFilename, Buffer.from(base64Content, 'base64'));
         console.log(`Created: ${outputFilename}`);
     }
@@ -827,6 +1263,196 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+require 'base64'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Sample data for multiple applicants
+applicants = [
+  { name: 'John Doe', dob: 'January 10, 1990', email: 'john.doe@example.com', phone: '(555) 111-2222' },
+  { name: 'Alice Johnson', dob: 'July 22, 1988', email: 'alice.j@example.com', phone: '(555) 333-4444' },
+  { name: 'Bob Williams', dob: 'December 5, 1995', email: 'bob.w@example.com', phone: '(555) 555-6666' },
+]
+
+# For batch processing, use edits.create(template_id:) against a pre-created template.
+# This skips field detection for each document, making it much faster.
+applicants.each_with_index do |applicant, i|
+  instructions = <<~INSTRUCTIONS
+    Full Name: #{applicant[:name]}
+    Date of Birth: #{applicant[:dob]}
+    Email Address: #{applicant[:email]}
+    Phone Number: #{applicant[:phone]}
+  INSTRUCTIONS
+
+  result = client.edits.create(
+    template_id: 'edittplt_your_template_id',
+    instructions: instructions,
+    model: 'retab-small',
+  )
+
+  next unless result.output.filled_document
+
+  output_filename = "filled-form-#{i + 1}-#{applicant[:name].gsub(' ', '-')}.pdf"
+  base64_content = result.output.filled_document.url.split(',', 2)[1]
+  File.binwrite(output_filename, Base64.decode64(base64_content))
+  puts "Created: #{output_filename}"
+end
+
+puts "Processed #{applicants.length} forms successfully!"
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$applicants = [
+    ['name' => 'John Doe', 'dob' => 'January 10, 1990', 'email' => 'john.doe@example.com', 'phone' => '(555) 111-2222'],
+    ['name' => 'Alice Johnson', 'dob' => 'July 22, 1988', 'email' => 'alice.j@example.com', 'phone' => '(555) 333-4444'],
+    ['name' => 'Bob Williams', 'dob' => 'December 5, 1995', 'email' => 'bob.w@example.com', 'phone' => '(555) 555-6666'],
+];
+
+// For batch processing, use edits.create with templateId against a pre-created template
+// This skips field detection for each document, making it much faster
+foreach ($applicants as $i => $applicant) {
+    $instructions = <<<TXT
+Full Name: {$applicant['name']}
+Date of Birth: {$applicant['dob']}
+Email Address: {$applicant['email']}
+Phone Number: {$applicant['phone']}
+TXT;
+
+    $result = $client->edits()->create(
+        instructions: $instructions,
+        templateId: 'edittplt_your_template_id',
+        model: 'retab-small',
+    );
+
+    $base64Content = explode(',', $result->output->filledDocument->url, 2)[1] ?? '';
+    $outputFilename = sprintf('filled-form-%d-%s.pdf', $i + 1, str_replace(' ', '-', $applicant['name']));
+    file_put_contents($outputFilename, base64_decode($base64Content));
+    echo "Created: {$outputFilename}" . PHP_EOL;
+}
+
+echo 'Processed ' . count($applicants) . ' forms successfully!' . PHP_EOL;
+```
+
+```rust Rust
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use retab::resources::edits::CreateParams;
+use retab::Retab;
+use std::fs;
+
+struct Applicant {
+    name: &'static str,
+    dob: &'static str,
+    email: &'static str,
+    phone: &'static str,
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let applicants = vec![
+        Applicant { name: "John Doe", dob: "January 10, 1990", email: "john.doe@example.com", phone: "(555) 111-2222" },
+        Applicant { name: "Alice Johnson", dob: "July 22, 1988", email: "alice.j@example.com", phone: "(555) 333-4444" },
+        Applicant { name: "Bob Williams", dob: "December 5, 1995", email: "bob.w@example.com", phone: "(555) 555-6666" },
+    ];
+
+    // For batch processing, use edits.create with template_id against a pre-created template.
+    // This skips field detection for each document, making it much faster.
+    for (i, person) in applicants.iter().enumerate() {
+        let instructions = format!(
+            "\
+        Full Name: {}
+        Date of Birth: {}
+        Email Address: {}
+        Phone Number: {}
+        ",
+            person.name, person.dob, person.email, person.phone,
+        );
+
+        let mut params = CreateParams::new(instructions);
+        params.body.template_id = Some("edittplt_your_template_id".into());
+        params.body.model = Some("retab-small".into());
+
+        let result = client.edits().create(params).await?;
+
+        let url = &result.output.filled_document.url;
+        if let Some((_, b64)) = url.split_once(',') {
+            let filled_bytes = STANDARD.decode(b64)?;
+            let output_filename = format!(
+                "filled-form-{}-{}.pdf",
+                i + 1,
+                person.name.replace(' ', "-"),
+            );
+            fs::write(&output_filename, filled_bytes)?;
+            println!("Created: {output_filename}");
+        }
+    }
+
+    println!("Processed {} forms successfully!", applicants.len());
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var applicants = new List<(string Name, string DOB, string Email, string Phone)>
+{
+    ("John Doe",      "January 10, 1990", "john.doe@example.com", "(555) 111-2222"),
+    ("Alice Johnson", "July 22, 1988",    "alice.j@example.com",  "(555) 333-4444"),
+    ("Bob Williams",  "December 5, 1995", "bob.w@example.com",    "(555) 555-6666"),
+};
+
+// For batch processing, use TemplateId against a pre-created template.
+// This skips field detection for each document, making it much faster.
+for (int i = 0; i < applicants.Count; i++)
+{
+    var applicant = applicants[i];
+    var instructions = $@"
+Full Name: {applicant.Name}
+Date of Birth: {applicant.DOB}
+Email Address: {applicant.Email}
+Phone Number: {applicant.Phone}
+";
+
+    var result = await client.Edits.CreateAsync(
+        client.ApiKey,
+        new EditsCreateOptions
+        {
+            TemplateId = "edittplt_your_template_id",
+            Instructions = instructions,
+            Model = "retab-small",
+        }
+    );
+
+    if (result.Output.FilledDocument != null)
+    {
+        var safeName = applicant.Name.Replace(' ', '-');
+        var outputFilename = $"filled-form-{i + 1}-{safeName}.pdf";
+        var base64Content = result.Output.FilledDocument.Url.Split(',', 2)[1];
+        await File.WriteAllBytesAsync(outputFilename, Convert.FromBase64String(base64Content));
+        Console.WriteLine($"Created: {outputFilename}");
+    }
+}
+
+Console.WriteLine($"Processed {applicants.Count} forms successfully!");
+```
+
 </CodeGroup>
 
 ## Use Case: Word Document Filling
@@ -840,11 +1466,10 @@ import base64
 
 client = Retab()
 
-# Fill a Word document with JSON data
-
+# Fill a Word document with JSON data.
 result = client.edits.create(
-document="contract-template.docx",
-instructions="""
+    document="contract-template.docx",
+    instructions="""
 {
 "client_name": "Acme Corporation",
 "contract_date": "January 15, 2025",
@@ -853,46 +1478,41 @@ instructions="""
 "payment_terms": "Net 30"
 }
 """,
-model="retab-small",
+    model="retab-small",
 )
 
-# Save the filled DOCX (preserves original formatting)
-
+# Save the filled DOCX (preserves original formatting).
 if result.output.filled_document:
-base64_content = result.output.filled_document.url.split(",")[1]
-filled_bytes = base64.b64decode(base64_content)
-with open("filled-contract.docx", "wb") as f:
-f.write(filled_bytes)
-print("Filled Word document saved!")
+    base64_content = result.output.filled_document.url.split(",")[1]
+    filled_bytes = base64.b64decode(base64_content)
+    with open("filled-contract.docx", "wb") as f:
+        f.write(filled_bytes)
+    print("Filled Word document saved!")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 import { readFileSync, writeFileSync } from 'fs';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const docxBuffer = readFileSync("contract-template.docx");
 const docxBase64 = docxBuffer.toString('base64');
 
-const result = await client.edits.create({
-    document: {
-        filename: "contract-template.docx",
-        url: `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${docxBase64}`
-    },
-    instructions: JSON.stringify({
+const result = await client.edits.create(JSON.stringify({
         client_name: "Acme Corporation",
         contract_date: "January 15, 2025",
         project_description: "Website redesign and development",
         total_amount: "$25,000",
         payment_terms: "Net 30"
-    }),
-    model: "retab-small",
-});
+    }), {
+        filename: "contract-template.docx",
+        url: `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${docxBase64}`
+    }, undefined, "retab-small");
 
-if (result.output.filled_document) {
-    const base64Content = result.output.filled_document.url.split(",")[1];
+if (result.output.filledDocument) {
+    const base64Content = result.output.filledDocument.url.split(",")[1];
     writeFileSync("filled-contract.docx", Buffer.from(base64Content, 'base64'));
     console.log("Filled Word document saved!");
 }
@@ -964,6 +1584,135 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+require 'base64'
+require 'json'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Fill a Word document with JSON data
+result = client.edits.create(
+  document: 'contract-template.docx',
+  instructions: JSON.generate(
+    client_name: 'Acme Corporation',
+    contract_date: 'January 15, 2025',
+    project_description: 'Website redesign and development',
+    total_amount: '$25,000',
+    payment_terms: 'Net 30',
+  ),
+  model: 'retab-small',
+)
+
+# Save the filled DOCX (preserves original formatting)
+if result.output.filled_document
+  base64_content = result.output.filled_document.url.split(',', 2)[1]
+  File.binwrite('filled-contract.docx', Base64.decode64(base64_content))
+  puts 'Filled Word document saved!'
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$result = $client->edits()->create(
+    instructions: json_encode([
+        'client_name' => 'Acme Corporation',
+        'contract_date' => 'January 15, 2025',
+        'project_description' => 'Website redesign and development',
+        'total_amount' => '$25,000',
+        'payment_terms' => 'Net 30',
+    ]),
+    document: 'contract-template.docx',
+    model: 'retab-small',
+);
+
+$base64Content = explode(',', $result->output->filledDocument->url, 2)[1] ?? '';
+file_put_contents('filled-contract.docx', base64_decode($base64Content));
+echo 'Filled Word document saved!' . PHP_EOL;
+```
+
+```rust Rust
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use retab::resources::edits::CreateParams;
+use retab::Retab;
+use std::fs;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let instructions = serde_json::to_string(&serde_json::json!({
+        "client_name": "Acme Corporation",
+        "contract_date": "January 15, 2025",
+        "project_description": "Website redesign and development",
+        "total_amount": "$25,000",
+        "payment_terms": "Net 30"
+    }))?;
+
+    let mut params = CreateParams::new(instructions);
+    let document: retab::MimeData = PathBuf::from("contract-template.docx").into();
+    params.body.document = Some(
+        retab::models::ClassificationRequestDocumentOneOf::MimeData(Box::new(document)),
+    );
+    params.body.model = Some("retab-small".into());
+
+    let result = client.edits().create(params).await?;
+
+    let url = &result.output.filled_document.url;
+    if let Some((_, b64)) = url.split_once(',') {
+        let filled_bytes = STANDARD.decode(b64)?;
+        fs::write("filled-contract.docx", filled_bytes)?;
+        println!("Filled Word document saved!");
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var data = new Dictionary<string, object>
+{
+    ["client_name"]         = "Acme Corporation",
+    ["contract_date"]       = "January 15, 2025",
+    ["project_description"] = "Website redesign and development",
+    ["total_amount"]        = "$25,000",
+    ["payment_terms"]       = "Net 30",
+};
+
+var result = await client.Edits.CreateAsync(
+    client.ApiKey,
+    new EditsCreateOptions
+    {
+        Document = new FileInfo("contract-template.docx"),
+        Instructions = JsonSerializer.Serialize(data),
+        Model = "retab-small",
+    }
+);
+
+// Save the filled DOCX (preserves original formatting).
+if (result.Output.FilledDocument != null)
+{
+    var base64Content = result.Output.FilledDocument.Url.Split(',', 2)[1];
+    await File.WriteAllBytesAsync("filled-contract.docx", Convert.FromBase64String(base64Content));
+    Console.WriteLine("Filled Word document saved!");
+}
+```
+
 </CodeGroup>
 
 ## Use Case: Excel Spreadsheet Filling
@@ -977,11 +1726,10 @@ import base64
 
 client = Retab()
 
-# Fill an Excel spreadsheet
-
+# Fill an Excel spreadsheet.
 result = client.edits.create(
-document="invoice-template.xlsx",
-instructions="""
+    document="invoice-template.xlsx",
+    instructions="""
 {
 "invoice_number": "INV-2025-001",
 "customer_name": "Tech Solutions Inc.",
@@ -993,32 +1741,27 @@ instructions="""
 "total": "$2,000"
 }
 """,
-model="retab-small",
+    model="retab-small",
 )
 
 if result.output.filled_document:
-base64_content = result.output.filled_document.url.split(",")[1]
-with open("filled-invoice.xlsx", "wb") as f:
-f.write(base64.b64decode(base64_content))
-print("Filled Excel spreadsheet saved!")
+    base64_content = result.output.filled_document.url.split(",")[1]
+    with open("filled-invoice.xlsx", "wb") as f:
+        f.write(base64.b64decode(base64_content))
+    print("Filled Excel spreadsheet saved!")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 import { readFileSync, writeFileSync } from 'fs';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const xlsxBuffer = readFileSync("invoice-template.xlsx");
 const xlsxBase64 = xlsxBuffer.toString('base64');
 
-const result = await client.edits.create({
-    document: {
-        filename: "invoice-template.xlsx",
-        url: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${xlsxBase64}`
-    },
-    instructions: JSON.stringify({
+const result = await client.edits.create(JSON.stringify({
         invoice_number: "INV-2025-001",
         customer_name: "Tech Solutions Inc.",
         invoice_date: "2025-01-15",
@@ -1027,12 +1770,13 @@ const result = await client.edits.create({
             { description: "Software License", quantity: 1, rate: 500 }
         ],
         total: "$2,000"
-    }),
-    model: "retab-small",
-});
+    }), {
+        filename: "invoice-template.xlsx",
+        url: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${xlsxBase64}`
+    }, undefined, "retab-small");
 
-if (result.output.filled_document) {
-    const base64Content = result.output.filled_document.url.split(",")[1];
+if (result.output.filledDocument) {
+    const base64Content = result.output.filledDocument.url.split(",")[1];
     writeFileSync("filled-invoice.xlsx", Buffer.from(base64Content, 'base64'));
     console.log("Filled Excel spreadsheet saved!");
 }
@@ -1107,6 +1851,146 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+require 'base64'
+require 'json'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Fill an Excel spreadsheet
+result = client.edits.create(
+  document: 'invoice-template.xlsx',
+  instructions: JSON.generate(
+    invoice_number: 'INV-2025-001',
+    customer_name: 'Tech Solutions Inc.',
+    invoice_date: '2025-01-15',
+    items: [
+      { description: 'Consulting Services', quantity: 10, rate: 150 },
+      { description: 'Software License', quantity: 1, rate: 500 },
+    ],
+    total: '$2,000',
+  ),
+  model: 'retab-small',
+)
+
+if result.output.filled_document
+  base64_content = result.output.filled_document.url.split(',', 2)[1]
+  File.binwrite('filled-invoice.xlsx', Base64.decode64(base64_content))
+  puts 'Filled Excel spreadsheet saved!'
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$result = $client->edits()->create(
+    instructions: json_encode([
+        'invoice_number' => 'INV-2025-001',
+        'customer_name' => 'Tech Solutions Inc.',
+        'invoice_date' => '2025-01-15',
+        'items' => [
+            ['description' => 'Consulting Services', 'quantity' => 10, 'rate' => 150],
+            ['description' => 'Software License', 'quantity' => 1, 'rate' => 500],
+        ],
+        'total' => '$2,000',
+    ]),
+    document: 'invoice-template.xlsx',
+    model: 'retab-small',
+);
+
+$base64Content = explode(',', $result->output->filledDocument->url, 2)[1] ?? '';
+file_put_contents('filled-invoice.xlsx', base64_decode($base64Content));
+echo 'Filled Excel spreadsheet saved!' . PHP_EOL;
+```
+
+```rust Rust
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use retab::resources::edits::CreateParams;
+use retab::Retab;
+use std::fs;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let instructions = serde_json::to_string(&serde_json::json!({
+        "invoice_number": "INV-2025-001",
+        "customer_name": "Tech Solutions Inc.",
+        "invoice_date": "2025-01-15",
+        "items": [
+            {"description": "Consulting Services", "quantity": 10, "rate": 150},
+            {"description": "Software License", "quantity": 1, "rate": 500}
+        ],
+        "total": "$2,000"
+    }))?;
+
+    let mut params = CreateParams::new(instructions);
+    let document: retab::MimeData = PathBuf::from("invoice-template.xlsx").into();
+    params.body.document = Some(
+        retab::models::ClassificationRequestDocumentOneOf::MimeData(Box::new(document)),
+    );
+    params.body.model = Some("retab-small".into());
+
+    let result = client.edits().create(params).await?;
+
+    let url = &result.output.filled_document.url;
+    if let Some((_, b64)) = url.split_once(',') {
+        let filled_bytes = STANDARD.decode(b64)?;
+        fs::write("filled-invoice.xlsx", filled_bytes)?;
+        println!("Filled Excel spreadsheet saved!");
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var data = new Dictionary<string, object>
+{
+    ["invoice_number"] = "INV-2025-001",
+    ["customer_name"]  = "Tech Solutions Inc.",
+    ["invoice_date"]   = "2025-01-15",
+    ["items"] = new List<Dictionary<string, object>>
+    {
+        new Dictionary<string, object> { ["description"] = "Consulting Services", ["quantity"] = 10, ["rate"] = 150 },
+        new Dictionary<string, object> { ["description"] = "Software License",    ["quantity"] = 1,  ["rate"] = 500 },
+    },
+    ["total"] = "$2,000",
+};
+
+var result = await client.Edits.CreateAsync(
+    client.ApiKey,
+    new EditsCreateOptions
+    {
+        Document = new FileInfo("invoice-template.xlsx"),
+        Instructions = JsonSerializer.Serialize(data),
+        Model = "retab-small",
+    }
+);
+
+if (result.Output.FilledDocument != null)
+{
+    var base64Content = result.Output.FilledDocument.Url.Split(',', 2)[1];
+    await File.WriteAllBytesAsync("filled-invoice.xlsx", Convert.FromBase64String(base64Content));
+    Console.WriteLine("Filled Excel spreadsheet saved!");
+}
+```
+
 </CodeGroup>
 
 ## Use Case: PowerPoint Presentation Filling
@@ -1120,11 +2004,10 @@ import base64
 
 client = Retab()
 
-# Fill a PowerPoint presentation
-
+# Fill a PowerPoint presentation.
 result = client.edits.create(
-document="sales-deck-template.pptx",
-instructions="""
+    document="sales-deck-template.pptx",
+    instructions="""
 {
 "company_name": "Acme Corp",
 "presenter_name": "Jane Smith",
@@ -1134,44 +2017,40 @@ instructions="""
 "key_highlights": ["Expanded to 3 new markets", "Launched 2 new products", "Increased team by 40%"]
 }
 """,
-model="retab-small",
+    model="retab-small",
 )
 
 if result.output.filled_document:
-base64_content = result.output.filled_document.url.split(",")[1]
-with open("filled-sales-deck.pptx", "wb") as f:
-f.write(base64.b64decode(base64_content))
-print("Filled PowerPoint presentation saved!")
+    base64_content = result.output.filled_document.url.split(",")[1]
+    with open("filled-sales-deck.pptx", "wb") as f:
+        f.write(base64.b64decode(base64_content))
+    print("Filled PowerPoint presentation saved!")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 import { readFileSync, writeFileSync } from 'fs';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const pptxBuffer = readFileSync("sales-deck-template.pptx");
 const pptxBase64 = pptxBuffer.toString('base64');
 
-const result = await client.edits.create({
-    document: {
-        filename: "sales-deck-template.pptx",
-        url: `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,${pptxBase64}`
-    },
-    instructions: JSON.stringify({
+const result = await client.edits.create(JSON.stringify({
         company_name: "Acme Corp",
         presenter_name: "Jane Smith",
         presentation_date: "Q1 2025",
         revenue_figure: "$1.2M",
         growth_percentage: "25%",
         key_highlights: ["Expanded to 3 new markets", "Launched 2 new products", "Increased team by 40%"]
-    }),
-    model: "retab-small",
-});
+    }), {
+        filename: "sales-deck-template.pptx",
+        url: `data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,${pptxBase64}`
+    }, undefined, "retab-small");
 
-if (result.output.filled_document) {
-    const base64Content = result.output.filled_document.url.split(",")[1];
+if (result.output.filledDocument) {
+    const base64Content = result.output.filledDocument.url.split(",")[1];
     writeFileSync("filled-sales-deck.pptx", Buffer.from(base64Content, 'base64'));
     console.log("Filled PowerPoint presentation saved!");
 }
@@ -1245,6 +2124,142 @@ func main() {
 			fmt.Println("Filled PowerPoint presentation saved!")
 		}
 	}
+}
+```
+
+```ruby Ruby
+require 'retab'
+require 'base64'
+require 'json'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Fill a PowerPoint presentation
+result = client.edits.create(
+  document: 'sales-deck-template.pptx',
+  instructions: JSON.generate(
+    company_name: 'Acme Corp',
+    presenter_name: 'Jane Smith',
+    presentation_date: 'Q1 2025',
+    revenue_figure: '$1.2M',
+    growth_percentage: '25%',
+    key_highlights: ['Expanded to 3 new markets', 'Launched 2 new products', 'Increased team by 40%'],
+  ),
+  model: 'retab-small',
+)
+
+if result.output.filled_document
+  base64_content = result.output.filled_document.url.split(',', 2)[1]
+  File.binwrite('filled-sales-deck.pptx', Base64.decode64(base64_content))
+  puts 'Filled PowerPoint presentation saved!'
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$result = $client->edits()->create(
+    instructions: json_encode([
+        'company_name' => 'Acme Corp',
+        'presenter_name' => 'Jane Smith',
+        'presentation_date' => 'Q1 2025',
+        'revenue_figure' => '$1.2M',
+        'growth_percentage' => '25%',
+        'key_highlights' => ['Expanded to 3 new markets', 'Launched 2 new products', 'Increased team by 40%'],
+    ]),
+    document: 'sales-deck-template.pptx',
+    model: 'retab-small',
+);
+
+$base64Content = explode(',', $result->output->filledDocument->url, 2)[1] ?? '';
+file_put_contents('filled-sales-deck.pptx', base64_decode($base64Content));
+echo 'Filled PowerPoint presentation saved!' . PHP_EOL;
+```
+
+```rust Rust
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use retab::resources::edits::CreateParams;
+use retab::Retab;
+use std::fs;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let instructions = serde_json::to_string(&serde_json::json!({
+        "company_name": "Acme Corp",
+        "presenter_name": "Jane Smith",
+        "presentation_date": "Q1 2025",
+        "revenue_figure": "$1.2M",
+        "growth_percentage": "25%",
+        "key_highlights": ["Expanded to 3 new markets", "Launched 2 new products", "Increased team by 40%"]
+    }))?;
+
+    let mut params = CreateParams::new(instructions);
+    let document: retab::MimeData = PathBuf::from("sales-deck-template.pptx").into();
+    params.body.document = Some(
+        retab::models::ClassificationRequestDocumentOneOf::MimeData(Box::new(document)),
+    );
+    params.body.model = Some("retab-small".into());
+
+    let result = client.edits().create(params).await?;
+
+    let url = &result.output.filled_document.url;
+    if let Some((_, b64)) = url.split_once(',') {
+        let filled_bytes = STANDARD.decode(b64)?;
+        fs::write("filled-sales-deck.pptx", filled_bytes)?;
+        println!("Filled PowerPoint presentation saved!");
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var data = new Dictionary<string, object>
+{
+    ["company_name"]      = "Acme Corp",
+    ["presenter_name"]    = "Jane Smith",
+    ["presentation_date"] = "Q1 2025",
+    ["revenue_figure"]    = "$1.2M",
+    ["growth_percentage"] = "25%",
+    ["key_highlights"]    = new List<string>
+    {
+        "Expanded to 3 new markets",
+        "Launched 2 new products",
+        "Increased team by 40%",
+    },
+};
+
+var result = await client.Edits.CreateAsync(
+    client.ApiKey,
+    new EditsCreateOptions
+    {
+        Document = new FileInfo("sales-deck-template.pptx"),
+        Instructions = JsonSerializer.Serialize(data),
+        Model = "retab-small",
+    }
+);
+
+if (result.Output.FilledDocument != null)
+{
+    var base64Content = result.Output.FilledDocument.Url.Split(',', 2)[1];
+    await File.WriteAllBytesAsync("filled-sales-deck.pptx", Convert.FromBase64String(base64Content));
+    Console.WriteLine("Filled PowerPoint presentation saved!");
 }
 ```
 

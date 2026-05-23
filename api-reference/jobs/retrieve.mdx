@@ -11,7 +11,7 @@ from retab import Retab
 client = Retab()
 
 # Retrieve a job by ID
-job = client.jobs.retrieve(
+job = client.jobs.get(
     "job_V1StGXR8_Z5jdHi6B-myT",
     include_request=True,
     include_response=True,
@@ -25,15 +25,15 @@ elif job.status == "failed":
     print(f"Error: {job.error.message}")
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Retrieve a job by ID
-const job = await client.jobs.retrieve("job_V1StGXR8_Z5jdHi6B-myT", {
-  include_request: true,
-  include_response: true,
+const job = await client.jobs.get("job_V1StGXR8_Z5jdHi6B-myT", {
+  includeRequest: true,
+  includeResponse: true,
 });
 
 console.log(`Status: ${job.status}`);
@@ -87,6 +87,101 @@ func main() {
 		}
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Retrieve a job by ID
+job = client.jobs.get(
+  job_id: 'job_V1StGXR8_Z5jdHi6B-myT',
+  include_request: true,
+  include_response: true,
+)
+
+puts "Status: #{job.status}"
+
+case job.status
+when 'completed'
+  puts "Result: #{job.response.body}"
+when 'failed'
+  puts "Error: #{job.error.message}"
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+// Retrieve a job by ID
+$job = $client->jobs()->get(
+    'job_V1StGXR8_Z5jdHi6B-myT',
+    includeRequest: true,
+    includeResponse: true,
+);
+
+echo 'Status: ' . $job->status?->value . PHP_EOL;
+
+if ($job->status?->value === 'completed') {
+    print_r($job->response?->body);
+} elseif ($job->status?->value === 'failed') {
+    echo 'Error: ' . ($job->error?->message ?? '') . PHP_EOL;
+}
+```
+
+```rust rust
+use retab::enums::JobsStatus;
+use retab::resources::jobs::GetParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let job = client
+        .jobs()
+        .get(
+            "job_V1StGXR8_Z5jdHi6B-myT",
+            GetParams {
+                include_request: Some(true),
+                include_response: Some(true),
+            },
+        )
+        .await?;
+
+    println!("Status: {:?}", job.status);
+
+    match job.status {
+        Some(JobsStatus::Completed) => {
+            if let Some(response) = &job.response {
+                println!("Result: {:?}", response);
+            }
+        }
+        Some(JobsStatus::Failed) => {
+            if let Some(err) = &job.error {
+                println!("Error: {:?}", err);
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Jobs.GetAsync("job_abc123", apiKey, new JobsGetOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl
@@ -204,8 +299,8 @@ curl -X GET \
 
 ## SDK Convenience Methods
 
-- Python: `client.jobs.retrieve(job_id)` defaults to lightweight polling. Pass `include_request=True` or `include_response=True` when you need payloads.
-- JavaScript: `client.jobs.retrieve(jobId)` defaults to lightweight polling. Pass `include_request: true` or `include_response: true` when you need payloads.
+- Python: `client.jobs.get(job_id)` defaults to lightweight polling. Pass `include_request=True` or `include_response=True` when you need payloads.
+- JavaScript: `client.jobs.get(jobId)` defaults to lightweight polling. Pass `include_request: true` or `include_response: true` when you need payloads.
 - Go: `client.Jobs.Retrieve(ctx, jobID, params)` defaults to lightweight polling when `params` is nil. Pass `JobRetrieveParams` when you need payloads.
 
 ## Payload Restoration
@@ -224,17 +319,17 @@ Use polling to wait for a job to complete:
 ```python Python
 import time
 
-job = client.jobs.retrieve(job_id)
+job = client.jobs.get(job_id)
 terminal_statuses = ("completed", "failed", "cancelled", "expired")
 
 while job.status not in terminal_statuses:
     time.sleep(2) # Wait 2 seconds between polls
-    job = client.jobs.retrieve(job_id)
+    job = client.jobs.get(job_id)
 
 # Fetch the payload only once the job is terminal
 
 if job.status == "completed":
-    job = client.jobs.retrieve(job_id, include_response=True)
+    job = client.jobs.get(job_id, include_response=True)
 
 # Or use the helper method
 
@@ -246,17 +341,17 @@ job = client.jobs.wait_for_completion(
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 const terminalStatuses = ["completed", "failed", "cancelled", "expired"];
 
 while (!terminalStatuses.includes(job.status)) {
     await new Promise(r => setTimeout(r, 2000));  // Wait 2 seconds
-    job = await client.jobs.retrieve(jobId);
+    job = await client.jobs.get(jobId);
 }
 
 // Fetch the payload only once the job is terminal
 if (job.status === "completed") {
-    job = await client.jobs.retrieve(jobId, { include_response: true });
+    job = await client.jobs.get(jobId, { includeResponse: true });
 }
 
 // Or use the helper method
@@ -323,6 +418,98 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println((*job)["status"])
+}
+```
+
+```ruby Ruby
+job_id = 'job_V1StGXR8_Z5jdHi6B-myT'
+
+job = client.jobs.get(job_id: job_id)
+terminal_statuses = ['completed', 'failed', 'cancelled', 'expired']
+
+until terminal_statuses.include?(job.status)
+  sleep 2 # Wait 2 seconds between polls
+  job = client.jobs.get(job_id: job_id)
+end
+
+# Fetch the payload only once the job is terminal
+if job.status == 'completed'
+  job = client.jobs.get(job_id: job_id, include_response: true)
+end
+```
+
+```rust Rust
+use retab::enums::JobStatus;
+use retab::resources::jobs::GetParams;
+use retab::Retab;
+use std::time::Duration;
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+let job_id = "job_V1StGXR8_Z5jdHi6B-myT";
+let mut job = client.jobs().get(job_id, GetParams::default()).await?;
+
+while !matches!(
+    job.status,
+    Some(JobStatus::Completed | JobStatus::Failed | JobStatus::Cancelled | JobStatus::Expired)
+) {
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    job = client.jobs().get(job_id, GetParams::default()).await?;
+}
+
+// Fetch the payload only once the job is terminal.
+if job.status == Some(JobStatus::Completed) {
+    job = client.jobs().get(job_id, GetParams {
+        include_response: Some(true),
+        ..Default::default()
+    }).await?;
+}
+```
+
+```php PHP
+<?php
+$jobId = 'job_V1StGXR8_Z5jdHi6B-myT';
+
+$job = $client->jobs()->get($jobId);
+$terminalStatuses = ['completed', 'failed', 'cancelled', 'expired'];
+
+while (!in_array($job->status?->value, $terminalStatuses, true)) {
+    sleep(2);
+    $job = $client->jobs()->get($jobId);
+}
+
+// Fetch the payload only once the job is terminal
+if ($job->status?->value === 'completed') {
+    $job = $client->jobs()->get($jobId, includeResponse: true);
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var jobId = "job_V1StGXR8_Z5jdHi6B-myT";
+var terminal = new HashSet<JobStatus> { JobStatus.Completed, JobStatus.Failed, JobStatus.Cancelled, JobStatus.Expired };
+
+var job = await client.Jobs.GetAsync(jobId, client.ApiKey);
+while (job.Status is { } status && !terminal.Contains(status))
+{
+    await Task.Delay(TimeSpan.FromSeconds(2));
+    job = await client.Jobs.GetAsync(jobId, client.ApiKey);
+}
+
+// Fetch the payload only once the job is terminal
+if (job.Status == JobStatus.Completed)
+{
+    job = await client.Jobs.GetAsync(
+        jobId,
+        client.ApiKey,
+        new JobsGetOptions { IncludeResponse = true }
+    );
 }
 ```
 

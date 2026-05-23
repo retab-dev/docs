@@ -36,10 +36,10 @@ tests_for_block = client.workflows.tests.list(
 print(f"Workflow has {len(tests.data)} tests")
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const tests = await client.workflows.tests.list({
   workflowId: "wf_abc123xyz",
@@ -96,6 +96,83 @@ func main() {
 	fmt.Printf("Workflow has %d tests\n", len(tests.Data))
 	_ = testsForBlock
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# All tests for a workflow.
+tests = client.workflow_tests.list(
+  workflow_id: 'wf_abc123xyz',
+  limit: 50,
+)
+
+# Only tests for one specific block.
+tests_for_block = client.workflow_tests.list(
+  workflow_id: 'wf_abc123xyz',
+  target_block_id: 'block_extract_invoice',
+  limit: 20,
+)
+
+puts "Workflow has #{tests.data.length} tests"
+```
+
+```rust rust
+use retab::resources::workflow_tests::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // All tests for a workflow.
+    let tests = client
+        .workflow_tests()
+        .list(ListParams {
+            limit: Some(50),
+            ..ListParams::new("wf_abc123xyz")
+        })
+        .await?;
+
+    // Only tests for one specific block.
+    let _tests_for_block = client
+        .workflow_tests()
+        .list(ListParams {
+            target_block_id: Some("block_extract_invoice".into()),
+            limit: Some(20),
+            ..ListParams::new("wf_abc123xyz")
+        })
+        .await?;
+
+    println!("Workflow has {} tests", tests.data.len());
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowTests()->list(
+    workflowId: 'wf_abc123',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowTests.ListAsync(apiKey, new WorkflowTestsListOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

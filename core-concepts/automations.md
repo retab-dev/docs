@@ -141,6 +141,116 @@ func main() {
 }
 ````
 
+```ruby Ruby
+# The Ruby SDK does not yet model the processors API. Call /v1/processors directly.
+require 'net/http'
+require 'uri'
+require 'json'
+
+schema = {
+  type: 'object',
+  properties: {
+    invoice_number: { type: 'string' },
+  },
+}
+
+uri = URI('https://api.retab.com/v1/processors')
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+request = Net::HTTP::Post.new(uri)
+request['Api-Key'] = ENV['RETAB_API_KEY']
+request['Content-Type'] = 'application/json'
+request.body = {
+  name: 'Invoice Processor',
+  model: 'retab-small',
+  json_schema: schema,
+}.to_json
+
+response = http.request(request)
+processor = JSON.parse(response.body)
+```
+
+
+
+
+
+```typescript TypeScript
+const schema = {
+  type: "object",
+  properties: { invoice_number: { type: "string" } },
+};
+
+const response = await fetch("https://api.retab.com/v1/processors", {
+  method: "POST",
+  headers: {
+    "Api-Key": process.env.RETAB_API_KEY!,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "Invoice Processor",
+    model: "retab-small",
+    json_schema: schema,
+  }),
+});
+
+const processor = await response.json();
+console.log(processor);
+```
+
+```rust Rust
+let api_key = std::env::var("RETAB_API_KEY")?;
+let schema = serde_json::json!({
+    "type": "object",
+    "properties": { "invoice_number": { "type": "string" } }
+});
+
+let processor: serde_json::Value = reqwest::Client::new()
+    .post("https://api.retab.com/v1/processors")
+    .header("Api-Key", api_key)
+    .json(&serde_json::json!({
+        "name": "Invoice Processor",
+        "model": "retab-small",
+        "json_schema": schema
+    }))
+    .send()
+    .await?
+    .error_for_status()?
+    .json()
+    .await?;
+println!("{processor:#?}");
+```
+
+```csharp C#
+using System.Net.Http.Json;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+using var http = new HttpClient();
+http.DefaultRequestHeaders.Add("Api-Key", apiKey);
+
+var response = await http.PostAsJsonAsync("https://api.retab.com/v1/processors", new
+{
+    name = "Invoice Processor",
+    model = "retab-small",
+    json_schema = new { type = "object", properties = new { invoice_number = new { type = "string" } } },
+});
+response.EnsureSuccessStatusCode();
+Console.WriteLine(await response.Content.ReadAsStringAsync());
+```
+
+```php PHP
+<?php
+$schema = ['type' => 'object', 'properties' => ['invoice_number' => ['type' => 'string']]];
+$ch = curl_init('https://api.retab.com/v1/processors');
+curl_setopt_array($ch, [
+    CURLOPT_POST => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => ['Api-Key: ' . getenv('RETAB_API_KEY'), 'Content-Type: application/json'],
+    CURLOPT_POSTFIELDS => json_encode(['name' => 'Invoice Processor', 'model' => 'retab-small', 'json_schema' => $schema]),
+]);
+echo curl_exec($ch) . PHP_EOL;
+curl_close($ch);
+```
+
 </CodeGroup>
 
 ## Create your FastAPI server with a webhook
@@ -173,6 +283,24 @@ uvicorn.run(app, host="0.0.0.0", port=8000)
 
 ````
 
+```ruby Ruby (Sinatra)
+require 'sinatra'
+require 'json'
+
+post '/webhook' do
+  request.body.rewind
+  webhook_request = JSON.parse(request.body.read)
+  invoice_object = JSON.parse(
+    webhook_request.dig('completion', 'choices', 0, 'message', 'content') || '{}'
+  )
+  puts "📬 Webhook received: #{invoice_object}"
+  content_type :json
+  { status: 'success', data: invoice_object }.to_json
+end
+
+# Run with: ruby your_module_name.rb -p 8000
+```
+
 You can test the webhook endpoint locally with a tool like curl or Postman. For example, using curl:
 
 ```bash testing locally
@@ -180,6 +308,80 @@ curl -X POST http://localhost:8000/webhook \
      -H "Content-Type: application/json" \
      -d '{"completion":{"id":"id","choices":[{"index":0,"message":{"content":"{\"name\" : \"Team Meeting!\", \"date\" : \"2023-12-31\" }","role":"assistant"}}],"created":0,"model":"gpt-5-nano","object":"chat.completion","likelihoods":{}},"file_payload":{"filename":"example.pdf","url":"data:application/pdf;base64,the_content_of_the_pdf_file"}}'
 ````
+
+
+
+
+
+
+```typescript TypeScript
+import express from "express";
+
+const app = express();
+app.use(express.json());
+
+app.post("/webhook", (req, res) => {
+  const invoiceObject = JSON.parse(
+    req.body.completion?.choices?.[0]?.message?.content ?? "{}",
+  );
+  console.log("Webhook received:", invoiceObject);
+  res.json({ status: "success", data: invoiceObject });
+});
+```
+
+```go Go
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+)
+
+func webhook(w http.ResponseWriter, r *http.Request) {
+	var payload map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	log.Printf("Webhook received: %#v", payload)
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
+```
+
+```rust Rust
+use axum::{extract::Json, response::IntoResponse, routing::post, Router};
+use serde_json::{json, Value};
+
+async fn webhook(Json(payload): Json<Value>) -> impl IntoResponse {
+    println!("Webhook received: {payload:#?}");
+    Json(json!({ "status": "success", "data": payload }))
+}
+
+let app = Router::new().route("/webhook", post(webhook));
+```
+
+```csharp C#
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapPost("/webhook", async (HttpRequest request) =>
+{
+    var payload = await request.ReadFromJsonAsync<Dictionary<string, object>>();
+    Console.WriteLine($"Webhook received: {payload}");
+    return Results.Json(new { status = "success", data = payload });
+});
+```
+
+```php PHP
+<?php
+$payload = json_decode(file_get_contents('php://input'), true);
+$content = $payload['completion']['choices'][0]['message']['content'] ?? '{}';
+$invoiceObject = json_decode($content, true);
+error_log('Webhook received: ' . json_encode($invoiceObject));
+header('Content-Type: application/json');
+echo json_encode(['status' => 'success', 'data' => $invoiceObject]);
+```
 
 </CodeGroup>
 
@@ -195,33 +397,35 @@ Here's how to implement signature verification in your FastAPI webhook:
 
 <CodeGroup>
 ```python Python {13-26}
-import os
+import hashlib
+import hmac
 import json
-from fastapi import FastAPI, Request, Response, HTTPException
-from retab import Retab
+import os
+
+from fastapi import FastAPI, HTTPException, Request
 
 app = FastAPI()
 
+
+def _verify_signature(payload: bytes, signature_header: str | None, secret: str) -> None:
+    """Constant-time HMAC-SHA256 check against the X-Retab-Signature header."""
+    if not signature_header:
+        raise HTTPException(status_code=400, detail="Missing X-Retab-Signature header")
+    expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature_header):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+
 @app.post("/webhook")
 async def webhook_handler(request: Request):
-payload = await request.body()
+    payload = await request.body()
+    _verify_signature(
+        payload,
+        request.headers.get("X-Retab-Signature"),
+        os.environ["WEBHOOKS_SECRET"],
+    )
 
-    # Signature verification
-    try:
-        signature_header = request.headers.get("X-Retab-Signature")
-        if not signature_header:
-            raise HTTPException(status_code=400, detail="Missing X-Retab-Signature header")
-        # Verify the signature using Retab SDK
-        Retab.verify_event(
-            event_body=payload,
-            event_signature=signature_header,
-            secret=os.getenv("WEBHOOKS_SECRET"),  # Get secret from environment variable
-        )
-    except Exception as e:
-        return Response(status_code=400, content=f"Webhook error: {str(e)}")
-
-    webhook_request = json.loads(payload.decode('utf-8'))
-
+    webhook_request = json.loads(payload.decode("utf-8"))
     invoice_object = json.loads(
         webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
     )
@@ -284,6 +488,95 @@ func main() {
 }
 ````
 
+```ruby Ruby (Sinatra)
+require 'sinatra'
+require 'json'
+require 'openssl'
+
+# Constant-time HMAC-SHA256 check against the X-Retab-Signature header.
+def verify_signature(payload, signature_header, secret)
+  halt 400, 'Missing X-Retab-Signature header' if signature_header.nil? || signature_header.empty?
+  expected = OpenSSL::HMAC.hexdigest('sha256', secret, payload)
+  halt 401, 'Invalid webhook signature' unless Rack::Utils.secure_compare(expected, signature_header)
+end
+
+post '/webhook' do
+  request.body.rewind
+  payload = request.body.read
+  verify_signature(payload, request.env['HTTP_X_RETAB_SIGNATURE'], ENV['WEBHOOKS_SECRET'])
+
+  webhook_request = JSON.parse(payload)
+  invoice_object = JSON.parse(
+    webhook_request.dig('completion', 'choices', 0, 'message', 'content') || '{}'
+  )
+  puts "📬 Webhook received: #{invoice_object}"
+  content_type :json
+  { status: 'success', data: invoice_object }.to_json
+end
+```
+
+
+
+
+
+```typescript TypeScript
+import crypto from "crypto";
+
+function verifySignature(payload: Buffer, signature: string | undefined, secret: string) {
+  if (!signature) throw new Error("Missing X-Retab-Signature header");
+  const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+  const a = Buffer.from(expected, "hex");
+  const b = Buffer.from(signature, "hex");
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    throw new Error("Invalid webhook signature");
+  }
+}
+```
+
+```rust Rust
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+
+fn verify_signature(payload: &[u8], signature: &str, secret: &str) -> anyhow::Result<()> {
+    let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes())?;
+    mac.update(payload);
+    let expected = hex::encode(mac.finalize().into_bytes());
+    if subtle::ConstantTimeEq::ct_eq(expected.as_bytes(), signature.as_bytes()).unwrap_u8() != 1 {
+        anyhow::bail!("invalid webhook signature");
+    }
+    Ok(())
+}
+```
+
+```csharp C#
+using System.Security.Cryptography;
+using System.Text;
+
+static void VerifySignature(byte[] payload, string? signature, string secret)
+{
+    if (string.IsNullOrEmpty(signature)) throw new InvalidOperationException("Missing X-Retab-Signature header");
+    using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+    var expected = Convert.ToHexString(hmac.ComputeHash(payload)).ToLowerInvariant();
+    if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(signature)))
+        throw new InvalidOperationException("Invalid webhook signature");
+}
+```
+
+```php PHP
+<?php
+function verify_signature(string $payload, ?string $signature, string $secret): void {
+    if (!$signature) {
+        http_response_code(400);
+        throw new RuntimeException('Missing X-Retab-Signature header');
+    }
+    $expected = hash_hmac('sha256', $payload, $secret);
+    if (!hash_equals($expected, $signature)) {
+        http_response_code(401);
+        throw new RuntimeException('Invalid webhook signature');
+    }
+}
+```
+
 </CodeGroup>
 
 ## Exposing local server to the internet using ngrok
@@ -314,6 +607,12 @@ INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
+
+
+
+
+
+
 
 </CodeGroup>
 
@@ -431,6 +730,108 @@ func main() {
 
 }
 ````
+
+```ruby Ruby
+# The Ruby SDK does not yet model the automations test API. Call the test
+# endpoints directly via /v1/processors/automations/tests/...
+require 'net/http'
+require 'uri'
+require 'json'
+require 'base64'
+
+api_key = ENV['RETAB_API_KEY']
+automation_id = 'auto_abc'
+
+# If you just want to send a test request to your webhook
+uri = URI("https://api.retab.com/v1/processors/automations/tests/webhook/#{automation_id}")
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+request = Net::HTTP::Post.new(uri)
+request['Api-Key'] = api_key
+webhook_log = http.request(request)
+raise "Webhook test failed: #{webhook_log.code}" unless webhook_log.is_a?(Net::HTTPSuccess)
+
+# If you want to test the file processing logic:
+File.open('your_invoice_email.eml', 'rb') do |document|
+  upload_uri = URI("https://api.retab.com/v1/processors/automations/tests/upload/#{automation_id}")
+  upload_http = Net::HTTP.new(upload_uri.host, upload_uri.port)
+  upload_http.use_ssl = true
+
+  boundary = "----RetabBoundary#{Time.now.to_i}"
+  body = +"--#{boundary}\r\n"
+  body << "Content-Disposition: form-data; name=\"file\"; filename=\"your_invoice_email.eml\"\r\n"
+  body << "Content-Type: message/rfc822\r\n\r\n"
+  body << document.read
+  body << "\r\n--#{boundary}--\r\n"
+
+  upload_req = Net::HTTP::Post.new(upload_uri)
+  upload_req['Api-Key'] = api_key
+  upload_req['Content-Type'] = "multipart/form-data; boundary=#{boundary}"
+  upload_req.body = body
+  upload_log = upload_http.request(upload_req)
+  raise "Upload test failed: #{upload_log.code}" unless upload_log.is_a?(Net::HTTPSuccess)
+end
+```
+
+
+
+
+
+```typescript TypeScript
+const automationId = "auto_abc";
+
+await fetch(`https://api.retab.com/v1/processors/automations/tests/webhook/${automationId}`, {
+  method: "POST",
+  headers: { "Api-Key": process.env.RETAB_API_KEY! },
+});
+
+const form = new FormData();
+form.append("file", new Blob([emailBytes], { type: "message/rfc822" }), "your_invoice_email.eml");
+await fetch(`https://api.retab.com/v1/processors/automations/tests/upload/${automationId}`, {
+  method: "POST",
+  headers: { "Api-Key": process.env.RETAB_API_KEY! },
+  body: form,
+});
+```
+
+```rust Rust
+let api_key = std::env::var("RETAB_API_KEY")?;
+let automation_id = "auto_abc";
+let client = reqwest::Client::new();
+
+client
+    .post(format!("https://api.retab.com/v1/processors/automations/tests/webhook/{automation_id}"))
+    .header("Api-Key", &api_key)
+    .send()
+    .await?
+    .error_for_status()?;
+```
+
+```csharp C#
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var automationId = "auto_abc";
+using var http = new HttpClient();
+http.DefaultRequestHeaders.Add("Api-Key", apiKey);
+
+var webhook = await http.PostAsync(
+    $"https://api.retab.com/v1/processors/automations/tests/webhook/{automationId}",
+    content: null
+);
+webhook.EnsureSuccessStatusCode();
+```
+
+```php PHP
+<?php
+$automationId = 'auto_abc';
+$ch = curl_init("https://api.retab.com/v1/processors/automations/tests/webhook/{$automationId}");
+curl_setopt_array($ch, [
+    CURLOPT_POST => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => ['Api-Key: ' . getenv('RETAB_API_KEY')],
+]);
+echo curl_exec($ch) . PHP_EOL;
+curl_close($ch);
+```
 
 </CodeGroup>
 

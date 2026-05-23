@@ -50,103 +50,36 @@ Then, set up a route that will handle incoming webhook POST requests. You will n
 
 <CodeGroup>
 ```python Python (FastAPI)
+import hashlib
+import hmac
 import json
-from fastapi import FastAPI, Request
-
-app = FastAPI()
-
-@app.post("/webhook")
-async def webhook(request: Request):
-    webhook_request = await request.json()
-    invoice_object = json.loads(
-        webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
-    )
-    print("📬 Webhook received:", invoice_object)
-    return {"status": "success", "data": invoice_object}
-
-# To run the FastAPI app locally, use the command:
-# uvicorn your_module_name:app --reload
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
-```javascript Node.js (Express)
-import express from 'express';
-
-const app = express();
-
-// Use express.raw() to get the raw body for signature verification
-app.use(express.raw({ type: 'application/json' }));
-
-app.post('/webhook', async (req, res) => {
-    const payload = req.body;
-    
-    // Decode and parse the webhook request
-    const webhookRequest = JSON.parse(payload.toString('utf-8'));
-    
-    const invoiceObject = JSON.parse(
-        webhookRequest.completion.choices[0].message.content || '{}'
-    ); // The parsed object matches your Invoice schema
-    console.log('📬 Webhook received:', invoiceObject);
-    
-    return res.status(200).json({ status: 'success', data: invoiceObject });
-});
-
-// To run the Express app locally:
-// node your_module_name.js
-app.listen(8000, () => {
-    console.log('Webhook server listening on port 8000');
-});
-```
-
-```bash testing locally
-curl -X POST http://localhost:8000/webhook \
-     -H "Content-Type: application/json" \
-     -d '{"completion":{"id":"id","choices":[{"index":0,"message":{"content":"{\"name\" : \"Team Meeting!\", \"date\" : \"2023-12-31\" }","role":"assistant"}}],"created":0,"model":"gpt-5-nano","object":"chat.completion","likelihoods":{}},"file_payload":{"filename":"example.pdf","url":"data:application/pdf;base64,the_content_of_the_pdf_file"}}'
-```
-</CodeGroup>
-
-
-### Secure your webhook endpoint
-
-When you set up a webhook, you provide an **HTTP endpoint** on your server for Retab to send data to. If this endpoint is not secured (i.e., it accepts unauthenticated `POST` requests from anywhere), it essentially becomes a public door into your system. **Any actor** could attempt to call this URL and send fake data. This is inherently dangerous: a malicious party might send **forged webhook requests** that masquerade as Retab, but contain bogus or harmful data.
-
-To secure webhook deliveries, Retab employs a **signature verification** mechanism using an HMAC-like scheme. Retab and your application share a **webhook secret** (a random string known only to Retab and you). This secret is available in your [Retab dashboard](https://www.retab.com/dashboard/settings) (Labeled as `WEBHOOKS_SECRET`). Retab uses this secret to include a special signature header with every webhook request. When your endpoint receives the webhook, your code should perform the same HMAC-SHA256 computation on the request body using the shared secret, then compare your computed signature to the value in the `X-Retab-Signature` header. If the signatures **match**, the request truly came from Retab and the payload was not altered in transit.
-
-<Warning>Make sure to set your `WEBHOOKS_SECRET` environment variable with the secret from your [Retab dashboard](https://www.retab.com/dashboard/settings).</Warning>
-
-Here's how to implement signature verification in your webhook:
-
-<CodeGroup>
-```python Python (FastAPI)
 import os
-import json
-from fastapi import FastAPI, Request, Response, HTTPException
-from retab import Retab
+
+from fastapi import FastAPI, HTTPException, Request
+
 
 app = FastAPI()
+
+
+def verify_retab_signature(payload: bytes, signature: str | None, secret: str) -> None:
+    """Constant-time HMAC-SHA256 verification against the X-Retab-Signature header."""
+    if not signature:
+        raise HTTPException(status_code=400, detail="Missing X-Retab-Signature header")
+    expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
 
 @app.post("/webhook")
 async def webhook_handler(request: Request):
     payload = await request.body()
+    verify_retab_signature(
+        payload,
+        request.headers.get("X-Retab-Signature"),
+        os.environ["WEBHOOKS_SECRET"],
+    )
 
-    # Signature verification
-    try:
-        signature_header = request.headers.get("X-Retab-Signature")
-        if not signature_header:
-            raise HTTPException(status_code=400, detail="Missing X-Retab-Signature header")
-        # Verify the signature using Retab SDK
-        Retab.verify_event(
-            event_body=payload,
-            event_signature=signature_header,
-            secret=os.getenv("WEBHOOKS_SECRET"),  # Get secret from environment variable
-        )
-    except Exception as e:
-        return Response(status_code=400, content=f"Signature verification error. Please verify your signature secret. {str(e)}")
-
-    webhook_request = json.loads(payload.decode('utf-8'))
-    
+    webhook_request = json.loads(payload.decode("utf-8"))
     invoice_object = json.loads(
         webhook_request["completion"]["choices"][0]["message"]["content"] or "{}"
     )
@@ -154,36 +87,164 @@ async def webhook_handler(request: Request):
     return {"status": "success", "data": invoice_object}
 ```
 
-```javascript Node.js (Express)
+```typescript TypeScript (Express)
+import crypto from 'crypto';
 import express from 'express';
-import { Retab } from '@retab/node';
 
 const app = express();
 
 app.use(express.raw({ type: 'application/json' }));
 
+function verifyRetabSignature(payload, signature, secret) {
+    if (!signature) {
+        throw new Error('Missing X-Retab-Signature header');
+    }
+    const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+    const a = Buffer.from(expected, 'hex');
+    const b = Buffer.from(String(signature), 'hex');
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        throw new Error('Invalid webhook signature');
+    }
+}
+
 app.post('/webhook', async (req, res) => {
     const payload = req.body;
-
-    // Signature verification
     try {
-        const signatureHeader = req.headers['x-retab-signature'];
-        if (!signatureHeader) {
-            return res.status(400).json({ detail: 'Missing X-Retab-Signature header' });
-        }
-        // Verify the signature using Retab SDK
-        Retab.verifyEvent(payload, String(signatureHeader), process.env.WEBHOOKS_SECRET);
+        verifyRetabSignature(
+            payload,
+            req.headers['x-retab-signature'],
+            process.env.WEBHOOKS_SECRET,
+        );
     } catch (error) {
-        return res.status(400).send(`Signature verification error. Please verify your signature secret. ${error.message}`);
+        return res.status(401).send(`Signature verification failed: ${error.message}`);
     }
 
     const webhookRequest = JSON.parse(payload.toString('utf-8'));
-    
-    const invoiceObject = JSON.parse(webhookRequest.completion.choices[0].message.content || '{}');
+    const invoiceObject = JSON.parse(
+        webhookRequest.completion.choices[0].message.content || '{}',
+    );
     console.log('📬 Webhook received:', invoiceObject);
     return res.status(200).json({ status: 'success', data: invoiceObject });
 });
 ```
+
+```ruby Ruby (Sinatra)
+require 'sinatra'
+require 'json'
+require 'openssl'
+
+# Constant-time HMAC-SHA256 verification against the X-Retab-Signature header.
+def verify_retab_signature(payload, signature, secret)
+  halt 400, 'Missing X-Retab-Signature header' if signature.nil? || signature.empty?
+  expected = OpenSSL::HMAC.hexdigest('sha256', secret, payload)
+  halt 401, 'Invalid webhook signature' unless Rack::Utils.secure_compare(expected, signature)
+end
+
+post '/webhook' do
+  request.body.rewind
+  payload = request.body.read
+  verify_retab_signature(payload, request.env['HTTP_X_RETAB_SIGNATURE'], ENV['WEBHOOKS_SECRET'])
+
+  webhook_request = JSON.parse(payload)
+  invoice_object = JSON.parse(
+    webhook_request.dig('completion', 'choices', 0, 'message', 'content') || '{}'
+  )
+  puts "📬 Webhook received: #{invoice_object}"
+
+  content_type :json
+  { status: 'success', data: invoice_object }.to_json
+end
+
+# Run with: ruby your_module_name.rb -p 8000
+```
+
+
+
+
+```go Go
+package main
+
+import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"io"
+	"net/http"
+	"os"
+)
+
+func webhook(w http.ResponseWriter, r *http.Request) {
+	payload, _ := io.ReadAll(r.Body)
+	sig := r.Header.Get("X-Retab-Signature")
+	mac := hmac.New(sha256.New, []byte(os.Getenv("WEBHOOKS_SECRET")))
+	mac.Write(payload)
+	if !hmac.Equal([]byte(hex.EncodeToString(mac.Sum(nil))), []byte(sig)) {
+		http.Error(w, "invalid signature", http.StatusUnauthorized)
+		return
+	}
+
+	var event map[string]any
+	_ = json.Unmarshal(payload, &event)
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
+```
+
+```rust Rust
+use axum::{body::Bytes, http::HeaderMap, response::IntoResponse};
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+
+async fn webhook(headers: HeaderMap, payload: Bytes) -> impl IntoResponse {
+    let signature = headers.get("X-Retab-Signature").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let secret = std::env::var("WEBHOOKS_SECRET").expect("WEBHOOKS_SECRET");
+    let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).expect("hmac key");
+    mac.update(&payload);
+    let expected = hex::encode(mac.finalize().into_bytes());
+    if expected != signature {
+        return (axum::http::StatusCode::UNAUTHORIZED, "invalid signature").into_response();
+    }
+    (axum::http::StatusCode::OK, "success").into_response()
+}
+```
+
+```csharp C#
+using System.Security.Cryptography;
+using System.Text;
+
+app.MapPost("/webhook", async (HttpRequest request) =>
+{
+    using var reader = new MemoryStream();
+    await request.Body.CopyToAsync(reader);
+    var payload = reader.ToArray();
+    var signature = request.Headers["X-Retab-Signature"].ToString();
+    var secret = Environment.GetEnvironmentVariable("WEBHOOKS_SECRET")!;
+
+    using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+    var expected = Convert.ToHexString(hmac.ComputeHash(payload)).ToLowerInvariant();
+    if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(signature)))
+        return Results.Unauthorized();
+
+    return Results.Json(new { status = "success" });
+});
+```
+
+```php PHP
+<?php
+$payload = file_get_contents('php://input');
+$signature = $_SERVER['HTTP_X_RETAB_SIGNATURE'] ?? '';
+$expected = hash_hmac('sha256', $payload, getenv('WEBHOOKS_SECRET'));
+
+if (!hash_equals($expected, $signature)) {
+    http_response_code(401);
+    echo 'invalid signature';
+    exit;
+}
+
+header('Content-Type: application/json');
+echo json_encode(['status' => 'success']);
+```
+
 </CodeGroup>
 
 
@@ -220,6 +281,12 @@ INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
+
+
+
+
+
+
 </CodeGroup>
 
 That's it! You can start processing documents at scale. 

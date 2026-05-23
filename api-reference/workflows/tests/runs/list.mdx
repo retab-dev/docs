@@ -28,10 +28,10 @@ for run in runs.data:
     print(run.id, run.lifecycle.status, run.counts)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const runs = await client.workflows.tests.runs.list({
   workflowId: "wf_abc123xyz",
@@ -76,6 +76,67 @@ func main() {
 		fmt.Println(run.ID, run.Lifecycle.Status, run.Counts)
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+runs = client.workflow_test_runs.list(
+  workflow_id: 'wf_abc123xyz',
+  statuses: ['completed', 'error'],
+  limit: 10,
+)
+runs.data.each do |run|
+  puts "#{run.id} #{run.lifecycle.status} #{run.counts}"
+end
+```
+
+```rust rust
+use retab::resources::workflow_test_runs::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let runs = client
+        .workflow_test_runs()
+        .list(ListParams {
+            workflow_id: Some("wf_abc123xyz".into()),
+            statuses: Some(vec!["completed".into(), "error".into()]),
+            limit: Some(10),
+            ..Default::default()
+        })
+        .await?;
+    for run in &runs.data {
+        println!("{} {:?} {:?}", run.id, run.lifecycle, run.counts);
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowTestRuns()->list();
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowTestRuns.ListAsync(apiKey, new WorkflowTestRunsListOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

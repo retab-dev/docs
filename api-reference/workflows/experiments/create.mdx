@@ -41,21 +41,15 @@ experiment = client.workflows.experiments.create(
 print(experiment.id)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const experiment = await client.workflows.experiments.create({
-  workflowId: "wf_abc123",
-  blockId: "extract-invoice",
-  name: "Q1 invoices",
-  documentCaptures: [
-    { workflow_run_id: "wfrun_1" },
-    { workflow_run_id: "wfrun_2", step_id: "for_each-0" },
-  ],
-  nConsensus: 5,
-});
+const experiment = await client.workflows.experiments.create("wf_abc123", "extract-invoice", [
+    { workflowRunId: "wfrun_1" },
+    { workflowRunId: "wfrun_2", stepId: "for_each-0" },
+  ], undefined, 5, "Q1 invoices");
 console.log(experiment.id);
 ```
 
@@ -94,6 +88,79 @@ func main() {
 
 	fmt.Println(experiment.ID)
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+experiment = client.workflow_experiments.create(
+  workflow_id: 'wf_abc123',
+  block_id: 'extract-invoice',
+  name: 'Q1 invoices',
+  document_captures: [
+    { workflow_run_id: 'wfrun_1' },
+    { workflow_run_id: 'wfrun_2', step_id: 'for_each-0' },
+  ],
+  n_consensus: 5,
+)
+puts experiment.id
+```
+
+```rust rust
+use retab::enums::CreateExperimentRequestNConsensus;
+use retab::models::{CreateExperimentRequest, ExperimentDocumentCaptureRequest};
+use retab::resources::workflow_experiments::CreateParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut body = CreateExperimentRequest::new("wf_abc123");
+    body.block_id = Some("extract-invoice".into());
+    body.name = Some("Q1 invoices".into());
+    body.document_captures = Some(vec![
+        ExperimentDocumentCaptureRequest::new("wfrun_1"),
+        ExperimentDocumentCaptureRequest {
+            workflow_run_id: "wfrun_2".into(),
+            step_id: Some("for_each-0".into()),
+        },
+    ]);
+    body.n_consensus = Some(CreateExperimentRequestNConsensus::V5);
+
+    let experiment = client
+        .workflow_experiments()
+        .create(CreateParams::new(body))
+        .await?;
+    println!("{}", experiment.id);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowExperiments()->create(
+    workflowId: 'wf_abc123',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowExperiments.CreateAsync(apiKey, new WorkflowExperimentsCreateOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

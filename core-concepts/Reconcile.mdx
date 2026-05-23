@@ -126,6 +126,132 @@ func main() {
 }
 ```
 
+```ruby Ruby
+# The Ruby SDK does not yet model the consensus API. Call /v1/consensus/consensus directly.
+require 'net/http'
+require 'uri'
+require 'json'
+
+results = [
+  { name: 'Science Fair', date: '2023-06-15', participants: ['Alice', 'Bob'] },
+  { name: 'Science Fair', date: '2023-06-15', participants: ['Alice', 'Bob', 'Charlie'] },
+  { name: 'Science Exhibition', date: '2023-06-15', participants: ['Alice', 'Bob'] },
+]
+
+schema = {
+  type: 'object',
+  properties: {
+    name: { type: 'string' },
+    date: { type: 'string' },
+    participants: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['name', 'date', 'participants'],
+}
+
+uri = URI('https://api.retab.com/v1/consensus/consensus')
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+request = Net::HTTP::Post.new(uri)
+request['Api-Key'] = ENV['RETAB_API_KEY']
+request['Content-Type'] = 'application/json'
+request.body = {
+  inputs: results,
+  reference_schema: schema,
+  mode: 'direct',
+}.to_json
+
+response = http.request(request)
+consensus_result = JSON.parse(response.body)
+
+# Access the reconciled data and likelihood scores
+reconciled_data = consensus_result['consensus']
+likelihoods = consensus_result['likelihoods']
+```
+
+```php PHP
+<?php
+// The PHP SDK does not yet model the consensus API. Call /v1/consensus/consensus directly.
+require 'vendor/autoload.php';
+
+use GuzzleHttp\Client as HttpClient;
+
+$results = [
+    ['name' => 'Science Fair', 'date' => '2023-06-15', 'participants' => ['Alice', 'Bob']],
+    ['name' => 'Science Fair', 'date' => '2023-06-15', 'participants' => ['Alice', 'Bob', 'Charlie']],
+    ['name' => 'Science Exhibition', 'date' => '2023-06-15', 'participants' => ['Alice', 'Bob']],
+];
+
+$schema = [
+    'type' => 'object',
+    'properties' => [
+        'name' => ['type' => 'string'],
+        'date' => ['type' => 'string'],
+        'participants' => ['type' => 'array', 'items' => ['type' => 'string']],
+    ],
+    'required' => ['name', 'date', 'participants'],
+];
+
+$http = new HttpClient(['base_uri' => 'https://api.retab.com/']);
+$response = $http->post('v1/consensus/consensus', [
+    'headers' => ['Api-Key' => getenv('RETAB_API_KEY')],
+    'json' => [
+        'inputs' => $results,
+        'reference_schema' => $schema,
+        'mode' => 'direct',
+    ],
+]);
+$consensusResult = json_decode((string) $response->getBody(), true);
+
+$reconciledData = $consensusResult['consensus'];
+$likelihoods = $consensusResult['likelihoods'];
+```
+
+```rust Rust
+// The Rust SDK does not yet model the consensus API. Call /v1/consensus/consensus directly.
+use serde_json::json;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let api_key = std::env::var("RETAB_API_KEY")?;
+
+    let results = json!([
+        {"name": "Science Fair", "date": "2023-06-15", "participants": ["Alice", "Bob"]},
+        {"name": "Science Fair", "date": "2023-06-15", "participants": ["Alice", "Bob", "Charlie"]},
+        {"name": "Science Exhibition", "date": "2023-06-15", "participants": ["Alice", "Bob"]}
+    ]);
+
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "date": {"type": "string"},
+            "participants": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["name", "date", "participants"]
+    });
+
+    let http = reqwest::Client::new();
+    let response = http
+        .post("https://api.retab.com/v1/consensus/consensus")
+        .header("Api-Key", api_key)
+        .json(&json!({
+            "inputs": results,
+            "reference_schema": schema,
+            "mode": "direct"
+        }))
+        .send()
+        .await?
+        .error_for_status()?;
+
+    let consensus_result: serde_json::Value = response.json().await?;
+    let reconciled_data = consensus_result.get("consensus");
+    let likelihoods = consensus_result.get("likelihoods");
+    println!("{:?}", reconciled_data);
+    println!("{:?}", likelihoods);
+    Ok(())
+}
+```
+
 ```bash cURL
 curl https://api.retab.com/v1/consensus/consensus \
   -H "Api-Key: $RETAB_API_KEY" \
@@ -190,6 +316,79 @@ curl https://api.retab.com/v1/consensus/consensus \
   ],
   "alignment": null
 }
+```
+
+```csharp C#
+// The .NET SDK does not yet model the consensus API. Call /v1/consensus/consensus directly.
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+
+var results = new List<Dictionary<string, object>>
+{
+    new() { ["name"] = "Science Fair", ["date"] = "2023-06-15", ["participants"] = new[] { "Alice", "Bob" } },
+    new() { ["name"] = "Science Fair", ["date"] = "2023-06-15", ["participants"] = new[] { "Alice", "Bob", "Charlie" } },
+    new() { ["name"] = "Science Exhibition", ["date"] = "2023-06-15", ["participants"] = new[] { "Alice", "Bob" } },
+};
+
+var schema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["name"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["date"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["participants"] = new Dictionary<string, object>
+        {
+            ["type"] = "array",
+            ["items"] = new Dictionary<string, object> { ["type"] = "string" },
+        },
+    },
+    ["required"] = new List<string> { "name", "date", "participants" },
+};
+
+using var http = new HttpClient();
+http.DefaultRequestHeaders.Add("Api-Key", apiKey);
+
+var payload = JsonConvert.SerializeObject(new Dictionary<string, object>
+{
+    ["inputs"] = results,
+    ["reference_schema"] = schema,
+    ["mode"] = "direct",
+});
+
+var response = await http.PostAsync(
+    "https://api.retab.com/v1/consensus/consensus",
+    new StringContent(payload, Encoding.UTF8, "application/json")
+);
+response.EnsureSuccessStatusCode();
+
+var consensusResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(
+    await response.Content.ReadAsStringAsync()
+)!;
+
+var reconciledData = consensusResult["consensus"];
+var likelihoods = consensusResult["likelihoods"];
+```
+
+```typescript TypeScript
+const response = await fetch("https://api.retab.com/v1/consensus/consensus", {
+  method: "POST",
+  headers: {
+    "Api-Key": process.env.RETAB_API_KEY!,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({}),
+});
+
+const result = await response.json();
+console.log(result);
 ```
 
 </CodeGroup>

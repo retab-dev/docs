@@ -161,7 +161,7 @@ block is uncertain; tests then lock in the behaviors you decide are correct.
 ## Using the SDK
 
 The dashboard flow above maps onto a small set of SDK calls. The same calls back
-the [MCP tool surface](/overview/MCP), so anything you can do interactively or
+the [MCP tool surface](/workflows/MCP), so anything you can do interactively or
 through an agent you can do programmatically.
 
 ### Create an experiment
@@ -188,21 +188,15 @@ experiment = client.workflows.experiments.create(
 )
 ```
 
-```javascript Node
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const experiment = await client.workflows.experiments.create({
-  workflowId: "wf_abc123",
-  blockId: "extract-invoice",
-  name: "Q1 invoices",
-  documentCaptures: [
-    { workflow_run_id: "wfrun_1" },
-    { workflow_run_id: "wfrun_2", step_id: "for_each-0" },
-  ],
-  nConsensus: 5,
-});
+const experiment = await client.workflows.experiments.create("wf_abc123", "extract-invoice", [
+    { workflowRunId: "wfrun_1" },
+    { workflowRunId: "wfrun_2", stepId: "for_each-0" },
+  ], undefined, 5, "Q1 invoices");
 ```
 
 ```go Go
@@ -241,6 +235,103 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+experiment = client.workflow_experiments.create(
+  workflow_id: 'wf_abc123',
+  block_id: 'extract-invoice',
+  name: 'Q1 invoices',
+  document_captures: [
+    { workflow_run_id: 'wfrun_1' },
+    { workflow_run_id: 'wfrun_2', step_id: 'for_each-0' },
+  ],
+  n_consensus: 5,
+)
+
+puts experiment.id
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\ExperimentDocumentCaptureRequest;
+use Retab\Resource\NConsensusValue;
+
+$client = new Client();
+
+$experiment = $client->workflowExperiments()->create(
+    workflowId: 'wf_abc123',
+    blockId: 'extract-invoice',
+    name: 'Q1 invoices',
+    documentCaptures: [
+        new ExperimentDocumentCaptureRequest(workflowRunId: 'wfrun_1'),
+        new ExperimentDocumentCaptureRequest(workflowRunId: 'wfrun_2', stepId: 'for_each-0'),
+    ],
+    nConsensus: NConsensusValue::Value5,
+);
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var experiment = await client.WorkflowExperiments.CreateAsync(
+    client.ApiKey,
+    new WorkflowExperimentsCreateOptions
+    {
+        WorkflowId = "wf_abc123",
+        BlockId = "extract-invoice",
+        Name = "Q1 invoices",
+        DocumentCaptures = new List<ExperimentDocumentCaptureRequest>
+        {
+            new ExperimentDocumentCaptureRequest { WorkflowRunId = "wfrun_1" },
+            new ExperimentDocumentCaptureRequest { WorkflowRunId = "wfrun_2", StepId = "for_each-0" },
+        },
+        // n_consensus accepts 3, 5, or 7
+        NConsensus = (CreateExperimentRequestNConsensus)5,
+    }
+);
+
+Console.WriteLine(experiment.Id);
+```
+
+```rust Rust
+use retab::{
+    enums::CreateExperimentRequestNConsensus,
+    models::{CreateExperimentRequest, ExperimentDocumentCaptureRequest},
+    resources::workflow_experiments,
+    Retab,
+};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let mut request = CreateExperimentRequest::new("wf_abc123");
+request.block_id = Some("extract-invoice".to_string());
+request.name = Some("Q1 invoices".to_string());
+request.document_captures = Some(vec![
+    ExperimentDocumentCaptureRequest::new("wfrun_1"),
+    ExperimentDocumentCaptureRequest {
+        workflow_run_id: "wfrun_2".to_string(),
+        step_id: Some("for_each-0".to_string()),
+    },
+]);
+request.n_consensus = Some(CreateExperimentRequestNConsensus::Value5);
+
+let experiment = client
+    .workflow_experiments()
+    .create(workflow_experiments::CreateParams::new(request))
+    .await?;
+println!("{}", experiment.id);
+```
+
 </CodeGroup>
 
 Creating an experiment does NOT trigger a run — the document set is registered
@@ -261,11 +352,8 @@ run = client.workflows.experiments.runs.create(
 print(run.id, run.lifecycle.status)
 ```
 
-```javascript Node
-const run = await client.workflows.experiments.runs.create({
-  workflowId: "wf_abc123",
-  experimentId: experiment.id,
-});
+```typescript TypeScript
+const run = await client.workflows.experiments.runs.create(experiment.id, "wf_abc123");
 
 console.log(run.id, run.lifecycle.status);
 ```
@@ -300,6 +388,57 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+run = client.experiment_runs.create(experiment_id: experiment.id)
+
+puts "#{run.id} #{run.lifecycle.status}"
+```
+
+```php PHP
+<?php
+$run = $client->experimentRuns()->create(
+    experimentId: $experiment->id,
+    workflowId: 'wf_abc123',
+);
+
+echo $run->id . ' ' . $run->lifecycle->status . PHP_EOL;
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var run = await client.ExperimentRuns.CreateAsync(
+    client.ApiKey,
+    new ExperimentRunsCreateOptions
+    {
+        ExperimentId = experiment.Id,
+        WorkflowId = "wf_abc123",
+    }
+);
+
+Console.WriteLine($"{run.Id} {run.Lifecycle.Status}");
+```
+
+```rust Rust
+use retab::{models::CreateExperimentRunRequest, resources::experiment_runs, Retab};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let mut request = CreateExperimentRunRequest::new(&experiment.id);
+request.workflow_id = Some("wf_abc123".to_string());
+let run = client
+    .experiment_runs()
+    .create(experiment_runs::CreateParams::new(request))
+    .await?;
+
+println!("{} {:?}", run.id, run.lifecycle);
+```
+
 </CodeGroup>
 
 Runs use the experiment's stored `n_consensus` and document set.
@@ -324,17 +463,15 @@ result = client.workflows.experiments.runs.results.get(
 print(result.artifact)
 ```
 
-```javascript Node
-const currentRun = await client.workflows.experiments.runs.get({
-  runId: run.id,
-});
+```typescript TypeScript
+const currentRun = await client.workflows.experiments.runs.get(run.id);
 console.log(currentRun.id, currentRun.lifecycle.status);
 
 const results = await client.workflows.experiments.runs.results.list({
   runId: run.id,
 });
 for (const result of results.data) {
-  console.log(result.document_id, result.lifecycle.status);
+  console.log(result.documentId, result.lifecycle.status);
 }
 
 const result = await client.workflows.experiments.runs.results.get({
@@ -384,6 +521,78 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+run = client.experiment_runs.get(run_id: run.id)
+
+results = client.experiment_run_results.list(run_id: run.id)
+results.data.each do |result|
+  puts "#{result.document_id} #{result.lifecycle.status}"
+end
+
+result = client.experiment_run_results.get(
+  run_id: run.id,
+  document_id: 'expdoc_xyz',
+)
+puts result.artifact
+```
+
+```php PHP
+<?php
+$run = $client->experimentRuns()->get($run->id);
+
+$results = $client->experimentRunResults()->list(runId: $run->id);
+foreach ($results->data as $result) {
+    echo $result->documentId . ' ' . ($result->lifecycle->status ?? '') . PHP_EOL;
+}
+
+$result = $client->experimentRunResults()->get('expdoc_xyz');
+print_r($result->artifact);
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var currentRun = await client.ExperimentRuns.GetAsync(run.Id, client.ApiKey);
+Console.WriteLine($"{currentRun.Id} {currentRun.Lifecycle.Status}");
+
+var results = await client.ExperimentRunResults.ListAsync(
+    client.ApiKey,
+    new ExperimentRunResultsListOptions { RunId = run.Id }
+);
+await foreach (var item in results)
+{
+    Console.WriteLine($"{item.DocumentId} {item.Lifecycle.Status}");
+}
+
+var result = await client.ExperimentRunResults.GetAsync("expdoc_xyz", client.ApiKey);
+Console.WriteLine(result.Artifact);
+```
+
+```rust Rust
+use retab::{resources::{experiment_run_results, experiment_runs}, Retab};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let current_run = client.experiment_runs().get(&run.id).await?;
+println!("{} {:?}", current_run.id, current_run.lifecycle);
+
+let results = client
+    .experiment_run_results()
+    .list(experiment_run_results::ListParams::new(&run.id))
+    .await?;
+for result in results.data {
+    println!("{} {:?}", result.document_id, result.lifecycle);
+}
+
+let result = client.experiment_run_results().get("expdoc_xyz").await?;
+println!("{:#?}", result.artifact);
+```
+
 </CodeGroup>
 
 ### Read metrics
@@ -422,7 +631,7 @@ votes = client.workflows.experiments.runs.metrics.get(
 )
 ```
 
-```javascript Node
+```typescript TypeScript
 const summary = await client.workflows.experiments.runs.metrics.get({
   runId: run.id,
   view: "summary",
@@ -502,6 +711,122 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+summary = client.experiment_run_metrics.get(
+  run_id: run.id,
+  view: 'summary',
+)
+
+# A weak field surfaces in summary.aggregate.likelihoods - drill in
+target_view = client.experiment_run_metrics.get(
+  run_id: run.id,
+  view: 'by_target',
+  target_path: 'line_items.*.unit_price',
+)
+
+# To see what each voter said for one document/target cell
+votes = client.experiment_run_metrics.get(
+  run_id: run.id,
+  view: 'votes',
+  document_id: 'expdoc_xyz',
+  target_path: 'line_items.*.unit_price',
+)
+```
+
+```php PHP
+<?php
+use Retab\Resource\ExperimentRunMetricsView;
+
+$summary = $client->experimentRunMetrics()->get(
+    runId: $run->id,
+    view: ExperimentRunMetricsView::Summary,
+);
+
+// A weak field surfaces in summary.aggregate.likelihoods - drill in
+$targetView = $client->experimentRunMetrics()->get(
+    runId: $run->id,
+    view: ExperimentRunMetricsView::ByTarget,
+    targetPath: 'line_items.*.unit_price',
+);
+
+// To see what each voter said for one document/target cell
+$votes = $client->experimentRunMetrics()->get(
+    runId: $run->id,
+    view: ExperimentRunMetricsView::Votes,
+    documentId: 'expdoc_xyz',
+    targetPath: 'line_items.*.unit_price',
+);
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var summary = await client.ExperimentRunMetrics.GetAsync(
+    client.ApiKey,
+    new ExperimentRunMetricsGetOptions
+    {
+        RunId = run.Id,
+        View = ExperimentRunMetricsView.Summary,
+    }
+);
+
+// A weak field surfaces in summary.aggregate.likelihoods - drill in
+var targetView = await client.ExperimentRunMetrics.GetAsync(
+    client.ApiKey,
+    new ExperimentRunMetricsGetOptions
+    {
+        RunId = run.Id,
+        View = ExperimentRunMetricsView.ByTarget,
+        TargetPath = "line_items.*.unit_price",
+    }
+);
+
+// To see what each voter said for one document/target cell
+var votes = await client.ExperimentRunMetrics.GetAsync(
+    client.ApiKey,
+    new ExperimentRunMetricsGetOptions
+    {
+        RunId = run.Id,
+        View = ExperimentRunMetricsView.Votes,
+        DocumentId = "expdoc_xyz",
+        TargetPath = "line_items.*.unit_price",
+    }
+);
+```
+
+```rust Rust
+use retab::{
+    enums::ExperimentRunMetricsView,
+    resources::experiment_run_metrics,
+    Retab,
+};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let summary = client
+    .experiment_run_metrics()
+    .get(experiment_run_metrics::GetParams::new(&run.id))
+    .await?;
+
+let mut target_params = experiment_run_metrics::GetParams::new(&run.id);
+target_params.view = Some(ExperimentRunMetricsView::ByTarget);
+target_params.target_path = Some("line_items.*.unit_price".to_string());
+let target_view = client.experiment_run_metrics().get(target_params).await?;
+
+let mut votes_params = experiment_run_metrics::GetParams::new(&run.id);
+votes_params.view = Some(ExperimentRunMetricsView::Votes);
+votes_params.document_id = Some("expdoc_xyz".to_string());
+votes_params.target_path = Some("line_items.*.unit_price".to_string());
+let votes = client.experiment_run_metrics().get(votes_params).await?;
+
+println!("{summary:#?} {target_view:#?} {votes:#?}");
+```
+
 </CodeGroup>
 
 If a run is stale relative to the current block config or document set,
@@ -523,10 +848,8 @@ client.workflows.experiments.delete(
 )
 ```
 
-```javascript Node
-await client.workflows.experiments.update(experiment.id, {
-  nConsensus: 7,
-});
+```typescript TypeScript
+await client.workflows.experiments.update(experiment.id, undefined, undefined, 7);
 
 await client.workflows.experiments.delete(experiment.id);
 ```
@@ -564,6 +887,72 @@ func main() {
 		log.Fatal(err)
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# Change the document set or n_consensus - invalidates existing metrics
+client.workflow_experiments.update(
+  experiment_id: experiment.id,
+  n_consensus: 7,
+)
+
+client.workflow_experiments.delete(experiment_id: experiment.id)
+```
+
+```php PHP
+<?php
+use Retab\Resource\NConsensusValue;
+
+// Change n_consensus — invalidates existing metrics
+$client->workflowExperiments()->update(
+    experimentId: $experiment->id,
+    nConsensus: NConsensusValue::Value7,
+);
+
+$client->workflowExperiments()->delete($experiment->id);
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+// Change n_consensus — invalidates existing metrics
+await client.WorkflowExperiments.UpdateAsync(
+    experiment.Id,
+    client.ApiKey,
+    new WorkflowExperimentsUpdateOptions
+    {
+        NConsensus = (CreateExperimentRequestNConsensus)7,
+    }
+);
+
+await client.WorkflowExperiments.DeleteAsync(experiment.Id, client.ApiKey);
+```
+
+```rust Rust
+use retab::{
+    enums::UpdateExperimentRequestNConsensus,
+    models::UpdateExperimentRequest,
+    resources::workflow_experiments,
+    Retab,
+};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let mut request = UpdateExperimentRequest::default();
+request.n_consensus = Some(UpdateExperimentRequestNConsensus::Value7);
+client
+    .workflow_experiments()
+    .update(
+        &experiment.id,
+        workflow_experiments::UpdateParams::new(request),
+    )
+    .await?;
+client.workflow_experiments().delete(&experiment.id).await?;
 ```
 
 </CodeGroup>

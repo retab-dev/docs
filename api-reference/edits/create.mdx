@@ -30,16 +30,12 @@ with open("filled_form.pdf", "wb") as f:
     f.write(base64.b64decode(edit.output.filled_document.url.split(",", 1)[1]))
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const edit = await client.edits.create({
-  instructions: "Name: John Doe, Date of Birth: 1990-01-15",
-  document: "form.pdf",
-  model: "retab-small",
-});
+const edit = await client.edits.create("Name: John Doe, Date of Birth: 1990-01-15", "form.pdf", undefined, "retab-small");
 
 console.log(`Edit ID: ${edit.id}`);
 ```
@@ -79,6 +75,72 @@ func main() {
 
 	fmt.Printf("Edit ID: %v\n", (*edit)["id"])
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+edit = client.edits.create(
+  instructions: 'Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street',
+  document: 'form.pdf',
+  model: 'retab-small',
+)
+
+puts "Edit ID: #{edit.id}"
+edit.output.form_data.each do |field|
+  puts "#{field.key} = #{field.value}"
+end
+```
+
+```rust rust
+use retab::models::ClassificationRequestDocumentOneOf;
+use retab::resources::edits::CreateParams;
+use retab::{MimeData, Retab};
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let document: MimeData = PathBuf::from("form.pdf").into();
+    let mut params = CreateParams::new("Name: John Doe, Date of Birth: 1990-01-15");
+    params.body.document = Some(ClassificationRequestDocumentOneOf::MimeData(Box::new(document)));
+    params.body.model = Some("retab-small".into());
+
+    let edit = client.edits().create(params).await?;
+
+    println!("Edit ID: {}", edit.id);
+    for field in &edit.output.form_data {
+        println!("{} = {}", field.key, field.value.as_deref().unwrap_or(""));
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->edits()->create(
+    instructions: 'value',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Edits.CreateAsync(apiKey, new EditsCreateOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

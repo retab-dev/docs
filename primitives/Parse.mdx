@@ -132,47 +132,41 @@ from chonkie import SentenceChunker
 client = Retab()
 
 parse = client.parses.create(
-document="technical-manual.pdf",
-model="retab-small",
-table_parsing_format="markdown",
-image_resolution_dpi=192,
+    document="technical-manual.pdf",
+    model="retab-small",
+    table_parsing_format="markdown",
+    image_resolution_dpi=192,
 )
 
 chunker = SentenceChunker(
-tokenizer_or_token_counter="gpt2",
-chunk_size=512,
-chunk_overlap=128,
-min_sentences_per_chunk=1,
+    tokenizer_or_token_counter="gpt2",
+    chunk_size=512,
+    chunk_overlap=128,
+    min_sentences_per_chunk=1,
 )
 
-all*chunks = []
+all_chunks = []
 for page_num, page_text in enumerate(parse.output.pages, start=1):
-chunks = list(chunker(page_text))
-for chunk_idx, chunk in enumerate(chunks):
-all_chunks.append(
-{
-"page": page_num,
-"chunk_id": f"page*{page*num}\_chunk*{chunk_idx}",
-"text": str(chunk),
-"document": parse.file.filename,
-}
-)
+    chunks = list(chunker(page_text))
+    for chunk_idx, chunk in enumerate(chunks):
+        all_chunks.append(
+            {
+                "page": page_num,
+                "chunk_id": f"page_{page_num}_chunk_{chunk_idx}",
+                "text": str(chunk),
+                "document": parse.file.filename,
+            }
+        )
 
-print(f"Created {len(all_chunks)} chunks from {parse.usage.page_count} pages")
+print(f"Created {len(all_chunks)} chunks ({parse.usage.credits if parse.usage else 0} credits used)")
+```
 
-````
-
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const parse = await client.parses.create({
-  document: 'technical-manual.pdf',
-  model: 'retab-small',
-  table_parsing_format: 'markdown',
-  image_resolution_dpi: 192,
-});
+const parse = await client.parses.create('technical-manual.pdf', 'retab-small', 'markdown', 192);
 
 const allChunks = [];
 parse.output.pages.forEach((pageText, index) => {
@@ -189,7 +183,7 @@ parse.output.pages.forEach((pageText, index) => {
   }
 });
 
-console.log(`Created ${allChunks.length} chunks from ${parse.usage.page_count} pages`);
+console.log(`Created ${allChunks.length} chunks (${parse.usage?.credits ?? 0} credits used)`);
 console.log(parse.output.text);
 ````
 
@@ -270,8 +264,38 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+parse = client.parses.create(
+  document: 'technical-manual.pdf',
+  model: 'retab-small',
+  table_parsing_format: 'markdown',
+  image_resolution_dpi: 192,
+)
+
+all_chunks = []
+parse.output.pages.each_with_index do |page_text, index|
+  page_num = index + 1
+  sentences = page_text.split(/[.!?]+/).map(&:strip).reject(&:empty?)
+  sentences.each_slice(3).with_index do |window, chunk_idx|
+    all_chunks << {
+      page: page_num,
+      chunk_id: "page_#{page_num}_chunk_#{chunk_idx}",
+      text: window.join('. '),
+      document: parse.file.filename,
+    }
+  end
+end
+
+puts "Created #{all_chunks.length} chunks from #{parse.output.pages.length} pages"
+puts parse.output.text
+```
+
 ```typescript TypeScript
-import { Retab, type ParseRequest, type Parse } from "@retab/node";
+import { Retab, type Parse } from "@retab/node";
 
 interface ChunkData {
   page: number;
@@ -280,16 +304,9 @@ interface ChunkData {
   document: string;
 }
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const parseRequest: ParseRequest = {
-  document: "technical-manual.pdf",
-  model: "retab-small",
-  table_parsing_format: "markdown",
-  image_resolution_dpi: 192,
-};
-
-const parse: Parse = await client.parses.create(parseRequest);
+const parse: Parse = await client.parses.create("technical-manual.pdf", "retab-small", "markdown", 192);
 
 const allChunks: ChunkData[] = [];
 parse.output.pages.forEach((pageText, index) => {
@@ -307,9 +324,155 @@ parse.output.pages.forEach((pageText, index) => {
 });
 
 console.log(
-  `Created ${allChunks.length} chunks from ${parse.usage.page_count} pages`,
+  `Created ${allChunks.length} chunks (${parse.usage?.credits ?? 0} credits used)`,
 );
 console.log(parse.output.text);
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\TableParsingFormat;
+
+$client = new Client();
+
+$parse = $client->parses()->create(
+    document: 'technical-manual.pdf',
+    model: 'retab-small',
+    tableParsingFormat: TableParsingFormat::Markdown,
+    imageResolutionDpi: 192,
+);
+
+$allChunks = [];
+foreach ($parse->output->pages as $index => $pageText) {
+    $pageNum = $index + 1;
+    $sentences = array_values(array_filter(
+        array_map('trim', preg_split('/[.!?]+/', $pageText) ?: []),
+        fn ($s) => $s !== '',
+    ));
+
+    for ($i = 0; $i < count($sentences); $i += 3) {
+        $allChunks[] = [
+            'page' => $pageNum,
+            'chunk_id' => "page_{$pageNum}_chunk_" . intdiv($i, 3),
+            'text' => implode('. ', array_slice($sentences, $i, 3)),
+            'document' => $parse->file->filename,
+        ];
+    }
+}
+
+printf("Created %d chunks from %d pages\n", count($allChunks), $parse->usage?->credits ?? 0);
+echo $parse->output->text . PHP_EOL;
+```
+
+```rust Rust
+use retab::enums::ParseRequestTableParsingFormat;
+use retab::resources::parses::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+#[derive(Debug)]
+struct ChunkData {
+    page: usize,
+    chunk_id: String,
+    text: String,
+    document: String,
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut params = CreateParams::new(PathBuf::from("technical-manual.pdf"));
+    params.body.model = Some("retab-small".into());
+    params.body.table_parsing_format = Some(ParseRequestTableParsingFormat::Markdown);
+    params.body.image_resolution_dpi = Some(192);
+
+    let parse = client.parses().create(params).await?;
+
+    let mut all_chunks: Vec<ChunkData> = Vec::new();
+    for (index, page_text) in parse.output.pages.iter().enumerate() {
+        let page_num = index + 1;
+        let sentences: Vec<&str> = page_text
+            .split(|c: char| c == '.' || c == '!' || c == '?')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        for (chunk_idx, window) in sentences.chunks(3).enumerate() {
+            all_chunks.push(ChunkData {
+                page: page_num,
+                chunk_id: format!("page_{page_num}_chunk_{chunk_idx}"),
+                text: window.join(". "),
+                document: parse.file.filename.clone(),
+            });
+        }
+    }
+
+    let credits = parse
+        .usage
+        .as_ref()
+        .map(|u| u.credits)
+        .unwrap_or_default();
+    println!(
+        "Created {} chunks from {} pages worth of content (credits: {})",
+        all_chunks.len(),
+        parse.output.pages.len(),
+        credits
+    );
+    println!("{}", parse.output.text);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var parse = await client.Parses.CreateAsync(
+    client.ApiKey,
+    new ParsesCreateOptions
+    {
+        Document = new FileInfo("technical-manual.pdf"),
+        Model = "retab-small",
+        TableParsingFormat = ParseRequestTableParsingFormat.Markdown,
+        ImageResolutionDpi = 192,
+    }
+);
+
+var allChunks = new List<Dictionary<string, object>>();
+for (int index = 0; index < parse.Output.Pages.Count; index++)
+{
+    var pageText = parse.Output.Pages[index];
+    var pageNum = index + 1;
+    var sentences = pageText
+        .Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries)
+        .Select(s => s.Trim())
+        .Where(s => s.Length > 0)
+        .ToList();
+
+    for (int i = 0; i < sentences.Count; i += 3)
+    {
+        var slice = sentences.Skip(i).Take(3);
+        allChunks.Add(new Dictionary<string, object>
+        {
+            ["page"] = pageNum,
+            ["chunk_id"] = $"page_{pageNum}_chunk_{i / 3}",
+            ["text"] = string.Join(". ", slice),
+            ["document"] = parse.File.Filename,
+        });
+    }
+}
+
+Console.WriteLine($"Created {allChunks.Count} chunks from {parse.Output.Pages.Count} pages");
+Console.WriteLine(parse.Output.Text);
 ```
 
 </CodeGroup>

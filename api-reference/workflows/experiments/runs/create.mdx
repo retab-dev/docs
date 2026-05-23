@@ -40,15 +40,12 @@ metrics = client.workflows.experiments.metrics.get(
 )
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const run = await client.workflows.experiments.runs.create({
-  workflowId: "wf_abc123",
-  experimentId: "exp_abc",
-});
+const run = await client.workflows.experiments.runs.create("exp_abc", "wf_abc123");
 console.log(run.id, run.lifecycle.status);
 
 // Wait for the run to complete, then read metrics.
@@ -91,6 +88,66 @@ func main() {
 	}
 	_ = metrics
 }
+```
+
+```rust rust
+use retab::enums::ExperimentRunMetricsView;
+use retab::models::CreateExperimentRunRequest;
+use retab::resources::experiment_run_metrics::GetParams as MetricsGetParams;
+use retab::resources::experiment_runs::CreateParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut body = CreateExperimentRunRequest::new("exp_abc");
+    body.workflow_id = Some("wf_abc123".into());
+    let run = client
+        .experiment_runs()
+        .create(CreateParams::new(body))
+        .await?;
+    println!("{} {:?}", run.id, run.lifecycle);
+
+    // Wait for the run to complete, then read metrics.
+    let mut params = MetricsGetParams::new(&run.id);
+    params.view = Some(ExperimentRunMetricsView::Summary);
+    let _metrics = client.experiment_run_metrics().get(params).await?;
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->experimentRuns()->create(
+    experimentId: 'exp_abc123',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.ExperimentRuns.CreateAsync(apiKey, new ExperimentRunsCreateOptions());
+Console.WriteLine(result);
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+result = client.experiment_runs.create
+puts result
 ```
 
 ```bash curl

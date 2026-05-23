@@ -25,10 +25,10 @@ classifications = client.classifications.list(
 )
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const classifications = await client.classifications.list({
   limit: 20,
@@ -67,6 +67,82 @@ func main() {
 		fmt.Printf("%v: %v\n", c["id"], output["category"])
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+require 'date'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+classifications = client.classifications.list(limit: 20, order: 'desc')
+classifications.data.each do |c|
+  puts "#{c.id}: #{c.output.category}"
+end
+
+# Filter by date range
+classifications = client.classifications.list(
+  from_date: DateTime.new(2024, 1, 1),
+  to_date: DateTime.new(2024, 12, 31),
+  limit: 50,
+)
+```
+
+```rust rust
+use retab::enums::ClassificationsOrder;
+use retab::resources::classifications::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let classifications = client
+        .classifications()
+        .list(ListParams {
+            limit: Some(20),
+            order: Some(ClassificationsOrder::Desc),
+            ..Default::default()
+        })
+        .await?;
+    for c in &classifications.data {
+        println!("{}: {}", c.id, c.output.category);
+    }
+
+    // Filter by date range
+    let _ranged = client
+        .classifications()
+        .list(ListParams {
+            from_date: Some("2024-01-01".into()),
+            to_date: Some("2024-12-31".into()),
+            limit: Some(50),
+            ..Default::default()
+        })
+        .await?;
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->classifications()->list();
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Classifications.ListAsync(apiKey, new ClassificationsListOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

@@ -33,24 +33,24 @@ extractions = client.extractions.list(
 ```typescript typescript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // List recent extractions
-const extractions = await client.extractions.list({
+const recent = await client.extractions.list({
   limit: 10,
   order: "desc",
 });
 
 // Filter by date range
-const extractions = await client.extractions.list({
-  from_date: new Date("2024-01-01"),
-  to_date: new Date("2024-12-31"),
+const byDate = await client.extractions.list({
+  fromDate: new Date("2024-01-01").toISOString(),
+  toDate: new Date("2024-12-31").toISOString(),
   limit: 50,
 });
 
 // Filter by metadata
-const extractions = await client.extractions.list({
-  metadata: { source: "docs" },
+const byMetadata = await client.extractions.list({
+  metadata: JSON.stringify({ source: "docs" }),
 });
 ```
 
@@ -107,6 +107,99 @@ func main() {
 	}
 	fmt.Println(extractions)
 }
+```
+
+```ruby Ruby
+require 'retab'
+require 'date'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+# List recent extractions
+extractions = client.extractions.list(
+  limit: 10,
+  order: 'desc',
+)
+
+# Filter by date range
+extractions = client.extractions.list(
+  from_date: DateTime.new(2024, 1, 1),
+  to_date: DateTime.new(2024, 12, 31),
+  limit: 50,
+)
+
+# Filter by metadata
+extractions = client.extractions.list(
+  metadata: { 'source' => 'docs' },
+)
+
+extractions.data.each do |extraction|
+  puts extraction.id
+end
+```
+
+```rust rust
+use retab::enums::ExtractionsOrder;
+use retab::resources::extractions::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // List recent extractions
+    let _extractions = client
+        .extractions()
+        .list(ListParams {
+            limit: Some(10),
+            order: Some(ExtractionsOrder::Desc),
+            ..Default::default()
+        })
+        .await?;
+
+    // Filter by date range
+    let _ranged = client
+        .extractions()
+        .list(ListParams {
+            from_date: Some("2024-01-01".into()),
+            to_date: Some("2024-12-31".into()),
+            limit: Some(50),
+            ..Default::default()
+        })
+        .await?;
+
+    // Filter by metadata
+    let _by_metadata = client
+        .extractions()
+        .list(ListParams {
+            metadata: Some(r#"{"source":"docs"}"#.into()),
+            ..Default::default()
+        })
+        .await?;
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->extractions()->list();
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.Extractions.ListAsync(apiKey, new ExtractionsListOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

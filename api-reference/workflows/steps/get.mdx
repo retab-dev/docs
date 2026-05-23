@@ -25,15 +25,15 @@ if step.handle_outputs:
     print(payload.data)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const step = await client.workflows.steps.get("step_extract_1");
 
 console.log(`Step status: ${step.lifecycle.status}`);
-const payload = step.handle_outputs["output-json-0"];
+const payload = step.handleOutputs["output-json-0"];
 if (payload?.type === "json") {
   console.log(payload.data);
 }
@@ -69,6 +69,70 @@ func main() {
 		fmt.Println(payload.Data)
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+step = client.workflow_steps.get(step_id: 'step_extract_1')
+
+puts step.lifecycle.status
+puts step.handle_outputs
+
+if step.handle_outputs
+  payload = step.handle_outputs['output-json-0']
+  puts payload.type
+  puts payload.data
+end
+```
+
+```rust rust
+use retab::resources::workflow_steps::GetParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let step = client
+        .workflow_steps()
+        .get("step_extract_1", GetParams::default())
+        .await?;
+
+    println!("{:?}", step.lifecycle);
+    if let Some(outputs) = &step.handle_outputs {
+        if let Some(payload) = outputs.get("output-json-0") {
+            println!("{:?}", payload);
+        }
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowSteps()->get(
+    stepId: 'step_abc123',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowSteps.GetAsync("step_abc123", apiKey, new WorkflowStepsGetOptions());
+Console.WriteLine(result);
 ```
 
 ```bash curl

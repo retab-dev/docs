@@ -24,10 +24,10 @@ for item in queue.data:
     print(item.id, item.workflow_run_id, item.block_id)
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const queue = await client.workflows.reviews.list({
   workflowId: "wf_1",
@@ -36,7 +36,7 @@ const queue = await client.workflows.reviews.list({
 });
 
 for (const item of queue.data) {
-  console.log(item.id, item.workflow_run_id, item.block_id);
+  console.log(item.id, item.workflowRunId, item.blockId);
 }
 ```
 
@@ -72,6 +72,62 @@ func main() {
 		fmt.Println(item.ID, item.WorkflowRunID, item.BlockID)
 	}
 }
+```
+
+```rust rust
+use retab::enums::ReviewDecisionStatus;
+use retab::resources::workflow_reviews::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let queue = client
+        .workflow_reviews()
+        .list(ListParams {
+            workflow_id: Some("wf_1".into()),
+            decision_status: Some(ReviewDecisionStatus::Pending),
+            limit: Some(50),
+            ..Default::default()
+        })
+        .await?;
+    for item in &queue.data {
+        println!("{} {} {}", item.id, item.workflow_run_id, item.block_id);
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowReviews()->list();
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowReviews.ListAsync(apiKey, new WorkflowReviewsListOptions());
+Console.WriteLine(result);
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+result = client.workflow_reviews.list
+puts result
 ```
 
 ```bash curl

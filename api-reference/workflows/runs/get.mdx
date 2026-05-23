@@ -34,26 +34,26 @@ if run.lifecycle.status == "completed":
             print(f"{step.block_id}: {step.handle_outputs}")
 ```
 
-```javascript javascript
+```typescript TypeScript
 import { Retab } from "@retab/node";
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const run = await client.workflows.runs.get("run_abc123xyz");
 
 console.log(`Lifecycle: ${run.lifecycle.status}`);
 if (run.lifecycle.status === "completed") {
-  if (run.timing.started_at && run.timing.completed_at) {
+  if (run.timing.startedAt && run.timing.completedAt) {
     const durationMs =
-      new Date(run.timing.completed_at).getTime() -
-      new Date(run.timing.started_at).getTime();
+      new Date(run.timing.completedAt).getTime() -
+      new Date(run.timing.startedAt).getTime();
     console.log(`Duration: ${durationMs}ms`);
   }
-  const stepSummaries = await client.workflows.steps.list(run.id);
+  const stepSummaries = await client.workflows.steps.list({ runId: run.id });
   for (const stepSummary of stepSummaries.data) {
-    const step = await client.workflows.steps.get(stepSummary.step_id);
-    if (Object.keys(step.handle_outputs).length > 0) {
-      console.log(`${step.block_id}:`, step.handle_outputs);
+    const step = await client.workflows.steps.get(stepSummary.stepId);
+    if (Object.keys(step.handleOutputs).length > 0) {
+      console.log(`${step.blockId}:`, step.handleOutputs);
     }
   }
 }
@@ -100,6 +100,67 @@ func main() {
 		}
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+run = client.workflow_runs.get(run_id: 'run_abc123xyz')
+
+puts "Lifecycle: #{run.lifecycle.status}"
+if run.lifecycle.status == 'completed'
+  step_summaries = client.workflow_steps.list(run_id: run.id)
+  step_summaries.data.each do |summary|
+    step = client.workflow_steps.get(step_id: summary.step_id)
+    puts "#{step.block_id}: #{step.handle_outputs}" if step.handle_outputs && !step.handle_outputs.empty?
+  end
+end
+```
+
+```rust rust
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let run = client.workflow_runs().get("run_abc123xyz").await?;
+
+    println!("Lifecycle: {:?}", run.lifecycle);
+    if let Some(timing) = &run.timing {
+        println!(
+            "Started: {:?}, Completed: {:?}",
+            timing.started_at, timing.completed_at
+        );
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflowRuns()->get(
+    runId: 'run_abc123',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new Retab(apiKey);
+
+var result = await client.WorkflowRuns.GetAsync("run_abc123", apiKey);
+Console.WriteLine(result);
 ```
 
 ```bash curl

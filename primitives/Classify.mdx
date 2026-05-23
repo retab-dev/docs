@@ -121,42 +121,42 @@ from retab import Retab
 client = Retab()
 
 categories = [
-{"name": "invoice", "description": "Invoice documents with billing details, line items, totals, and payment terms"},
-{"name": "receipt", "description": "Payment receipts showing transaction confirmation and amounts paid"},
-{"name": "contract", "description": "Legal contracts with terms, conditions, and signature blocks"},
-{"name": "purchase_order", "description": "Purchase order documents with order details and shipping information"},
+    {"name": "invoice", "description": "Invoice documents with billing details, line items, totals, and payment terms"},
+    {"name": "receipt", "description": "Payment receipts showing transaction confirmation and amounts paid"},
+    {"name": "contract", "description": "Legal contracts with terms, conditions, and signature blocks"},
+    {"name": "purchase_order", "description": "Purchase order documents with order details and shipping information"},
 ]
 
 classification = client.classifications.create(
-document="incoming_document.pdf",
-model="retab-small",
-categories=categories,
+    document="incoming_document.pdf",
+    model="retab-small",
+    categories=categories,
 )
 
 print(f"Document classified as: {classification.output.category}")
 print(f"Reasoning: {classification.output.reasoning}")
 
 if classification.output.category == "invoice":
-invoice_schema = {...}
-extraction = client.extractions.create(
-document="incoming_document.pdf",
-model="retab-small",
-json_schema=invoice_schema,
-)
+    invoice_schema = {"type": "object"}
+    extraction = client.extractions.create(
+        document="incoming_document.pdf",
+        model="retab-small",
+        json_schema=invoice_schema,
+    )
 elif classification.output.category == "contract":
-contract_schema = {...}
-extraction = client.extractions.create(
-document="incoming_document.pdf",
-model="retab-small",
-json_schema=contract_schema,
-)
+    contract_schema = {"type": "object"}
+    extraction = client.extractions.create(
+        document="incoming_document.pdf",
+        model="retab-small",
+        json_schema=contract_schema,
+    )
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const categories = [
     { name: "invoice", description: "Invoice documents with billing details, line items, totals, and payment terms" },
@@ -165,29 +165,17 @@ const categories = [
     { name: "purchase_order", description: "Purchase order documents with order details and shipping information" },
 ];
 
-const classification = await client.classifications.create({
-    document: "incoming_document.pdf",
-    model: "retab-small",
-    categories,
-});
+const classification = await client.classifications.create("incoming_document.pdf", undefined, "retab-small");
 
 console.log(`Document classified as: ${classification.output.category}`);
 console.log(`Reasoning: ${classification.output.reasoning}`);
 
 if (classification.output.category === "invoice") {
-    const invoiceSchema = {...};
-    const extraction = await client.extractions.create({
-        document: "incoming_document.pdf",
-        model: "retab-small",
-        json_schema: invoiceSchema,
-    });
+    const invoiceSchema = {};
+    const extraction = await client.extractions.create("incoming_document.pdf", invoiceSchema, "retab-small");
 } else if (classification.output.category === "contract") {
-    const contractSchema = {...};
-    const extraction = await client.extractions.create({
-        document: "incoming_document.pdf",
-        model: "retab-small",
-        json_schema: contractSchema,
-    });
+    const contractSchema = {};
+    const extraction = await client.extractions.create("incoming_document.pdf", contractSchema, "retab-small");
 }
 ````
 
@@ -258,6 +246,45 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+categories = [
+  { name: 'invoice', description: 'Invoice documents with billing details, line items, totals, and payment terms' },
+  { name: 'receipt', description: 'Payment receipts showing transaction confirmation and amounts paid' },
+  { name: 'contract', description: 'Legal contracts with terms, conditions, and signature blocks' },
+  { name: 'purchase_order', description: 'Purchase order documents with order details and shipping information' },
+]
+
+classification = client.classifications.create(
+  document: 'incoming_document.pdf',
+  model: 'retab-small',
+  categories: categories,
+)
+
+puts "Document classified as: #{classification.output.category}"
+puts "Reasoning: #{classification.output.reasoning}"
+
+case classification.output.category
+when 'invoice'
+  invoice_schema = { 'type' => 'object' }
+  client.extractions.create(
+    document: 'incoming_document.pdf',
+    model: 'retab-small',
+    json_schema: invoice_schema,
+  )
+when 'contract'
+  contract_schema = { 'type' => 'object' }
+  client.extractions.create(
+    document: 'incoming_document.pdf',
+    model: 'retab-small',
+    json_schema: contract_schema,
+  )
+end
+```
+
 ```typescript TypeScript
 import { Retab } from "@retab/node";
 
@@ -266,7 +293,7 @@ interface Category {
   description: string;
 }
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const categories: Category[] = [
   {
@@ -290,11 +317,7 @@ const categories: Category[] = [
   },
 ];
 
-const classification = await client.classifications.create({
-  document: "incoming_document.pdf",
-  model: "retab-small",
-  categories,
-});
+const classification = await client.classifications.create("incoming_document.pdf", undefined, "retab-small");
 
 console.log(`Document classified as: ${classification.output.category}`);
 console.log(`Reasoning: ${classification.output.reasoning}`);
@@ -306,6 +329,165 @@ switch (classification.output.category) {
     break;
   default:
     break;
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\Category;
+
+$client = new Client();
+
+$categories = [
+    new Category(name: 'invoice', description: 'Invoice documents with billing details, line items, totals, and payment terms'),
+    new Category(name: 'receipt', description: 'Payment receipts showing transaction confirmation and amounts paid'),
+    new Category(name: 'contract', description: 'Legal contracts with terms, conditions, and signature blocks'),
+    new Category(name: 'purchase_order', description: 'Purchase order documents with order details and shipping information'),
+];
+
+$classification = $client->classifications()->create(
+    document: 'incoming_document.pdf',
+    categories: $categories,
+    model: 'retab-small',
+);
+
+echo "Document classified as: {$classification->output->category}" . PHP_EOL;
+echo "Reasoning: {$classification->output->reasoning}" . PHP_EOL;
+
+if ($classification->output->category === 'invoice') {
+    $invoiceSchema = ['type' => 'object'];
+    $extraction = $client->extractions()->create(
+        document: 'incoming_document.pdf',
+        jsonSchema: $invoiceSchema,
+        model: 'retab-small',
+    );
+} elseif ($classification->output->category === 'contract') {
+    $contractSchema = ['type' => 'object'];
+    $extraction = $client->extractions()->create(
+        document: 'incoming_document.pdf',
+        jsonSchema: $contractSchema,
+        model: 'retab-small',
+    );
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var categories = new List<Category>
+{
+    new Category { Name = "invoice",        Description = "Invoice documents with billing details, line items, totals, and payment terms" },
+    new Category { Name = "receipt",        Description = "Payment receipts showing transaction confirmation and amounts paid" },
+    new Category { Name = "contract",       Description = "Legal contracts with terms, conditions, and signature blocks" },
+    new Category { Name = "purchase_order", Description = "Purchase order documents with order details and shipping information" },
+};
+
+var classification = await client.Classifications.CreateAsync(
+    client.ApiKey,
+    new ClassificationsCreateOptions
+    {
+        Document = new FileInfo("incoming_document.pdf"),
+        Model = "retab-small",
+        Categories = categories,
+    }
+);
+
+Console.WriteLine($"Document classified as: {classification.Output.Category}");
+Console.WriteLine($"Reasoning: {classification.Output.Reasoning}");
+
+switch (classification.Output.Category)
+{
+    case "invoice":
+    {
+        var invoiceSchema = new Dictionary<string, object> { ["type"] = "object" };
+        var extraction = await client.Extractions.CreateAsync(
+            client.ApiKey,
+            new ExtractionsCreateOptions
+            {
+                Document = new FileInfo("incoming_document.pdf"),
+                Model = "retab-small",
+                JsonSchema = invoiceSchema,
+            }
+        );
+        Console.WriteLine(extraction.Id);
+        break;
+    }
+    case "contract":
+    {
+        var contractSchema = new Dictionary<string, object> { ["type"] = "object" };
+        var extraction = await client.Extractions.CreateAsync(
+            client.ApiKey,
+            new ExtractionsCreateOptions
+            {
+                Document = new FileInfo("incoming_document.pdf"),
+                Model = "retab-small",
+                JsonSchema = contractSchema,
+            }
+        );
+        Console.WriteLine(extraction.Id);
+        break;
+    }
+}
+```
+
+```rust Rust
+use retab::models::Category;
+use retab::resources::classifications::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let categories = vec![
+        Category {
+            name: "invoice".into(),
+            handle_key: None,
+            description: Some(
+                "Invoice documents with billing details, line items, totals, and payment terms".into(),
+            ),
+        },
+        Category {
+            name: "receipt".into(),
+            handle_key: None,
+            description: Some(
+                "Payment receipts showing transaction confirmation and amounts paid".into(),
+            ),
+        },
+        Category {
+            name: "contract".into(),
+            handle_key: None,
+            description: Some(
+                "Legal contracts with terms, conditions, and signature blocks".into(),
+            ),
+        },
+        Category {
+            name: "purchase_order".into(),
+            handle_key: None,
+            description: Some(
+                "Purchase order documents with order details and shipping information".into(),
+            ),
+        },
+    ];
+
+    let mut params = CreateParams::new(PathBuf::from("incoming_document.pdf"), categories);
+    params.body.model = Some("retab-small".into());
+
+    let classification = client.classifications().create(params).await?;
+
+    println!("Document classified as: {}", classification.output.category);
+    println!("Reasoning: {}", classification.output.reasoning);
+
+    Ok(())
 }
 ```
 
@@ -322,18 +504,18 @@ from retab import Retab
 client = Retab()
 
 categories = [
-{"name": "invoice", "description": "Invoice or billing documents requiring payment"},
-{"name": "quote", "description": "Price quotes or proposals from vendors"},
-{"name": "marketing", "description": "Marketing materials, brochures, or promotional content"},
-{"name": "other", "description": "Miscellaneous documents not fitting other categories"},
+    {"name": "invoice", "description": "Invoice or billing documents requiring payment"},
+    {"name": "quote", "description": "Price quotes or proposals from vendors"},
+    {"name": "marketing", "description": "Marketing materials, brochures, or promotional content"},
+    {"name": "other", "description": "Miscellaneous documents not fitting other categories"},
 ]
 
 for attachment in email_attachments:
-classification = client.classifications.create(
-document=attachment,
-model="retab-small",
-categories=categories,
-)
+    classification = client.classifications.create(
+        document=attachment,
+        model="retab-small",
+        categories=categories,
+    )
 
     if classification.output.category == "invoice":
         process_invoice(attachment)
@@ -347,10 +529,10 @@ categories=categories,
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const categories = [
     { name: "invoice", description: "Invoice or billing documents requiring payment" },
@@ -360,11 +542,7 @@ const categories = [
 ];
 
 for (const attachment of emailAttachments) {
-    const classification = await client.classifications.create({
-        document: attachment,
-        model: "retab-small",
-        categories,
-    });
+    const classification = await client.classifications.create(attachment, undefined, "retab-small");
 
     if (classification.output.category === "invoice") {
         await processInvoice(attachment);
@@ -446,6 +624,198 @@ func main() {
 		}
 		fmt.Printf("  Reason: %s...\n", preview)
 	}
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+categories = [
+  { name: 'invoice', description: 'Invoice or billing documents requiring payment' },
+  { name: 'quote', description: 'Price quotes or proposals from vendors' },
+  { name: 'marketing', description: 'Marketing materials, brochures, or promotional content' },
+  { name: 'other', description: 'Miscellaneous documents not fitting other categories' },
+]
+
+email_attachments.each do |attachment|
+  classification = client.classifications.create(
+    document: attachment,
+    model: 'retab-small',
+    categories: categories,
+  )
+
+  case classification.output.category
+  when 'invoice'
+    process_invoice(attachment)
+  when 'quote'
+    queue_for_review(attachment)
+  when 'marketing'
+    archive_document(attachment)
+  end
+
+  puts "#{attachment.name}: #{classification.output.category}"
+  puts "  Reason: #{classification.output.reasoning[0, 100]}..."
+end
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\Category;
+
+$client = new Client();
+
+$categories = [
+    new Category(name: 'invoice', description: 'Invoice or billing documents requiring payment'),
+    new Category(name: 'quote', description: 'Price quotes or proposals from vendors'),
+    new Category(name: 'marketing', description: 'Marketing materials, brochures, or promotional content'),
+    new Category(name: 'other', description: 'Miscellaneous documents not fitting other categories'),
+];
+
+foreach ($emailAttachments as $attachment) {
+    $classification = $client->classifications()->create(
+        document: $attachment->path,
+        categories: $categories,
+        model: 'retab-small',
+    );
+
+    switch ($classification->output->category) {
+        case 'invoice':
+            processInvoice($attachment);
+            break;
+        case 'quote':
+            queueForReview($attachment);
+            break;
+        case 'marketing':
+            archiveDocument($attachment);
+            break;
+    }
+
+    echo "{$attachment->name}: {$classification->output->category}" . PHP_EOL;
+    echo '  Reason: ' . substr($classification->output->reasoning, 0, 100) . '...' . PHP_EOL;
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var categories = new List<Category>
+{
+    new Category { Name = "invoice",   Description = "Invoice or billing documents requiring payment" },
+    new Category { Name = "quote",     Description = "Price quotes or proposals from vendors" },
+    new Category { Name = "marketing", Description = "Marketing materials, brochures, or promotional content" },
+    new Category { Name = "other",     Description = "Miscellaneous documents not fitting other categories" },
+};
+
+// Pretend these were retrieved from an email server.
+var emailAttachments = new List<FileInfo>();
+
+foreach (var attachment in emailAttachments)
+{
+    var classification = await client.Classifications.CreateAsync(
+        client.ApiKey,
+        new ClassificationsCreateOptions
+        {
+            Document = attachment,
+            Model = "retab-small",
+            Categories = categories,
+        }
+    );
+
+    switch (classification.Output.Category)
+    {
+        case "invoice":
+            // ProcessInvoice(attachment);
+            break;
+        case "quote":
+            // QueueForReview(attachment);
+            break;
+        case "marketing":
+            // ArchiveDocument(attachment);
+            break;
+    }
+
+    Console.WriteLine($"{attachment.Name}: {classification.Output.Category}");
+    var reasoning = classification.Output.Reasoning ?? "";
+    var preview = reasoning.Length > 100 ? reasoning.Substring(0, 100) : reasoning;
+    Console.WriteLine($"  Reason: {preview}...");
+}
+```
+
+```rust Rust
+use retab::models::Category;
+use retab::resources::classifications::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+struct EmailAttachment {
+    name: &'static str,
+    path: &'static str,
+}
+
+fn process_invoice(_: &EmailAttachment) {}
+fn queue_for_review(_: &EmailAttachment) {}
+fn archive_document(_: &EmailAttachment) {}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let categories = vec![
+        Category {
+            name: "invoice".into(),
+            handle_key: None,
+            description: Some("Invoice or billing documents requiring payment".into()),
+        },
+        Category {
+            name: "quote".into(),
+            handle_key: None,
+            description: Some("Price quotes or proposals from vendors".into()),
+        },
+        Category {
+            name: "marketing".into(),
+            handle_key: None,
+            description: Some(
+                "Marketing materials, brochures, or promotional content".into(),
+            ),
+        },
+        Category {
+            name: "other".into(),
+            handle_key: None,
+            description: Some("Miscellaneous documents not fitting other categories".into()),
+        },
+    ];
+
+    let email_attachments: Vec<EmailAttachment> = Vec::new();
+
+    for attachment in &email_attachments {
+        let mut params = CreateParams::new(PathBuf::from(attachment.path), categories.clone());
+        params.body.model = Some("retab-small".into());
+
+        let classification = client.classifications().create(params).await?;
+
+        match classification.output.category.as_str() {
+            "invoice" => process_invoice(attachment),
+            "quote" => queue_for_review(attachment),
+            "marketing" => archive_document(attachment),
+            _ => {}
+        }
+
+        println!("{}: {}", attachment.name, classification.output.category);
+        let reasoning = &classification.output.reasoning;
+        let preview = &reasoning[..reasoning.len().min(100)];
+        println!("  Reason: {preview}...");
+    }
+    Ok(())
 }
 ```
 

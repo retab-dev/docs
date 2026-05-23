@@ -138,32 +138,26 @@ from retab import Retab
 client = Retab()
 
 response = client.partitions.create(
-document="invoice_batch.pdf",
-key="invoice_number",
-instructions="Return one chunk per invoice number and keep all pages for the same invoice together.",
-model="retab-small",
-n_consensus=3,
+    document="invoice_batch.pdf",
+    key="invoice_number",
+    instructions="Return one chunk per invoice number and keep all pages for the same invoice together.",
+    model="retab-small",
+    n_consensus=3,
 )
 
 for chunk in response.output:
-print(chunk.key, chunk.pages)
+    print(chunk.key, chunk.pages)
 
 print(response.consensus.likelihoods)
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const response = await client.partitions.create({
-  document: "invoice_batch.pdf",
-  key: "invoice_number",
-  instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
-  model: "retab-small",
-  n_consensus: 3,
-});
+const response = await client.partitions.create("invoice_batch.pdf", "invoice_number", "Return one chunk per invoice number and keep all pages for the same invoice together.", "retab-small", 3);
 
 for (const chunk of response.output) {
   console.log(chunk.key, chunk.pages);
@@ -211,6 +205,112 @@ func main() {
 	if consensus, ok := (*response)["consensus"].(map[string]any); ok {
 		fmt.Println(consensus["likelihoods"])
 	}
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+response = client.partitions.create(
+  document: 'invoice_batch.pdf',
+  key: 'invoice_number',
+  instructions: 'Return one chunk per invoice number and keep all pages for the same invoice together.',
+  model: 'retab-small',
+  n_consensus: 3,
+)
+
+response.output.each do |chunk|
+  puts "#{chunk.key} #{chunk.pages}"
+end
+
+puts response.consensus&.likelihoods
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client();
+
+$response = $client->partitions()->create(
+    document: 'invoice_batch.pdf',
+    key: 'invoice_number',
+    instructions: 'Return one chunk per invoice number and keep all pages for the same invoice together.',
+    model: 'retab-small',
+    nConsensus: 3,
+);
+
+foreach ($response->output as $chunk) {
+    echo $chunk->key . ': ' . implode(', ', $chunk->pages) . PHP_EOL;
+}
+
+print_r($response->consensus?->likelihoods);
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var response = await client.Partitions.CreateAsync(
+    client.ApiKey,
+    new PartitionsCreateOptions
+    {
+        Document = new FileInfo("invoice_batch.pdf"),
+        Key = "invoice_number",
+        Instructions = "Return one chunk per invoice number and keep all pages for the same invoice together.",
+        Model = "retab-small",
+        NConsensus = 3,
+    }
+);
+
+foreach (var chunk in response.Output ?? new List<PartitionChunk>())
+{
+    Console.WriteLine($"{chunk.Key}: {string.Join(",", chunk.Pages ?? new List<long>())}");
+}
+
+if (response.Consensus?.Likelihoods != null)
+{
+    Console.WriteLine(response.Consensus.Likelihoods);
+}
+```
+
+```rust Rust
+use retab::resources::partitions::CreateParams;
+use retab::Retab;
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut params = CreateParams::new(
+        PathBuf::from("invoice_batch.pdf"),
+        "invoice_number",
+        "Return one chunk per invoice number and keep all pages for the same invoice together.",
+    );
+    params.body.model = Some("retab-small".into());
+    params.body.n_consensus = Some(3);
+
+    let response = client.partitions().create(params).await?;
+
+    if let Some(output) = &response.output {
+        for chunk in output {
+            println!("{} {:?}", chunk.key, chunk.pages);
+        }
+    }
+
+    if let Some(consensus) = &response.consensus {
+        println!("{:?}", consensus.likelihoods);
+    }
+    Ok(())
 }
 ```
 

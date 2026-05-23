@@ -36,20 +36,25 @@ from pathlib import Path
 
 client = Retab()
 
-# Upload from a file path
-
-mime_data = client.files.upload(Path("invoice.pdf"))
+# Create an upload session for a local file.
+invoice_path = Path("invoice.pdf")
+session = client.files.create_upload(
+    filename=invoice_path.name,
+    size_bytes=invoice_path.stat().st_size,
+    content_type="application/pdf",
+)
+mime_data = session.mime_data
 print(f"Filename: {mime_data.filename}")
 print(f"URL: {mime_data.url}")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
-const client = new Retab();
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const mimeData = await client.files.upload("invoice.pdf");
+const mimeData = await client.files.complete_upload((await client.files.create_upload("invoice.pdf", 1024, "application/pdf")).fileId);
 
 console.log(`Filename: ${mimeData.filename}`);
 console.log(`URL: ${mimeData.url}`);
@@ -84,6 +89,117 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new
+
+# 1. Create the upload session
+path = 'invoice.pdf'
+session = client.files.create_upload(
+  filename: File.basename(path),
+  size_bytes: File.size(path),
+  content_type: 'application/pdf',
+)
+
+# 2. PUT the bytes to the signed storage URL
+require 'net/http'
+require 'uri'
+uri = URI(session.upload_url)
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = (uri.scheme == 'https')
+request = Net::HTTP::Put.new(uri)
+(session.upload_headers || { 'Content-Type' => 'application/pdf' }).each do |k, v|
+  request[k] = v
+end
+request.body = File.binread(path)
+http.request(request)
+
+# 3. Finalize and receive the durable MimeData reference
+mime_data = client.files.complete_upload(file_id: session.file_id)
+puts "Filename: #{mime_data.filename}"
+puts "URL: #{mime_data.url}"
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use GuzzleHttp\Client as HttpClient;
+use Retab\Client;
+
+$client = new Client();
+
+// 1. Create the upload session
+$path = 'invoice.pdf';
+$session = $client->files()->createUpload(
+    filename: basename($path),
+    sizeBytes: filesize($path),
+    contentType: 'application/pdf',
+);
+
+// 2. PUT the bytes to the signed storage URL
+(new HttpClient())->request(
+    $session->uploadMethod ?? 'PUT',
+    $session->uploadUrl,
+    [
+        'headers' => $session->uploadHeaders ?? ['Content-Type' => 'application/pdf'],
+        'body' => fopen($path, 'rb'),
+    ],
+);
+
+// 3. Finalize and receive the durable MimeData reference
+$mimeData = $client->files()->completeUpload($session->fileId);
+echo 'Filename: ' . $mimeData->filename . PHP_EOL;
+echo 'URL: ' . $mimeData->url . PHP_EOL;
+```
+
+```rust Rust
+use retab::models::{CompleteFileUploadRequest, UploadFileRequest};
+use retab::resources::files::{CompleteUploadParams, CreateUploadParams};
+use retab::Retab;
+use std::fs;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // 1. Create the upload session
+    let path = "invoice.pdf";
+    let bytes = fs::read(path)?;
+    let mut upload_req = UploadFileRequest::new(path, bytes.len() as i64);
+    upload_req.content_type = Some("application/pdf".into());
+
+    let session = client
+        .files()
+        .create_upload(CreateUploadParams::new(upload_req))
+        .await?;
+
+    // 2. PUT the bytes to the signed storage URL
+    let http = reqwest::Client::new();
+    let mut request = http.put(&session.upload_url).body(bytes);
+    if let Some(headers) = &session.upload_headers {
+        for (k, v) in headers {
+            request = request.header(k, v);
+        }
+    }
+    request.send().await?.error_for_status()?;
+
+    // 3. Finalize and receive the durable MimeData reference
+    let mime_data = client
+        .files()
+        .complete_upload(
+            &session.file_id,
+            CompleteUploadParams::new(CompleteFileUploadRequest::default()),
+        )
+        .await?;
+
+    println!("Filename: {}", mime_data.filename);
+    println!("URL: {}", mime_data.url);
+    Ok(())
+}
+```
+
 ```bash cURL
 SESSION=$(curl -s -X POST \
   'https://api.retab.com/v1/files/upload' \
@@ -107,6 +223,52 @@ curl -X POST \
   -H "Api-Key: $RETAB_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{}'
+```
+
+```csharp C#
+using System;
+using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+// 1. Create the upload session
+var path = "invoice.pdf";
+var bytes = await File.ReadAllBytesAsync(path);
+var session = await client.Files.UploadAsync(
+    client.ApiKey,
+    new FilesUploadOptions
+    {
+        Filename = Path.GetFileName(path),
+        ContentType = "application/pdf",
+        SizeBytes = bytes.LongLength,
+    }
+);
+
+// 2. PUT the bytes to the signed storage URL
+using var http = new HttpClient();
+using var content = new ByteArrayContent(bytes);
+content.Headers.Add("Content-Type", "application/pdf");
+if (session.UploadHeaders != null)
+{
+    foreach (var kv in session.UploadHeaders)
+    {
+        content.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
+    }
+}
+var put = await http.PutAsync(session.UploadUrl, content);
+put.EnsureSuccessStatusCode();
+
+// 3. Finalize and receive the durable MimeData reference
+var mimeData = await client.Files.CompleteUploadAsync(
+    session.FileId,
+    client.ApiKey,
+    new FilesCompleteUploadOptions()
+);
+Console.WriteLine($"Filename: {mimeData.Filename}");
+Console.WriteLine($"URL: {mimeData.Url}");
 ```
 
 </CodeGroup>
@@ -165,7 +327,7 @@ print(extraction.output)
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
@@ -180,11 +342,7 @@ const schema = {
 
 const cloudflareR2Url = "https://<public-id>.r2.dev/large_document.pdf";
 
-const extraction = await client.extractions.create({
-    document: cloudflareR2Url,
-    model: "retab-small",
-    json_schema: schema,
-});
+const extraction = await client.extractions.create(cloudflareR2Url, schema, "retab-small");
 
 console.log(extraction.output);
 ````
@@ -231,6 +389,121 @@ func main() {
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: 'YOUR_RETAB_API_KEY')
+
+schema = {
+  type: 'object',
+  properties: {
+    invoice_number: { type: 'string' },
+    total_amount: { type: 'number' },
+  },
+}
+
+cloudflare_r2_url = 'https://<public-id>.r2.dev/large_document.pdf'
+
+extraction = client.extractions.create(
+  document: cloudflare_r2_url,
+  model: 'retab-small',
+  json_schema: schema,
+)
+
+puts extraction.output
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: 'YOUR_RETAB_API_KEY');
+
+$schema = [
+    'type' => 'object',
+    'properties' => [
+        'invoice_number' => ['type' => 'string'],
+        'total_amount' => ['type' => 'number'],
+    ],
+];
+
+$cloudflareR2Url = 'https://<public-id>.r2.dev/large_document.pdf';
+
+$extraction = $client->extractions()->create(
+    document: $cloudflareR2Url,
+    jsonSchema: $schema,
+    model: 'retab-small',
+);
+
+print_r($extraction->output);
+```
+
+```rust Rust
+use retab::resources::extractions::CreateParams;
+use retab::Retab;
+use std::collections::HashMap;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let schema: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "type": "object",
+        "properties": {
+            "invoice_number": {"type": "string"},
+            "total_amount": {"type": "number"}
+        }
+    }))?;
+
+    let cloudflare_r2_url = "https://<public-id>.r2.dev/large_document.pdf";
+
+    let mut params = CreateParams::new(cloudflare_r2_url, schema);
+    params.body.model = Some("retab-small".into());
+
+    let extraction = client.extractions().create(params).await?;
+    println!("{:?}", extraction.output);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_RETAB_API_KEY");
+
+var schema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["invoice_number"] = new Dictionary<string, object> { ["type"] = "string" },
+        ["total_amount"] = new Dictionary<string, object> { ["type"] = "number" },
+    },
+};
+
+var cloudflareR2Url = new Uri("https://<public-id>.r2.dev/large_document.pdf");
+
+var extraction = await client.Extractions.CreateAsync(
+    client.ApiKey,
+    new ExtractionsCreateOptions
+    {
+        Document = cloudflareR2Url,
+        Model = "retab-small",
+        JsonSchema = schema,
+    }
+);
+
+foreach (var kv in extraction.Output)
+{
+    Console.WriteLine($"{kv.Key}: {kv.Value}");
+}
+```
+
 </CodeGroup>
 
 ### Option 2: upload to Retab, then reuse the URL
@@ -243,7 +516,12 @@ from retab import Retab
 
 client = Retab(api_key="YOUR_RETAB_API_KEY")
 
-mime_ref = client.files.upload("large_document.pdf")
+session = client.files.create_upload(
+    filename="large_document.pdf",
+    size_bytes=12345,
+    content_type="application/pdf",
+)
+mime_ref = session.mime_data
 
 extraction = client.extractions.create(
 document=mime_ref.url,
@@ -259,24 +537,20 @@ json_schema={
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 import { Retab } from '@retab/node';
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const mimeRef = await client.files.upload("large_document.pdf");
+const mimeRef = await client.files.complete_upload((await client.files.create_upload("large_document.pdf", 1024, "application/pdf")).fileId);
 
-const extraction = await client.extractions.create({
-    document: mimeRef.url,
-    model: "retab-small",
-    json_schema: {
+const extraction = await client.extractions.create(mimeRef.url, {
         type: "object",
         properties: {
             invoice_number: { type: "string" },
             total_amount: { type: "number" },
         },
-    },
-});
+    }, "retab-small");
 ````
 
 ```go Go
@@ -317,6 +591,192 @@ func main() {
 		log.Fatal(err)
 	}
 }
+```
+
+```ruby Ruby
+require 'retab'
+require 'net/http'
+require 'uri'
+
+client = Retab::Client.new(api_key: 'YOUR_RETAB_API_KEY')
+
+path = 'large_document.pdf'
+session = client.files.create_upload(
+  filename: File.basename(path),
+  size_bytes: File.size(path),
+  content_type: 'application/pdf',
+)
+
+uri = URI(session.upload_url)
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = (uri.scheme == 'https')
+request = Net::HTTP::Put.new(uri)
+(session.upload_headers || { 'Content-Type' => 'application/pdf' }).each do |k, v|
+  request[k] = v
+end
+request.body = File.binread(path)
+http.request(request)
+
+mime_ref = client.files.complete_upload(file_id: session.file_id)
+
+extraction = client.extractions.create(
+  document: mime_ref.url,
+  model: 'retab-small',
+  json_schema: {
+    type: 'object',
+    properties: {
+      invoice_number: { type: 'string' },
+      total_amount: { type: 'number' },
+    },
+  },
+)
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use GuzzleHttp\Client as HttpClient;
+use Retab\Client;
+
+$client = new Client(apiKey: 'YOUR_RETAB_API_KEY');
+
+$path = 'large_document.pdf';
+$session = $client->files()->createUpload(
+    filename: basename($path),
+    sizeBytes: filesize($path),
+    contentType: 'application/pdf',
+);
+
+(new HttpClient())->request(
+    $session->uploadMethod ?? 'PUT',
+    $session->uploadUrl,
+    ['headers' => $session->uploadHeaders ?? ['Content-Type' => 'application/pdf'], 'body' => fopen($path, 'rb')],
+);
+
+$mimeRef = $client->files()->completeUpload($session->fileId);
+
+$extraction = $client->extractions()->create(
+    document: $mimeRef->url,
+    jsonSchema: [
+        'type' => 'object',
+        'properties' => [
+            'invoice_number' => ['type' => 'string'],
+            'total_amount' => ['type' => 'number'],
+        ],
+    ],
+    model: 'retab-small',
+);
+```
+
+```rust Rust
+use retab::models::{CompleteFileUploadRequest, UploadFileRequest};
+use retab::resources::extractions::CreateParams as ExtractionCreateParams;
+use retab::resources::files::{CompleteUploadParams, CreateUploadParams};
+use retab::Retab;
+use std::collections::HashMap;
+use std::fs;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let path = "large_document.pdf";
+    let bytes = fs::read(path)?;
+    let mut upload_req = UploadFileRequest::new(path, bytes.len() as i64);
+    upload_req.content_type = Some("application/pdf".into());
+
+    let session = client
+        .files()
+        .create_upload(CreateUploadParams::new(upload_req))
+        .await?;
+
+    let http = reqwest::Client::new();
+    let mut request = http.put(&session.upload_url).body(bytes);
+    if let Some(headers) = &session.upload_headers {
+        for (k, v) in headers {
+            request = request.header(k, v);
+        }
+    }
+    request.send().await?.error_for_status()?;
+
+    let mime_ref = client
+        .files()
+        .complete_upload(
+            &session.file_id,
+            CompleteUploadParams::new(CompleteFileUploadRequest::default()),
+        )
+        .await?;
+
+    let schema: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "type": "object",
+        "properties": {
+            "invoice_number": {"type": "string"},
+            "total_amount": {"type": "number"}
+        }
+    }))?;
+
+    let mut params = ExtractionCreateParams::new(mime_ref.url.as_str(), schema);
+    params.body.model = Some("retab-small".into());
+
+    let extraction = client.extractions().create(params).await?;
+    println!("{:?}", extraction.output);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_RETAB_API_KEY");
+
+// 1. Upload to Retab storage
+var path = "large_document.pdf";
+var bytes = await File.ReadAllBytesAsync(path);
+var session = await client.Files.UploadAsync(
+    client.ApiKey,
+    new FilesUploadOptions
+    {
+        Filename = Path.GetFileName(path),
+        ContentType = "application/pdf",
+        SizeBytes = bytes.LongLength,
+    }
+);
+
+using var http = new HttpClient();
+using var content = new ByteArrayContent(bytes);
+content.Headers.Add("Content-Type", "application/pdf");
+(await http.PutAsync(session.UploadUrl, content)).EnsureSuccessStatusCode();
+
+var mimeRef = await client.Files.CompleteUploadAsync(
+    session.FileId,
+    client.ApiKey,
+    new FilesCompleteUploadOptions()
+);
+
+// 2. Reuse the durable Retab URL on subsequent calls
+var extraction = await client.Extractions.CreateAsync(
+    client.ApiKey,
+    new ExtractionsCreateOptions
+    {
+        Document = new Uri(mimeRef.Url),
+        Model = "retab-small",
+        JsonSchema = new Dictionary<string, object>
+        {
+            ["type"] = "object",
+            ["properties"] = new Dictionary<string, object>
+            {
+                ["invoice_number"] = new Dictionary<string, object> { ["type"] = "string" },
+                ["total_amount"] = new Dictionary<string, object> { ["type"] = "number" },
+            },
+        },
+    }
+);
 ```
 
 </CodeGroup>
@@ -382,7 +842,7 @@ pdfs = client.files.list(filename="invoice", mime_type="application/pdf")
 
 ````
 
-```javascript JavaScript
+```typescript TypeScript
 const files = await client.files.list({ limit: 20 });
 for (const f of files) {
     console.log(`${f.id}: ${f.filename}`);
@@ -401,6 +861,82 @@ for _, f := range files.Data {
 }
 ```
 
+```ruby Ruby
+# List recent files
+files = client.files.list(limit: 20)
+files.each do |f|
+  puts "#{f.id}: #{f.filename}"
+end
+
+# Filter by filename prefix and MIME type
+pdfs = client.files.list(filename: 'invoice', mime_type: 'application/pdf')
+```
+
+```php PHP
+$files = $client->files()->list(limit: 20);
+foreach ($files->data as $f) {
+    echo "{$f->id}: {$f->filename}" . PHP_EOL;
+}
+
+// Filter by filename prefix and MIME type
+$pdfs = $client->files()->list(filename: 'invoice', mimeType: 'application/pdf');
+```
+
+```rust Rust
+use retab::resources::files::ListParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    // List recent files
+    let files = client
+        .files()
+        .list(ListParams {
+            limit: Some(20),
+            ..Default::default()
+        })
+        .await?;
+    for f in &files.data {
+        println!("{}: {}", f.id, f.filename);
+    }
+
+    // Filter by filename prefix and MIME type
+    let pdfs = client
+        .files()
+        .list(ListParams {
+            filename: Some("invoice".into()),
+            mime_type: Some("application/pdf".into()),
+            ..Default::default()
+        })
+        .await?;
+    println!("{:?}", pdfs.data);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+// List recent files
+var files = await client.Files.ListAsync(client.ApiKey, new FilesListOptions { Limit = 20 });
+await foreach (var f in files)
+{
+    Console.WriteLine($"{f.Id}: {f.Filename}");
+}
+
+// Filter by filename prefix and MIME type
+var pdfs = await client.Files.ListAsync(
+    client.ApiKey,
+    new FilesListOptions { Filename = "invoice", MimeType = "application/pdf" }
+);
+```
+
 </CodeGroup>
 
 ## Downloading files
@@ -414,8 +950,8 @@ print(f"Download URL: {link.download_url}")
 print(f"Expires in: {link.expires_in}")
 ```
 
-```javascript JavaScript
-const link = await client.files.getDownloadLink("file_a1b2c3d4e5f6");
+```typescript TypeScript
+const link = await client.files.get_download_link("file_a1b2c3d4e5f6");
 console.log(`Download URL: ${link.downloadUrl}`);
 console.log(`Expires in: ${link.expiresIn}`);
 ```
@@ -427,6 +963,44 @@ if err != nil {
 }
 fmt.Printf("Download URL: %s\n", link.DownloadURL)
 fmt.Printf("Expires in: %s\n", link.ExpiresIn)
+```
+
+```ruby Ruby
+link = client.files.get_download_link(file_id: 'file_a1b2c3d4e5f6')
+puts "Download URL: #{link.download_url}"
+puts "Expires in: #{link.expires_in}"
+```
+
+```php PHP
+$link = $client->files()->getDownloadLink('file_a1b2c3d4e5f6');
+echo "Download URL: {$link->downloadUrl}" . PHP_EOL;
+echo "Expires in: {$link->expiresIn}" . PHP_EOL;
+```
+
+```rust Rust
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let link = client.files().get_download_link("file_a1b2c3d4e5f6").await?;
+    println!("Download URL: {}", link.download_url);
+    println!("Expires in: {}", link.expires_in);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Threading.Tasks;
+using Retab;
+
+var client = new Retab("YOUR_API_KEY");
+
+var link = await client.Files.GetDownloadLinkAsync("file_a1b2c3d4e5f6", client.ApiKey);
+Console.WriteLine($"Download URL: {link.DownloadUrl}");
+Console.WriteLine($"Expires in: {link.ExpiresIn}");
 ```
 
 </CodeGroup>
