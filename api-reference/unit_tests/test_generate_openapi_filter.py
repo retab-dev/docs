@@ -593,6 +593,54 @@ def test_generated_public_operation_ids_are_stable() -> None:
     ] == []
 
 
+def test_generated_paginated_list_routes_keep_pagination_query_params() -> None:
+    """Regression: paginated GET routes must publish their cursor params.
+
+    The post-processor previously stripped ``before``/``after``/``limit``/
+    ``order`` from a handful of list endpoints (e.g. GET
+    ``/v1/workflows/experiments``) even though FastAPI declared them on the
+    route. The published spec then advertised a single positional filter and
+    no pagination knobs, which broke SDK pagination generation downstream.
+    """
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+
+    expected_params_by_path = {
+        "/v1/workflows/experiments": {
+            "workflow_id",
+            "before",
+            "after",
+            "limit",
+            "order",
+        },
+        "/v1/workflows/blocks/executions": {
+            "run_id",
+            "block_id",
+            "before",
+            "after",
+            "limit",
+            "order",
+        },
+        "/v1/workflows/tests": {
+            "workflow_id",
+            "target_block_id",
+            "before",
+            "after",
+            "limit",
+            "order",
+        },
+    }
+
+    missing: dict[str, list[str]] = {}
+    for path, expected in expected_params_by_path.items():
+        op = generated_openapi["paths"][path]["get"]
+        actual = {param["name"] for param in op.get("parameters", [])}
+        missing_here = sorted(expected - actual)
+        if missing_here:
+            missing[path] = missing_here
+
+    assert missing == {}, json.dumps(missing, indent=2, sort_keys=True)
+
+
 def test_generated_experiment_metrics_use_kind_discriminator_and_public_flows() -> None:
     generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
 
