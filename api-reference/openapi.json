@@ -10903,7 +10903,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEDataInput"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -10917,6 +10917,7 @@
               "$ref": "#/components/schemas/Category"
             },
             "type": "array",
+            "minItems": 1,
             "title": "Categories",
             "description": "The categories to classify the document into"
           },
@@ -10982,7 +10983,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEDataInput"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -11039,7 +11040,7 @@
             "description": "Name of the template."
           },
           "document": {
-            "$ref": "#/components/schemas/MIMEData",
+            "$ref": "#/components/schemas/MIMEDataInput",
             "description": "The PDF document to use as the empty template."
           },
           "form_fields": {
@@ -11186,7 +11187,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEDataInput"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -11442,7 +11443,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEDataInput"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -11471,6 +11472,7 @@
           },
           "image_resolution_dpi": {
             "type": "integer",
+            "minimum": 72.0,
             "title": "Image Resolution Dpi",
             "description": "DPI used when rasterizing pages for the parser",
             "default": 192
@@ -11507,7 +11509,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEDataInput"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -11642,7 +11644,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEData"
+                "$ref": "#/components/schemas/MIMEDataInput"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -14318,8 +14320,15 @@
             "description": "Alternative extraction vote outputs used to build the consolidated result."
           },
           "likelihoods": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Likelihoods",
             "description": "Consensus likelihood tree mirroring the extraction output. Scalar leaves carry per-value voter-agreement in [0, 1]; list leaves carry one entry per matched list item."
           }
@@ -14663,7 +14672,7 @@
         "properties": {
           "documents": {
             "items": {
-              "$ref": "#/components/schemas/MIMEData"
+              "$ref": "#/components/schemas/MIMEDataInput"
             },
             "type": "array",
             "title": "Documents"
@@ -15502,7 +15511,7 @@
         ],
         "title": "LlmNotJudgedAsCondition"
       },
-      "MIMEData": {
+      "MIMEDataInput": {
         "properties": {
           "filename": {
             "type": "string",
@@ -15528,58 +15537,7 @@
           "filename",
           "url"
         ],
-        "title": "MIMEData"
-      },
-      "MIMEDataInput": {
-        "properties": {
-          "filename": {
-            "type": "string",
-            "title": "Filename",
-            "description": "The filename of the file"
-          },
-          "content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content",
-            "description": "Base64 encoded content"
-          },
-          "url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Url",
-            "description": "URL-backed document reference"
-          },
-          "mime_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mime Type",
-            "description": "MIME type of the file"
-          }
-        },
-        "type": "object",
-        "required": [
-          "filename"
-        ],
-        "title": "MIMEDataInput",
-        "description": "Input format for documents from the frontend.\n\nThis accepts either inline base64 content or a URL-backed MIMEData reference."
+        "title": "MIMEDataInput"
       },
       "ManualTrigger": {
         "properties": {
@@ -20673,6 +20631,18 @@
             "title": "Filename",
             "description": "The name of the file"
           },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type",
+            "description": "The MIME type of the file"
+          },
           "created_at": {
             "anyOf": [
               {
@@ -20791,6 +20761,40 @@
         ],
         "title": "JobResult",
         "description": "Public response returned when job completes successfully."
+      },
+      "MIMEData": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "The filename of the file",
+            "examples": [
+              "file.pdf",
+              "image.png",
+              "data.txt"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "The URL of the file in base64 format",
+            "examples": [
+              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
+            ]
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "url",
+          "mime_type"
+        ],
+        "title": "MIMEData"
       },
       "ClassificationList": {
         "properties": {
