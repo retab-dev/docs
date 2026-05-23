@@ -2775,10 +2775,31 @@
                   "type": "null"
                 }
               ],
-              "description": "Optional logical block ID filter.",
+              "description": "Optional logical block ID filter (deprecated; prefer ``block_ids`` for multi-value filtering).",
               "title": "Block Id"
             },
-            "description": "Optional logical block ID filter."
+            "description": "Optional logical block ID filter (deprecated; prefer ``block_ids`` for multi-value filtering)."
+          },
+          {
+            "name": "block_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional logical block ID filter — multi-value. Repeat the query parameter (``?block_ids=a&block_ids=b``) to match any of several blocks. An empty list is treated as no filter. Preferred over the singular ``block_id``.",
+              "title": "Block Ids"
+            },
+            "description": "Optional logical block ID filter — multi-value. Repeat the query parameter (``?block_ids=a&block_ids=b``) to match any of several blocks. An empty list is treated as no filter. Preferred over the singular ``block_id``."
           },
           {
             "name": "step_id",
@@ -5192,6 +5213,38 @@
             }
           },
           {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -5201,6 +5254,20 @@
               "minimum": 1,
               "default": 50,
               "title": "Limit"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
             }
           }
         ],
@@ -6140,6 +6207,7 @@
           "Workflow Experiments"
         ],
         "summary": "List Experiments",
+        "description": "List experiments under one workflow with cursor pagination.\n\nThe enrichment passes (latest-run snapshot, block info, drift detection)\nrun on the paginated page, not the full collection — so they scale with\n``limit``, not with the total experiment count under the workflow.",
         "operationId": "list_experiments",
         "security": [
           {
@@ -6160,6 +6228,64 @@
             "schema": {
               "type": "string",
               "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
             }
           }
         ],
@@ -6459,7 +6585,7 @@
           "Workflow Blocks Executions"
         ],
         "summary": "List Block Executions",
-        "description": "List recent block executions for one workflow run block.",
+        "description": "List recent block executions for one workflow run block.\n\nCursor pagination matches the conventions used by\n``GET /v1/extractions`` — pass ``after`` from the previous page's\n``list_metadata.after`` to advance, ``before`` to step backwards, and\n``order`` to flip the sort direction. ``run_id`` + ``block_id`` are\nrequired scope filters; without them this endpoint would expose\ncross-run cursors that walk arbitrary block executions.",
         "operationId": "list_block_executions",
         "security": [
           {
@@ -6492,6 +6618,38 @@
             }
           },
           {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -6501,6 +6659,20 @@
               "minimum": 1,
               "default": 20,
               "title": "Limit"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
             }
           }
         ],
