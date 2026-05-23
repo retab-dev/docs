@@ -10244,16 +10244,10 @@
             "description": "Alternative classification vote outputs used to build the consolidated result."
           },
           "likelihoods": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "number",
             "title": "Likelihoods",
-            "description": "Consensus likelihood score (0.0-1.0) of the winning classification."
+            "description": "Consensus likelihood score (0.0-1.0) of the winning classification.",
+            "default": 0.0
           }
         },
         "type": "object",
@@ -10923,7 +10917,6 @@
               "$ref": "#/components/schemas/Category"
             },
             "type": "array",
-            "minItems": 1,
             "title": "Categories",
             "description": "The categories to classify the document into"
           },
@@ -10959,8 +10952,6 @@
           },
           "n_consensus": {
             "type": "integer",
-            "maximum": 16.0,
-            "minimum": 1.0,
             "title": "N Consensus",
             "description": "Number of classification runs to use for consensus voting. Uses deterministic single-pass when set to 1.",
             "default": 1
@@ -10972,6 +10963,7 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "document",
@@ -11031,6 +11023,7 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "instructions"
@@ -11058,6 +11051,7 @@
             "description": "Form fields to attach to the template."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "name",
@@ -11214,8 +11208,6 @@
           },
           "image_resolution_dpi": {
             "type": "integer",
-            "maximum": 300.0,
-            "minimum": 96.0,
             "title": "Image Resolution Dpi",
             "description": "Resolution of the image sent to the LLM",
             "default": 192
@@ -11234,17 +11226,22 @@
           },
           "n_consensus": {
             "type": "integer",
-            "maximum": 16.0,
-            "minimum": 1.0,
             "title": "N Consensus",
             "description": "Number of consensus extraction runs to perform. Uses deterministic single-pass when set to 1.",
             "default": 1
           },
           "metadata": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Metadata",
             "description": "User-defined metadata to associate with this extraction"
           },
@@ -11274,6 +11271,20 @@
             "type": "boolean",
             "title": "Stream",
             "default": false
+          },
+          "chunking_keys": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunking Keys"
           }
         },
         "additionalProperties": false,
@@ -11460,8 +11471,6 @@
           },
           "image_resolution_dpi": {
             "type": "integer",
-            "maximum": 300.0,
-            "minimum": 96.0,
             "title": "Image Resolution Dpi",
             "description": "DPI used when rasterizing pages for the parser",
             "default": 192
@@ -11525,8 +11534,6 @@
           },
           "n_consensus": {
             "type": "integer",
-            "maximum": 8.0,
-            "minimum": 1.0,
             "title": "N Consensus",
             "description": "Number of partitioning runs to use for consensus voting. Uses deterministic single-pass when set to 1.",
             "default": 1
@@ -11649,7 +11656,6 @@
               "$ref": "#/components/schemas/Subdocument"
             },
             "type": "array",
-            "minItems": 1,
             "title": "Subdocuments",
             "description": "The subdocuments to split the document into"
           },
@@ -11673,8 +11679,6 @@
           },
           "n_consensus": {
             "type": "integer",
-            "maximum": 8.0,
-            "minimum": 1.0,
             "title": "N Consensus",
             "description": "Number of consensus split runs to perform. Uses deterministic single-pass when set to 1.",
             "default": 1
@@ -12558,6 +12562,17 @@
             "$ref": "#/components/schemas/EditResult",
             "description": "The edit result: filled form fields and the rendered PDF."
           },
+          "filled_document_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Durable file reference for the filled document, when materialized."
+          },
           "usage": {
             "anyOf": [
               {
@@ -12595,7 +12610,14 @@
       "EditConfig": {
         "properties": {
           "color": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Color",
             "description": "Hex code of the color to use for the filled text.",
             "default": "#000080"
@@ -12643,28 +12665,56 @@
             "description": "File information for the empty PDF template."
           },
           "form_fields": {
-            "items": {
-              "$ref": "#/components/schemas/FormField"
-            },
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FormField"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Form Fields",
             "description": "Form fields attached to the template."
           },
           "field_count": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Field Count",
             "description": "Number of form fields in the template.",
             "default": 0
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Created At",
             "description": "Timestamp of creation."
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Updated At",
             "description": "Timestamp of last update."
           }
@@ -12673,9 +12723,7 @@
         "required": [
           "id",
           "name",
-          "file",
-          "created_at",
-          "updated_at"
+          "file"
         ],
         "title": "EditTemplate"
       },
@@ -12726,6 +12774,17 @@
           "output": {
             "$ref": "#/components/schemas/EditResult",
             "description": "The edit result: filled form fields and the rendered PDF."
+          },
+          "filled_document_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Durable file reference for the filled document, when materialized."
           },
           "usage": {
             "anyOf": [
@@ -14199,10 +14258,17 @@
             "description": "Consensus metadata for multi-vote extraction runs"
           },
           "metadata": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Metadata"
           },
           "usage": {
@@ -14252,15 +14318,8 @@
             "description": "Alternative extraction vote outputs used to build the consolidated result."
           },
           "likelihoods": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "additionalProperties": true,
+            "type": "object",
             "title": "Likelihoods",
             "description": "Consensus likelihood tree mirroring the extraction output. Scalar leaves carry per-value voter-agreement in [0, 1]; list leaves carry one entry per matched list item."
           }
@@ -14325,10 +14384,17 @@
             "description": "Consensus metadata for multi-vote extraction runs"
           },
           "metadata": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Metadata"
           },
           "usage": {
@@ -16187,17 +16253,10 @@
             "description": "Alternative partition vote outputs used to build the consolidated result."
           },
           "likelihoods": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/PartitionChunkLikelihood"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/PartitionChunkLikelihood"
+            },
+            "type": "array",
             "title": "Likelihoods",
             "description": "Consensus likelihoods aligned with the partition output."
           }
@@ -17383,14 +17442,7 @@
             "description": "The list of document splits with their assigned pages"
           },
           "consensus": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SplitConsensus"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "$ref": "#/components/schemas/SplitConsensus",
             "description": "Consensus metadata for multi-vote split runs"
           },
           "usage": {
@@ -17430,17 +17482,10 @@
       "SplitConsensus": {
         "properties": {
           "likelihoods": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/SplitSubdocumentLikelihood"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/SplitSubdocumentLikelihood"
+            },
+            "type": "array",
             "title": "Likelihoods",
             "description": "Consensus likelihood tree mirroring the split output"
           },
@@ -17585,14 +17630,7 @@
             "description": "The list of document splits with their assigned pages"
           },
           "consensus": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SplitConsensus"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "$ref": "#/components/schemas/SplitConsensus",
             "description": "Consensus metadata for multi-vote split runs"
           },
           "usage": {
@@ -17740,6 +17778,7 @@
             "description": "Replacement list of form fields."
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "UpdateEditTemplateRequest"
       },
