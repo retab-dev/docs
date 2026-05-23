@@ -605,10 +605,39 @@ def generate_openapi() -> None:
     # Keep only schemas reachable from the published API surface.
     _prune_unreferenced_schemas(spec)
 
+    _print_public_routes(spec)
+
     # Write updated spec to file
     output_path = Path(__file__).resolve().parent / "openapi.json"
     with output_path.open("w") as f:
         json.dump(spec, f, indent=2, ensure_ascii=False)
+
+
+def _print_public_routes(spec: dict[str, object]) -> None:
+    """Print every (METHOD, URL) pair that survived the public filtering."""
+    servers = spec.get("servers")
+    base_url = ""
+    if isinstance(servers, list) and servers and isinstance(servers[0], dict):
+        server_url = servers[0].get("url")
+        if isinstance(server_url, str):
+            base_url = server_url.rstrip("/")
+
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return
+
+    routes: list[tuple[str, str]] = []
+    for path, path_item in paths.items():
+        if not isinstance(path, str) or not isinstance(path_item, dict):
+            continue
+        for method in path_item:
+            if method in OPENAPI_HTTP_METHODS:
+                routes.append((method.upper(), f"{base_url}{path}"))
+
+    routes.sort(key=lambda route: (route[1], route[0]))
+    print(f"Public OpenAPI routes ({len(routes)}):")
+    for method, url in routes:
+        print(f"  {method:<6} {url}")
 
 
 if __name__ == "__main__":
