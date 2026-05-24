@@ -32,6 +32,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -44,7 +46,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println((*template)["name"], (*template)["field_count"])
+	fmt.Println(template.Name, template.FieldCount)
 }
 ```
 
@@ -63,7 +65,7 @@ use retab::Retab;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
-    let template = client.edit_templates().get("edittplt_abc123").await?;
+    let template = client.edits().templates().get("edittplt_abc123").await?;
     println!("{} {}", template.name, template.field_count.unwrap_or_default());
     Ok(())
 }
@@ -85,12 +87,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.EditTemplates.GetAsync("tmpl_abc123", apiKey);
+var result = await client.Edits.Templates.GetAsync("tmpl_abc123");
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().templates().get("tmpl_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

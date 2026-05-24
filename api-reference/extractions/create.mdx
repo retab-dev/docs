@@ -55,6 +55,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -68,7 +70,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	extraction, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document: document,
 		JSONSchema: map[string]any{
 			"type": "object",
@@ -78,16 +80,16 @@ func main() {
 			},
 			"required": []string{"invoice_number", "total"},
 		},
-		Model:      "retab-small",
-		NConsensus: 1,
+		Model:      ptr("retab-small"),
+		NConsensus: ptr(1),
 		Metadata:   map[string]string{"source": "docs"},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Extraction ID: %v\n", (*extraction)["id"])
-	fmt.Println((*extraction)["output"])
+	fmt.Printf("Extraction ID: %s\n", extraction.ID)
+	fmt.Println(extraction.Output)
 }
 ```
 
@@ -160,12 +162,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Extractions.CreateAsync(apiKey, new ExtractionsCreateOptions());
+var result = await client.Extractions.CreateAsync(new ExtractionsCreateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

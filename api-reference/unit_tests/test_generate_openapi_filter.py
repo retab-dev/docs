@@ -19,6 +19,7 @@ REQUIRED_SNIPPET_LANGUAGES = {
     "python": {"python"},
     "javascript": {"javascript", "typescript", "js", "ts"},
     "go": {"go"},
+    "java": {"java"},
     "curl": {"bash", "curl", "sh", "shell"},
 }
 GENERATED_OPENAPI = DOCS_ROOT / "api-reference" / "openapi.json"

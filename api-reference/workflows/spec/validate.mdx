@@ -38,7 +38,7 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const validation = await client.workflows.specs.validate(yamlDefinition);
+const validation = await client.workflows.spec.validate(yamlDefinition);
 
 console.log(validation.isValid);
 console.log(validation.diagnostics);
@@ -55,6 +55,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -63,14 +65,35 @@ func main() {
 		log.Fatal(err)
 	}
 
-	yamlDefinition := "<workflow-yaml>"
-	validation, err := client.Workflows.Spec.Validate(ctx, yamlDefinition)
+	yamlDefinition := `apiVersion: workflows.retab.com/v1alpha2
+kind: Workflow
+metadata:
+  id: wf_invoice_demo
+  name: Invoice Workflow
+spec:
+  blocks:
+    start:
+      type: start_json
+      label: Input JSON
+      config:
+        json_schema:
+          type: object
+          required:
+            - value
+          properties:
+            value:
+              type: string
+  edges: []
+`
+	validation, err := client.Workflows.Spec.Validate(ctx, &retab.WorkflowSpecValidateParams{
+		YamlDefinition: yamlDefinition,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*validation)["is_valid"])
-	fmt.Println((*validation)["diagnostics"])
+	fmt.Println(validation.IsValid)
+	fmt.Println(validation.Diagnostics)
 }
 ```
 
@@ -79,7 +102,7 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-validation = client.workflow_specs.validate(yaml_definition: yaml_definition)
+validation = client.workflows.spec.validate(yaml_definition: yaml_definition)
 
 puts validation.is_valid
 puts validation.diagnostics
@@ -87,16 +110,35 @@ puts validation.diagnostics
 
 ```rust Rust
 use retab::models::DeclarativeWorkflowRequest;
-use retab::resources::workflow_specs::ValidateParams;
+use retab::resources::workflow_spec::ValidateParams;
 use retab::Retab;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    let yaml_definition = "<workflow-yaml>";
+    let yaml_definition = r#"apiVersion: workflows.retab.com/v1alpha2
+kind: Workflow
+metadata:
+  id: wf_invoice_demo
+  name: Invoice Workflow
+spec:
+  blocks:
+    start:
+      type: start_json
+      label: Input JSON
+      config:
+        json_schema:
+          type: object
+          required:
+            - value
+          properties:
+            value:
+              type: string
+  edges: []
+"#;
     let validation = client
-        .workflow_specs()
+        .workflows().spec()
         .validate(ValidateParams::new(DeclarativeWorkflowRequest::new(
             yaml_definition,
         )))
@@ -116,20 +158,80 @@ use Retab\Client;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
-$result = $client->workflowSpecs()->validate(
-    yamlDefinition: 'value',
+$yamlDefinition = <<<'YAML'
+apiVersion: workflows.retab.com/v1alpha2
+kind: Workflow
+metadata:
+  id: wf_invoice_demo
+  name: Invoice Workflow
+spec:
+  blocks:
+    start:
+      type: start_json
+      label: Input JSON
+      config:
+        json_schema:
+          type: object
+          required:
+            - value
+          properties:
+            value:
+              type: string
+  edges: []
+YAML;
+
+$result = $client->workflows()->spec()->validate(
+    yamlDefinition: $yamlDefinition,
 );
 print_r($result);
 ```
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowSpecs.ValidateAsync(apiKey, new WorkflowSpecsValidateOptions());
+var yamlDefinition = """
+apiVersion: workflows.retab.com/v1alpha2
+kind: Workflow
+metadata:
+  id: wf_invoice_demo
+  name: Invoice Workflow
+spec:
+  blocks:
+    start:
+      type: start_json
+      label: Input JSON
+      config:
+        json_schema:
+          type: object
+          required:
+            - value
+          properties:
+            value:
+              type: string
+  edges: []
+""";
+
+var result = await client.Workflows.Spec.ValidateAsync(
+    new WorkflowSpecValidateOptions { YamlDefinition = yamlDefinition }
+);
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().spec().validate("metadata:\n  id: invoice-workflow\n");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

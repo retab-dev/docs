@@ -62,6 +62,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -75,25 +77,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	template, err := client.Edits.Templates.Create(ctx, retab.EditTemplateCreateRequest{
+	template, err := client.Edits.Templates.Create(ctx, &retab.EditTemplatesCreateParams{
 		Name:     "W-9 Form",
 		Document: document,
-		FormFields: []retab.FormField{
+		FormFields: []*retab.FormField{
 			{
-				"key":         "full_name",
-				"description": "Full legal name of the taxpayer",
-				"type":        "text",
-				"bbox": map[string]any{
-					"left": 0.15, "top": 0.20, "width": 0.35, "height": 0.03, "page": 1,
-				},
+				Key:         "full_name",
+				Description: "Full legal name of the taxpayer",
+				Type:        retab.FieldTypeText,
+				Bbox:        retab.BBox{Left: 0.15, Top: 0.20, Width: 0.35, Height: 0.03, Page: 1},
 			},
 			{
-				"key":         "tax_id",
-				"description": "Taxpayer Identification Number",
-				"type":        "text",
-				"bbox": map[string]any{
-					"left": 0.15, "top": 0.28, "width": 0.25, "height": 0.03, "page": 1,
-				},
+				Key:         "tax_id",
+				Description: "Taxpayer Identification Number",
+				Type:        retab.FieldTypeText,
+				Bbox:        retab.BBox{Left: 0.15, Top: 0.28, Width: 0.25, Height: 0.03, Page: 1},
 			},
 		},
 	})
@@ -101,7 +99,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Template ID: %v\n", (*template)["id"])
+	fmt.Printf("Template ID: %s\n", template.ID)
 }
 ```
 
@@ -161,7 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     let params = CreateParams::new("W-9 Form", PathBuf::from("w9_empty.pdf"), form_fields);
-    let template = client.edit_templates().create(params).await?;
+    let template = client.edits().templates().create(params).await?;
 
     println!("Template ID: {}", template.id);
     Ok(())
@@ -186,12 +184,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.EditTemplates.CreateAsync(apiKey, new EditTemplatesCreateOptions());
+var result = await client.Edits.Templates.CreateAsync(new EditTemplatesCreateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().templates().create("Invoice Processing", null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

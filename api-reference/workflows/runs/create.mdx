@@ -51,26 +51,27 @@ import { Retab } from "@retab/node";
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 // Run with documents only
-const run = await client.workflows.runs.create({
-  workflowId: "wf_abc123xyz",
-  documents: {
+const run = await client.workflows.runs.create(
+  "wf_abc123xyz",
+  {
     "start_document-block-1": "./invoice.pdf",
   },
-});
+);
 
 // Run with documents and JSON inputs
-const run2 = await client.workflows.runs.create({
-  workflowId: "wf_abc123xyz",
-  documents: {
+const run2 = await client.workflows.runs.create(
+  "wf_abc123xyz",
+  {
     "start_document-block-1": "./invoice.pdf",
   },
-  jsonInputs: {
-    "start-json-block-1": { customerId: "cust_123", priority: "high" },
+  {
+    "start-json-block-1": { customer_id: "cust_123", priority: "high" },
   },
-});
+);
 
 console.log(`Run started: ${run.id}`);
 console.log(`Lifecycle: ${run.lifecycle.status}`);
+console.log(`Second run started: ${run2.id}`);
 ```
 
 ```go Go
@@ -93,7 +94,7 @@ func main() {
 	}
 
 	// Run with documents only
-	run, err := client.Workflows.Runs.Create(ctx, retab.CreateWorkflowRunRequest{
+	run, err := client.Workflows.Runs.Create(ctx, &retab.WorkflowRunsCreateParams{
 		WorkflowID: "wf_abc123xyz",
 		Documents: map[string]any{
 			"start_document-block-1": "invoice.pdf",
@@ -104,7 +105,7 @@ func main() {
 	}
 
 	// Run with documents and JSON inputs
-	run2, err := client.Workflows.Runs.Create(ctx, retab.CreateWorkflowRunRequest{
+	run2, err := client.Workflows.Runs.Create(ctx, &retab.WorkflowRunsCreateParams{
 		WorkflowID: "wf_abc123xyz",
 		Documents: map[string]any{
 			"start_document-block-1": "invoice.pdf",
@@ -121,7 +122,7 @@ func main() {
 	}
 
 	fmt.Printf("Run started: %s\n", run.ID)
-	fmt.Printf("Lifecycle: %s\n", run.Lifecycle.Status)
+	fmt.Printf("Lifecycle: %v\n", run.Lifecycle.Status)
 	_ = run2
 }
 ```
@@ -132,7 +133,7 @@ require 'retab'
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 # Run with documents only
-run = client.workflow_runs.create(
+run = client.workflows.runs.create(
   workflow_id: 'wf_abc123xyz',
   documents: {
     'start_document-block-1' => 'invoice.pdf',
@@ -140,7 +141,7 @@ run = client.workflow_runs.create(
 )
 
 # Run with documents and JSON inputs
-run = client.workflow_runs.create(
+run = client.workflows.runs.create(
   workflow_id: 'wf_abc123xyz',
   documents: {
     'start_document-block-1' => 'invoice.pdf',
@@ -155,22 +156,22 @@ puts "Lifecycle: #{run.lifecycle.status}"
 ```
 
 ```rust Rust
-use retab::models::{CreateFreshWorkflowRunRequest, CreateWorkflowRunRequest};
+use retab::models::CreateWorkflowRunRequest;
 use retab::resources::workflow_runs::CreateParams;
 use retab::Retab;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    // Run with documents only — NOTE: `documents` accepts the SDK's
-    // CreateFreshWorkflowRunRequestDocumentsOneOf wrapper for file payloads.
+    // Run with documents only
+    let request = CreateWorkflowRunRequest::new("wf_abc123xyz")
+        .with_document("start_document-block-1", PathBuf::from("invoice.pdf"));
     let run = client
-        .workflow_runs()
-        .create(CreateParams::new(CreateWorkflowRunRequest::from(
-            CreateFreshWorkflowRunRequest::new("wf_abc123xyz"),
-        )))
+        .workflows().runs()
+        .create(CreateParams::new(request))
         .await?;
 
     // Run with JSON inputs
@@ -180,15 +181,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::json!({"customer_id": "cust_123", "priority": "high"}),
     );
     let _run = client
-        .workflow_runs()
-        .create(CreateParams::new(CreateWorkflowRunRequest::from(
-            CreateFreshWorkflowRunRequest {
-                workflow_id: "wf_abc123xyz".into(),
-                documents: None,
-                json_inputs: Some(json_inputs),
-                version: None,
-            },
-        )))
+        .workflows().runs()
+        .create(CreateParams::new(CreateWorkflowRunRequest {
+            workflow_id: "wf_abc123xyz".into(),
+            documents: None,
+            json_inputs: Some(json_inputs),
+            version: None,
+        }))
         .await?;
 
     println!("Run started: {}", run.id);
@@ -204,21 +203,51 @@ use Retab\Client;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
-$result = $client->workflowRuns()->create();
-print_r($result);
+$run = $client->workflows()->runs()->create(
+    workflowId: 'wf_abc123xyz',
+    documents: [
+        'start_document-block-1' => 'invoice.pdf',
+    ],
+    jsonInputs: [
+        'start-json-block-1' => ['customer_id' => 'cust_123', 'priority' => 'high'],
+    ],
+);
+print_r($run);
 ```
 
 ```csharp C#
+using System;
+using System.Collections.Generic;
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowRuns.CreateAsync(
-    apiKey,
-    new WorkflowRunsCreateOptions { WorkflowId = "wf_abc123xyz" }
+var result = await client.Workflows.Runs.CreateAsync(
+    new WorkflowRunsCreateOptions
+    {
+        WorkflowId = "wf_abc123xyz",
+        Documents = new Dictionary<string, WorkflowRunDocumentInput>
+        {
+            ["start_document-block-1"] = MimeData.FromFile("invoice.pdf"),
+        },
+    }
 );
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().runs().create("wf_abc123", null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL
@@ -232,8 +261,7 @@ curl -X 'POST' \
     "documents": {
       "start_document-block-1": {
         "filename": "invoice.pdf",
-        "content": "<BASE64_ENCODED_FILE_CONTENT>",
-        "mime_type": "application/pdf"
+        "url": "data:application/pdf;base64,<BASE64_ENCODED_FILE_CONTENT>"
       }
     }
   }'
@@ -248,8 +276,7 @@ curl -X 'POST' \
     "documents": {
       "start_document-block-1": {
         "filename": "invoice.pdf",
-        "content": "<BASE64_ENCODED_FILE_CONTENT>",
-        "mime_type": "application/pdf"
+        "url": "data:application/pdf;base64,<BASE64_ENCODED_FILE_CONTENT>"
       }
     },
     "json_inputs": {

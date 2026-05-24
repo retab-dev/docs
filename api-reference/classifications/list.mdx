@@ -50,6 +50,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -58,13 +60,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	classifications, err := client.Classifications.List(ctx, &retab.ListParams{Limit: 20, Order: "desc"})
+	classifications, err := client.Classifications.List(ctx, &retab.ClassificationsListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(20), Order: ptr("desc")},
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, c := range classifications.Data {
-		output, _ := c["output"].(map[string]any)
-		fmt.Printf("%v: %v\n", c["id"], output["category"])
+		fmt.Printf("%s: %s\n", c.ID, c.Output.Category)
 	}
 }
 ```
@@ -137,12 +140,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Classifications.ListAsync(apiKey, new ClassificationsListOptions());
+var result = await client.Classifications.ListAsync(new ClassificationsListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.classifications().list(null, null, 10L, null, "invoice.pdf", null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

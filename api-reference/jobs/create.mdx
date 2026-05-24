@@ -72,6 +72,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -81,8 +83,8 @@ func main() {
 	}
 
 	// Create an async extraction job
-	job, err := client.Jobs.Create(ctx, retab.JobCreateRequest{
-		Endpoint: "/v1/extractions",
+	job, err := client.Jobs.Create(ctx, &retab.JobsCreateParams{
+		Endpoint: retab.CreateJobRequestEndpointV1Extractions,
 		Request: retab.Resource{
 			"document": map[string]any{
 				"filename": "invoice.pdf",
@@ -104,8 +106,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Job ID: %s\n", (*job)["id"])
-	fmt.Printf("Status: %s\n", (*job)["status"])
+	fmt.Printf("Job ID: %s\n", *job.ID)
+	fmt.Printf("Status: %s\n", *job.Status)
 }
 ```
 
@@ -204,12 +206,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Jobs.CreateAsync(apiKey, new JobsCreateOptions());
+var result = await client.Jobs.CreateAsync(new JobsCreateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().create(null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

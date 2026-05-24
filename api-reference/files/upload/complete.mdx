@@ -60,6 +60,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -68,8 +70,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Recommended — SDK runs the full upload + complete flow.
-	mime, err := client.Files.Upload(ctx, "invoice.pdf")
+	// Create an upload session, PUT bytes to upload.UploadURL yourself,
+	// then complete the upload.
+	upload, err := client.Files.CreateUpload(ctx, &retab.FilesCreateUploadParams{
+		Filename:    "invoice.pdf",
+		ContentType: ptr("application/pdf"),
+		SizeBytes:   1024,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	mime, err := client.Files.CompleteUpload(ctx, upload.FileID, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,7 +89,7 @@ func main() {
 	// Lower-level — only when you've handled the PUT yourself.
 	// CompleteUpload finalizes a direct-to-storage upload after the
 	// bytes have already been written to the signed uploadUrl.
-	completed, err := client.Files.CompleteUpload(ctx, "file_a1b2c3d4e5f6", "")
+	completed, err := client.Files.CompleteUpload(ctx, "file_a1b2c3d4e5f6", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -135,12 +146,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Files.CompleteUploadAsync("file_6dd6eb00688ad8d1", apiKey, new FilesCompleteUploadOptions());
+var result = await client.Files.CompleteUploadAsync("file_6dd6eb00688ad8d1", new FilesCompleteUploadOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.files().completeUpload("file_abc123", "abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

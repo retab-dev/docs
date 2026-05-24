@@ -42,6 +42,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -50,7 +52,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	block, err := client.Workflows.Blocks.Get(ctx, "extract-1")
+	block, err := client.Workflows.Blocks.Get(ctx, "extract-1", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     let block = client
-        .workflow_blocks()
+        .workflows().blocks()
         .get("extract-1", GetParams::default())
         .await?;
 
@@ -106,12 +108,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowBlocks.GetAsync("blk_extract_1", apiKey, new WorkflowBlocksGetOptions());
+var result = await client.Workflows.Blocks.GetAsync("blk_extract_1", new WorkflowBlocksGetOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().blocks().get("block_abc123", "wf_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

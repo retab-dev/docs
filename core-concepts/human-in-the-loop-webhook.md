@@ -245,6 +245,35 @@ header('Content-Type: application/json');
 echo json_encode(['status' => 'success']);
 ```
 
+```java Java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
+public final class Example {
+  static void verifyRetabSignature(byte[] payload, String signature, String secret) throws Exception {
+    if (signature == null || signature.isBlank()) {
+      throw new IllegalArgumentException("Missing X-Retab-Signature header");
+    }
+    Mac mac = Mac.getInstance("HmacSHA256");
+    mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+    String expected = bytesToHex(mac.doFinal(payload));
+    if (!MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8), signature.getBytes(StandardCharsets.UTF_8))) {
+      throw new IllegalArgumentException("Invalid webhook signature");
+    }
+  }
+
+  static String bytesToHex(byte[] bytes) {
+    StringBuilder out = new StringBuilder(bytes.length * 2);
+    for (byte b : bytes) {
+      out.append(String.format("%02x", b));
+    }
+    return out.toString();
+  }
+}
+```
+
 </CodeGroup>
 
 

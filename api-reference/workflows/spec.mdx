@@ -1,6 +1,6 @@
 ---
 title: "Export Workflow Spec"
-openapi: "GET /v1/workflows/{workflow_id}/spec"
+openapi: "GET /v1/workflows/spec/{workflow_id}"
 ---
 
 Export the current draft workflow as canonical declarative YAML.
@@ -24,7 +24,7 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const exported = await client.workflows.specs.get("wf_abc123");
+const exported = await client.workflows.spec.get("wf_abc123");
 
 console.log(exported.yamlDefinition);
 ```
@@ -40,6 +40,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -48,12 +50,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	exported, err := client.Workflows.Spec.Export(ctx, "wf_abc123")
+	exported, err := client.Workflows.Spec.Get(ctx, "wf_abc123")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*exported)["yaml_definition"])
+	fmt.Println(exported.YamlDefinition)
 }
 ```
 
@@ -62,7 +64,7 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-exported = client.workflow_specs.get(workflow_id: 'wf_abc123')
+exported = client.workflows.spec.get(workflow_id: 'wf_abc123')
 
 puts exported.yaml_definition
 ```
@@ -74,7 +76,7 @@ use retab::Retab;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    let exported = client.workflow_specs().get("wf_abc123").await?;
+    let exported = client.workflows().spec().get("wf_abc123").await?;
 
     println!("{}", exported.yaml_definition);
     Ok(())
@@ -89,7 +91,7 @@ use Retab\Client;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
-$result = $client->workflowSpecs()->get(
+$result = $client->workflowSpec()->get(
     workflowId: 'wf_abc123',
 );
 print_r($result);
@@ -97,17 +99,31 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowSpecs.GetAsync("wf_abc123", apiKey);
+var result = await client.Workflows.Spec.GetAsync("wf_abc123");
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().spec().get("wf_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/wf_abc123/spec' \
+  'https://api.retab.com/v1/workflows/spec/wf_abc123' \
   -H 'Api-Key: <your-api-key>'
 ```
 

@@ -154,6 +154,23 @@ let calendar_event_schema = json!({
 });
 ```
 
+```java Java
+import java.util.List;
+import java.util.Map;
+
+public final class Example {
+  public static void main(String[] args) {
+    Map<String, Object> schema =
+        Map.of(
+            "type", "object",
+            "properties", Map.of("invoice_number", Map.of("type", "string")),
+            "required", List.of("invoice_number"));
+
+    System.out.println(schema);
+  }
+}
+```
+
 </CodeGroup>
 
 ---
@@ -219,18 +236,19 @@ func main() {
 		"required": []string{"name", "date", "address"},
 	}
 
-	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	model := "retab-small"
+	nConsensus := 4
+	result, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document:   "event_flyer.pdf",
-		Model:      "retab-small",
+		Model:      &model,
 		JSONSchema: calendarEventSchema,
-		NConsensus: 4,
+		NConsensus: &nConsensus,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	consensus, _ := (*result)["consensus"].(map[string]any)
-	likelihoods, _ := consensus["likelihoods"].(map[string]any)
+	likelihoods := result.Consensus.Likelihoods
 	pretty, err := json.MarshalIndent(likelihoods, "", "  ")
 	if err != nil {
 		log.Fatal(err)
@@ -300,8 +318,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
 
 var calendarEventSchema = new Dictionary<string, object>
 {
@@ -316,7 +335,6 @@ var calendarEventSchema = new Dictionary<string, object>
 };
 
 var result = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new FileInfo("event_flyer.pdf"),
@@ -345,6 +363,19 @@ let calendar_event_schema = json!({
     },
     "required": ["name", "date", "address"]
 });
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -596,6 +627,23 @@ let calendar_event_schema = json!({
     },
     "required": ["name", "date", "address"]
 });
+```
+
+```java Java
+import java.util.List;
+import java.util.Map;
+
+public final class Example {
+  public static void main(String[] args) {
+    Map<String, Object> schema =
+        Map.of(
+            "type", "object",
+            "properties", Map.of("invoice_number", Map.of("type", "string")),
+            "required", List.of("invoice_number"));
+
+    System.out.println(schema);
+  }
+}
 ```
 
 </CodeGroup>

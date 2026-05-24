@@ -55,6 +55,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -64,20 +66,21 @@ func main() {
 	}
 
 	// List recent files
-	files, err := client.Files.List(ctx, &retab.ListFilesParams{
-		ListParams: retab.ListParams{Limit: 20},
+	files, err := client.Files.List(ctx, &retab.FilesListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(20)},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, f := range files.Data {
-		fmt.Printf("%s: %s\n", f["id"], f["filename"])
+		fmt.Printf("%s: %s\n", f.ID, f.Filename)
 	}
 
 	// Filter by filename prefix and MIME type
-	filtered, err := client.Files.List(ctx, &retab.ListFilesParams{
-		ListParams: retab.ListParams{Filename: "invoice", Limit: 50},
-		MIMEType:   "application/pdf",
+	filtered, err := client.Files.List(ctx, &retab.FilesListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(50)},
+		Filename:         ptr("invoice"),
+		MIMEType:         ptr("application/pdf"),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -153,12 +156,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Files.ListAsync(apiKey, new FilesListOptions());
+var result = await client.Files.ListAsync(new FilesListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.files().list(null, null, 10L, null, "invoice.pdf", null, null, null, null, "created_at");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

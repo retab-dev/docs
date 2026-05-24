@@ -58,6 +58,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -66,19 +68,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	workflows, err := client.Workflows.List(ctx, &retab.ListWorkflowsParams{
-		Limit:  10,
-		Order:  "desc",
-		SortBy: "updated_at",
+	workflows, err := client.Workflows.List(ctx, &retab.WorkflowsListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(10), Order: ptr("desc")},
+		SortBy:           ptr("updated_at"),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	filtered, err := client.Workflows.List(ctx, &retab.ListWorkflowsParams{
-		After:  "workflow_abc123xyz",
-		Limit:  5,
-		Fields: "id,name,updated_at",
+	filtered, err := client.Workflows.List(ctx, &retab.WorkflowsListParams{
+		PaginationParams: retab.PaginationParams{
+			After: ptr("workflow_abc123xyz"),
+			Limit: ptr(5),
+		},
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -160,12 +162,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Workflows.ListAsync(apiKey, new WorkflowsListOptions());
+var result = await client.Workflows.ListAsync(new WorkflowsListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().list(null, null, 10L, null, "created_at");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

@@ -59,6 +59,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -72,26 +74,24 @@ func main() {
 		log.Fatal(err)
 	}
 
-	classification, err := client.Classifications.Create(ctx, retab.ClassificationCreateRequest{
+	classification, err := client.Classifications.Create(ctx, &retab.ClassificationsCreateParams{
 		Document: document,
-		Model:    "retab-small",
-		Categories: []retab.ClassificationCategory{
-			{Name: "invoice", Description: "Invoice documents with billing information"},
-			{Name: "receipt", Description: "Receipt documents for payments"},
-			{Name: "contract", Description: "Legal contract documents"},
+		Model:    ptr("retab-small"),
+		Categories: []*retab.Category{
+			{Name: "invoice", Description: ptr("Invoice documents with billing information")},
+			{Name: "receipt", Description: ptr("Receipt documents for payments")},
+			{Name: "contract", Description: ptr("Legal contract documents")},
 		},
-		FirstNPages:  3,
-		Instructions: "Processing batch from Q4 2024 vendor submissions",
-		NConsensus:   1,
+		FirstNPages:  ptr(3),
+		Instructions: ptr("Processing batch from Q4 2024 vendor submissions"),
+		NConsensus:   ptr(1),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Classification ID: %v\n", (*classification)["id"])
-	if output, ok := (*classification)["output"].(map[string]any); ok {
-		fmt.Printf("Category: %v\n", output["category"])
-	}
+	fmt.Printf("Classification ID: %s\n", classification.ID)
+	fmt.Printf("Category: %s\n", classification.Output.Category)
 }
 ```
 
@@ -178,12 +178,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Classifications.CreateAsync(apiKey, new ClassificationsCreateOptions());
+var result = await client.Classifications.CreateAsync(new ClassificationsCreateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.classifications().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

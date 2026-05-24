@@ -45,6 +45,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -53,8 +55,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	workflow, err := client.Workflows.Publish(ctx, "wf_abc123xyz", retab.PublishWorkflowRequest{
-		Description: "Add vendor-name normalization step",
+	workflow, err := client.Workflows.Publish(ctx, "wf_abc123xyz", &retab.WorkflowsPublishParams{
+		Body: retab.PublishWorkflowRequest{
+			Description: ptr("Add vendor-name normalization step"),
+		},
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -126,12 +130,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Workflows.PublishAsync("wf_abc123", apiKey, new WorkflowsPublishOptions());
+var result = await client.Workflows.PublishAsync("wf_abc123", new WorkflowsPublishOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().publish("wf_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

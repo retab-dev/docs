@@ -94,6 +94,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -102,31 +104,32 @@ func main() {
 		log.Fatal(err)
 	}
 
-	runs, err := client.Workflows.Runs.List(ctx, &retab.ListWorkflowRunsParams{
-		WorkflowID: "wf_abc123xyz",
-		Limit:      20,
-		Order:      "desc",
-		SortBy:     "created_at",
+	runs, err := client.Workflows.Runs.List(ctx, &retab.WorkflowRunsListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(20), Order: ptr("desc")},
+		WorkflowID:       ptr("wf_abc123xyz"),
+		SortBy:           ptr("created_at"),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	recentFailures, err := client.Workflows.Runs.List(ctx, &retab.ListWorkflowRunsParams{
-		WorkflowID: "wf_abc123xyz",
-		Statuses:   []string{"error", "pending"},
-		FromDate:   "2026-04-24",
-		ToDate:     "2026-05-01",
-		Limit:      50,
+	recentFailures, err := client.Workflows.Runs.List(ctx, &retab.WorkflowRunsListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(50)},
+		WorkflowID:       ptr("wf_abc123xyz"),
+		Statuses:         ptr("error,pending"),
+		FromDate:         ptr("2026-04-24"),
+		ToDate:           ptr("2026-05-01"),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	nextPage, err := client.Workflows.Runs.List(ctx, &retab.ListWorkflowRunsParams{
-		WorkflowID: "wf_abc123xyz",
-		After:      runs.ListMetadata.After,
-		Limit:      20,
+	nextPage, err := client.Workflows.Runs.List(ctx, &retab.WorkflowRunsListParams{
+		PaginationParams: retab.PaginationParams{
+			After: ptr(runs.ListMetadata.After),
+			Limit: ptr(20),
+		},
+		WorkflowID: ptr("wf_abc123xyz"),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -177,7 +180,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     let runs = client
-        .workflow_runs()
+        .workflows().runs()
         .list(ListParams {
             workflow_id: Some("wf_abc123xyz".into()),
             limit: Some(20),
@@ -188,7 +191,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     let _recent_failures = client
-        .workflow_runs()
+        .workflows().runs()
         .list(ListParams {
             workflow_id: Some("wf_abc123xyz".into()),
             statuses: Some("error,pending".into()),
@@ -200,7 +203,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     let _next_page = client
-        .workflow_runs()
+        .workflows().runs()
         .list(ListParams {
             workflow_id: Some("wf_abc123xyz".into()),
             after: runs.list_metadata.after.clone(),
@@ -228,12 +231,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowRuns.ListAsync(apiKey, new WorkflowRunsListOptions());
+var result = await client.Workflows.Runs.ListAsync(new WorkflowRunsListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().runs().list("wf_abc123", null, null, null, null, null, null, null, null, null, null, null, null, 10L, null, "created_at");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

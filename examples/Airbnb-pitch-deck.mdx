@@ -620,12 +620,36 @@ console.log(extraction.output);
 use retab::{resources::extractions::CreateParams, Retab};
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let schema: std::collections::HashMap<String, serde_json::Value> =
+    serde_json::from_value(serde_json::json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "website": {"type": "string"},
+            "businessModel": {"type": "string"}
+        }
+    }))?;
+let mut params = CreateParams::new("airbnb_pitch_deck.pdf", schema);
+params.body.model = Some("retab-small".into());
 let extraction = client
     .extractions()
-    .create(CreateParams::new("airbnb_pitch_deck.pdf", schema))
+    .create(params)
     .await?;
 
 println!("{:#?}", extraction.output);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -742,11 +766,11 @@ using System;
 using System.IO;
 using System.Text.Json;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
 
 var extraction = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new FileInfo("airbnb_pitch_deck.pdf"),
@@ -787,16 +811,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	extraction, err := client.Extractions.Create(context.Background(), retab.ExtractionCreateRequest{
+	schema := map[string]any{"type": "object"}
+	model := "retab-small"
+	extraction, err := client.Extractions.Create(context.Background(), &retab.ExtractionsCreateParams{
 		Document:   "airbnb_pitch_deck.pdf",
 		JSONSchema: schema,
-		Model:      "retab-small",
+		Model:      &model,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*extraction)["output"])
+	fmt.Println(extraction.Output)
 }
 ```
 
@@ -804,9 +830,20 @@ func main() {
 use retab::{resources::extractions::CreateParams, Retab};
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let schema: std::collections::HashMap<String, serde_json::Value> =
+    serde_json::from_value(serde_json::json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "website": {"type": "string"},
+            "businessModel": {"type": "string"}
+        }
+    }))?;
+let mut params = CreateParams::new("airbnb_pitch_deck.pdf", schema);
+params.body.model = Some("retab-small".into());
 let extraction = client
     .extractions()
-    .create(CreateParams::new("airbnb_pitch_deck.pdf", schema))
+    .create(params)
     .await?;
 
 println!("{:#?}", extraction.output);
@@ -826,6 +863,19 @@ $extraction = $client->extractions()->create(
 );
 
 print_r($extraction->output);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -975,16 +1025,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	extraction, err := client.Extractions.Create(context.Background(), retab.ExtractionCreateRequest{
+	schema := map[string]any{"type": "object"}
+	model := "retab-small"
+	extraction, err := client.Extractions.Create(context.Background(), &retab.ExtractionsCreateParams{
 		Document:   "airbnb_pitch_deck.pdf",
 		JSONSchema: schema,
-		Model:      "retab-small",
+		Model:      &model,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*extraction)["output"])
+	fmt.Println(extraction.Output)
 }
 ```
 
@@ -992,9 +1044,20 @@ func main() {
 use retab::{resources::extractions::CreateParams, Retab};
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let schema: std::collections::HashMap<String, serde_json::Value> =
+    serde_json::from_value(serde_json::json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "website": {"type": "string"},
+            "businessModel": {"type": "string"}
+        }
+    }))?;
+let mut params = CreateParams::new("airbnb_pitch_deck.pdf", schema);
+params.body.model = Some("retab-small".into());
 let extraction = client
     .extractions()
-    .create(CreateParams::new("airbnb_pitch_deck.pdf", schema))
+    .create(params)
     .await?;
 
 println!("{:#?}", extraction.output);
@@ -1014,6 +1077,19 @@ $extraction = $client->extractions()->create(
 );
 
 print_r($extraction->output);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -1720,6 +1796,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Retab;
+using RetabClient = Retab.Retab;
 
 var systemPrompt = """
 Your task is to extract structured information from pitch decks based on the provided schema. Carefully analyze the content to identify relevant details and populate each field accurately while maintaining consistency across extracted data.
@@ -1797,10 +1874,9 @@ var schema = new Dictionary<string, object>
     },
 };
 
-var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
 
 var extraction = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new FileInfo("airbnb_pitch_deck.pdf"),
@@ -1864,16 +1940,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	extraction, err := client.Extractions.Create(context.Background(), retab.ExtractionCreateRequest{
+	schema := map[string]any{"type": "object"}
+	model := "retab-small"
+	extraction, err := client.Extractions.Create(context.Background(), &retab.ExtractionsCreateParams{
 		Document:   "airbnb_pitch_deck.pdf",
 		JSONSchema: schema,
-		Model:      "retab-small",
+		Model:      &model,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*extraction)["output"])
+	fmt.Println(extraction.Output)
 }
 ```
 
@@ -1881,9 +1959,20 @@ func main() {
 use retab::{resources::extractions::CreateParams, Retab};
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let schema: std::collections::HashMap<String, serde_json::Value> =
+    serde_json::from_value(serde_json::json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "website": {"type": "string"},
+            "businessModel": {"type": "string"}
+        }
+    }))?;
+let mut params = CreateParams::new("airbnb_pitch_deck.pdf", schema);
+params.body.model = Some("retab-small".into());
 let extraction = client
     .extractions()
-    .create(CreateParams::new("airbnb_pitch_deck.pdf", schema))
+    .create(params)
     .await?;
 
 println!("{:#?}", extraction.output);
@@ -1903,6 +1992,19 @@ $extraction = $client->extractions()->create(
 );
 
 print_r($extraction->output);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>

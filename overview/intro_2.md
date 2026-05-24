@@ -85,6 +85,84 @@ const completion = await openai.chat.completions.parse({
 const researchPaper = completion.choices[0].message.parsed;
 ````
 
+```go Go
+package main
+
+import "encoding/json"
+
+type ResearchPaperExtraction struct {
+	Title    string   `json:"title"`
+	Authors  []string `json:"authors"`
+	Abstract string   `json:"abstract"`
+	Keywords []string `json:"keywords"`
+}
+
+func main() {
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"title":    map[string]any{"type": "string"},
+			"authors":  map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			"abstract": map[string]any{"type": "string"},
+			"keywords": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+		},
+		"required": []string{"title", "authors", "abstract", "keywords"},
+	}
+	_, _ = json.Marshal(schema)
+}
+```
+
+```rust Rust
+use serde_json::json;
+
+fn main() {
+    let _schema = json!({
+        "type": "object",
+        "properties": {
+            "title": { "type": "string" },
+            "authors": { "type": "array", "items": { "type": "string" } },
+            "abstract": { "type": "string" },
+            "keywords": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["title", "authors", "abstract", "keywords"]
+    });
+}
+```
+
+```csharp C#
+using System.Text.Json;
+
+var schema = new
+{
+    type = "object",
+    properties = new
+    {
+        title = new { type = "string" },
+        authors = new { type = "array", items = new { type = "string" } },
+        @abstract = new { type = "string" },
+        keywords = new { type = "array", items = new { type = "string" } },
+    },
+    required = new[] { "title", "authors", "abstract", "keywords" },
+};
+
+Console.WriteLine(JsonSerializer.Serialize(schema));
+```
+
+```php PHP
+<?php
+$schema = [
+    'type' => 'object',
+    'properties' => [
+        'title' => ['type' => 'string'],
+        'authors' => ['type' => 'array', 'items' => ['type' => 'string']],
+        'abstract' => ['type' => 'string'],
+        'keywords' => ['type' => 'array', 'items' => ['type' => 'string']],
+    ],
+    'required' => ['title', 'authors', 'abstract', 'keywords'],
+];
+echo json_encode($schema, JSON_PRETTY_PRINT);
+```
+
 ```ruby Ruby
 require 'openai'
 
@@ -149,6 +227,23 @@ completion = client.completions.parse(
   "authors": ["John Doe", "Jane Smith"],
   "abstract": "This paper explores the effects of climate change on global agriculture, examining how rising temperatures and changing precipitation patterns are impacting crop yields and food security.",
   "keywords": ["climate change", "global agriculture", "food security"]
+}
+```
+
+```java Java
+import java.util.List;
+import java.util.Map;
+
+public final class Example {
+  public static void main(String[] args) {
+    Map<String, Object> schema =
+        Map.of(
+            "type", "object",
+            "properties", Map.of("invoice_number", Map.of("type", "string")),
+            "required", List.of("invoice_number"));
+
+    System.out.println(schema);
+  }
 }
 ```
 

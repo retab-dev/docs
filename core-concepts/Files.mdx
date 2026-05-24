@@ -67,6 +67,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	retab "github.com/retab-dev/retab/clients/go"
 )
@@ -79,7 +80,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	mimeData, err := client.Files.Upload(ctx, "invoice.pdf")
+	contentType := "application/pdf"
+	info, err := os.Stat("invoice.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	session, err := client.Files.CreateUpload(ctx, &retab.FilesCreateUploadParams{
+		Filename:    "invoice.pdf",
+		SizeBytes:   int(info.Size()),
+		ContentType: &contentType,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mimeData, err := client.Files.CompleteUpload(ctx, session.FileID, &retab.FilesCompleteUploadParams{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -159,6 +175,7 @@ use retab::models::{CompleteFileUploadRequest, UploadFileRequest};
 use retab::resources::files::{CompleteUploadParams, CreateUploadParams};
 use retab::Retab;
 use std::fs;
+use std::process::Command;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -176,14 +193,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     // 2. PUT the bytes to the signed storage URL
-    let http = reqwest::Client::new();
-    let mut request = http.put(&session.upload_url).body(bytes);
+    let mut upload = Command::new("curl");
+    upload
+        .arg("-X")
+        .arg("PUT")
+        .arg(&session.upload_url)
+        .arg("--data-binary")
+        .arg(format!("@{path}"));
     if let Some(headers) = &session.upload_headers {
         for (k, v) in headers {
-            request = request.header(k, v);
+            upload.arg("-H").arg(format!("{k}: {v}"));
         }
     }
-    request.send().await?.error_for_status()?;
+    let status = upload.status()?;
+    if !status.success() {
+        return Err("file upload failed".into());
+    }
 
     // 3. Finalize and receive the durable MimeData reference
     let mime_data = client
@@ -197,6 +222,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Filename: {}", mime_data.filename);
     println!("URL: {}", mime_data.url);
     Ok(())
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var session = client.files().createUpload("invoice.pdf", "application/pdf", 1024L, null);
+    System.out.println(session);
+  }
 }
 ```
 
@@ -231,15 +269,15 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 // 1. Create the upload session
 var path = "invoice.pdf";
-var bytes = await File.ReadAllBytesAsync(path);
-var session = await client.Files.UploadAsync(
-    client.ApiKey,
-    new FilesUploadOptions
+var bytes = await System.IO.File.ReadAllBytesAsync(path);
+var session = await client.Files.CreateUploadAsync(
+    new FilesCreateUploadOptions
     {
         Filename = Path.GetFileName(path),
         ContentType = "application/pdf",
@@ -264,7 +302,6 @@ put.EnsureSuccessStatusCode();
 // 3. Finalize and receive the durable MimeData reference
 var mimeData = await client.Files.CompleteUploadAsync(
     session.FileId,
-    client.ApiKey,
     new FilesCompleteUploadOptions()
 );
 Console.WriteLine($"Filename: {mimeData.Filename}");
@@ -376,16 +413,17 @@ func main() {
 
 	cloudflareR2URL := "https://<public-id>.r2.dev/large_document.pdf"
 
-	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	model := "retab-small"
+	extraction, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document:   cloudflareR2URL,
-		Model:      "retab-small",
+		Model:      &model,
 		JSONSchema: schema,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*extraction)["output"])
+	fmt.Println(extraction.Output)
 }
 ```
 
@@ -473,8 +511,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_RETAB_API_KEY");
+var client = new RetabClient("YOUR_RETAB_API_KEY");
 
 var schema = new Dictionary<string, object>
 {
@@ -489,7 +528,6 @@ var schema = new Dictionary<string, object>
 var cloudflareR2Url = new Uri("https://<public-id>.r2.dev/large_document.pdf");
 
 var extraction = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = cloudflareR2Url,
@@ -501,6 +539,19 @@ var extraction = await client.Extractions.CreateAsync(
 foreach (var kv in extraction.Output)
 {
     Console.WriteLine($"{kv.Key}: {kv.Value}");
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -559,6 +610,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 
 	retab "github.com/retab-dev/retab/clients/go"
 )
@@ -571,14 +623,30 @@ func main() {
 		log.Fatal(err)
 	}
 
-	mimeRef, err := client.Files.Upload(ctx, "large_document.pdf")
+	contentType := "application/pdf"
+	info, err := os.Stat("large_document.pdf")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, err = client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	session, err := client.Files.CreateUpload(ctx, &retab.FilesCreateUploadParams{
+		Filename:    "large_document.pdf",
+		SizeBytes:   int(info.Size()),
+		ContentType: &contentType,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mimeRef, err := client.Files.CompleteUpload(ctx, session.FileID, &retab.FilesCompleteUploadParams{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	model := "retab-small"
+	_, err = client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document: mimeRef.URL,
-		Model:    "retab-small",
+		Model:    &model,
 		JSONSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -676,6 +744,7 @@ use retab::resources::files::{CompleteUploadParams, CreateUploadParams};
 use retab::Retab;
 use std::collections::HashMap;
 use std::fs;
+use std::process::Command;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -691,14 +760,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_upload(CreateUploadParams::new(upload_req))
         .await?;
 
-    let http = reqwest::Client::new();
-    let mut request = http.put(&session.upload_url).body(bytes);
+    let mut upload = Command::new("curl");
+    upload
+        .arg("-X")
+        .arg("PUT")
+        .arg(&session.upload_url)
+        .arg("--data-binary")
+        .arg(format!("@{path}"));
     if let Some(headers) = &session.upload_headers {
         for (k, v) in headers {
-            request = request.header(k, v);
+            upload.arg("-H").arg(format!("{k}: {v}"));
         }
     }
-    request.send().await?.error_for_status()?;
+    let status = upload.status()?;
+    if !status.success() {
+        return Err("file upload failed".into());
+    }
 
     let mime_ref = client
         .files()
@@ -732,15 +809,15 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_RETAB_API_KEY");
+var client = new RetabClient("YOUR_RETAB_API_KEY");
 
 // 1. Upload to Retab storage
 var path = "large_document.pdf";
-var bytes = await File.ReadAllBytesAsync(path);
-var session = await client.Files.UploadAsync(
-    client.ApiKey,
-    new FilesUploadOptions
+var bytes = await System.IO.File.ReadAllBytesAsync(path);
+var session = await client.Files.CreateUploadAsync(
+    new FilesCreateUploadOptions
     {
         Filename = Path.GetFileName(path),
         ContentType = "application/pdf",
@@ -755,13 +832,11 @@ content.Headers.Add("Content-Type", "application/pdf");
 
 var mimeRef = await client.Files.CompleteUploadAsync(
     session.FileId,
-    client.ApiKey,
     new FilesCompleteUploadOptions()
 );
 
 // 2. Reuse the durable Retab URL on subsequent calls
 var extraction = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new Uri(mimeRef.Url),
@@ -777,6 +852,19 @@ var extraction = await client.Extractions.CreateAsync(
         },
     }
 );
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -920,11 +1008,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 // List recent files
-var files = await client.Files.ListAsync(client.ApiKey, new FilesListOptions { Limit = 20 });
+var files = await client.Files.ListAsync(new FilesListOptions { Limit = 20 });
 await foreach (var f in files)
 {
     Console.WriteLine($"{f.Id}: {f.Filename}");
@@ -932,9 +1021,21 @@ await foreach (var f in files)
 
 // Filter by filename prefix and MIME type
 var pdfs = await client.Files.ListAsync(
-    client.ApiKey,
     new FilesListOptions { Filename = "invoice", MimeType = "application/pdf" }
 );
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.files().list(null, null, 10L, null, "invoice.pdf", null, null, null, null, "created_at");
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -995,12 +1096,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
-var link = await client.Files.GetDownloadLinkAsync("file_a1b2c3d4e5f6", client.ApiKey);
+var link = await client.Files.GetDownloadLinkAsync("file_a1b2c3d4e5f6");
 Console.WriteLine($"Download URL: {link.DownloadUrl}");
 Console.WriteLine($"Expires in: {link.ExpiresIn}");
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+    System.out.println(client.workflows() != null);
+  }
+}
 ```
 
 </CodeGroup>

@@ -68,6 +68,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -78,8 +80,10 @@ func main() {
 
 	summary, err := client.Workflows.Experiments.Metrics.Get(
 		ctx,
-		"exprun_2",
-		&retab.GetExperimentMetricsParams{View: "summary"},
+		&retab.ExperimentRunMetricsGetParams{
+			RunID: "exprun_2",
+			View:  ptr(retab.ExperimentRunMetricsViewSummary),
+		},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -87,17 +91,17 @@ func main() {
 
 	targetView, err := client.Workflows.Experiments.Metrics.Get(
 		ctx,
-		"exprun_2",
-		&retab.GetExperimentMetricsParams{
-			View:       "by_target",
-			TargetPath: "line_items.*.unit_price",
+		&retab.ExperimentRunMetricsGetParams{
+			RunID:      "exprun_2",
+			View:       ptr(retab.ExperimentRunMetricsViewByTarget),
+			TargetPath: ptr("line_items.*.unit_price"),
 		},
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(summary["score"], targetView["view"])
+	fmt.Println(summary.Score, targetView.View)
 }
 ```
 
@@ -129,12 +133,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut summary_params = GetParams::new("exprun_2");
     summary_params.view = Some(ExperimentRunMetricsView::Summary);
-    let _summary = client.experiment_run_metrics().get(summary_params).await?;
+    let _summary = client.workflows().experiments().metrics().get(summary_params).await?;
 
     let mut target_params = GetParams::new("exprun_2");
     target_params.view = Some(ExperimentRunMetricsView::ByTarget);
     target_params.target_path = Some("line_items.*.unit_price".into());
-    let _target_view = client.experiment_run_metrics().get(target_params).await?;
+    let _target_view = client.workflows().experiments().metrics().get(target_params).await?;
     Ok(())
 }
 ```
@@ -155,12 +159,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.ExperimentRunMetrics.GetAsync(apiKey, new ExperimentRunMetricsGetOptions());
+var result = await client.Workflows.Experiments.Metrics.GetAsync(new ExperimentRunMetricsGetOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().experiments().metrics().get("run_abc123", null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

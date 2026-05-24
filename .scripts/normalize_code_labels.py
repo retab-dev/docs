@@ -11,6 +11,7 @@ one used in ``primitives/Extract.mdx``:
     ruby        -> Ruby
     rust        -> Rust
     php         -> PHP
+    java        -> Java
     csharp      -> C#
     curl        -> cURL
 
@@ -47,6 +48,7 @@ NORMALIZATIONS: dict[tuple[str, str], tuple[str, str]] = {
     ("ruby", "ruby"): ("ruby", "Ruby"),
     ("rust", "rust"): ("rust", "Rust"),
     ("php", "php"): ("php", "PHP"),
+    ("java", "java"): ("java", "Java"),
     ("csharp", "csharp"): ("csharp", "C#"),
     ("csharp", "c#"): ("csharp", "C#"),
     ("csharp", "cs"): ("csharp", "C#"),

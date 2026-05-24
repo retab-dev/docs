@@ -57,6 +57,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -65,12 +67,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	edge, err := client.Workflows.Edges.Create(ctx, "wf_abc123xyz", retab.WorkflowEdgeCreateRequest{
-		ID:           "edge-start-to-extract",
+	edge, err := client.Workflows.Edges.Create(ctx, &retab.WorkflowEdgesCreateParams{
+		WorkflowID:    "wf_abc123xyz",
+		ID:            ptr("edge-start-to-extract"),
 		SourceBlock:  "start-1",
 		TargetBlock:  "extract-1",
-		SourceHandle: "output-file-0",
-		TargetHandle: "input-file-0",
+		SourceHandle: ptr("output-file-0"),
+		TargetHandle: ptr("input-file-0"),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -107,7 +110,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     let edge = client
-        .workflow_edges()
+        .workflows().edges()
         .create(CreateParams::new(WorkflowEdgeCreateRequest {
             workflow_id: "wf_abc123xyz".into(),
             id: Some("edge-start-to-extract".into()),
@@ -141,12 +144,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowEdges.CreateAsync(apiKey, new WorkflowEdgesCreateOptions());
+var result = await client.Workflows.Edges.CreateAsync(new WorkflowEdgesCreateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().edges().create("wf_abc123", null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

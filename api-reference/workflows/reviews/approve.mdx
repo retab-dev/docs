@@ -40,6 +40,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -48,7 +50,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Workflows.Reviews.Approve(ctx, "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY", retab.ApproveReviewRequest{
+	result, err := client.Workflows.Reviews.Approve(ctx, "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY", &retab.WorkflowReviewsApproveParams{
 		VersionID: "rvr_PFBGO3R6T3PG5O37U4Y3NDXWAM",
 	})
 	if err != nil {
@@ -72,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let body = ApproveReviewRequest::new("rvr_PFBGO3R6T3PG5O37U4Y3NDXWAM");
     let result = client
-        .workflow_reviews()
+        .workflows().reviews()
         .approve(
             "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
             ApproveParams::new(body),
@@ -102,13 +104,13 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowReviews.ApproveAsync(
+var result = await client.Workflows.Reviews.ApproveAsync(
     "rev_abc123",
-    apiKey,
     new WorkflowReviewsApproveOptions { VersionId = "ver_abc123" }
 );
 Console.WriteLine(result);
@@ -124,6 +126,19 @@ result = client.workflow_reviews.approve(
   version_id: 'ver_abc123',
 )
 puts result
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().reviews().approve("review_abc123", "version_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

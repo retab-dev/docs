@@ -198,33 +198,37 @@ func main() {
 		log.Fatal(err)
 	}
 
-	categories := []retab.ClassificationCategory{
-		{Name: "invoice", Description: "Invoice documents with billing details, line items, totals, and payment terms"},
-		{Name: "receipt", Description: "Payment receipts showing transaction confirmation and amounts paid"},
-		{Name: "contract", Description: "Legal contracts with terms, conditions, and signature blocks"},
-		{Name: "purchase_order", Description: "Purchase order documents with order details and shipping information"},
+	invoiceDescription := "Invoice documents with billing details, line items, totals, and payment terms"
+	receiptDescription := "Payment receipts showing transaction confirmation and amounts paid"
+	contractDescription := "Legal contracts with terms, conditions, and signature blocks"
+	purchaseOrderDescription := "Purchase order documents with order details and shipping information"
+	categories := []*retab.Category{
+		{Name: "invoice", Description: &invoiceDescription},
+		{Name: "receipt", Description: &receiptDescription},
+		{Name: "contract", Description: &contractDescription},
+		{Name: "purchase_order", Description: &purchaseOrderDescription},
 	}
 
-	classification, err := client.Classifications.Create(ctx, retab.ClassificationCreateRequest{
+	model := "retab-small"
+	classification, err := client.Classifications.Create(ctx, &retab.ClassificationsCreateParams{
 		Document:   "incoming_document.pdf",
-		Model:      "retab-small",
+		Model:      &model,
 		Categories: categories,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	output, _ := (*classification)["output"].(map[string]any)
-	category, _ := output["category"].(string)
+	category := classification.Output.Category
 	fmt.Printf("Document classified as: %s\n", category)
-	fmt.Printf("Reasoning: %v\n", output["reasoning"])
+	fmt.Printf("Reasoning: %v\n", classification.Output.Reasoning)
 
 	switch category {
 	case "invoice":
 		invoiceSchema := map[string]any{"type": "object"}
-		extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		extraction, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 			Document:   "incoming_document.pdf",
-			Model:      "retab-small",
+			Model:      &model,
 			JSONSchema: invoiceSchema,
 		})
 		if err != nil {
@@ -233,9 +237,9 @@ func main() {
 		_ = extraction
 	case "contract":
 		contractSchema := map[string]any{"type": "object"}
-		extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+		extraction, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 			Document:   "incoming_document.pdf",
-			Model:      "retab-small",
+			Model:      &model,
 			JSONSchema: contractSchema,
 		})
 		if err != nil {
@@ -379,8 +383,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var categories = new List<Category>
 {
@@ -391,7 +396,6 @@ var categories = new List<Category>
 };
 
 var classification = await client.Classifications.CreateAsync(
-    client.ApiKey,
     new ClassificationsCreateOptions
     {
         Document = new FileInfo("incoming_document.pdf"),
@@ -409,8 +413,7 @@ switch (classification.Output.Category)
     {
         var invoiceSchema = new Dictionary<string, object> { ["type"] = "object" };
         var extraction = await client.Extractions.CreateAsync(
-            client.ApiKey,
-            new ExtractionsCreateOptions
+    new ExtractionsCreateOptions
             {
                 Document = new FileInfo("incoming_document.pdf"),
                 Model = "retab-small",
@@ -424,8 +427,7 @@ switch (classification.Output.Category)
     {
         var contractSchema = new Dictionary<string, object> { ["type"] = "object" };
         var extraction = await client.Extractions.CreateAsync(
-            client.ApiKey,
-            new ExtractionsCreateOptions
+    new ExtractionsCreateOptions
             {
                 Document = new FileInfo("incoming_document.pdf"),
                 Model = "retab-small",
@@ -488,6 +490,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Reasoning: {}", classification.output.reasoning);
 
     Ok(())
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.classifications().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -585,28 +600,32 @@ func main() {
 		log.Fatal(err)
 	}
 
-	categories := []retab.ClassificationCategory{
-		{Name: "invoice", Description: "Invoice or billing documents requiring payment"},
-		{Name: "quote", Description: "Price quotes or proposals from vendors"},
-		{Name: "marketing", Description: "Marketing materials, brochures, or promotional content"},
-		{Name: "other", Description: "Miscellaneous documents not fitting other categories"},
+	invoiceDescription := "Invoice or billing documents requiring payment"
+	quoteDescription := "Price quotes or proposals from vendors"
+	marketingDescription := "Marketing materials, brochures, or promotional content"
+	otherDescription := "Miscellaneous documents not fitting other categories"
+	categories := []*retab.Category{
+		{Name: "invoice", Description: &invoiceDescription},
+		{Name: "quote", Description: &quoteDescription},
+		{Name: "marketing", Description: &marketingDescription},
+		{Name: "other", Description: &otherDescription},
 	}
 
 	emailAttachments := []emailAttachment{}
 
+	model := "retab-small"
 	for _, attachment := range emailAttachments {
-		classification, err := client.Classifications.Create(ctx, retab.ClassificationCreateRequest{
+		classification, err := client.Classifications.Create(ctx, &retab.ClassificationsCreateParams{
 			Document:   attachment.Path,
-			Model:      "retab-small",
+			Model:      &model,
 			Categories: categories,
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		output, _ := (*classification)["output"].(map[string]any)
-		category, _ := output["category"].(string)
-		reasoning, _ := output["reasoning"].(string)
+		category := classification.Output.Category
+		reasoning := classification.Output.Reasoning
 
 		switch category {
 		case "invoice":
@@ -705,8 +724,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var categories = new List<Category>
 {
@@ -722,8 +742,7 @@ var emailAttachments = new List<FileInfo>();
 foreach (var attachment in emailAttachments)
 {
     var classification = await client.Classifications.CreateAsync(
-        client.ApiKey,
-        new ClassificationsCreateOptions
+    new ClassificationsCreateOptions
         {
             Document = attachment,
             Model = "retab-small",
@@ -816,6 +835,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("  Reason: {preview}...");
     }
     Ok(())
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.classifications().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null);
+    System.out.println(result);
+  }
 }
 ```
 

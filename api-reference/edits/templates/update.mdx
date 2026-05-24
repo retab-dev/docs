@@ -38,6 +38,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -47,13 +49,13 @@ func main() {
 	}
 
 	name := "W-9 Form (2024)"
-	template, err := client.Edits.Templates.Update(ctx, "edittplt_abc123", retab.EditTemplateUpdateRequest{
+	template, err := client.Edits.Templates.Update(ctx, "edittplt_abc123", &retab.EditTemplatesUpdateParams{
 		Name: &name,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println((*template)["name"])
+	fmt.Println(template.Name)
 }
 ```
 
@@ -79,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     let template = client
-        .edit_templates()
+        .edits().templates()
         .update(
             "edittplt_abc123",
             UpdateParams {
@@ -111,12 +113,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.EditTemplates.UpdateAsync("tmpl_abc123", apiKey, new EditTemplatesUpdateOptions());
+var result = await client.Edits.Templates.UpdateAsync("tmpl_abc123", new EditTemplatesUpdateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().templates().update("tmpl_abc123", "Invoice Processing", null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

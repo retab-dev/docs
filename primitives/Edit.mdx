@@ -285,7 +285,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
+	model := "retab-small"
+	color := "#000080" // Dark blue text (default)
+	result, err := client.Edits.Create(ctx, &retab.EditsCreateParams{
 		Document: document,
 		Instructions: `
         Full Name: Jane Smith
@@ -298,16 +300,14 @@ func main() {
         ZIP Code: 94102
         I agree to the terms and conditions: checked
         `,
-		Model: "retab-small",
-		Color: "#000080", // Dark blue text (default)
+		Model:  &model,
+		Config: &retab.EditConfig{Color: &color},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	output, _ := (*result)["output"].(map[string]any)
-	filled, _ := output["filled_document"].(map[string]any)
-	if url, ok := filled["url"].(string); ok && url != "" {
+	if url := result.Output.FilledDocument.URL; url != "" {
 		parts := strings.SplitN(url, ",", 2)
 		if len(parts) == 2 {
 			filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
@@ -321,12 +321,10 @@ func main() {
 		}
 	}
 
-	formData, _ := output["form_data"].([]any)
-	fmt.Printf("Filled %d form fields:\n", len(formData))
-	for _, raw := range formData {
-		field, _ := raw.(map[string]any)
-		if value, ok := field["value"]; ok && value != nil && value != "" {
-			fmt.Printf("  - %v: %v\n", field["key"], value)
+	fmt.Printf("Filled %d form fields:\n", len(result.Output.FormData))
+	for _, field := range result.Output.FormData {
+		if field.Value != nil && *field.Value != "" {
+			fmt.Printf("  - %v: %v\n", field.Key, *field.Value)
 		}
 	}
 }
@@ -533,13 +531,13 @@ I agree to the terms and conditions: checked
 using System;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 // Fill the form with natural language instructions.
 // FileInfo implicitly converts to MimeData.
 var result = await client.Edits.CreateAsync(
-    client.ApiKey,
     new EditsCreateOptions
     {
         Document = new FileInfo("application-form.pdf"),
@@ -555,7 +553,10 @@ ZIP Code: 94102
 I agree to the terms and conditions: checked
 ",
         Model = "retab-small",
-        Color = "#000080", // Dark blue text (default)
+        Config = new EditConfig
+        {
+            Color = "#000080", // Dark blue text (default)
+        },
     }
 );
 
@@ -565,7 +566,7 @@ if (result.Output.FilledDocument != null)
     var dataUrl = result.Output.FilledDocument.Url;
     var base64Content = dataUrl.Split(',', 2)[1];
     var filledBytes = Convert.FromBase64String(base64Content);
-    await File.WriteAllBytesAsync("filled-application.pdf", filledBytes);
+    await System.IO.File.WriteAllBytesAsync("filled-application.pdf", filledBytes);
     Console.WriteLine("Filled form saved!");
 }
 
@@ -577,6 +578,19 @@ foreach (var field in result.Output.FormData)
     {
         Console.WriteLine($"  - {field.Key}: {field.Value}");
     }
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().create("Extract the invoice fields", null, "tmpl_abc123", "retab-1.5", null, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -659,21 +673,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	template, err := client.Edits.Templates.Create(ctx, retab.EditTemplateCreateRequest{
+	fullNameDescription := "Applicant's full legal name"
+	dateOfBirthDescription := "Date of birth, ISO 8601"
+	template, err := client.Edits.Templates.Create(ctx, &retab.EditTemplatesCreateParams{
 		Name:     "Application Form",
 		Document: "blank-form.pdf",
-		FormFields: []retab.FormField{
+		FormFields: []*retab.FormField{
 			{
-				"key":         "full_name",
-				"description": "Applicant's full legal name",
-				"type":        "text",
-				"bbox":        map[string]any{"left": 0.15, "top": 0.12, "width": 0.35, "height": 0.03, "page": 1},
+				Key:         "full_name",
+				Description: fullNameDescription,
+				Type:        "text",
+				Bbox:        retab.BBox{Left: 0.15, Top: 0.12, Width: 0.35, Height: 0.03, Page: 1},
 			},
 			{
-				"key":         "date_of_birth",
-				"description": "Date of birth, ISO 8601",
-				"type":        "text",
-				"bbox":        map[string]any{"left": 0.15, "top": 0.18, "width": 0.25, "height": 0.03, "page": 1},
+				Key:         "date_of_birth",
+				Description: dateOfBirthDescription,
+				Type:        "text",
+				Bbox:        retab.BBox{Left: 0.15, Top: 0.18, Width: 0.25, Height: 0.03, Page: 1},
 			},
 		},
 	})
@@ -681,7 +697,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Template %v with %v fields ready for fill calls\n", (*template)["id"], (*template)["field_count"])
+	fmt.Printf("Template %v with %v fields ready for fill calls\n", template.ID, *template.FieldCount)
 }
 ```
 
@@ -780,7 +796,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         form_fields,
     );
 
-    let template = client.edit_templates().create(params).await?;
+    let template = client.edits().templates().create(params).await?;
 
     println!(
         "Template {} with {} fields ready for fill calls",
@@ -796,11 +812,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
-var template = await client.EditTemplates.CreateAsync(
-    client.ApiKey,
+var template = await client.Edits.Templates.CreateAsync(
     new EditTemplatesCreateOptions
     {
         Name = "Application Form",
@@ -826,6 +842,19 @@ var template = await client.EditTemplates.CreateAsync(
 );
 
 Console.WriteLine($"Template {template.Id} with {template.FieldCount} fields ready for fill calls");
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().templates().create("Invoice Processing", null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -911,23 +940,24 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
-		TemplateID: "edittplt_abc123",
+	templateID := "edittplt_abc123"
+	model := "retab-small"
+	color := "#000080" // Dark blue text (default)
+	result, err := client.Edits.Create(ctx, &retab.EditsCreateParams{
+		TemplateID: &templateID,
 		Instructions: `
         Full Name: Jane Smith
         Date of Birth: March 15, 1985
         Email: jane.smith@example.com
         `,
-		Model: "retab-small",
-		Color: "#000080", // Dark blue text (default)
+		Model:  &model,
+		Config: &retab.EditConfig{Color: &color},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	output, _ := (*result)["output"].(map[string]any)
-	filled, _ := output["filled_document"].(map[string]any)
-	if url, ok := filled["url"].(string); ok && url != "" {
+	if url := result.Output.FilledDocument.URL; url != "" {
 		parts := strings.SplitN(url, ",", 2)
 		if len(parts) == 2 {
 			filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
@@ -1036,12 +1066,12 @@ Email: jane.smith@example.com
 using System;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 // Use Edits.CreateAsync with TemplateId for fast, consistent filling.
 var result = await client.Edits.CreateAsync(
-    client.ApiKey,
     new EditsCreateOptions
     {
         TemplateId = "edittplt_abc123",
@@ -1051,7 +1081,10 @@ Date of Birth: March 15, 1985
 Email: jane.smith@example.com
 ",
         Model = "retab-small",
-        Color = "#000080", // Dark blue text (default)
+        Config = new EditConfig
+        {
+            Color = "#000080", // Dark blue text (default)
+        },
     }
 );
 
@@ -1059,8 +1092,21 @@ if (result.Output.FilledDocument != null)
 {
     var dataUrl = result.Output.FilledDocument.Url;
     var base64Content = dataUrl.Split(',', 2)[1];
-    await File.WriteAllBytesAsync("filled-from-template.pdf", Convert.FromBase64String(base64Content));
+    await System.IO.File.WriteAllBytesAsync("filled-from-template.pdf", Convert.FromBase64String(base64Content));
     Console.WriteLine("Template-based form filled and saved!");
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().create("Extract the invoice fields", null, "tmpl_abc123", "retab-1.5", null, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -1232,18 +1278,18 @@ func main() {
         Phone Number: %s
         `, person.Name, person.DOB, person.Email, person.Phone)
 
-		result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
-			TemplateID:   "edittplt_your_template_id",
+		templateID := "edittplt_your_template_id"
+		model := "retab-small"
+		result, err := client.Edits.Create(ctx, &retab.EditsCreateParams{
+			TemplateID:   &templateID,
 			Instructions: instructions,
-			Model:        "retab-small",
+			Model:        &model,
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		output, _ := (*result)["output"].(map[string]any)
-		filled, _ := output["filled_document"].(map[string]any)
-		if url, ok := filled["url"].(string); ok && url != "" {
+		if url := result.Output.FilledDocument.URL; url != "" {
 			parts := strings.SplitN(url, ",", 2)
 			if len(parts) == 2 {
 				filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
@@ -1408,8 +1454,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var applicants = new List<(string Name, string DOB, string Email, string Phone)>
 {
@@ -1431,8 +1478,7 @@ Phone Number: {applicant.Phone}
 ";
 
     var result = await client.Edits.CreateAsync(
-        client.ApiKey,
-        new EditsCreateOptions
+    new EditsCreateOptions
         {
             TemplateId = "edittplt_your_template_id",
             Instructions = instructions,
@@ -1445,12 +1491,25 @@ Phone Number: {applicant.Phone}
         var safeName = applicant.Name.Replace(' ', '-');
         var outputFilename = $"filled-form-{i + 1}-{safeName}.pdf";
         var base64Content = result.Output.FilledDocument.Url.Split(',', 2)[1];
-        await File.WriteAllBytesAsync(outputFilename, Convert.FromBase64String(base64Content));
+        await System.IO.File.WriteAllBytesAsync(outputFilename, Convert.FromBase64String(base64Content));
         Console.WriteLine($"Created: {outputFilename}");
     }
 }
 
 Console.WriteLine($"Processed {applicants.Count} forms successfully!");
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().create("Extract the invoice fields", null, "tmpl_abc123", "retab-1.5", null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -1557,18 +1616,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
+	model := "retab-small"
+	result, err := client.Edits.Create(ctx, &retab.EditsCreateParams{
 		Document:     document,
 		Instructions: string(instructions),
-		Model:        "retab-small",
+		Model:        &model,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	output, _ := (*result)["output"].(map[string]any)
-	filled, _ := output["filled_document"].(map[string]any)
-	if url, ok := filled["url"].(string); ok && url != "" {
+	if url := result.Output.FilledDocument.URL; url != "" {
 		parts := strings.SplitN(url, ",", 2)
 		if len(parts) == 2 {
 			filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
@@ -1682,8 +1740,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var data = new Dictionary<string, object>
 {
@@ -1695,7 +1754,6 @@ var data = new Dictionary<string, object>
 };
 
 var result = await client.Edits.CreateAsync(
-    client.ApiKey,
     new EditsCreateOptions
     {
         Document = new FileInfo("contract-template.docx"),
@@ -1708,8 +1766,21 @@ var result = await client.Edits.CreateAsync(
 if (result.Output.FilledDocument != null)
 {
     var base64Content = result.Output.FilledDocument.Url.Split(',', 2)[1];
-    await File.WriteAllBytesAsync("filled-contract.docx", Convert.FromBase64String(base64Content));
+    await System.IO.File.WriteAllBytesAsync("filled-contract.docx", Convert.FromBase64String(base64Content));
     Console.WriteLine("Filled Word document saved!");
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().create("Extract the invoice fields", null, "tmpl_abc123", "retab-1.5", null, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -1824,18 +1895,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
+	model := "retab-small"
+	result, err := client.Edits.Create(ctx, &retab.EditsCreateParams{
 		Document:     document,
 		Instructions: string(instructions),
-		Model:        "retab-small",
+		Model:        &model,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	output, _ := (*result)["output"].(map[string]any)
-	filled, _ := output["filled_document"].(map[string]any)
-	if url, ok := filled["url"].(string); ok && url != "" {
+	if url := result.Output.FilledDocument.URL; url != "" {
 		parts := strings.SplitN(url, ",", 2)
 		if len(parts) == 2 {
 			filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
@@ -1957,8 +2027,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var data = new Dictionary<string, object>
 {
@@ -1974,7 +2045,6 @@ var data = new Dictionary<string, object>
 };
 
 var result = await client.Edits.CreateAsync(
-    client.ApiKey,
     new EditsCreateOptions
     {
         Document = new FileInfo("invoice-template.xlsx"),
@@ -1986,8 +2056,21 @@ var result = await client.Edits.CreateAsync(
 if (result.Output.FilledDocument != null)
 {
     var base64Content = result.Output.FilledDocument.Url.Split(',', 2)[1];
-    await File.WriteAllBytesAsync("filled-invoice.xlsx", Convert.FromBase64String(base64Content));
+    await System.IO.File.WriteAllBytesAsync("filled-invoice.xlsx", Convert.FromBase64String(base64Content));
     Console.WriteLine("Filled Excel spreadsheet saved!");
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().create("Extract the invoice fields", null, "tmpl_abc123", "retab-1.5", null, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -2100,18 +2183,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Edits.Create(ctx, retab.EditCreateRequest{
+	model := "retab-small"
+	result, err := client.Edits.Create(ctx, &retab.EditsCreateParams{
 		Document:     document,
 		Instructions: string(instructions),
-		Model:        "retab-small",
+		Model:        &model,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	output, _ := (*result)["output"].(map[string]any)
-	filled, _ := output["filled_document"].(map[string]any)
-	if url, ok := filled["url"].(string); ok && url != "" {
+	if url := result.Output.FilledDocument.URL; url != "" {
 		parts := strings.SplitN(url, ",", 2)
 		if len(parts) == 2 {
 			filledBytes, err := base64.StdEncoding.DecodeString(parts[1])
@@ -2227,8 +2309,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var data = new Dictionary<string, object>
 {
@@ -2246,7 +2329,6 @@ var data = new Dictionary<string, object>
 };
 
 var result = await client.Edits.CreateAsync(
-    client.ApiKey,
     new EditsCreateOptions
     {
         Document = new FileInfo("sales-deck-template.pptx"),
@@ -2258,8 +2340,21 @@ var result = await client.Edits.CreateAsync(
 if (result.Output.FilledDocument != null)
 {
     var base64Content = result.Output.FilledDocument.Url.Split(',', 2)[1];
-    await File.WriteAllBytesAsync("filled-sales-deck.pptx", Convert.FromBase64String(base64Content));
+    await System.IO.File.WriteAllBytesAsync("filled-sales-deck.pptx", Convert.FromBase64String(base64Content));
     Console.WriteLine("Filled PowerPoint presentation saved!");
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().create("Extract the invoice fields", null, "tmpl_abc123", "retab-1.5", null, null);
+    System.out.println(result);
+  }
 }
 ```
 

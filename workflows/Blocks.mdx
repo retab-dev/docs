@@ -117,7 +117,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	run, err := client.Workflows.Runs.Create(ctx, retab.CreateWorkflowRunRequest{
+	run, err := client.Workflows.Runs.Create(ctx, &retab.WorkflowRunsCreateParams{
 		WorkflowID: "wf_abc123",
 		JSONInputs: map[string]any{
 			"json-block-id": map[string]any{
@@ -138,7 +138,7 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-run = client.workflow_runs.create(
+run = client.workflows.runs.create(
   workflow_id: 'wf_abc123',
   json_inputs: {
     'json-block-id' => { customer_id: 'cust_123', priority: 'high' },
@@ -150,7 +150,7 @@ puts run.id
 
 ```php PHP
 <?php
-$run = $client->workflowRuns()->create(
+$run = $client->workflows()->runs()->create(
     workflowId: 'wf_abc123',
     jsonInputs: [
         'json-block-id' => ['customer_id' => 'cust_123', 'priority' => 'high'],
@@ -163,13 +163,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 // CreateAsync triggers a new workflow run; per-input documents/json maps are
 // supplied through the request body emitted by the SDK.
-var run = await client.WorkflowRuns.CreateAsync(
-    client.ApiKey,
+var run = await client.Workflows.Runs.CreateAsync(
     new WorkflowRunsCreateOptions
     {
         WorkflowId = "wf_abc123",
@@ -188,32 +188,46 @@ Console.WriteLine(run.Id);
 ```
 
 ```typescript TypeScript
-const run = await client.workflows.runs.create({
-  workflowId: "wf_abc123",
-  jsonInputs: {
+const run = await client.workflows.runs.create(
+  "wf_abc123",
+  undefined,
+  {
     "json-block-id": { customer_id: "cust_123", priority: "high" },
   },
-});
+);
 
 console.log(run.id);
 ```
 
 ```rust Rust
-use retab::{models::CreateFreshWorkflowRunRequest, resources::workflow_runs, Retab};
+use retab::{models::CreateWorkflowRunRequest, resources::workflow_runs, Retab};
 use std::collections::HashMap;
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
-let mut request = CreateFreshWorkflowRunRequest::new("wf_abc123");
+let mut request = CreateWorkflowRunRequest::new("wf_abc123");
 request.json_inputs = Some(HashMap::from([(
     "json-block-id".to_string(),
     serde_json::json!({ "customer_id": "cust_123", "priority": "high" }),
 )]));
 let run = client
-    .workflow_runs()
+    .workflows().runs()
     .create(workflow_runs::CreateParams::new(request.into()))
     .await?;
 
 println!("{}", run.id);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().runs().create("wf_abc123", null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>

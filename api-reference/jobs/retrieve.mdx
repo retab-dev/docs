@@ -56,6 +56,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -65,26 +67,22 @@ func main() {
 	}
 
 	// Retrieve a job by ID
-	job, err := client.Jobs.Retrieve(ctx, "job_V1StGXR8_Z5jdHi6B-myT", &retab.JobRetrieveParams{
-		IncludeRequest:  true,
-		IncludeResponse: true,
+	job, err := client.Jobs.Get(ctx, "job_V1StGXR8_Z5jdHi6B-myT", &retab.JobsGetParams{
+		IncludeRequest:  ptr(true),
+		IncludeResponse: ptr(true),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	status, _ := (*job)["status"].(string)
+	status := string(*job.Status)
 	fmt.Printf("Status: %s\n", status)
 
 	switch status {
 	case "completed":
-		if response, ok := (*job)["response"].(map[string]any); ok {
-			fmt.Println("Result:", response["body"])
-		}
+		fmt.Println("Result:", job.Response)
 	case "failed":
-		if jobErr, ok := (*job)["error"].(map[string]any); ok {
-			fmt.Println("Error:", jobErr["message"])
-		}
+		fmt.Println("Error:", job.Error.Message)
 	}
 }
 ```
@@ -136,7 +134,7 @@ if ($job->status?->value === 'completed') {
 ```
 
 ```rust Rust
-use retab::enums::JobsStatus;
+use retab::enums::JobStatus;
 use retab::resources::jobs::GetParams;
 use retab::Retab;
 
@@ -158,12 +156,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Status: {:?}", job.status);
 
     match job.status {
-        Some(JobsStatus::Completed) => {
+        Some(JobStatus::Completed) => {
             if let Some(response) = &job.response {
                 println!("Result: {:?}", response);
             }
         }
-        Some(JobsStatus::Failed) => {
+        Some(JobStatus::Failed) => {
             if let Some(err) = &job.error {
                 println!("Error: {:?}", err);
             }
@@ -176,12 +174,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Jobs.GetAsync("job_abc123", apiKey, new JobsGetOptions());
+var result = await client.Jobs.GetAsync("job_abc123", new JobsGetOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().get("job_abc123", null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL
@@ -373,6 +385,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -385,39 +399,30 @@ func main() {
 
 	// Manual polling
 	terminal := map[string]bool{"completed": true, "failed": true, "cancelled": true, "expired": true}
-	job, err := client.Jobs.Retrieve(ctx, jobID, nil)
+	job, err := client.Jobs.Get(ctx, jobID, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	for {
-		status, _ := (*job)["status"].(string)
+		status := string(*job.Status)
 		if terminal[status] {
 			break
 		}
 		time.Sleep(2 * time.Second)
-		job, err = client.Jobs.Retrieve(ctx, jobID, nil)
+		job, err = client.Jobs.Get(ctx, jobID, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	if status, _ := (*job)["status"].(string); status == "completed" {
-		job, err = client.Jobs.Retrieve(ctx, jobID, &retab.JobRetrieveParams{IncludeResponse: true})
+	if status := string(*job.Status); status == "completed" {
+		job, err = client.Jobs.Get(ctx, jobID, &retab.JobsGetParams{IncludeResponse: ptr(true)})
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	// Or use the helper method
-	job, err = client.Jobs.WaitForCompletion(ctx, jobID, &retab.JobWaitForCompletionParams{
-		PollInterval:    2 * time.Second,
-		Timeout:         5 * time.Minute,
-		IncludeResponse: true,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println((*job)["status"])
+	fmt.Println(*job.Status)
 }
 ```
 
@@ -489,17 +494,18 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var jobId = "job_V1StGXR8_Z5jdHi6B-myT";
 var terminal = new HashSet<JobStatus> { JobStatus.Completed, JobStatus.Failed, JobStatus.Cancelled, JobStatus.Expired };
 
-var job = await client.Jobs.GetAsync(jobId, client.ApiKey);
+var job = await client.Jobs.GetAsync(jobId);
 while (job.Status is { } status && !terminal.Contains(status))
 {
     await Task.Delay(TimeSpan.FromSeconds(2));
-    job = await client.Jobs.GetAsync(jobId, client.ApiKey);
+    job = await client.Jobs.GetAsync(jobId);
 }
 
 // Fetch the payload only once the job is terminal
@@ -507,9 +513,21 @@ if (job.Status == JobStatus.Completed)
 {
     job = await client.Jobs.GetAsync(
         jobId,
-        client.ApiKey,
         new JobsGetOptions { IncludeResponse = true }
     );
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().get("job_abc123", null, null);
+    System.out.println(result);
+  }
 }
 ```
 

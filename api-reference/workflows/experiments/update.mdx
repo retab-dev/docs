@@ -52,9 +52,11 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
-	nConsensus := 7
+	nConsensus := retab.UpdateExperimentRequestNConsensus(retab.CreateExperimentRequestNConsensus7)
 
 	client, err := retab.NewClient("")
 	if err != nil {
@@ -64,7 +66,7 @@ func main() {
 	experiment, err := client.Workflows.Experiments.Update(
 		ctx,
 		"exp_abc",
-		retab.UpdateExperimentRequest{NConsensus: &nConsensus},
+		&retab.WorkflowExperimentsUpdateParams{NConsensus: &nConsensus},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -107,7 +109,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
     let experiment = client
-        .workflow_experiments()
+        .workflows()
+        .experiments()
         .update("exp_abc", UpdateParams::new(body))
         .await?;
     println!("{}", experiment.id);
@@ -131,12 +134,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowExperiments.UpdateAsync("exp_abc123", apiKey, new WorkflowExperimentsUpdateOptions());
+var result = await client.Workflows.Experiments.UpdateAsync("exp_abc123", new WorkflowExperimentsUpdateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().experiments().update("exp_abc123", null, null, null, "Invoice Processing");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

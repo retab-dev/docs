@@ -70,6 +70,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -83,14 +85,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Lifecycle: %s\n", run.Lifecycle.Status)
-	if run.Lifecycle.Status == "completed" {
-		stepSummaries, err := client.Workflows.Steps.List(ctx, run.ID, nil)
+	fmt.Printf("Lifecycle: %v\n", run.Lifecycle.Status)
+	if run.Lifecycle.Status != nil && *run.Lifecycle.Status == "completed" {
+		stepSummaries, err := client.Workflows.Steps.List(ctx, &retab.WorkflowStepsListParams{
+			RunID: ptr(run.ID),
+		})
 		if err != nil {
 			log.Fatal(err)
 			}
 			for _, summary := range stepSummaries.Data {
-				step, err := client.Workflows.Steps.Get(ctx, summary.StepID)
+				step, err := client.Workflows.Steps.Get(ctx, summary.StepID, nil)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -126,7 +130,7 @@ use retab::Retab;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    let run = client.workflow_runs().get("run_abc123xyz").await?;
+    let run = client.workflows().runs().get("run_abc123xyz").await?;
 
     println!("Lifecycle: {:?}", run.lifecycle);
     if let Some(timing) = &run.timing {
@@ -155,12 +159,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowRuns.GetAsync("run_abc123", apiKey);
+var result = await client.Workflows.Runs.GetAsync("run_abc123");
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().runs().get("run_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

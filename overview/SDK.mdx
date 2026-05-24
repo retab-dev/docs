@@ -1,9 +1,9 @@
 ---
 title: "SDKs"
-description: "Official Retab client libraries for Python, Node, and Go."
+description: "Official Retab client libraries."
 ---
 
-Every Retab endpoint is available through a typed client library. All three are open-source under [`retab-dev/retab`](https://github.com/retab-dev/retab).
+Every Retab endpoint is available through a typed client library. The SDKs are open-source under [`retab-dev/retab`](https://github.com/retab-dev/retab).
 
 ## Install
 
@@ -36,6 +36,14 @@ dotnet add package Retab
 cargo add retab
 ```
 
+```sh Java
+# Maven
+mvn dependency:get -Dartifact=com.retab:retab:0.0.0
+
+# Gradle
+gradle dependencies --configuration implementation --dependency com.retab:retab:0.0.0
+```
+
 </CodeGroup>
 
 ## Authenticate
@@ -64,6 +72,7 @@ const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 import retab "github.com/retab-dev/retab/clients/go"
 
 client, _ := retab.NewClient("")  // empty string → reads RETAB_API_KEY
+_ = client
 ```
 
 ```ruby Ruby
@@ -83,14 +92,26 @@ $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
 ```
 
 ```rust Rust
 use retab::Retab;
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+    System.out.println(client.workflows() != null);
+  }
+}
 ```
 
 </CodeGroup>
@@ -199,11 +220,11 @@ $edge = $client->workflowEdges()->create(
 ```csharp C#
 using System.Collections.Generic;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
 
-var block = await client.WorkflowBlocks.CreateAsync(
-    client.ApiKey,
+var block = await client.Workflows.Blocks.CreateAsync(
     new WorkflowBlocksCreateOptions
     {
         WorkflowId = "wf_abc123",
@@ -226,8 +247,7 @@ var block = await client.WorkflowBlocks.CreateAsync(
     }
 );
 
-var edge = await client.WorkflowEdges.CreateAsync(
-    client.ApiKey,
+var edge = await client.Workflows.Edges.CreateAsync(
     new WorkflowEdgesCreateOptions
     {
         WorkflowId = "wf_abc123",
@@ -254,10 +274,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	block, err := client.Workflows.Blocks.Create(context.Background(), "wf_abc123", retab.WorkflowBlockCreateRequest{
-		ID:    "blk_extract_1",
-		Type:  "extract",
-		Label: "Extract invoice",
+	blockID := "blk_extract_1"
+	label := "Extract invoice"
+	block, err := client.Workflows.Blocks.Create(context.Background(), &retab.WorkflowBlocksCreateParams{
+		WorkflowID: "wf_abc123",
+		ID:         &blockID,
+		Type:       retab.WorkflowBlockCreateRequestTypeExtract,
+		Label:      &label,
 		Config: map[string]any{
 			"model": "retab-small",
 			"json_schema": map[string]any{
@@ -272,9 +295,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err = client.Workflows.Edges.Create(context.Background(), retab.WorkflowEdgeCreateRequest{
+	edgeID := "edge_start_extract"
+	_, err = client.Workflows.Edges.Create(context.Background(), &retab.WorkflowEdgesCreateParams{
 		WorkflowID:   "wf_abc123",
-		ID:           "edge_start_extract",
+		ID:           &edgeID,
 		SourceBlock:  "start",
 		TargetBlock:  block.ID,
 	})
@@ -297,16 +321,29 @@ let mut block_request = WorkflowBlockCreateRequest::new("wf_abc123", WorkflowBlo
 block_request.id = Some("blk_extract_1".to_string());
 block_request.label = Some("Extract invoice".to_string());
 let block = client
-    .workflow_blocks()
+    .workflows().blocks()
     .create(workflow_blocks::CreateParams::new(block_request))
     .await?;
 
 let mut edge_request = WorkflowEdgeCreateRequest::new("wf_abc123", "start", &block.id);
 edge_request.id = Some("edge_start_extract".to_string());
 client
-    .workflow_edges()
+    .workflows().edges()
     .create(workflow_edges::CreateParams::new(edge_request))
     .await?;
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().blocks().create("wf_abc123", null, null, null, null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -389,21 +426,20 @@ $decision = $client->workflowReviews()->approve(
 ```csharp C#
 using System.Collections.Generic;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
 
-var review = await client.WorkflowReviews.GetAsync("rev_abc123", client.ApiKey);
-var versions = await client.WorkflowReviewVersions.ListAsync(
-    client.ApiKey,
+var review = await client.Workflows.Reviews.GetAsync("rev_abc123");
+var versions = await client.Workflows.Reviews.Versions.ListAsync(
     new WorkflowReviewVersionsListOptions { ReviewId = review.Id }
 );
 
-var corrected = await client.WorkflowReviewVersions.CreateAsync(
-    client.ApiKey,
+var corrected = await client.Workflows.Reviews.Versions.CreateAsync(
     new WorkflowReviewVersionsCreateOptions
     {
         ReviewId = review.Id,
-        ParentId = versions.Items[0].Id,
+        ParentId = versions.Data[0].Id,
         Snapshot = new Dictionary<string, object>
         {
             ["invoice_number"] = "INV-1001",
@@ -413,9 +449,8 @@ var corrected = await client.WorkflowReviewVersions.CreateAsync(
     }
 );
 
-var decision = await client.WorkflowReviews.ApproveAsync(
+var decision = await client.Workflows.Reviews.ApproveAsync(
     review.Id,
-    client.ApiKey,
     new WorkflowReviewsApproveOptions { VersionId = corrected.Id }
 );
 ```
@@ -436,20 +471,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	versions, err := client.Workflows.Reviews.Versions.List(context.Background(), &retab.ListReviewVersionsParams{ReviewID: review.ID})
+	reviewID := "rev_abc123"
+	versions, err := client.Workflows.Reviews.Versions.List(context.Background(), &retab.WorkflowReviewVersionsListParams{ReviewID: reviewID})
 	if err != nil {
 		log.Fatal(err)
 	}
-	corrected, err := client.Workflows.Reviews.Versions.Create(context.Background(), retab.CreateReviewVersionRequest{
-		ReviewID: review.ID,
+	note := "fixed total"
+	corrected, err := client.Workflows.Reviews.Versions.Create(context.Background(), &retab.WorkflowReviewVersionsCreateParams{
+		ReviewID: reviewID,
 		ParentID: versions.Data[0].ID,
 		Snapshot: map[string]any{"invoice_number": "INV-1001", "total": 1200},
-		Note: "fixed total",
+		Note:     &note,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = client.Workflows.Reviews.Approve(context.Background(), review.ID, retab.ApproveReviewRequest{VersionID: corrected.ID})
+	_, err = client.Workflows.Reviews.Approve(context.Background(), reviewID, &retab.WorkflowReviewsApproveParams{VersionID: corrected.ID})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -465,31 +502,47 @@ use retab::{
 use std::collections::HashMap;
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let review_id = "rev_abc123";
 let versions = client
-    .workflow_review_versions()
-    .list(workflow_review_versions::ListParams {
-        review_id: Some(review.id.clone()),
-        ..Default::default()
-    })
+    .workflows()
+    .reviews()
+    .versions()
+    .list(workflow_review_versions::ListParams::new(review_id))
     .await?;
 let mut snapshot = HashMap::new();
 snapshot.insert("invoice_number".to_string(), serde_json::json!("INV-1001"));
 snapshot.insert("total".to_string(), serde_json::json!(1200));
 let corrected = client
-    .workflow_review_versions()
+    .workflows()
+    .reviews()
+    .versions()
     .create(workflow_review_versions::CreateParams::new(CreateReviewVersionRequest::new(
-        &review.id,
+        review_id,
         &versions.data[0].id,
         snapshot,
     )))
     .await?;
 let decision = client
-    .workflow_reviews()
+    .workflows()
+    .reviews()
     .approve(
-        &review.id,
+        review_id,
         workflow_reviews::ApproveParams::new(ApproveReviewRequest::new(&corrected.id)),
     )
     .await?;
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().reviews().get("review_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -588,37 +641,36 @@ $metrics = $client->experimentRunMetrics()->get(
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
+var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
 
-var testRun = await client.WorkflowTestRuns.CreateAsync(
-    client.ApiKey,
+var testRun = await client.Workflows.Tests.Runs.CreateAsync(
     new WorkflowTestRunsCreateOptions
     {
         WorkflowId = "wf_abc123",
-        TestId = "test_abc",
+        Scope = new WorkflowTestRunSingleScope { TestId = "test_abc" },
     }
 );
-testRun = await client.WorkflowTestRuns.GetAsync(testRun.Id, client.ApiKey);
-var testResults = await client.WorkflowTestRunResults.ListAsync(
-    client.ApiKey,
+testRun = await client.Workflows.Tests.Runs.GetAsync(testRun.Id);
+var testResults = await client.Workflows.Tests.Results.ListAsync(
     new WorkflowTestRunResultsListOptions { RunId = testRun.Id }
 );
 
-var experimentRun = await client.ExperimentRuns.CreateAsync(
-    client.ApiKey,
+var experimentRun = await client.Workflows.Experiments.Runs.CreateAsync(
     new ExperimentRunsCreateOptions
     {
         WorkflowId = "wf_abc123",
         ExperimentId = "exp_abc",
     }
 );
-experimentRun = await client.ExperimentRuns.GetAsync(experimentRun.Id, client.ApiKey);
-var experimentResults = await client.ExperimentRunResults.ListAsync(
-    client.ApiKey,
-    new ExperimentRunResultsListOptions { ExperimentRunId = experimentRun.Id }
+experimentRun = await client.Workflows.Experiments.Runs.GetAsync(experimentRun.Id);
+var experimentResults = await client.Workflows.Experiments.Results.ListAsync(
+    new ExperimentRunResultsListOptions { RunId = experimentRun.Id }
 );
-var metrics = await client.ExperimentRunMetrics.GetAsync(experimentRun.Id, client.ApiKey);
+var metrics = await client.Workflows.Experiments.Metrics.GetAsync(
+    new ExperimentRunMetricsGetOptions { RunId = experimentRun.Id }
+);
 ```
 
 ```go Go
@@ -638,23 +690,32 @@ func main() {
 		log.Fatal(err)
 	}
 
-	testRun, err := client.Workflows.Tests.Runs.Create(context.Background(), retab.CreateWorkflowTestRunRequest{TestID: "test_abc"})
+	testID := "test_abc"
+	scope := retab.WorkflowTestRunScope{
+		Type:   retab.WorkflowTestRunScopeTypeSingle,
+		TestID: &testID,
+	}
+	testRun, err := client.Workflows.Tests.Runs.Create(context.Background(), &retab.WorkflowTestRunsCreateParams{
+		WorkflowID: "wf_abc123",
+		Scope:      &scope,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	testResults, err := client.Workflows.Tests.Results.List(context.Background(), retab.ListWorkflowTestRunResultsParams{RunID: testRun.ID})
+	testResults, err := client.Workflows.Tests.Results.List(context.Background(), &retab.WorkflowTestRunResultsListParams{RunID: testRun.ID})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	experimentRun, err := client.Workflows.Experiments.Runs.Create(context.Background(), retab.CreateExperimentRunRequest{
-		WorkflowID:    "wf_abc123",
+	workflowID := "wf_abc123"
+	experimentRun, err := client.Workflows.Experiments.Runs.Create(context.Background(), &retab.ExperimentRunsCreateParams{
+		WorkflowID:    &workflowID,
 		ExperimentID: "exp_abc",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	metrics, err := client.Workflows.Experiments.Metrics.Get(context.Background(), experimentRun.ID)
+	metrics, err := client.Workflows.Experiments.Metrics.Get(context.Background(), &retab.ExperimentRunMetricsGetParams{RunID: experimentRun.ID})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -665,29 +726,53 @@ func main() {
 
 ```rust Rust
 use retab::{
-    models::{CreateExperimentRunRequest, CreateWorkflowTestRunForTestRequest},
-    resources::{experiment_runs, workflow_test_run_results, workflow_test_runs},
+    models::{CreateExperimentRunRequest, CreateWorkflowTestRunRequest},
+    resources::{experiment_run_metrics, experiment_runs, workflow_test_run_results, workflow_test_runs},
     Retab,
 };
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 let test_run = client
-    .workflow_test_runs()
+    .workflows()
+    .tests()
+    .runs()
     .create(workflow_test_runs::CreateParams::new(
-        CreateWorkflowTestRunForTestRequest::new("test_abc").into(),
+        CreateWorkflowTestRunRequest::new("wf_abc"),
     ))
     .await?;
 let test_results = client
-    .workflow_test_run_results()
+    .workflows()
+    .tests()
+    .results()
     .list(workflow_test_run_results::ListParams::new(&test_run.id))
     .await?;
 let experiment_run = client
-    .experiment_runs()
+    .workflows()
+    .experiments()
+    .runs()
     .create(experiment_runs::CreateParams::new(CreateExperimentRunRequest::new("exp_abc")))
     .await?;
-let metrics = client.experiment_run_metrics().get(&experiment_run.id).await?;
+let metrics = client
+    .workflows()
+    .experiments()
+    .metrics()
+    .get(experiment_run_metrics::GetParams::new(&experiment_run.id))
+    .await?;
 
 println!("{test_results:#?} {metrics:#?}");
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().tests().runs().create("wf_abc123", null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>

@@ -70,6 +70,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -78,13 +80,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	exportResult, err := client.Workflows.Runs.Export(ctx, retab.ExportWorkflowRunsRequest{
+	exportResult, err := client.Workflows.Runs.Export(ctx, &retab.WorkflowRunsExportParams{
 		WorkflowID:       "wf_abc123xyz",
 		BlockID:          "extract-1",
-		ExportSource:     "outputs",
-		Status:           "completed",
-		FromDate:         "2026-04-01",
-		ToDate:           "2026-04-30",
+		ExportSource:     ptr(retab.WorkflowExportPayloadRequestExportSourceOutputs),
+		Status:           ptr(retab.WorkflowExportPayloadRequestExcludeStatusCompleted),
+		FromDate:         ptr("2026-04-01"),
+		ToDate:           ptr("2026-04-30"),
 		PreferredColumns: []string{"invoice_number", "total", "vendor.name"},
 	})
 	if err != nil {
@@ -92,7 +94,7 @@ func main() {
 	}
 
 	fmt.Printf("%d rows, %d columns\n", exportResult.Rows, exportResult.Columns)
-	if err := os.WriteFile("invoices.csv", []byte(exportResult.CSVData), 0o644); err != nil {
+	if err := os.WriteFile("invoices.csv", []byte(exportResult.CsvData), 0o644); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -140,7 +142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ]);
 
     let export = client
-        .workflow_runs()
+        .workflows().runs()
         .export(ExportParams::new(body))
         .await?;
 
@@ -167,12 +169,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowRuns.ExportAsync(apiKey, new WorkflowRunsExportOptions());
+var result = await client.Workflows.Runs.ExportAsync(new WorkflowRunsExportOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().runs().export("wf_abc123", "block_abc123", null, null, null, null, null, null, null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

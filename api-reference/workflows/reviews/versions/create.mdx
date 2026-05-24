@@ -47,6 +47,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -55,14 +57,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	version, err := client.Workflows.Reviews.Versions.Create(ctx, retab.CreateReviewVersionRequest{
+	version, err := client.Workflows.Reviews.Versions.Create(ctx, &retab.WorkflowReviewVersionsCreateParams{
 		ReviewID: "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
 		ParentID: "rvr_HQ6ZZBQTJLSGLZQCWBSI25SCOQ",
 		Snapshot: map[string]any{
 			"total_amount": 325,
 			"vendor_name":  "Acme Corp",
 		},
-		Note: "Corrected total.",
+		Note: ptr("Corrected total."),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -94,7 +96,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     body.note = Some("Corrected total.".into());
 
     let version = client
-        .workflow_review_versions()
+        .workflows()
+        .reviews()
+        .versions()
         .create(CreateParams::new(body))
         .await?;
     println!("{}", version.id);
@@ -120,11 +124,12 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowReviewVersions.CreateAsync(apiKey, new WorkflowReviewVersionsCreateOptions());
+var result = await client.Workflows.Reviews.Versions.CreateAsync(new WorkflowReviewVersionsCreateOptions());
 Console.WriteLine(result);
 ```
 
@@ -135,6 +140,19 @@ client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 result = client.workflow_review_versions.create
 puts result
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().reviews().versions().create("review_abc123", null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

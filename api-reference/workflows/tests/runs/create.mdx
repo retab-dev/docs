@@ -43,12 +43,9 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const run = await client.workflows.tests.runs.create({
-  workflowId: "wf_abc123xyz",
-  scope: {
-    type: "single",
-    testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
-  },
+const run = await client.workflows.tests.runs.create("wf_abc123xyz", {
+  type: "single",
+  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
 });
 
 console.log(run.id, run.lifecycle.status);
@@ -65,6 +62,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -73,11 +72,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	run, err := client.Workflows.Tests.Runs.Create(ctx, retab.CreateWorkflowTestRunRequest{
+	run, err := client.Workflows.Tests.Runs.Create(ctx, &retab.WorkflowTestRunsCreateParams{
 		WorkflowID: "wf_abc123xyz",
-		Scope: retab.WorkflowTestRunSingleScope{
-			Type:   "single",
-			TestID: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+		Scope: &retab.WorkflowTestRunScope{
+			Type:   retab.WorkflowTestRunScopeTypeSingle,
+			TestID: ptr("wfnodetest_hsLEQiM61ez9Piv147MWk"),
 		},
 	})
 	if err != nil {
@@ -114,7 +113,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     let run = client
-        .workflow_test_runs()
+        .workflows().tests().runs()
         .create(CreateParams::new(CreateWorkflowTestRunRequest {
             workflow_id: "wf_abc123xyz".into(),
             scope: Some(WorkflowTestRunSingleScope {
@@ -142,23 +141,35 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowTestRuns.CreateAsync(
-    apiKey,
+var result = await client.Workflows.Tests.Runs.CreateAsync(
     new WorkflowTestRunsCreateOptions
     {
         WorkflowId = "wf_abc123xyz",
         Scope = new WorkflowTestRunSingleScope
         {
-            Type = "single",
             TestId = "wfnodetest_hsLEQiM61ez9Piv147MWk",
         },
     }
 );
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().tests().runs().create("wf_abc123", null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

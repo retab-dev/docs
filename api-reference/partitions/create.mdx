@@ -49,6 +49,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -62,24 +64,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	response, err := client.Partitions.Create(ctx, retab.PartitionCreateRequest{
+	response, err := client.Partitions.Create(ctx, &retab.PartitionsCreateParams{
 		Document:     document,
 		Key:          "invoice_number",
 		Instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
-		Model:        "retab-small",
-		NConsensus:   3,
-		AllowOverlap: true,
-		BustCache:    false,
+		Model:        ptr("retab-small"),
+		NConsensus:   ptr(3),
+		AllowOverlap: ptr(true),
+		BustCache:    ptr(false),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if output, ok := (*response)["output"].([]any); ok {
-		for _, chunk := range output {
-			c, _ := chunk.(map[string]any)
-			fmt.Println(c["key"], c["pages"])
-		}
+	for _, chunk := range response.Output {
+		fmt.Println(chunk.Key, chunk.Pages)
 	}
 }
 ```
@@ -150,12 +149,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Partitions.CreateAsync(apiKey, new PartitionsCreateOptions());
+var result = await client.Partitions.CreateAsync(new PartitionsCreateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.partitions().create(null, null, "Extract the invoice fields", "retab-1.5", 10L, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL
