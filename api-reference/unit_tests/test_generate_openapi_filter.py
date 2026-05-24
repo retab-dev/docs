@@ -128,6 +128,50 @@ def test_strips_routes_not_listed_in_docs_markdown(tmp_path: Path) -> None:
     }
 
 
+def test_strips_public_openapi_excluded_routes_even_when_documented(
+    tmp_path: Path,
+) -> None:
+    docs_root = tmp_path / "docs"
+    workflows_reference = docs_root / "api-reference" / "workflows"
+    widgets_reference = docs_root / "api-reference" / "widgets"
+    workflows_reference.mkdir(parents=True)
+    widgets_reference.mkdir(parents=True)
+    (docs_root / "docs.json").write_text(
+        json.dumps(
+            {
+                "navigation": [
+                    "api-reference/widgets/list",
+                    "api-reference/workflows/diagnose-graph",
+                ]
+            }
+        )
+    )
+    (widgets_reference / "list.mdx").write_text(
+        '---\nopenapi: "GET /v1/widgets"\n---\n'
+    )
+    (workflows_reference / "diagnose-graph.mdx").write_text(
+        '---\nopenapi: "POST /v1/workflows/{workflow_id}/diagnose-graph"\n---\n'
+    )
+    spec = {
+        "paths": {
+            "/v1/widgets": {"get": {"operationId": "list_widgets"}},
+            "/v1/workflows/{workflow_id}/diagnose-graph": {
+                "post": {"operationId": "diagnose_workflow_graph"}
+            },
+        }
+    }
+
+    generate_openapi._strip_routes_not_in_api_reference_markdown(
+        spec,
+        docs_root / "docs.json",
+        docs_root,
+    )
+
+    assert spec["paths"] == {
+        "/v1/widgets": {"get": {"operationId": "list_widgets"}}
+    }
+
+
 def test_missing_docs_json_api_reference_page_fails(tmp_path: Path) -> None:
     docs_root = tmp_path / "docs"
     docs_root.mkdir()
@@ -450,6 +494,7 @@ def test_generated_openapi_routes_match_docs_json_markdown_openapi_fields() -> N
         DOCS_ROOT,
     )
     docs_routes = generate_openapi._collect_api_reference_openapi_routes(markdown_files)
+    docs_routes -= generate_openapi.PUBLIC_OPENAPI_EXCLUDED_ROUTES
     generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
 
     spec_routes: set[tuple[str, str]] = set()

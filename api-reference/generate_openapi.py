@@ -16,6 +16,9 @@ DIAGNOSTIC_PATH_SUFFIXES: tuple[str, ...] = (
     "/stress-test",
     "/benchmark",
 )
+PUBLIC_OPENAPI_EXCLUDED_ROUTES: set[tuple[str, str]] = {
+    ("post", "/v1/workflows/{workflow_id}/diagnose-graph"),
+}
 
 LEGACY_EDIT_PATHS: set[str] = {
     "/v1/edit/agent/fill",
@@ -182,6 +185,7 @@ def _strip_routes_not_in_api_reference_markdown(
     allowed_routes = _collect_api_reference_openapi_routes(
         _list_api_reference_markdown_files(docs_json_path, docs_root)
     )
+    allowed_routes -= PUBLIC_OPENAPI_EXCLUDED_ROUTES
     if not allowed_routes:
         raise RuntimeError(
             f"No API reference OpenAPI routes found from docs navigation: {docs_json_path}"
