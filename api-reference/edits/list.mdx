@@ -42,6 +42,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -50,20 +52,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	edits, err := client.Edits.List(ctx, &retab.ListEditsParams{
-		ListParams: retab.ListParams{Limit: 20, Order: "desc"},
+	edits, err := client.Edits.List(ctx, &retab.EditsListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(20), Order: ptr("desc")},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, edit := range edits.Data {
-		fmt.Printf("%v: %v\n", edit["id"], edit["file"])
+		fmt.Printf("%s: %s\n", edit.ID, edit.File.Filename)
 	}
 
 	// Filter by template
-	filtered, err := client.Edits.List(ctx, &retab.ListEditsParams{
-		ListParams: retab.ListParams{Limit: 50},
-		TemplateID: "edittplt_abc123",
+	filtered, err := client.Edits.List(ctx, &retab.EditsListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(50)},
+		TemplateID: ptr("edittplt_abc123"),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -134,12 +136,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Edits.ListAsync(apiKey, new EditsListOptions());
+var result = await client.Edits.ListAsync(new EditsListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.edits().list(null, null, 10L, null, "invoice.pdf", "tmpl_abc123", null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

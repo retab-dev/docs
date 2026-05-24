@@ -64,8 +64,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
-	"time"
 
 	retab "github.com/retab-dev/retab/clients/go"
 )
@@ -78,31 +78,37 @@ func main() {
 		log.Fatal(err)
 	}
 
-	extractions, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{
-			Limit: 10,
-			Order: "desc",
+	limit := 10
+	order := "desc"
+	extractions, err := client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		PaginationParams: retab.PaginationParams{
+			Limit: &limit,
+			Order: &order,
 		},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	extractions, err = client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{Limit: 50},
-		Metadata:   map[string]string{"customer_id": "cust_acme_corp"},
+	customerMetadata, err := json.Marshal(map[string]string{"customer_id": "cust_acme_corp"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	customerMetadataFilter := string(customerMetadata)
+	limit = 50
+	extractions, err = client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		PaginationParams: retab.PaginationParams{Limit: &limit},
+		Metadata:         &customerMetadataFilter,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fromDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	toDate := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
-	extractions, err = client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{
-			FromDate: &fromDate,
-			ToDate:   &toDate,
-		},
+	fromDate := "2024-01-01"
+	toDate := "2024-12-31"
+	extractions, err = client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		FromDate: &fromDate,
+		ToDate:   &toDate,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -214,26 +220,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 // List recent extractions
 var recent = await client.Extractions.ListAsync(
-    client.ApiKey,
     new ExtractionsListOptions { Limit = 10, Order = "desc" }
 );
 
 // Filter by metadata
 var byMetadata = await client.Extractions.ListAsync(
-    client.ApiKey,
     new ExtractionsListOptions { Limit = 50, Metadata = "{\"customer_id\":\"cust_acme_corp\"}" }
 );
 
 // Filter by date range
 var byDate = await client.Extractions.ListAsync(
-    client.ApiKey,
     new ExtractionsListOptions { FromDate = "2024-01-01", ToDate = "2024-12-31" }
 );
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().list(null, null, 10L, null, "invoice.pdf", null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -360,11 +377,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
-var extraction = await client.Extractions.GetAsync("extr_01G34H8J2K", client.ApiKey);
+var extraction = await client.Extractions.GetAsync("extr_01G34H8J2K");
 Console.WriteLine(extraction);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().get("extr_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -405,6 +436,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 
 	retab "github.com/retab-dev/retab/clients/go"
@@ -418,9 +450,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	customerExtractions, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{Limit: 100},
-		Metadata:   map[string]string{"customer_id": "cust_acme_corp"},
+	customerMetadata, err := json.Marshal(map[string]string{"customer_id": "cust_acme_corp"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	customerMetadataFilter := string(customerMetadata)
+	limit := 100
+	customerExtractions, err := client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		PaginationParams: retab.PaginationParams{Limit: &limit},
+		Metadata:         &customerMetadataFilter,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -489,6 +527,19 @@ http.DefaultRequestHeaders.Add("Api-Key", apiKey);
 var response = await http.PostAsJsonAsync("https://api.retab.com/v1/extractions", new { });
 response.EnsureSuccessStatusCode();
 Console.WriteLine(await response.Content.ReadAsStringAsync());
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().list(null, null, 10L, null, "invoice.pdf", null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>

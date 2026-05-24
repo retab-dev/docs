@@ -44,6 +44,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	client, err := retab.NewClient("")
 	if err != nil {
@@ -55,8 +57,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*artifact)["operation"])
-	fmt.Println((*artifact)["id"])
+	fmt.Println(artifact.Operation)
+	fmt.Println(artifact.ID)
 }
 ```
 
@@ -78,7 +80,7 @@ use retab::Retab;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    let artifact = client.workflow_artifacts().get("ceval_abc123").await?;
+    let artifact = client.workflows().artifacts().get("ceval_abc123").await?;
     println!("{}", artifact["operation"]);
     println!("{}", artifact["id"]);
     Ok(())
@@ -101,12 +103,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowArtifacts.GetAsync("artifact_abc123", apiKey);
+var result = await client.Workflows.Artifacts.GetAsync("artifact_abc123");
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().artifacts().get("artifact_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

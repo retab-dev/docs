@@ -57,6 +57,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -66,21 +68,25 @@ func main() {
 	}
 
 	// List recent parses
-	parses, err := client.Parses.List(ctx, &retab.ListParams{Limit: 20, Order: "desc"})
+	parses, err := client.Parses.List(ctx, &retab.ParsesListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(20), Order: ptr("desc")},
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, parse := range parses.Data {
-		fmt.Printf("%v: %v\n", parse["id"], parse["file"])
+		fmt.Printf("%s: %s\n", parse.ID, parse.File.Filename)
 	}
 
 	// Filter by date range
 	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
-	ranged, err := client.Parses.List(ctx, &retab.ListParams{
-		FromDate: &from,
-		ToDate:   &to,
-		Limit:    50,
+	ranged, err := client.Parses.List(ctx, &retab.ParsesListParams{
+		PaginationParams: retab.PaginationParams{
+			Limit: ptr(50),
+		},
+		FromDate: ptr(from.Format("2006-01-02")),
+		ToDate:   ptr(to.Format("2006-01-02")),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -159,12 +165,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Parses.ListAsync(apiKey, new ParsesListOptions());
+var result = await client.Parses.ListAsync(new ParsesListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.parses().list(null, null, 10L, null, "invoice.pdf", null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

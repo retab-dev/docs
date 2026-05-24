@@ -47,6 +47,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -55,9 +57,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	page, err := client.Workflows.Reviews.Versions.List(ctx, &retab.ListReviewVersionsParams{
-		ReviewID: "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
-		Limit:    50,
+	page, err := client.Workflows.Reviews.Versions.List(ctx, &retab.WorkflowReviewVersionsListParams{
+		ReviewID:         "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
+		PaginationParams: retab.PaginationParams{Limit: ptr(50)},
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -78,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     let page = client
-        .workflow_review_versions()
+        .workflows().reviews().versions()
         .list(ListParams {
             limit: Some(50),
             ..ListParams::new("rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY")
@@ -107,11 +109,12 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowReviewVersions.ListAsync(apiKey, new WorkflowReviewVersionsListOptions());
+var result = await client.Workflows.Reviews.Versions.ListAsync(new WorkflowReviewVersionsListOptions());
 Console.WriteLine(result);
 ```
 
@@ -122,6 +125,19 @@ client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 result = client.workflow_review_versions.list
 puts result
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().reviews().versions().list("review_abc123", null, null, 10L);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

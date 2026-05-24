@@ -38,6 +38,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -52,7 +54,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Status: %s\n", (*cancelledJob)["status"]) // cancelled
+	fmt.Printf("Status: %s\n", *cancelledJob.Status) // cancelled
 }
 ```
 
@@ -97,12 +99,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Jobs.CancelAsync("job_abc123", apiKey);
+var result = await client.Jobs.CancelAsync("job_abc123");
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().cancel("job_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL
@@ -222,16 +238,16 @@ ctx := context.Background()
 client, _ := retab.NewClient("")
 
 // Cancel all queued jobs from a specific batch
-jobs, err := client.Jobs.List(ctx, &retab.ListJobsParams{Status: "queued"})
+status := retab.JobStatusQueued
+jobs, err := client.Jobs.List(ctx, &retab.JobsListParams{Status: &status})
 if err != nil {
 	log.Fatal(err)
 }
 for _, job := range jobs.Data {
-	metadata, ok := job["metadata"].(map[string]any)
-	if !ok || metadata["batch_id"] != "batch_001" {
+	if job.Metadata["batch_id"] != "batch_001" {
 		continue
 	}
-	jobID, _ := job["id"].(string)
+	jobID := *job.ID
 	if _, err := client.Jobs.Cancel(ctx, jobID); err != nil {
 		fmt.Printf("Failed to cancel %s: %v\n", jobID, err)
 		continue
@@ -301,11 +317,12 @@ foreach ($jobs->data as $job) {
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 // Cancel all queued jobs from a specific batch
-var jobs = await client.Jobs.ListAsync(client.ApiKey, new JobsListOptions { Status = JobStatus.Queued });
+var jobs = await client.Jobs.ListAsync(new JobsListOptions { Status = JobStatus.Queued });
 await foreach (var job in jobs)
 {
     if (job.Metadata == null || !job.Metadata.TryGetValue("batch_id", out var batchId) || batchId != "batch_001")
@@ -314,13 +331,26 @@ await foreach (var job in jobs)
     }
     try
     {
-        await client.Jobs.CancelAsync(job.Id, client.ApiKey);
+        await client.Jobs.CancelAsync(job.Id);
         Console.WriteLine($"Cancelled {job.Id}");
     }
     catch (Exception e)
     {
         Console.WriteLine($"Failed to cancel {job.Id}: {e.Message}");
     }
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().cancel("job_abc123");
+    System.out.println(result);
+  }
 }
 ```
 
@@ -367,21 +397,21 @@ while (!terminalStatuses.includes(job.status)) {
 ctx := context.Background()
 client, _ := retab.NewClient("")
 
-job, err := client.Jobs.Create(ctx, retab.JobCreateRequest{
-	Endpoint: "/v1/extractions",
+job, err := client.Jobs.Create(ctx, &retab.JobsCreateParams{
+	Endpoint: retab.CreateJobRequestEndpointV1Extractions,
 	Request:  retab.Resource{},
 })
 if err != nil {
 	log.Fatal(err)
 }
-jobID, _ := (*job)["id"].(string)
+jobID := *job.ID
 
 start := time.Now()
 timeout := 60 * time.Second
 terminal := map[string]bool{"completed": true, "failed": true, "cancelled": true, "expired": true}
 
 for {
-	status, _ := (*job)["status"].(string)
+	status := string(*job.Status)
 	if terminal[status] {
 		break
 	}
@@ -393,7 +423,7 @@ for {
 		break
 	}
 	time.Sleep(2 * time.Second)
-	job, err = client.Jobs.Retrieve(ctx, jobID, nil)
+	job, err = client.Jobs.Get(ctx, jobID, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -418,7 +448,7 @@ end
 ```
 
 ```rust Rust
-use retab::enums::{JobStatus, JobsEndpoint};
+use retab::enums::{CreateJobRequestEndpoint, JobStatus};
 use retab::models::CreateJobRequest;
 use retab::resources::jobs::{CreateParams, GetParams};
 use retab::Retab;
@@ -428,7 +458,7 @@ use std::time::{Duration, Instant};
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
 let mut job = client.jobs().create(CreateParams::new(CreateJobRequest {
-    endpoint: JobsEndpoint::V1Extractions,
+    endpoint: CreateJobRequestEndpoint::V1Extractions,
     request: HashMap::new(),
     metadata: None,
 })).await?;
@@ -477,11 +507,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var job = await client.Jobs.CreateAsync(
-    client.ApiKey,
     new JobsCreateOptions
     {
         Endpoint = CreateJobRequestEndpoint.V1Extractions,
@@ -497,12 +527,25 @@ while (job.Status is { } status && !terminal.Contains(status))
 {
     if (stopwatch.Elapsed > timeout)
     {
-        job = await client.Jobs.CancelAsync(job.Id, client.ApiKey);
+        job = await client.Jobs.CancelAsync(job.Id);
         Console.WriteLine("Job cancelled due to timeout");
         break;
     }
     await Task.Delay(TimeSpan.FromSeconds(2));
-    job = await client.Jobs.GetAsync(job.Id, client.ApiKey);
+    job = await client.Jobs.GetAsync(job.Id);
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().cancel("job_abc123");
+    System.out.println(result);
+  }
 }
 ```
 

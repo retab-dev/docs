@@ -62,6 +62,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -71,29 +73,33 @@ func main() {
 	}
 
 	// All edges
-	edges, err := client.Workflows.Edges.List(ctx, "wf_abc123xyz", nil)
+	edges, err := client.Workflows.Edges.List(ctx, &retab.WorkflowEdgesListParams{
+		WorkflowID: "wf_abc123xyz",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Outgoing edges of one block
-	outgoing, err := client.Workflows.Edges.List(ctx, "wf_abc123xyz", &retab.ListWorkflowEdgesParams{
-		SourceBlock: "extract-1",
+	outgoing, err := client.Workflows.Edges.List(ctx, &retab.WorkflowEdgesListParams{
+		WorkflowID:   "wf_abc123xyz",
+		SourceBlock:  ptr("extract-1"),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Incoming edges of one block
-	incoming, err := client.Workflows.Edges.List(ctx, "wf_abc123xyz", &retab.ListWorkflowEdgesParams{
-		TargetBlock: "extract-1",
+	incoming, err := client.Workflows.Edges.List(ctx, &retab.WorkflowEdgesListParams{
+		WorkflowID:   "wf_abc123xyz",
+		TargetBlock:  ptr("extract-1"),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, edge := range edges.Data {
-		fmt.Printf("%s/%s -> %s/%s\n", edge.SourceBlock, edge.SourceHandle, edge.TargetBlock, edge.TargetHandle)
+		fmt.Printf("%s/%v -> %s/%v\n", edge.SourceBlock, edge.SourceHandle, edge.TargetBlock, edge.TargetHandle)
 	}
 	_, _ = outgoing, incoming
 }
@@ -134,13 +140,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // All edges
     let edges = client
-        .workflow_edges()
+        .workflows().edges()
         .list(ListParams::new("wf_abc123xyz"))
         .await?;
 
     // Outgoing edges of one block
     let _outgoing = client
-        .workflow_edges()
+        .workflows().edges()
         .list(ListParams {
             source_block: Some("extract-1".into()),
             ..ListParams::new("wf_abc123xyz")
@@ -149,7 +155,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Incoming edges of one block
     let _incoming = client
-        .workflow_edges()
+        .workflows().edges()
         .list(ListParams {
             target_block: Some("extract-1".into()),
             ..ListParams::new("wf_abc123xyz")
@@ -185,12 +191,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowEdges.ListAsync(apiKey, new WorkflowEdgesListOptions());
+var result = await client.Workflows.Edges.ListAsync(new WorkflowEdgesListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().edges().list("wf_abc123", null, null, null, null, 10L);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

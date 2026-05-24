@@ -66,6 +66,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -75,8 +77,8 @@ func main() {
 	}
 
 	// List recent extractions
-	extractions, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{Limit: 10, Order: "desc"},
+	extractions, err := client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(10), Order: ptr("desc")},
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -86,12 +88,12 @@ func main() {
 	// Filter by date range
 	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
-	extractions, err = client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{
-			Limit:    50,
-			FromDate: &from,
-			ToDate:   &to,
+	extractions, err = client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		PaginationParams: retab.PaginationParams{
+			Limit: ptr(50),
 		},
+		FromDate: ptr(from.Format("2006-01-02")),
+		ToDate:   ptr(to.Format("2006-01-02")),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -99,8 +101,8 @@ func main() {
 	fmt.Println(extractions)
 
 	// Filter by metadata
-	extractions, err = client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		Metadata: map[string]string{"source": "docs"},
+	extractions, err = client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		Metadata: ptr(`{"source":"docs"}`),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -194,12 +196,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Extractions.ListAsync(apiKey, new ExtractionsListOptions());
+var result = await client.Extractions.ListAsync(new ExtractionsListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().list(null, null, 10L, null, "invoice.pdf", null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

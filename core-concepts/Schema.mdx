@@ -68,15 +68,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	schema, err := client.Schemas.Generate(ctx, retab.GenerateSchemaRequest{
+	model := "retab-small"
+	schema, err := client.Schemas.Generate(ctx, &retab.SchemasGenerateParams{
 		Documents: []any{firstDocument, secondDocument},
-		Model:     "retab-small",
+		Model:     &model,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*schema)["json_schema"])
+	fmt.Println(schema.JSONSchema)
 }
 ```
 
@@ -120,6 +121,19 @@ $schema = $client->schemas()->generate(
 );
 
 print_r($schema->jsonSchema);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.schemas().generate(null, "retab-1.5", null, "Extract the invoice fields", 10L, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL
@@ -172,11 +186,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var schema = await client.Schemas.GenerateAsync(
-    client.ApiKey,
     new SchemasGenerateOptions
     {
         Documents = new List<MimeData>

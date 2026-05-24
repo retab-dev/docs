@@ -185,25 +185,25 @@ func main() {
 		log.Fatal(err)
 	}
 
-	response, err := client.Partitions.Create(ctx, retab.PartitionCreateRequest{
+	model := "retab-small"
+	nConsensus := 3
+	response, err := client.Partitions.Create(ctx, &retab.PartitionsCreateParams{
 		Document:     "invoice_batch.pdf",
 		Key:          "invoice_number",
 		Instructions: "Return one chunk per invoice number and keep all pages for the same invoice together.",
-		Model:        "retab-small",
-		NConsensus:   3,
+		Model:        &model,
+		NConsensus:   &nConsensus,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	output, _ := (*response)["output"].([]any)
-	for _, raw := range output {
-		chunk, _ := raw.(map[string]any)
-		fmt.Println(chunk["key"], chunk["pages"])
+	for _, chunk := range response.Output {
+		fmt.Println(chunk.Key, chunk.Pages)
 	}
 
-	if consensus, ok := (*response)["consensus"].(map[string]any); ok {
-		fmt.Println(consensus["likelihoods"])
+	if response.Consensus != nil {
+		fmt.Println(response.Consensus.Likelihoods)
 	}
 }
 ```
@@ -256,11 +256,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var response = await client.Partitions.CreateAsync(
-    client.ApiKey,
     new PartitionsCreateOptions
     {
         Document = new FileInfo("invoice_batch.pdf"),
@@ -311,6 +311,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{:?}", consensus.likelihoods);
     }
     Ok(())
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.partitions().create(null, null, "Extract the invoice fields", "retab-1.5", 10L, null, null);
+    System.out.println(result);
+  }
 }
 ```
 

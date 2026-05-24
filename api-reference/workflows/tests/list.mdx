@@ -66,6 +66,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -75,19 +77,23 @@ func main() {
 	}
 
 	// All tests for a workflow.
-	tests, err := client.Workflows.Tests.List(ctx, retab.ListWorkflowTestsRequest{
+	tests, err := client.Workflows.Tests.List(ctx, &retab.WorkflowTestsListParams{
 		WorkflowID: "wf_abc123xyz",
-		Limit:      50,
+		PaginationParams: retab.PaginationParams{
+			Limit: ptr(50),
+		},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Only tests for one specific block.
-	testsForBlock, err := client.Workflows.Tests.List(ctx, retab.ListWorkflowTestsRequest{
+	testsForBlock, err := client.Workflows.Tests.List(ctx, &retab.WorkflowTestsListParams{
 		WorkflowID:    "wf_abc123xyz",
-		TargetBlockID: "block_extract_invoice",
-		Limit:         20,
+		TargetBlockID: ptr("block_extract_invoice"),
+		PaginationParams: retab.PaginationParams{
+			Limit: ptr(20),
+		},
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -129,7 +135,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // All tests for a workflow.
     let tests = client
-        .workflow_tests()
+        .workflows()
+        .tests()
         .list(ListParams {
             limit: Some(50),
             ..ListParams::new("wf_abc123xyz")
@@ -138,7 +145,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Only tests for one specific block.
     let _tests_for_block = client
-        .workflow_tests()
+        .workflows()
+        .tests()
         .list(ListParams {
             target_block_id: Some("block_extract_invoice".into()),
             limit: Some(20),
@@ -167,12 +175,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowTests.ListAsync(apiKey, new WorkflowTestsListOptions());
+var result = await client.Workflows.Tests.ListAsync(new WorkflowTestsListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().tests().list("wf_abc123", null, null, null, 10L, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

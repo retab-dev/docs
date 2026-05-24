@@ -63,6 +63,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -71,17 +73,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	artifacts, err := client.Workflows.Artifacts.List(ctx, retab.ListWorkflowArtifactsParams{
-		RunID:     "run_abc123xyz",
-		Operation: "conditional_evaluation",
+	artifacts, err := client.Workflows.Artifacts.List(ctx, &retab.WorkflowArtifactsListParams{
+		RunID:     ptr("run_abc123xyz"),
+		Operation: ptr(retab.StepArtifactRefOperationConditionalEvaluation),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, artifact := range artifacts.Data {
-		fmt.Println(artifact["step_id"])
-		fmt.Println(artifact["matched_condition_ids"])
+		fmt.Println(artifact.Operation)
+		fmt.Println(artifact.ID)
 	}
 }
 ```
@@ -112,7 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     let artifacts = client
-        .workflow_artifacts()
+        .workflows().artifacts()
         .list(ListParams {
             run_id: Some("run_abc123xyz".into()),
             operation: Some(WorkflowArtifactsOperation::ConditionalEvaluation),
@@ -140,12 +142,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowArtifacts.ListAsync(apiKey, new WorkflowArtifactsListOptions());
+var result = await client.Workflows.Artifacts.ListAsync(new WorkflowArtifactsListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().artifacts().list("run_abc123", null, "block_abc123", "step_abc123", null, null, 10L);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

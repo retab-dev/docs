@@ -42,6 +42,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -50,7 +52,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Workflows.Reviews.Reject(ctx, "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY", retab.RejectReviewRequest{
+	result, err := client.Workflows.Reviews.Reject(ctx, "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY", &retab.WorkflowReviewsRejectParams{
 		VersionID: "rvr_HQ6ZZBQTJLSGLZQCWBSI25SCOQ",
 		Reason:    "Source document is illegible; cannot verify totals.",
 	})
@@ -78,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Source document is illegible; cannot verify totals.",
     );
     let result = client
-        .workflow_reviews()
+        .workflows().reviews()
         .reject(
             "rev_D4J7WZBRV4H7C2SKQJ4NP6W2EY",
             RejectParams::new(body),
@@ -109,13 +111,13 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowReviews.RejectAsync(
+var result = await client.Workflows.Reviews.RejectAsync(
     "rev_abc123",
-    apiKey,
     new WorkflowReviewsRejectOptions
     {
         VersionId = "ver_abc123",
@@ -136,6 +138,19 @@ result = client.workflow_reviews.reject(
   reason: 'Source document is illegible; cannot verify totals.',
 )
 puts result
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().reviews().reject("review_abc123", "version_abc123", "Needs another review");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

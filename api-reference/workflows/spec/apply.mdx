@@ -26,7 +26,7 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const result = await client.workflows.specs.apply(yamlDefinition);
+const result = await client.workflows.spec.apply(yamlDefinition);
 
 console.log(result.workflowId);
 console.log(result.created);
@@ -44,6 +44,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -52,15 +54,36 @@ func main() {
 		log.Fatal(err)
 	}
 
-	yamlDefinition := "<workflow-yaml>"
-	result, err := client.Workflows.Spec.Apply(ctx, yamlDefinition)
+	yamlDefinition := `apiVersion: workflows.retab.com/v1alpha2
+kind: Workflow
+metadata:
+  id: wf_invoice_demo
+  name: Invoice Workflow
+spec:
+  blocks:
+    start:
+      type: start_json
+      label: Input JSON
+      config:
+        json_schema:
+          type: object
+          required:
+            - value
+          properties:
+            value:
+              type: string
+  edges: []
+`
+	result, err := client.Workflows.Spec.Apply(ctx, &retab.WorkflowSpecApplyParams{
+		YamlDefinition: yamlDefinition,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*result)["workflow_id"])
-	fmt.Println((*result)["created"])
-	fmt.Println((*result)["summary"])
+	fmt.Println(result.WorkflowID)
+	fmt.Println(result.Created)
+	fmt.Println(result.Summary)
 }
 ```
 
@@ -69,7 +92,7 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-result = client.workflow_specs.apply(yaml_definition: yaml_definition)
+result = client.workflows.spec.apply(yaml_definition: yaml_definition)
 
 puts result.workflow_id
 puts result.created
@@ -78,16 +101,35 @@ puts result.summary.has_changes
 
 ```rust Rust
 use retab::models::DeclarativeWorkflowRequest;
-use retab::resources::workflow_specs::ApplyParams;
+use retab::resources::workflow_spec::ApplyParams;
 use retab::Retab;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    let yaml_definition = "<workflow-yaml>";
+    let yaml_definition = r#"apiVersion: workflows.retab.com/v1alpha2
+kind: Workflow
+metadata:
+  id: wf_invoice_demo
+  name: Invoice Workflow
+spec:
+  blocks:
+    start:
+      type: start_json
+      label: Input JSON
+      config:
+        json_schema:
+          type: object
+          required:
+            - value
+          properties:
+            value:
+              type: string
+  edges: []
+"#;
     let result = client
-        .workflow_specs()
+        .workflows().spec()
         .apply(ApplyParams::new(DeclarativeWorkflowRequest::new(
             yaml_definition,
         )))
@@ -110,20 +152,80 @@ use Retab\Client;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
-$result = $client->workflowSpecs()->apply(
-    yamlDefinition: 'value',
+$yamlDefinition = <<<'YAML'
+apiVersion: workflows.retab.com/v1alpha2
+kind: Workflow
+metadata:
+  id: wf_invoice_demo
+  name: Invoice Workflow
+spec:
+  blocks:
+    start:
+      type: start_json
+      label: Input JSON
+      config:
+        json_schema:
+          type: object
+          required:
+            - value
+          properties:
+            value:
+              type: string
+  edges: []
+YAML;
+
+$result = $client->workflows()->spec()->apply(
+    yamlDefinition: $yamlDefinition,
 );
 print_r($result);
 ```
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowSpecs.ApplyAsync(apiKey, new WorkflowSpecsApplyOptions());
+var yamlDefinition = """
+apiVersion: workflows.retab.com/v1alpha2
+kind: Workflow
+metadata:
+  id: wf_invoice_demo
+  name: Invoice Workflow
+spec:
+  blocks:
+    start:
+      type: start_json
+      label: Input JSON
+      config:
+        json_schema:
+          type: object
+          required:
+            - value
+          properties:
+            value:
+              type: string
+  edges: []
+""";
+
+var result = await client.Workflows.Spec.ApplyAsync(
+    new WorkflowSpecApplyOptions { YamlDefinition = yamlDefinition }
+);
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().spec().apply("metadata:\n  id: invoice-workflow\n");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL
@@ -132,7 +234,7 @@ curl -X 'POST' \
   -H 'Content-Type: application/json' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
-    "yaml_definition": "<workflow-yaml>"
+    "yaml_definition": "apiVersion: workflows.retab.com/v1alpha2\nkind: Workflow\nmetadata:\n  id: wf_invoice_demo\n  name: Invoice Workflow\nspec:\n  blocks:\n    start:\n      type: start_json\n      label: Input JSON\n      config:\n        json_schema:\n          type: object\n          required:\n            - value\n          properties:\n            value:\n              type: string\n  edges: []\n"
   }'
 ```
 

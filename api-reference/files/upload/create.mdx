@@ -47,6 +47,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -55,10 +57,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	mimeData, err := client.Files.Upload(ctx, "invoice.pdf")
+	session, err := client.Files.CreateUpload(ctx, &retab.FilesCreateUploadParams{
+		Filename:    "invoice.pdf",
+		ContentType: ptr("application/pdf"),
+		SizeBytes:   1024,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
+	mimeData := session.MIMEData
 
 	fmt.Printf("Filename: %s\n", mimeData.Filename)
 	fmt.Printf("URL: %s\n", mimeData.URL)
@@ -124,12 +131,12 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
 var result = await client.Files.CreateUploadAsync(
-    apiKey,
     new FilesCreateUploadOptions
     {
         Filename = "invoice.pdf",
@@ -138,6 +145,19 @@ var result = await client.Files.CreateUploadAsync(
     }
 );
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.files().createUpload("invoice.pdf", "application/pdf", 10L, "abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL
@@ -279,6 +299,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -298,9 +320,9 @@ func main() {
 	// Option 1: object-storage URL
 	cloudflareR2URL := "https://<public-id>.r2.dev/large_document.pdf"
 
-	extractionFromR2, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	extractionFromR2, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document:   cloudflareR2URL,
-		Model:      "retab-small",
+		Model:      ptr("retab-small"),
 		JSONSchema: schema,
 	})
 	if err != nil {
@@ -309,14 +331,19 @@ func main() {
 	_ = extractionFromR2
 
 	// Option 2: Retab upload, then reuse the returned URL
-	mimeRef, err := client.Files.Upload(ctx, "large_document.pdf")
+	session, err := client.Files.CreateUpload(ctx, &retab.FilesCreateUploadParams{
+		Filename:    "large_document.pdf",
+		ContentType: ptr("application/pdf"),
+		SizeBytes:   1024,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
+	mimeRef := session.MIMEData
 
-	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	extraction, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document:   mimeRef.URL,
-		Model:      "retab-small",
+		Model:      ptr("retab-small"),
 		JSONSchema: schema,
 	})
 	if err != nil {
@@ -324,16 +351,16 @@ func main() {
 	}
 
 	// This also works:
-	sameExtraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
-		Document:   *mimeRef,
-		Model:      "retab-small",
+	sameExtraction, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
+		Document:   mimeRef,
+		Model:      ptr("retab-small"),
 		JSONSchema: schema,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*extraction)["id"], (*sameExtraction)["id"])
+	fmt.Println(extraction.ID, sameExtraction.ID)
 }
 ```
 
@@ -431,12 +458,12 @@ print_r($extraction);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
 var extraction = await client.Extractions.CreateAsync(
-    apiKey,
     new ExtractionsCreateOptions
     {
         Document = MimeData.FromUrl(new Uri("https://<public-id>.r2.dev/large_document.pdf")),
@@ -454,6 +481,19 @@ var extraction = await client.Extractions.CreateAsync(
 );
 
 Console.WriteLine(extraction.Id);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.files().createUpload("invoice.pdf", "application/pdf", 10L, "abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 </RequestExample>

@@ -43,6 +43,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -51,9 +53,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	workflow, err := client.Workflows.Create(ctx, retab.CreateWorkflowRequest{
-		Name:        "Invoice Processing",
-		Description: "Extract invoice fields and route for review",
+	workflow, err := client.Workflows.Create(ctx, &retab.WorkflowsCreateParams{
+		Name:        ptr("Invoice Processing"),
+		Description: ptr("Extract invoice fields and route for review"),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -115,12 +117,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Workflows.CreateAsync(apiKey, new WorkflowsCreateOptions());
+var result = await client.Workflows.CreateAsync(new WorkflowsCreateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().create("Invoice Processing", "Extract invoice fields");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

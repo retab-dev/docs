@@ -72,6 +72,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -83,28 +85,26 @@ func main() {
 	testID := "wfnodetest_hsLEQiM61ez9Piv147MWk"
 
 	// Rename only.
-	if _, err := client.Workflows.Tests.Update(ctx, testID, retab.UpdateWorkflowTestRequest{
-		Name: "Q1 invoice — vendor name check",
+	if _, err := client.Workflows.Tests.Update(ctx, testID, &retab.WorkflowTestsUpdateParams{
+		Name: ptr("Q1 invoice — vendor name check"),
 	}); err != nil {
 		log.Fatal(err)
 	}
 
 	// Replace the assertion.
-	if _, err := client.Workflows.Tests.Update(ctx, testID, retab.UpdateWorkflowTestRequest{
-		Assertion: retab.Resource{
-			"target":    map[string]any{"output_handle_id": "output-json-0", "path": "vendor.name"},
-			"condition": map[string]any{"kind": "matches_regex", "expected": "^Acme.*"},
+	if _, err := client.Workflows.Tests.Update(ctx, testID, &retab.WorkflowTestsUpdateParams{
+		Assertion: &retab.AssertionSpec{
+			Target:    retab.OutputTarget{OutputHandleID: "output-json-0", Path: ptr("vendor.name")},
+			Condition: &retab.ExistCondition{Kind: ptr("exists")},
 		},
 	}); err != nil {
 		log.Fatal(err)
 	}
 
 	// Re-capture inputs from a different run.
-	if _, err := client.Workflows.Tests.Update(ctx, testID, retab.UpdateWorkflowTestRequest{
-		Source: retab.Resource{
-			"type":    "run_step",
-			"run_id":  "wfrun_new789",
-			"step_id": "block_extract_invoice",
+	if _, err := client.Workflows.Tests.Update(ctx, testID, &retab.WorkflowTestsUpdateParams{
+		Source: &retab.ManualWorkflowTestSource{
+			Type: ptr("manual"),
 		},
 	}); err != nil {
 		log.Fatal(err)
@@ -159,7 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
     let _renamed = client
-        .workflow_tests()
+        .workflows().tests()
         .update(test_id, UpdateParams::new(renamed_body))
         .await?;
 
@@ -171,7 +171,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
     let _rebound = client
-        .workflow_tests()
+        .workflows().tests()
         .update(test_id, UpdateParams::new(resource_body))
         .await?;
     Ok(())
@@ -194,12 +194,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowTests.UpdateAsync("test_abc123", apiKey, new WorkflowTestsUpdateOptions());
+var result = await client.Workflows.Tests.UpdateAsync("test_abc123", new WorkflowTestsUpdateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().tests().update("test_abc123", "Invoice Processing", null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

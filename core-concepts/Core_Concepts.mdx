@@ -72,14 +72,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Parses.Create(ctx, retab.ParseCreateRequest{
+	model := "retab-small"
+	result, err := client.Parses.Create(ctx, &retab.ParsesCreateParams{
 		Document: "invoice.pdf",
-		Model:    "retab-small",
+		Model:    &model,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println((*result)["output"])
+	fmt.Println(result.Output.Text)
 }
 ```
 
@@ -128,12 +129,12 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
 // The .NET SDK is async by design; every method returns Task<T>.
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var result = await client.Parses.CreateAsync(
-    client.ApiKey,
     new ParsesCreateOptions
     {
         Document = new FileInfo("invoice.pdf"),
@@ -142,6 +143,19 @@ var result = await client.Parses.CreateAsync(
 );
 
 Console.WriteLine(result.Output.Text);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.parses().create(null, "retab-1.5", null, 10L, "Extract the invoice fields", null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -260,11 +274,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	response, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	model := "retab-micro"
+	nConsensus := 10
+	response, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document:   "booking_confirmation.jpg",
-		Model:      "retab-micro",
+		Model:      &model,
 		JSONSchema: jsonSchema,
-		NConsensus: 10, // This will run and combine the results of 10 calls to the same LLM
+		NConsensus: &nConsensus, // This will run and combine the results of 10 calls to the same LLM
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -336,16 +352,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 using Newtonsoft.Json;
 
 var jsonSchema = JsonConvert.DeserializeObject<Dictionary<string, object>>(
-    await File.ReadAllTextAsync("booking_confirmation_json_schema.json")
+    await System.IO.File.ReadAllTextAsync("booking_confirmation_json_schema.json")
 )!;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var response = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new FileInfo("booking_confirmation.jpg"),
@@ -563,6 +579,19 @@ Console.WriteLine(response.Output);
       }
     }
   ]
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
 }
 ```
 

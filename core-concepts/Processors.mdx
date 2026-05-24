@@ -274,6 +274,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+```java Java
+// The Java SDK does not yet model the processors API. Call /v1/processors directly.
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    String body =
+        "{"
+            + "\"name\":\"Invoice Processor\","
+            + "\"json_schema\":{\"type\":\"object\",\"properties\":{"
+            + "\"invoice_number\":{\"type\":\"string\"},"
+            + "\"total_amount\":{\"type\":\"number\"}}},"
+            + "\"model\":\"retab-small\","
+            + "\"n_consensus\":3,"
+            + "\"image_resolution_dpi\":150"
+            + "}";
+
+    HttpRequest request =
+        HttpRequest.newBuilder(URI.create("https://api.retab.com/v1/processors"))
+            .header("Api-Key", System.getenv("RETAB_API_KEY"))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build();
+
+    HttpResponse<String> response =
+        HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(response.body());
+  }
+}
+```
+
 ```json Response
 {
   "object": "processor",
@@ -368,6 +402,33 @@ const result = await response.json();
 console.log(result);
 ```
 
+
+```java Java
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    String body =
+        "{\"name\":\"Invoice Processor\","
+            + "\"model\":\"retab-small\","
+            + "\"json_schema\":{\"type\":\"object\"}}";
+
+    HttpRequest request =
+        HttpRequest.newBuilder(URI.create("https://api.retab.com/v1/processors"))
+            .header("Api-Key", System.getenv("RETAB_API_KEY"))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build();
+
+    HttpResponse<String> response =
+        HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(response.body());
+  }
+}
+```
 </CodeGroup>
 
 ### Submit
@@ -527,6 +588,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+```java Java
+// The Java SDK does not yet model the processors API. Submit documents as multipart form data.
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    String boundary = "----RetabBoundary";
+    byte[] file = Files.readAllBytes(Path.of("invoice.pdf"));
+    byte[] prefix =
+        ("--"
+                + boundary
+                + "\r\nContent-Disposition: form-data; name=\"document\"; filename=\"invoice.pdf\"\r\n"
+                + "Content-Type: application/pdf\r\n\r\n")
+            .getBytes(StandardCharsets.UTF_8);
+    byte[] suffix = ("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8);
+    byte[] body = new byte[prefix.length + file.length + suffix.length];
+    System.arraycopy(prefix, 0, body, 0, prefix.length);
+    System.arraycopy(file, 0, body, prefix.length, file.length);
+    System.arraycopy(suffix, 0, body, prefix.length + file.length, suffix.length);
+
+    HttpRequest request =
+        HttpRequest.newBuilder(URI.create("https://api.retab.com/v1/processors/proc_01G34H8J2K/submit"))
+            .header("Api-Key", System.getenv("RETAB_API_KEY"))
+            .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+            .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+            .build();
+
+    HttpResponse<String> response =
+        HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(response.body());
+  }
+}
+```
+
 ```json Response
 {
   "id": "chatcmpl_...",
@@ -566,7 +667,7 @@ using var http = new HttpClient();
 http.DefaultRequestHeaders.Add("Api-Key", apiKey);
 
 using var form = new MultipartFormDataContent();
-var bytes = await File.ReadAllBytesAsync("invoice.pdf");
+var bytes = await System.IO.File.ReadAllBytesAsync("invoice.pdf");
 var fileContent = new ByteArrayContent(bytes);
 fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
 form.Add(fileContent, "document", "invoice.pdf");

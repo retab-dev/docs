@@ -50,6 +50,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -58,12 +60,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	step, err := client.Workflows.Steps.Get(ctx, "step_extract_1")
+	step, err := client.Workflows.Steps.Get(ctx, "step_extract_1", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Step status: %s\n", step.Lifecycle["status"])
+	fmt.Printf("Step status: %v\n", step.Lifecycle.Status)
 	if payload, ok := step.HandleOutputs["output-json-0"]; ok {
 		fmt.Println(payload.Type)
 		fmt.Println(payload.Data)
@@ -97,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     let step = client
-        .workflow_steps()
+        .workflows().steps()
         .get("step_extract_1", GetParams::default())
         .await?;
 
@@ -127,12 +129,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowSteps.GetAsync("step_abc123", apiKey, new WorkflowStepsGetOptions());
+var result = await client.Workflows.Steps.GetAsync("step_abc123", new WorkflowStepsGetOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().steps().get("step_abc123", "run_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

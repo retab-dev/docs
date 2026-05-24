@@ -182,34 +182,37 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Splits.Create(ctx, retab.SplitCreateRequest{
+	model := "retab-small"
+	nConsensus := 3
+	propertyDescription := "Property listing pages with photos, pricing, and listing details"
+	allowMultipleInstances := true
+	legalNoticeDescription := "Legal notices, disclaimers, or policy pages"
+	result, err := client.Splits.Create(ctx, &retab.SplitsCreateParams{
 		Document: "property_portfolio.pdf",
-		Model:    "retab-small",
-		Subdocuments: []retab.SplitSubdocument{
+		Model:    &model,
+		Subdocuments: []*retab.Subdocument{
 			{
 				Name:                   "property_listing",
-				Description:            "Property listing pages with photos, pricing, and listing details",
-				AllowMultipleInstances: true,
+				Description:            &propertyDescription,
+				AllowMultipleInstances: &allowMultipleInstances,
 			},
 			{
 				Name:        "legal_notice",
-				Description: "Legal notices, disclaimers, or policy pages",
+				Description: &legalNoticeDescription,
 			},
 		},
-		NConsensus: 3,
+		NConsensus: &nConsensus,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	output, _ := (*result)["output"].([]any)
-	for _, raw := range output {
-		split, _ := raw.(map[string]any)
-		fmt.Println(split["name"], split["pages"])
+	for _, split := range result.Output {
+		fmt.Println(split.Name, split.Pages)
 	}
 
-	if consensus, ok := (*result)["consensus"].(map[string]any); ok {
-		fmt.Println(consensus["likelihoods"])
+	if result.Consensus != nil {
+		fmt.Println(result.Consensus.Likelihoods)
 	}
 }
 ```
@@ -323,11 +326,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var result = await client.Splits.CreateAsync(
-    client.ApiKey,
     new SplitsCreateOptions
     {
         Document = new FileInfo("property_portfolio.pdf"),
@@ -358,6 +361,19 @@ foreach (var split in result.Output)
 if (result.Consensus?.Likelihoods != null)
 {
     Console.WriteLine(result.Consensus.Likelihoods);
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.splits().create(null, null, "retab-1.5", "Extract the invoice fields", 10L, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -427,26 +443,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	subdocuments := []retab.SplitSubdocument{
-		{Name: "invoice", Description: "Invoice documents with billing details, line items, totals, and payment terms"},
-		{Name: "receipt", Description: "Payment receipts showing transaction confirmation and amounts paid"},
-		{Name: "contract", Description: "Legal contracts with terms, conditions, and signature blocks"},
-		{Name: "cover_letter", Description: "Cover letters or transmittal documents"},
+	invoiceDescription := "Invoice documents with billing details, line items, totals, and payment terms"
+	receiptDescription := "Payment receipts showing transaction confirmation and amounts paid"
+	contractDescription := "Legal contracts with terms, conditions, and signature blocks"
+	coverLetterDescription := "Cover letters or transmittal documents"
+	subdocuments := []*retab.Subdocument{
+		{Name: "invoice", Description: &invoiceDescription},
+		{Name: "receipt", Description: &receiptDescription},
+		{Name: "contract", Description: &contractDescription},
+		{Name: "cover_letter", Description: &coverLetterDescription},
 	}
 
-	result, err := client.Splits.Create(ctx, retab.SplitCreateRequest{
+	model := "retab-small"
+	result, err := client.Splits.Create(ctx, &retab.SplitsCreateParams{
 		Document:     "scanned_batch.pdf",
-		Model:        "retab-small",
+		Model:        &model,
 		Subdocuments: subdocuments,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	output, _ := (*result)["output"].([]any)
-	for _, raw := range output {
-		split, _ := raw.(map[string]any)
-		fmt.Printf("%v: pages %v\n", split["name"], split["pages"])
+	for _, split := range result.Output {
+		fmt.Printf("%v: pages %v\n", split.Name, split.Pages)
 	}
 }
 ```
@@ -557,8 +576,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var subdocuments = new List<Subdocument>
 {
@@ -569,7 +589,6 @@ var subdocuments = new List<Subdocument>
 };
 
 var result = await client.Splits.CreateAsync(
-    client.ApiKey,
     new SplitsCreateOptions
     {
         Document = new FileInfo("scanned_batch.pdf"),
@@ -581,6 +600,19 @@ var result = await client.Splits.CreateAsync(
 foreach (var split in result.Output)
 {
     Console.WriteLine($"{split.Name}: pages {string.Join(",", split.Pages)}");
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.splits().create(null, null, "retab-1.5", "Extract the invoice fields", 10L, null);
+    System.out.println(result);
+  }
 }
 ```
 

@@ -66,6 +66,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -80,13 +82,14 @@ func main() {
 		log.Fatal(err)
 	}
 	for _, job := range jobsResponse.Data {
-		fmt.Printf("%s: %s - %s\n", job["id"], job["status"], job["endpoint"])
+		fmt.Printf("%s: %s - %s\n", *job.ID, *job.Status, job.Endpoint)
 	}
 
 	// List with filters and pagination
-	filtered, err := client.Jobs.List(ctx, &retab.ListJobsParams{
-		Status: "completed",
-		Limit:  10,
+	status := retab.JobStatusCompleted
+	filtered, err := client.Jobs.List(ctx, &retab.JobsListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(10)},
+		Status:           &status,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -94,9 +97,11 @@ func main() {
 
 	// Paginate through results
 	if filtered.ListMetadata.After != "" {
-		nextPage, err := client.Jobs.List(ctx, &retab.ListJobsParams{
-			After: filtered.ListMetadata.After,
-			Limit: 10,
+		nextPage, err := client.Jobs.List(ctx, &retab.JobsListParams{
+			PaginationParams: retab.PaginationParams{
+				After: ptr(filtered.ListMetadata.After),
+				Limit: ptr(10),
+			},
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -204,12 +209,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Jobs.ListAsync(apiKey, new JobsListOptions());
+var result = await client.Jobs.ListAsync(new JobsListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().list(null, null, 10L, null, "job_abc123", null, null, null, null, "wf_abc123", null, "retab-1.5", null, null, null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL
@@ -336,6 +355,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -348,9 +369,11 @@ func main() {
 	after := ""
 
 	for {
-		response, err := client.Jobs.List(ctx, &retab.ListJobsParams{
-			After: after,
-			Limit: 100,
+		response, err := client.Jobs.List(ctx, &retab.JobsListParams{
+			PaginationParams: retab.PaginationParams{
+				After: ptr(after),
+				Limit: ptr(100),
+			},
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -426,17 +449,31 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var allJobs = new List<Job>();
-var page = await client.Jobs.ListAsync(client.ApiKey, new JobsListOptions { Limit = 100 });
+var page = await client.Jobs.ListAsync(new JobsListOptions { Limit = 100 });
 await foreach (var job in page)
 {
     allJobs.Add(job);
 }
 
 Console.WriteLine($"Total jobs: {allJobs.Count}");
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().list(null, null, 10L, null, "job_abc123", null, null, null, null, "wf_abc123", null, "retab-1.5", null, null, null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -470,11 +507,11 @@ ctx := context.Background()
 client, _ := retab.NewClient("")
 
 // Get all jobs currently processing
-inProgress, err := client.Jobs.List(ctx, &retab.ListJobsParams{Status: "in_progress"})
+inProgress, err := client.Jobs.List(ctx, &retab.JobsListParams{Status: "in_progress"})
 if err != nil {
 	log.Fatal(err)
 }
-queued, err := client.Jobs.List(ctx, &retab.ListJobsParams{Status: "queued"})
+queued, err := client.Jobs.List(ctx, &retab.JobsListParams{Status: "queued"})
 if err != nil {
 	log.Fatal(err)
 }
@@ -529,15 +566,29 @@ echo 'Queued: ' . count($queued->data) . PHP_EOL;
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 // Get all jobs currently processing
-var inProgress = await client.Jobs.ListAsync(client.ApiKey, new JobsListOptions { Status = JobStatus.InProgress });
-var queued = await client.Jobs.ListAsync(client.ApiKey, new JobsListOptions { Status = JobStatus.Queued });
+var inProgress = await client.Jobs.ListAsync(new JobsListOptions { Status = JobStatus.InProgress });
+var queued = await client.Jobs.ListAsync(new JobsListOptions { Status = JobStatus.Queued });
 
-Console.WriteLine($"In progress: {inProgress.Items.Count}");
-Console.WriteLine($"Queued: {queued.Items.Count}");
+Console.WriteLine($"In progress: {inProgress.Data.Count}");
+Console.WriteLine($"Queued: {queued.Data.Count}");
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().list(null, null, 10L, null, "job_abc123", null, null, null, null, "wf_abc123", null, "retab-1.5", null, null, null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -568,9 +619,9 @@ ctx := context.Background()
 client, _ := retab.NewClient("")
 
 // List failed jobs to investigate errors
-failedJobs, err := client.Jobs.List(ctx, &retab.ListJobsParams{
+failedJobs, err := client.Jobs.List(ctx, &retab.JobsListParams{
 	Status: "failed",
-	Limit:  50,
+	Limit:  ptr(50),
 })
 if err != nil {
 	log.Fatal(err)
@@ -628,18 +679,31 @@ foreach ($failedJobs->data as $job) {
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 // List failed jobs to investigate errors
 var failedJobs = await client.Jobs.ListAsync(
-    client.ApiKey,
     new JobsListOptions { Status = JobStatus.Failed, Limit = 50 }
 );
 
 await foreach (var job in failedJobs)
 {
     Console.WriteLine($"{job.Id}: {job.Error?.Code} - {job.Error?.Message}");
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().list(null, null, 10L, null, "job_abc123", null, null, null, null, "wf_abc123", null, "retab-1.5", null, null, null, null, null, null, null, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -687,7 +751,7 @@ client, _ := retab.NewClient("")
 batchID := "batch_001"
 batchJobs := []retab.Job{}
 
-response, err := client.Jobs.List(ctx, &retab.ListJobsParams{Limit: 100})
+response, err := client.Jobs.List(ctx, &retab.JobsListParams{Limit: ptr(100)})
 if err != nil {
 	log.Fatal(err)
 }
@@ -760,15 +824,16 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 // Find jobs from a specific batch
 var batchId = "batch_001";
 var batchJobs = new List<Job>();
 
-var response = await client.Jobs.ListAsync(client.ApiKey, new JobsListOptions { Limit = 100 });
-foreach (var job in response.Items)
+var response = await client.Jobs.ListAsync(new JobsListOptions { Limit = 100 });
+foreach (var job in response.Data)
 {
     if (job.Metadata != null
         && job.Metadata.TryGetValue("batch_id", out var value)
@@ -779,6 +844,19 @@ foreach (var job in response.Items)
 }
 
 Console.WriteLine($"Jobs in {batchId}: {batchJobs.Count}");
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.jobs().list(null, null, 10L, null, "job_abc123", null, null, null, null, "wf_abc123", null, "retab-1.5", null, null, null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>

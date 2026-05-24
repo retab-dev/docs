@@ -202,9 +202,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	extraction, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	model := "retab-micro"
+	nConsensus := 1
+	extraction, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document: "freight/booking_confirmation.jpg",
-		Model:    "retab-micro",
+		Model:    &model,
 		JSONSchema: map[string]any{
 			"X-SystemPrompt": "You are a useful assistant.",
 			"properties": map[string]any{
@@ -223,17 +225,17 @@ func main() {
 			"title":    "CalendarEvent",
 			"type":     "object",
 		},
-		NConsensus: 1, // 1 means disabled (default); if > 1 the extraction runs in consensus mode
+		NConsensus: &nConsensus, // 1 means disabled (default); if > 1 the extraction runs in consensus mode
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*extraction)["output"])
-	if consensus, ok := (*extraction)["consensus"].(map[string]any); ok {
-		fmt.Println(consensus["likelihoods"])
+	fmt.Println(extraction.Output)
+	if extraction.Consensus != nil {
+		fmt.Println(extraction.Consensus.Likelihoods)
 	}
-	fmt.Println((*extraction)["id"])
+	fmt.Println(extraction.ID)
 }
 ```
 
@@ -351,6 +353,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
+```
+
 ```curl cURL
 curl -X POST https://api.retab.com/v1/extractions \
 -H "Api-Key: $RETAB_API_KEY" \
@@ -418,8 +433,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var schema = new Dictionary<string, object>
 {
@@ -445,7 +461,6 @@ var schema = new Dictionary<string, object>
 };
 
 var extraction = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new FileInfo("freight/booking_confirmation.jpg"),
@@ -588,19 +603,21 @@ func main() {
 		"required": []string{"name", "date", "address"},
 	}
 
-	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	model := "retab-small"
+	nConsensus := 4
+	result, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document:   "event_flyer.pdf",
-		Model:      "retab-small",
+		Model:      &model,
 		JSONSchema: initialSchema,
-		NConsensus: 4,
+		NConsensus: &nConsensus,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*result)["output"])
-	if consensus, ok := (*result)["consensus"].(map[string]any); ok {
-		fmt.Println(consensus["likelihoods"])
+	fmt.Println(result.Output)
+	if result.Consensus != nil {
+		fmt.Println(result.Consensus.Likelihoods)
 	}
 }
 ```
@@ -701,8 +718,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var initialSchema = new Dictionary<string, object>
 {
@@ -718,7 +736,6 @@ var initialSchema = new Dictionary<string, object>
 };
 
 var result = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new FileInfo("event_flyer.pdf"),
@@ -738,6 +755,19 @@ if (result.Consensus?.Likelihoods != null)
     {
         Console.WriteLine($"{kv.Key}: {kv.Value}");
     }
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -923,6 +953,30 @@ Console.WriteLine(JsonSerializer.Serialize(
 ));
 ```
 
+```java Java
+import java.util.List;
+import java.util.Map;
+
+public final class Example {
+  public static void main(String[] args) {
+    Map<String, Object> schema =
+        Map.of(
+            "type", "object",
+            "properties",
+                Map.of(
+                    "temperature",
+                    Map.of(
+                        "type", "number",
+                        "description", "temperature in Fahrenheit",
+                        "X-ReasoningPrompt",
+                            "Convert Celsius to Fahrenheit when needed.")),
+            "required", List.of("temperature"));
+
+    System.out.println(schema);
+  }
+}
+```
+
 </CodeGroup>
 
 Without reasoning, a model may copy `22.5` directly. With reasoning enabled, it is more likely to compute `72.5` and explain the conversion in `reasoning___temperature`.
@@ -993,8 +1047,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*sources)["extraction"])
-	fmt.Println((*sources)["sources"])
+	fmt.Println(sources.Extraction)
+	fmt.Println(sources.Sources)
 }
 ```
 
@@ -1041,13 +1095,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```csharp C#
 using System;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
-var sources = await client.Extractions.SourcesAsync("extr_01G34H8J2K", client.ApiKey);
+var sources = await client.Extractions.SourcesAsync("extr_01G34H8J2K");
 
 Console.WriteLine(sources.Extraction);
 Console.WriteLine(sources.Sources);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().sources("extr_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -1142,9 +1210,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
-	"time"
 
 	retab "github.com/retab-dev/retab/clients/go"
 )
@@ -1157,27 +1225,36 @@ func main() {
 		log.Fatal(err)
 	}
 
-	recent, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{Limit: 10, Order: "desc"},
+	limit := 10
+	order := "desc"
+	recent, err := client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		PaginationParams: retab.PaginationParams{Limit: &limit, Order: &order},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(recent.Data)
 
-	customerSpecific, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{Limit: 50},
-		Metadata:   map[string]string{"customer_id": "cust_acme_corp"},
+	customerMetadata, err := json.Marshal(map[string]string{"customer_id": "cust_acme_corp"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	customerMetadataFilter := string(customerMetadata)
+	limit = 50
+	customerSpecific, err := client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		PaginationParams: retab.PaginationParams{Limit: &limit},
+		Metadata:         &customerMetadataFilter,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(customerSpecific.Data)
 
-	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	to := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
-	dateFiltered, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{FromDate: &from, ToDate: &to},
+	from := "2024-01-01"
+	to := "2024-12-31"
+	dateFiltered, err := client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		FromDate: &from,
+		ToDate:   &to,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -1279,34 +1356,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 using System;
 using System.Collections.Generic;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var recent = await client.Extractions.ListAsync(
-    client.ApiKey,
     new ExtractionsListOptions { Limit = 10, Order = "desc" }
 );
-foreach (var e in recent.Items) Console.WriteLine(e.Id);
+foreach (var e in recent.Data) Console.WriteLine(e.Id);
 
 var customerSpecific = await client.Extractions.ListAsync(
-    client.ApiKey,
     new ExtractionsListOptions
     {
         Limit = 50,
-        Metadata = new Dictionary<string, string> { ["customer_id"] = "cust_acme_corp" },
+        Metadata = "{\"customer_id\":\"cust_acme_corp\"}",
     }
 );
-foreach (var e in customerSpecific.Items) Console.WriteLine(e.Id);
+foreach (var e in customerSpecific.Data) Console.WriteLine(e.Id);
 
 var dateFiltered = await client.Extractions.ListAsync(
-    client.ApiKey,
     new ExtractionsListOptions
     {
         FromDate = "2024-01-01",
         ToDate = "2024-12-31",
     }
 );
-foreach (var e in dateFiltered.Items) Console.WriteLine(e.Id);
+foreach (var e in dateFiltered.Data) Console.WriteLine(e.Id);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().list(null, null, 10L, null, "invoice.pdf", null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -1405,14 +1493,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```csharp C#
 using System;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
-var extraction = await client.Extractions.GetAsync("extr_01G34H8J2K", client.ApiKey);
+var extraction = await client.Extractions.GetAsync("extr_01G34H8J2K");
 Console.WriteLine(extraction.Id);
 foreach (var kv in extraction.Output)
 {
     Console.WriteLine($"{kv.Key}: {kv.Value}");
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().get("extr_abc123");
+    System.out.println(result);
+  }
 }
 ```
 
@@ -1451,6 +1553,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -1465,9 +1568,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	customerExtractions, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{Limit: 100},
-		Metadata:   map[string]string{"customer_id": "cust_acme_corp"},
+	customerMetadata, err := json.Marshal(map[string]string{"customer_id": "cust_acme_corp"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	customerMetadataFilter := string(customerMetadata)
+	limit := 100
+	customerExtractions, err := client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		PaginationParams: retab.PaginationParams{Limit: &limit},
+		Metadata:         &customerMetadataFilter,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -1526,21 +1635,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 using System;
 using System.Collections.Generic;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var customerExtractions = await client.Extractions.ListAsync(
-    client.ApiKey,
     new ExtractionsListOptions
     {
         Limit = 100,
-        Metadata = new Dictionary<string, string> { ["customer_id"] = "cust_acme_corp" },
+        Metadata = "{\"customer_id\":\"cust_acme_corp\"}",
     }
 );
 
-foreach (var e in customerExtractions.Items)
+foreach (var e in customerExtractions.Data)
 {
     Console.WriteLine(e.Id);
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().list(null, null, 10L, null, "invoice.pdf", null, null, null, null, null, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -1666,9 +1788,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	model := "retab-micro"
+	nConsensus := 1
+	result, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document: "freight/booking_confirmation.jpg",
-		Model:    "retab-micro",
+		Model:    &model,
 		JSONSchema: map[string]any{
 			"X-SystemPrompt": "You are a useful assistant.",
 			"properties": map[string]any{
@@ -1687,18 +1811,16 @@ func main() {
 			"title":    "CalendarEvent",
 			"type":     "object",
 		},
-		NConsensus: 1,
+		NConsensus: &nConsensus,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	extractedData, _ := (*result)["output"].(map[string]any)
+	extractedData := result.Output
 	likelihoods := map[string]any{}
-	if consensus, ok := (*result)["consensus"].(map[string]any); ok {
-		if l, ok := consensus["likelihoods"].(map[string]any); ok {
-			likelihoods = l
-		}
+	if result.Consensus != nil {
+		likelihoods = result.Consensus.Likelihoods
 	}
 
 	fmt.Printf("Extracted Event: %v on %v\n", extractedData["name"], extractedData["date"])
@@ -1717,8 +1839,8 @@ func main() {
 		fmt.Println("Low likelihood - Review manually")
 	}
 
-	if usage, ok := (*result)["usage"].(map[string]any); ok {
-		fmt.Printf("Processed with %v tokens\n", usage["total_tokens"])
+	if result.Usage != nil {
+		fmt.Printf("Processed with %v credits\n", result.Usage.Credits)
 	}
 }
 ```
@@ -1890,8 +2012,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var schema = new Dictionary<string, object>
 {
@@ -1918,7 +2041,6 @@ var schema = new Dictionary<string, object>
 
 // Extract data
 var result = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new FileInfo("freight/booking_confirmation.jpg"),
@@ -1933,7 +2055,7 @@ var date = result.GetOutputAttribute<string>("date");
 Console.WriteLine($"Extracted Event: {name} on {date}");
 
 var likelihoods = result.Consensus?.Likelihoods;
-if (likelihoods != null && likelihoods.Count > 0 && likelihoods.Values.All(score => score > 0.7))
+if (likelihoods != null && likelihoods.Count > 0 && likelihoods.Values.OfType<double>().All(score => score > 0.7))
 {
     Console.WriteLine("High likelihood extraction - Saving to DB...");
 }
@@ -1944,7 +2066,20 @@ else
 
 if (result.Usage != null)
 {
-    Console.WriteLine($"Processed with {result.Usage.TotalTokens} tokens");
+    Console.WriteLine($"Processed with {result.Usage.Credits} credits");
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
 }
 ```
 
@@ -2023,9 +2158,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	model := "retab-micro"
+	instructions := "This invoice is from our European supplier. " +
+		"Amounts should be in EUR unless explicitly stated otherwise. " +
+		"Extract values exactly as written; do not infer a missing currency."
+	result, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document: "invoices/invoice_001.pdf",
-		Model:    "retab-micro",
+		Model:    &model,
 		JSONSchema: map[string]any{
 			"properties": map[string]any{
 				"vendor_name":    map[string]any{"type": "string", "description": "Name of the vendor"},
@@ -2036,15 +2175,13 @@ func main() {
 			"required": []string{"vendor_name", "invoice_number", "total_amount"},
 			"type":     "object",
 		},
-		Instructions: "This invoice is from our European supplier. " +
-			"Amounts should be in EUR unless explicitly stated otherwise. " +
-			"Extract values exactly as written; do not infer a missing currency.",
+		Instructions: &instructions,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*result)["output"])
+	fmt.Println(result.Output)
 }
 ```
 
@@ -2139,6 +2276,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
+```
+
 ```curl cURL
 curl -X POST https://api.retab.com/v1/extractions \
 -H "Api-Key: $RETAB_API_KEY" \
@@ -2168,8 +2318,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var schema = new Dictionary<string, object>
 {
@@ -2185,7 +2336,6 @@ var schema = new Dictionary<string, object>
 };
 
 var result = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new FileInfo("invoices/invoice_001.pdf"),
@@ -2267,9 +2417,10 @@ func main() {
 
 	mySchema := map[string]any{"type": "object"}
 
-	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	model := "retab-small"
+	result, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document:   "freight/booking_confirmation.jpg",
-		Model:      "retab-small",
+		Model:      &model,
 		JSONSchema: mySchema,
 		Metadata: map[string]string{
 			"customer_id": "cust_123",
@@ -2353,13 +2504,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var mySchema = new Dictionary<string, object> { ["type"] = "object" };
 
 var result = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new FileInfo("freight/booking_confirmation.jpg"),
@@ -2375,6 +2526,19 @@ var result = await client.Extractions.CreateAsync(
 );
 
 Console.WriteLine(result.Id);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -2416,6 +2580,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -2430,12 +2595,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	customerExtractions, err := client.Extractions.List(ctx, &retab.ListExtractionsParams{
-		ListParams: retab.ListParams{Limit: 50},
-		Metadata: map[string]string{
+	customerMetadata, err := json.Marshal(map[string]string{
 			"customer_id": "cust_123",
 			"source":          "sinari_jobs",
-		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	customerMetadataFilter := string(customerMetadata)
+	limit := 50
+	customerExtractions, err := client.Extractions.List(ctx, &retab.ExtractionsListParams{
+		PaginationParams: retab.PaginationParams{Limit: &limit},
+		Metadata:         &customerMetadataFilter,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -2496,6 +2667,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().list(null, null, 10L, null, "invoice.pdf", null, null, null, null, null, null);
+    System.out.println(result);
+  }
+}
+```
+
 ```curl cURL
 curl -G 'https://api.retab.com/v1/extractions' \
   -H 'Api-Key: $RETAB_API_KEY' \
@@ -2507,23 +2691,19 @@ curl -G 'https://api.retab.com/v1/extractions' \
 using System;
 using System.Collections.Generic;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var customerExtractions = await client.Extractions.ListAsync(
-    client.ApiKey,
     new ExtractionsListOptions
     {
         Limit = 50,
-        Metadata = new Dictionary<string, string>
-        {
-            ["customer_id"] = "cust_123",
-            ["source"]      = "sinari_jobs",
-        },
+        Metadata = "{\"customer_id\":\"cust_123\",\"source\":\"sinari_jobs\"}",
     }
 );
 
-foreach (var e in customerExtractions.Items)
+foreach (var e in customerExtractions.Data)
 {
     Console.WriteLine(e.Id);
 }

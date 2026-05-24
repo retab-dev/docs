@@ -64,6 +64,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -77,27 +79,24 @@ func main() {
 		log.Fatal(err)
 	}
 
-	split, err := client.Splits.Create(ctx, retab.SplitCreateRequest{
+	split, err := client.Splits.Create(ctx, &retab.SplitsCreateParams{
 		Document: document,
-		Model:    "retab-small",
-		Subdocuments: []retab.SplitSubdocument{
-			{Name: "invoice", Description: "Invoice documents with billing information", AllowMultipleInstances: true},
-			{Name: "receipt", Description: "Receipt documents for payments"},
-			{Name: "contract", Description: "Legal contract documents"},
+		Model:    ptr("retab-small"),
+		Subdocuments: []*retab.Subdocument{
+			{Name: "invoice", Description: ptr("Invoice documents with billing information"), AllowMultipleInstances: ptr(true)},
+			{Name: "receipt", Description: ptr("Receipt documents for payments")},
+			{Name: "contract", Description: ptr("Legal contract documents")},
 		},
-		Instructions: "Processing Q4 2024 vendor document batch",
-		NConsensus:   3,
-		BustCache:    false,
+		Instructions: ptr("Processing Q4 2024 vendor document batch"),
+		NConsensus:   ptr(3),
+		BustCache:    ptr(false),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if output, ok := (*split)["output"].([]any); ok {
-		for _, sub := range output {
-			s, _ := sub.(map[string]any)
-			fmt.Printf("%v: pages %v\n", s["name"], s["pages"])
-		}
+	for _, sub := range split.Output {
+		fmt.Printf("%s: pages %v\n", sub.Name, sub.Pages)
 	}
 }
 ```
@@ -189,12 +188,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Splits.CreateAsync(apiKey, new SplitsCreateOptions());
+var result = await client.Splits.CreateAsync(new SplitsCreateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.splits().create(null, null, "retab-1.5", "Extract the invoice fields", 10L, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

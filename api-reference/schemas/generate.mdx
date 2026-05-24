@@ -41,6 +41,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -54,9 +56,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Schemas.Generate(ctx, retab.GenerateSchemaRequest{
+	result, err := client.Schemas.Generate(ctx, &retab.SchemasGenerateParams{
 		Documents: []any{document},
-		Model:     "retab-small",
+		Model:     ptr("retab-small"),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -119,12 +121,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Schemas.GenerateAsync(apiKey, new SchemasGenerateOptions());
+var result = await client.Schemas.GenerateAsync(new SchemasGenerateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.schemas().generate(null, "retab-1.5", null, "Extract the invoice fields", 10L, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

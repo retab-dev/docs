@@ -69,8 +69,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println((*result)["extraction"])
-	fmt.Println((*result)["sources"])
+	fmt.Println(result.Extraction)
+	fmt.Println(result.Sources)
 }
 ```
 
@@ -105,6 +105,19 @@ print_r($result->extraction);
 print_r($result->sources);
 ```
 
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().sources("extr_abc123");
+    System.out.println(result);
+  }
+}
+```
+
 ```curl cURL
 curl -X 'GET' \
   'https://api.retab.com/v1/extractions/extr_01G34H8J2K/sources' \
@@ -116,10 +129,11 @@ curl -X 'GET' \
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
-var result = await client.Extractions.SourcesAsync("extr_01G34H8J2K", client.ApiKey);
+var result = await client.Extractions.SourcesAsync("extr_01G34H8J2K");
 
 // Access the original extraction
 Console.WriteLine(result.Extraction);
@@ -564,9 +578,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Extractions.Create(ctx, retab.ExtractionCreateRequest{
+	model := "retab-small"
+	result, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
 		Document: document,
-		Model:    "retab-small",
+		Model:    &model,
 		JSONSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -579,12 +594,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	sources, err := client.Extractions.Sources(ctx, (*result)["id"].(string))
+	sources, err := client.Extractions.Sources(ctx, result.ID)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for field, leaf := range (*sources)["sources"].(map[string]any) {
+	for field, leaf := range sources.Sources {
 		leafMap, ok := leaf.(map[string]any)
 		if !ok || leafMap["source"] == nil {
 			continue
@@ -675,13 +690,19 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 using Newtonsoft.Json.Linq;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
+
+var mySchema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>(),
+};
 
 // 1. Extract data from a document
 var result = await client.Extractions.CreateAsync(
-    client.ApiKey,
     new ExtractionsCreateOptions
     {
         Document = new FileInfo("invoices/invoice_001.pdf"),
@@ -691,14 +712,14 @@ var result = await client.Extractions.CreateAsync(
 );
 
 // 2. Get sources for the extraction
-var sources = await client.Extractions.SourcesAsync(result.Id, client.ApiKey);
+var sources = await client.Extractions.SourcesAsync(result.Id);
 
 // 3. Use anchors to highlight values in a PDF viewer
 foreach (var kv in sources.Sources)
 {
-    if (kv.Value is JObject leaf && leaf["source"] is JObject source
-        && source["anchor"] is JObject anchor
-        && (string?)anchor["kind"] == "pdf_bbox")
+    var leaf = JObject.FromObject(kv.Value);
+    var anchor = leaf["source"]?["anchor"] as JObject;
+    if ((string?)anchor?["kind"] == "pdf_bbox")
     {
         Console.WriteLine(
             $"{kv.Key}: page {anchor["page"]}, bbox " +
@@ -727,6 +748,19 @@ let extraction = client
 let sources = client.extractions().sources(&extraction.id).await?;
 
 println!("{:#?}", sources.sources);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.extractions().sources("extr_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>

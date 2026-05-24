@@ -64,6 +64,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -72,15 +74,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	experiment, err := client.Workflows.Experiments.Create(ctx, retab.CreateExperimentRequest{
+	experiment, err := client.Workflows.Experiments.Create(ctx, &retab.WorkflowExperimentsCreateParams{
 		WorkflowID: "wf_abc123",
-		BlockID:    "extract-invoice",
-		Name:       "Q1 invoices",
-		DocumentCaptures: []retab.ExperimentDocumentCaptureRequest{
+		BlockID:    ptr("extract-invoice"),
+		Name:       ptr("Q1 invoices"),
+		DocumentCaptures: []*retab.ExperimentDocumentCaptureRequest{
 			{WorkflowRunID: "wfrun_1"},
-			{WorkflowRunID: "wfrun_2", StepID: "for_each-0"},
+			{WorkflowRunID: "wfrun_2", StepID: ptr("for_each-0")},
 		},
-		NConsensus: 5,
+		NConsensus: ptr(retab.CreateExperimentRequestNConsensus5),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -131,7 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     body.n_consensus = Some(CreateExperimentRequestNConsensus::V5);
 
     let experiment = client
-        .workflow_experiments()
+        .workflows().experiments()
         .create(CreateParams::new(body))
         .await?;
     println!("{}", experiment.id);
@@ -155,12 +157,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowExperiments.CreateAsync(apiKey, new WorkflowExperimentsCreateOptions());
+var result = await client.Workflows.Experiments.CreateAsync(new WorkflowExperimentsCreateOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().experiments().create("wf_abc123", "block_abc123", null, null, null, "Invoice Processing", null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

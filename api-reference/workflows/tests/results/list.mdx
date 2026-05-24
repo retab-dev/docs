@@ -47,6 +47,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -55,13 +57,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	results, err := client.Workflows.Tests.Results.List(ctx, "wftestrun_q1z2")
+	results, err := client.Workflows.Tests.Results.List(ctx, &retab.WorkflowTestRunResultsListParams{
+		RunID: "wftestrun_q1z2",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, result := range results.Data {
-		fmt.Println(result["test_id"], result["verdict"])
+		fmt.Println(result.TestID, result.Verdict)
 	}
 }
 ```
@@ -86,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     let results = client
-        .workflow_test_run_results()
+        .workflows().tests().results()
         .list(ListParams::new("wftestrun_q1z2"))
         .await?;
     for result in &results.data {
@@ -112,12 +116,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowTestRunResults.ListAsync(apiKey, new WorkflowTestRunResultsListOptions());
+var result = await client.Workflows.Tests.Results.ListAsync(new WorkflowTestRunResultsListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().tests().results().list("run_abc123", null, null, 10L, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

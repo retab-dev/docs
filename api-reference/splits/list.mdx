@@ -39,6 +39,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -47,12 +49,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	splits, err := client.Splits.List(ctx, &retab.ListParams{Limit: 20, Order: "desc"})
+	splits, err := client.Splits.List(ctx, &retab.SplitsListParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(20), Order: ptr("desc")},
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, s := range splits.Data {
-		fmt.Printf("%v: %v\n", s["id"], s["file"])
+		fmt.Printf("%s: %s\n", s.ID, s.File.Filename)
 	}
 }
 ```
@@ -106,12 +110,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Splits.ListAsync(apiKey, new SplitsListOptions());
+var result = await client.Splits.ListAsync(new SplitsListOptions());
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.splits().list(null, null, 10L, null, "invoice.pdf", null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

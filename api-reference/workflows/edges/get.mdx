@@ -42,6 +42,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -55,7 +57,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%s/%s -> %s/%s\n", edge.SourceBlock, edge.SourceHandle, edge.TargetBlock, edge.TargetHandle)
+	fmt.Printf("%s/%v -> %s/%v\n", edge.SourceBlock, edge.SourceHandle, edge.TargetBlock, edge.TargetHandle)
 }
 ```
 
@@ -76,7 +78,7 @@ use retab::Retab;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    let edge = client.workflow_edges().get("edge-1").await?;
+    let edge = client.workflows().edges().get("edge-1").await?;
 
     println!(
         "{}/{} -> {}/{}",
@@ -105,12 +107,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.WorkflowEdges.GetAsync("edge_start_extract", apiKey);
+var result = await client.Workflows.Edges.GetAsync("edge_start_extract");
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().edges().get("edge_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

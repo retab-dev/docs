@@ -207,22 +207,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	parse, err := client.Parses.Create(ctx, retab.ParseCreateRequest{
+	model := "retab-small"
+	tableFormat := retab.ParseRequestTableParsingFormatMarkdown
+	imageResolutionDpi := 192
+	parse, err := client.Parses.Create(ctx, &retab.ParsesCreateParams{
 		Document:           "technical-manual.pdf",
-		Model:              "retab-small",
-		TableParsingFormat: "markdown",
-		ImageResolutionDPI: 192,
+		Model:              &model,
+		TableParsingFormat: &tableFormat,
+		ImageResolutionDpi: &imageResolutionDpi,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	output, _ := (*parse)["output"].(map[string]any)
-	pages, _ := output["pages"].([]any)
-	file, _ := (*parse)["file"].(map[string]any)
-	filename, _ := file["filename"].(string)
-	usage, _ := (*parse)["usage"].(map[string]any)
-	pageCount, _ := usage["page_count"].(float64)
+	pages := parse.Output.Pages
+	filename := parse.File.Filename
 
 	type chunkData struct {
 		Page     int    `json:"page"`
@@ -232,8 +231,7 @@ func main() {
 	}
 
 	var allChunks []chunkData
-	for index, raw := range pages {
-		pageText, _ := raw.(string)
+	for index, pageText := range pages {
 		pageNum := index + 1
 		sentences := strings.FieldsFunc(pageText, func(r rune) bool {
 			return r == '.' || r == '!' || r == '?'
@@ -259,8 +257,8 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Created %d chunks from %d pages\n", len(allChunks), int(pageCount))
-	fmt.Println(output["text"])
+	fmt.Printf("Created %d chunks from %d pages\n", len(allChunks), len(pages))
+	fmt.Println(parse.Output.Text)
 }
 ```
 
@@ -433,11 +431,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
 var parse = await client.Parses.CreateAsync(
-    client.ApiKey,
     new ParsesCreateOptions
     {
         Document = new FileInfo("technical-manual.pdf"),
@@ -473,6 +471,19 @@ for (int index = 0; index < parse.Output.Pages.Count; index++)
 
 Console.WriteLine($"Created {allChunks.Count} chunks from {parse.Output.Pages.Count} pages");
 Console.WriteLine(parse.Output.Text);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.parses().create(null, "retab-1.5", null, 10L, "Extract the invoice fields", null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>

@@ -42,6 +42,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -55,9 +57,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Filename: %s\n", (*file)["filename"])
-	fmt.Printf("Pages: %v\n", (*file)["page_count"])
-	fmt.Printf("Created: %v\n", (*file)["created_at"])
+	fmt.Printf("Filename: %s\n", file.Filename)
+	fmt.Printf("Pages: %v\n", file.PageCount)
+	fmt.Printf("Created: %v\n", file.CreatedAt)
 }
 ```
 
@@ -84,7 +86,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Filename: {}", file.filename);
     println!("Pages: {}", file.page_count.unwrap_or_default());
-    println!("Created: {}", file.created_at);
+    println!("Created: {}", file.created_at.as_deref().unwrap_or("unknown"));
     Ok(())
 }
 ```
@@ -105,12 +107,26 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Files.GetAsync("file_6dd6eb00688ad8d1", apiKey);
+var result = await client.Files.GetAsync("file_6dd6eb00688ad8d1");
 Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.files().get("file_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL

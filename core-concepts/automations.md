@@ -251,6 +251,33 @@ echo curl_exec($ch) . PHP_EOL;
 curl_close($ch);
 ```
 
+
+```java Java
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    String body =
+        "{\"name\":\"Invoice Processor\","
+            + "\"model\":\"retab-small\","
+            + "\"json_schema\":{\"type\":\"object\"}}";
+
+    HttpRequest request =
+        HttpRequest.newBuilder(URI.create("https://api.retab.com/v1/processors"))
+            .header("Api-Key", System.getenv("RETAB_API_KEY"))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build();
+
+    HttpResponse<String> response =
+        HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(response.body());
+  }
+}
+```
 </CodeGroup>
 
 ## Create your FastAPI server with a webhook
@@ -383,6 +410,30 @@ header('Content-Type: application/json');
 echo json_encode(['status' => 'success', 'data' => $invoiceObject]);
 ```
 
+
+```java Java
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+    server.createContext(
+        "/webhook",
+        exchange -> {
+          byte[] payload = exchange.getRequestBody().readAllBytes();
+          System.out.println(new String(payload, StandardCharsets.UTF_8));
+          byte[] response = "{\"status\":\"success\"}".getBytes(StandardCharsets.UTF_8);
+          exchange.getResponseHeaders().add("Content-Type", "application/json");
+          exchange.sendResponseHeaders(200, response.length);
+          exchange.getResponseBody().write(response);
+          exchange.close();
+        });
+    server.start();
+  }
+}
+```
 </CodeGroup>
 
 ## Secure your webhook endpoint
@@ -435,19 +486,18 @@ async def webhook_handler(request: Request):
 ````
 
 ```go Go
-// retab.VerifyEvent validates the X-Retab-Signature HMAC and decodes the
-// payload into a typed struct in one step.
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-
-	retab "github.com/retab-dev/retab/clients/go"
 )
 
 type WebhookRequest struct {
@@ -455,6 +505,21 @@ type WebhookRequest struct {
 	User        string            `json:"user,omitempty"`
 	FilePayload json.RawMessage   `json:"file_payload"`
 	Metadata    map[string]any    `json:"metadata,omitempty"`
+}
+
+func verifyEvent[T any](body []byte, signature string, secret string) (T, error) {
+	var event T
+
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write(body)
+	expected := hex.EncodeToString(mac.Sum(nil))
+	if !hmac.Equal([]byte(signature), []byte(expected)) {
+		return event, fmt.Errorf("invalid webhook signature")
+	}
+	if err := json.Unmarshal(body, &event); err != nil {
+		return event, err
+	}
+	return event, nil
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -468,7 +533,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing X-Retab-Signature header", http.StatusBadRequest)
 		return
 	}
-	event, err := retab.VerifyEvent[WebhookRequest](
+	event, err := verifyEvent[WebhookRequest](
 		body,
 		signature,
 		os.Getenv("WEBHOOKS_SECRET"),
@@ -577,6 +642,52 @@ function verify_signature(string $payload, ?string $signature, string $secret): 
 }
 ```
 
+
+```java Java
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
+public final class Example {
+  static String hmacSha256(byte[] payload, String secret) throws Exception {
+    Mac mac = Mac.getInstance("HmacSHA256");
+    mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+    byte[] digest = mac.doFinal(payload);
+    StringBuilder hex = new StringBuilder();
+    for (byte value : digest) {
+      hex.append(String.format("%02x", value));
+    }
+    return hex.toString();
+  }
+
+  public static void main(String[] args) throws Exception {
+    HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+    server.createContext(
+        "/webhook",
+        exchange -> {
+          try {
+            byte[] payload = exchange.getRequestBody().readAllBytes();
+            String signature = exchange.getRequestHeaders().getFirst("X-Retab-Signature");
+            String expected = hmacSha256(payload, System.getenv("WEBHOOKS_SECRET"));
+            int status = expected.equals(signature) ? 200 : 401;
+            byte[] response = "{\"status\":\"success\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, response.length);
+            exchange.getResponseBody().write(response);
+          } catch (Exception error) {
+            byte[] response = error.getMessage().getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(400, response.length);
+            exchange.getResponseBody().write(response);
+          } finally {
+            exchange.close();
+          }
+        });
+    server.start();
+  }
+}
+```
 </CodeGroup>
 
 ## Exposing local server to the internet using ngrok
@@ -833,6 +944,51 @@ echo curl_exec($ch) . PHP_EOL;
 curl_close($ch);
 ```
 
+
+```java Java
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    HttpClient http = HttpClient.newHttpClient();
+
+    HttpRequest webhookRequest =
+        HttpRequest.newBuilder(
+                URI.create("https://api.retab.com/v1/processors/automations/tests/webhook/auto_abc"))
+            .header("Api-Key", System.getenv("RETAB_API_KEY"))
+            .POST(HttpRequest.BodyPublishers.ofString("{}"))
+            .build();
+    System.out.println(http.send(webhookRequest, HttpResponse.BodyHandlers.ofString()).body());
+
+    String boundary = "----RetabBoundary" + System.nanoTime();
+    byte[] fileBytes = Files.readAllBytes(Path.of("invoice.pdf"));
+    byte[] body =
+        ("--" + boundary + "\r\n"
+                + "Content-Disposition: form-data; name=\"document\"; filename=\"invoice.pdf\"\r\n"
+                + "Content-Type: application/pdf\r\n\r\n")
+            .getBytes();
+    byte[] ending = ("\r\n--" + boundary + "--\r\n").getBytes();
+    byte[] payload = new byte[body.length + fileBytes.length + ending.length];
+    System.arraycopy(body, 0, payload, 0, body.length);
+    System.arraycopy(fileBytes, 0, payload, body.length, fileBytes.length);
+    System.arraycopy(ending, 0, payload, body.length + fileBytes.length, ending.length);
+
+    HttpRequest uploadRequest =
+        HttpRequest.newBuilder(
+                URI.create("https://api.retab.com/v1/processors/automations/tests/upload/auto_abc"))
+            .header("Api-Key", System.getenv("RETAB_API_KEY"))
+            .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+            .POST(HttpRequest.BodyPublishers.ofByteArray(payload))
+            .build();
+    System.out.println(http.send(uploadRequest, HttpResponse.BodyHandlers.ofString()).body());
+  }
+}
+```
 </CodeGroup>
 
 You can also test your automation directly from the [dashboard](https://www.retab.com/dashboard/processors).

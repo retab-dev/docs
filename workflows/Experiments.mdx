@@ -217,15 +217,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	experiment, err := client.Workflows.Experiments.Create(ctx, retab.CreateExperimentRequest{
+	blockID := "extract-invoice"
+	name := "Q1 invoices"
+	stepID := "for_each-0"
+	nConsensus := retab.CreateExperimentRequestNConsensus5
+	experiment, err := client.Workflows.Experiments.Create(ctx, &retab.WorkflowExperimentsCreateParams{
 		WorkflowID: "wf_abc123",
-		BlockID:    "extract-invoice",
-		Name:       "Q1 invoices",
-		DocumentCaptures: []retab.ExperimentDocumentCaptureRequest{
+		BlockID:    &blockID,
+		Name:       &name,
+		DocumentCaptures: []*retab.ExperimentDocumentCaptureRequest{
 			{WorkflowRunID: "wfrun_1"},
-			{WorkflowRunID: "wfrun_2", StepID: "for_each-0"},
+			{WorkflowRunID: "wfrun_2", StepID: &stepID},
 		},
-		NConsensus: 5,
+		NConsensus: &nConsensus,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -281,11 +285,11 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var client = new Retab("YOUR_API_KEY");
+var client = new RetabClient("YOUR_API_KEY");
 
-var experiment = await client.WorkflowExperiments.CreateAsync(
-    client.ApiKey,
+var experiment = await client.Workflows.Experiments.CreateAsync(
     new WorkflowExperimentsCreateOptions
     {
         WorkflowId = "wf_abc123",
@@ -323,13 +327,27 @@ request.document_captures = Some(vec![
         step_id: Some("for_each-0".to_string()),
     },
 ]);
-request.n_consensus = Some(CreateExperimentRequestNConsensus::Value5);
+request.n_consensus = Some(CreateExperimentRequestNConsensus::V5);
 
 let experiment = client
-    .workflow_experiments()
+    .workflows()
+    .experiments()
     .create(workflow_experiments::CreateParams::new(request))
     .await?;
 println!("{}", experiment.id);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().experiments().create("wf_abc123", "block_abc123", null, null, null, "Invoice Processing", null);
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -375,10 +393,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	workflowID := "wf_abc123"
 	run, err := client.Workflows.Experiments.Runs.Create(
 		context.Background(),
-		"wf_abc123",
-		"exp_abc123",
+		&retab.ExperimentRunsCreateParams{
+			WorkflowID:    &workflowID,
+			ExperimentID: "exp_abc123",
+		},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -412,9 +433,14 @@ echo $run->id . ' ' . $run->lifecycle->status . PHP_EOL;
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var run = await client.ExperimentRuns.CreateAsync(
-    client.ApiKey,
+static string LifecycleStatus(object? lifecycle)
+{
+    return lifecycle?.GetType().GetProperty("Status")?.GetValue(lifecycle)?.ToString() ?? "unknown";
+}
+
+var run = await client.Workflows.Experiments.Runs.CreateAsync(
     new ExperimentRunsCreateOptions
     {
         ExperimentId = experiment.Id,
@@ -422,21 +448,37 @@ var run = await client.ExperimentRuns.CreateAsync(
     }
 );
 
-Console.WriteLine($"{run.Id} {run.Lifecycle.Status}");
+Console.WriteLine($"{run.Id} {LifecycleStatus(run.Lifecycle)}");
 ```
 
 ```rust Rust
 use retab::{models::CreateExperimentRunRequest, resources::experiment_runs, Retab};
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
-let mut request = CreateExperimentRunRequest::new(&experiment.id);
+let experiment_id = "wexp_abc123";
+let mut request = CreateExperimentRunRequest::new(experiment_id);
 request.workflow_id = Some("wf_abc123".to_string());
 let run = client
-    .experiment_runs()
+    .workflows()
+    .experiments()
+    .runs()
     .create(experiment_runs::CreateParams::new(request))
     .await?;
 
 println!("{} {:?}", run.id, run.lifecycle);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().experiments().runs().create("exp_abc123", "wf_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -505,7 +547,13 @@ func main() {
 	}
 	fmt.Println(run.ID, run.Lifecycle.Status)
 
-	results, err := client.Workflows.Experiments.Runs.Results.List(ctx, "exprun_2", 20)
+	limit := 20
+	results, err := client.Workflows.Experiments.Results.List(ctx, &retab.ExperimentRunResultsListParams{
+		RunID: "exprun_2",
+		PaginationParams: retab.PaginationParams{
+			Limit: &limit,
+		},
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -513,7 +561,7 @@ func main() {
 		fmt.Println(result.DocumentID, result.Lifecycle.Status)
 	}
 
-	result, err := client.Workflows.Experiments.Runs.Results.Get(ctx, "exprun_2", "expdoc_xyz")
+	result, err := client.Workflows.Experiments.Results.Get(ctx, "expdoc_xyz")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -557,40 +605,59 @@ print_r($result->artifact);
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var currentRun = await client.ExperimentRuns.GetAsync(run.Id, client.ApiKey);
-Console.WriteLine($"{currentRun.Id} {currentRun.Lifecycle.Status}");
+static string LifecycleStatus(object? lifecycle)
+{
+    return lifecycle?.GetType().GetProperty("Status")?.GetValue(lifecycle)?.ToString() ?? "unknown";
+}
 
-var results = await client.ExperimentRunResults.ListAsync(
-    client.ApiKey,
+var currentRun = await client.Workflows.Experiments.Runs.GetAsync(run.Id);
+Console.WriteLine($"{currentRun.Id} {LifecycleStatus(currentRun.Lifecycle)}");
+
+var results = await client.Workflows.Experiments.Results.ListAsync(
     new ExperimentRunResultsListOptions { RunId = run.Id }
 );
 await foreach (var item in results)
 {
-    Console.WriteLine($"{item.DocumentId} {item.Lifecycle.Status}");
+    Console.WriteLine($"{item.DocumentId} {LifecycleStatus(item.Lifecycle)}");
 }
 
-var result = await client.ExperimentRunResults.GetAsync("expdoc_xyz", client.ApiKey);
+var result = await client.Workflows.Experiments.Results.GetAsync("expdoc_xyz");
 Console.WriteLine(result.Artifact);
 ```
 
 ```rust Rust
-use retab::{resources::{experiment_run_results, experiment_runs}, Retab};
+use retab::{resources::experiment_run_results, Retab};
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
-let current_run = client.experiment_runs().get(&run.id).await?;
+let run_id = "exprun_abc123";
+let current_run = client.workflows().experiments().runs().get(run_id).await?;
 println!("{} {:?}", current_run.id, current_run.lifecycle);
 
 let results = client
-    .experiment_run_results()
-    .list(experiment_run_results::ListParams::new(&run.id))
+    .workflows().experiments().results()
+    .list(experiment_run_results::ListParams::new(run_id))
     .await?;
 for result in results.data {
     println!("{} {:?}", result.document_id, result.lifecycle);
 }
 
-let result = client.experiment_run_results().get("expdoc_xyz").await?;
+let result = client.workflows().experiments().results().get("expdoc_xyz").await?;
 println!("{:#?}", result.artifact);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().experiments().runs().get("run_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>
@@ -670,10 +737,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	summary, err := client.Workflows.Experiments.Runs.Metrics.Get(
+	summaryView := retab.ExperimentRunMetricsViewSummary
+	summary, err := client.Workflows.Experiments.Metrics.Get(
 		context.Background(),
-		"exprun_2",
-		&retab.GetExperimentMetricsParams{View: "summary"},
+		&retab.ExperimentRunMetricsGetParams{RunID: "exprun_2", View: &summaryView},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -681,12 +748,14 @@ func main() {
 	fmt.Println(summary)
 
 	// A weak field surfaces in summary.aggregate.likelihoods - drill in
-	target, err := client.Workflows.Experiments.Runs.Metrics.Get(
+	targetView := retab.ExperimentRunMetricsViewByTarget
+	targetPath := "line_items.*.unit_price"
+	target, err := client.Workflows.Experiments.Metrics.Get(
 		context.Background(),
-		"exprun_2",
-		&retab.GetExperimentMetricsParams{
-			View:       "by_target",
-			TargetPath: "line_items.*.unit_price",
+		&retab.ExperimentRunMetricsGetParams{
+			RunID:      "exprun_2",
+			View:       &targetView,
+			TargetPath: &targetPath,
 		},
 	)
 	if err != nil {
@@ -695,13 +764,15 @@ func main() {
 	fmt.Println(target)
 
 	// To see what each voter said for one document/target cell
-	votes, err := client.Workflows.Experiments.Runs.Metrics.Get(
+	votesView := retab.ExperimentRunMetricsViewVotes
+	documentID := "expdoc_xyz"
+	votes, err := client.Workflows.Experiments.Metrics.Get(
 		context.Background(),
-		"exprun_2",
-		&retab.GetExperimentMetricsParams{
-			View:       "votes",
-			DocumentID: "expdoc_xyz",
-			TargetPath: "line_items.*.unit_price",
+		&retab.ExperimentRunMetricsGetParams{
+			RunID:      "exprun_2",
+			View:       &votesView,
+			DocumentID: &documentID,
+			TargetPath: &targetPath,
 		},
 	)
 	if err != nil {
@@ -766,9 +837,9 @@ $votes = $client->experimentRunMetrics()->get(
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
-var summary = await client.ExperimentRunMetrics.GetAsync(
-    client.ApiKey,
+var summary = await client.Workflows.Experiments.Metrics.GetAsync(
     new ExperimentRunMetricsGetOptions
     {
         RunId = run.Id,
@@ -777,8 +848,7 @@ var summary = await client.ExperimentRunMetrics.GetAsync(
 );
 
 // A weak field surfaces in summary.aggregate.likelihoods - drill in
-var targetView = await client.ExperimentRunMetrics.GetAsync(
-    client.ApiKey,
+var targetView = await client.Workflows.Experiments.Metrics.GetAsync(
     new ExperimentRunMetricsGetOptions
     {
         RunId = run.Id,
@@ -788,8 +858,7 @@ var targetView = await client.ExperimentRunMetrics.GetAsync(
 );
 
 // To see what each voter said for one document/target cell
-var votes = await client.ExperimentRunMetrics.GetAsync(
-    client.ApiKey,
+var votes = await client.Workflows.Experiments.Metrics.GetAsync(
     new ExperimentRunMetricsGetOptions
     {
         RunId = run.Id,
@@ -808,23 +877,39 @@ use retab::{
 };
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let run_id = "exprun_abc123";
 let summary = client
-    .experiment_run_metrics()
-    .get(experiment_run_metrics::GetParams::new(&run.id))
+    .workflows()
+    .experiments()
+    .metrics()
+    .get(experiment_run_metrics::GetParams::new(run_id))
     .await?;
 
-let mut target_params = experiment_run_metrics::GetParams::new(&run.id);
+let mut target_params = experiment_run_metrics::GetParams::new(run_id);
 target_params.view = Some(ExperimentRunMetricsView::ByTarget);
 target_params.target_path = Some("line_items.*.unit_price".to_string());
-let target_view = client.experiment_run_metrics().get(target_params).await?;
+let target_view = client.workflows().experiments().metrics().get(target_params).await?;
 
-let mut votes_params = experiment_run_metrics::GetParams::new(&run.id);
+let mut votes_params = experiment_run_metrics::GetParams::new(run_id);
 votes_params.view = Some(ExperimentRunMetricsView::Votes);
 votes_params.document_id = Some("expdoc_xyz".to_string());
 votes_params.target_path = Some("line_items.*.unit_price".to_string());
-let votes = client.experiment_run_metrics().get(votes_params).await?;
+let votes = client.workflows().experiments().metrics().get(votes_params).await?;
 
 println!("{summary:#?} {target_view:#?} {votes:#?}");
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var metrics = client.workflows().experiments().metrics().get("run_abc123", null, null, null, null, null);
+    System.out.println(metrics);
+  }
+}
 ```
 
 </CodeGroup>
@@ -874,8 +959,9 @@ func main() {
 
 	// Change n_consensus - invalidates existing metrics
 	nConsensus := 7
-	updated, err := client.Workflows.Experiments.Update(ctx, "exp_abc123", retab.UpdateExperimentRequest{
-		NConsensus: &nConsensus,
+	nConsensusValue := retab.UpdateExperimentRequestNConsensus(nConsensus)
+	updated, err := client.Workflows.Experiments.Update(ctx, "exp_abc123", &retab.WorkflowExperimentsUpdateParams{
+		NConsensus: &nConsensusValue,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -920,18 +1006,18 @@ $client->workflowExperiments()->delete($experiment->id);
 using System;
 using System.Threading.Tasks;
 using Retab;
+using RetabClient = Retab.Retab;
 
 // Change n_consensus — invalidates existing metrics
-await client.WorkflowExperiments.UpdateAsync(
+await client.Workflows.Experiments.UpdateAsync(
     experiment.Id,
-    client.ApiKey,
     new WorkflowExperimentsUpdateOptions
     {
         NConsensus = (CreateExperimentRequestNConsensus)7,
     }
 );
 
-await client.WorkflowExperiments.DeleteAsync(experiment.Id, client.ApiKey);
+await client.Workflows.Experiments.DeleteAsync(experiment.Id);
 ```
 
 ```rust Rust
@@ -943,16 +1029,31 @@ use retab::{
 };
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let experiment_id = "wexp_abc123";
 let mut request = UpdateExperimentRequest::default();
-request.n_consensus = Some(UpdateExperimentRequestNConsensus::Value7);
+request.n_consensus = Some(UpdateExperimentRequestNConsensus::V7);
 client
-    .workflow_experiments()
+    .workflows()
+    .experiments()
     .update(
-        &experiment.id,
+        experiment_id,
         workflow_experiments::UpdateParams::new(request),
     )
     .await?;
-client.workflow_experiments().delete(&experiment.id).await?;
+client.workflows().experiments().delete(experiment_id).await?;
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().experiments().update("exp_abc123", null, null, null, "Invoice Processing");
+    System.out.println(result);
+  }
+}
 ```
 
 </CodeGroup>

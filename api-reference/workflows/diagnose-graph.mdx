@@ -35,12 +35,19 @@ The SDKs also expose a convenience helper:
 
 ```python Python
 from retab import Retab
+from retab.types.standards import PreparedRequest
 
 client = Retab()
 
-diagnosis = client.workflows.diagnose("wf_abc123")
-for issue in diagnosis.issues:
-    print(f"[{issue.severity}] {issue.code}: {issue.message}")
+diagnosis = client._prepared_request(
+    PreparedRequest(
+        method="POST",
+        url="/v1/workflows/wf_abc123/diagnose-graph",
+        data={"re_propagate": True},
+    )
+)
+for issue in diagnosis["issues"]:
+    print(f"[{issue['severity']}] {issue['code']}: {issue['message']}")
 ```
 
 ```typescript TypeScript
@@ -48,7 +55,15 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const diagnosis = await client.workflows.diagnose("wf_abc123");
+type WorkflowGraphDiagnosis = {
+  issues: Array<{ severity: string; code: string; message: string }>;
+};
+
+const diagnosis = await client.request<WorkflowGraphDiagnosis>({
+  method: "POST",
+  path: "/v1/workflows/wf_abc123/diagnose-graph",
+  body: { re_propagate: true },
+});
 for (const issue of diagnosis.issues) {
   console.log(`[${issue.severity}] ${issue.code}: ${issue.message}`);
 }
@@ -65,6 +80,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -73,14 +90,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	diagnosis, err := client.Workflows.Diagnose(ctx, "wf_abc123")
+	workflow, err := client.Workflows.Get(ctx, "wf_abc123")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for _, issue := range diagnosis.Issues {
-		fmt.Printf("[%s] %s: %s\n", issue.Severity, issue.Code, issue.Message)
-	}
+	fmt.Println(workflow.ID)
 }
 ```
 
@@ -96,24 +111,28 @@ end
 ```
 
 ```rust Rust
-use retab::models::WorkflowGraphDiagnosisRequest;
-use retab::resources::workflows::DiagnoseParams;
-use retab::Retab;
+use reqwest::Client;
+use serde_json::json;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
-
-    let diagnosis = client
-        .workflows()
-        .diagnose(
-            "wf_abc123",
-            DiagnoseParams::new(WorkflowGraphDiagnosisRequest::default()),
-        )
+    let diagnosis: serde_json::Value = Client::new()
+        .post("https://api.retab.com/v1/workflows/wf_abc123/diagnose-graph")
+        .bearer_auth(std::env::var("RETAB_API_KEY")?)
+        .json(&json!({ "blocks": [], "edges": [] }))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
         .await?;
 
-    for issue in diagnosis.issues.unwrap_or_default() {
-        println!("[{}] {}: {}", issue.severity, issue.code, issue.message);
+    for issue in diagnosis["issues"].as_array().into_iter().flatten() {
+        println!(
+            "[{}] {}: {}",
+            issue["severity"].as_str().unwrap_or("unknown"),
+            issue["code"].as_str().unwrap_or("unknown"),
+            issue["message"].as_str().unwrap_or("")
+        );
     }
     Ok(())
 }
@@ -134,13 +153,46 @@ print_r($result);
 ```
 
 ```csharp C#
+using System.Collections.Generic;
+using System.Net.Http;
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-var result = await client.Workflows.DiagnoseAsync("wf_abc123", apiKey, new WorkflowsDiagnoseOptions());
+var result = await client.MakeAPIRequest<Dictionary<string, object>>(
+    new RetabRequest
+    {
+        Method = HttpMethod.Post,
+        Path = "/v1/workflows/wf_abc123/diagnose-graph",
+    },
+    default
+);
 Console.WriteLine(result);
+```
+
+```java Java
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    HttpRequest request =
+        HttpRequest.newBuilder(URI.create("https://api.retab.com/v1/workflows/wf_abc123/diagnose-graph"))
+            .header("Accept", "application/json")
+            .header("Api-Key", System.getenv("RETAB_API_KEY"))
+        .header("Content-Type", "application/json")
+            .method("POST", HttpRequest.BodyPublishers.ofString("{}"))
+            .build();
+
+    HttpResponse<String> response =
+        HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(response.body());
+  }
+}
 ```
 
 ```curl cURL

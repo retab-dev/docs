@@ -37,6 +37,8 @@ import (
 	retab "github.com/retab-dev/retab/clients/go"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func main() {
 	ctx := context.Background()
 
@@ -45,7 +47,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := client.Workflows.Blocks.Delete(ctx, "extract-1"); err != nil {
+	if err := client.Workflows.Blocks.Delete(ctx, "extract-1", nil); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -68,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     client
-        .workflow_blocks()
+        .workflows().blocks()
         .delete("extract-1", DeleteParams::default())
         .await?;
     Ok(())
@@ -91,12 +93,26 @@ echo "Deleted\n";
 
 ```csharp C#
 using Retab;
+using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
-var client = new Retab(apiKey);
+var client = new RetabClient(apiKey);
 
-await client.WorkflowBlocks.DeleteAsync("blk_extract_1", apiKey, new WorkflowBlocksDeleteOptions());
+await client.Workflows.Blocks.DeleteAsync("blk_extract_1", new WorkflowBlocksDeleteOptions());
 Console.WriteLine("Deleted");
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().blocks().delete("block_abc123", "wf_abc123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```curl cURL
