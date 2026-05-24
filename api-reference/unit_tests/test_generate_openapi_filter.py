@@ -199,17 +199,37 @@ def test_workflow_create_request_docs_publish_shape_variants() -> None:
     }
     assert "restart_of" not in schemas["CreateWorkflowRunRequest"]["properties"]
     assert "CreateRestartWorkflowRunRequest" not in schemas
-    assert schemas["CreateWorkflowTestRunRequest"]["oneOf"] == [
-        {"$ref": "#/components/schemas/CreateWorkflowTestRunForTestRequest"},
-        {"$ref": "#/components/schemas/CreateWorkflowTestRunForTargetRequest"},
-        {"$ref": "#/components/schemas/CreateWorkflowTestRunAllRequest"},
-    ]
-    assert schemas["CreateWorkflowTestRunForTestRequest"]["required"] == ["test_id"]
-    assert schemas["CreateWorkflowTestRunForTargetRequest"]["required"] == [
+    test_run_request = schemas["CreateWorkflowTestRunRequest"]
+    assert "oneOf" not in test_run_request
+    assert test_run_request["required"] == ["workflow_id"]
+    assert set(test_run_request["properties"]) == {
         "workflow_id",
-        "target",
+        "scope",
+    }
+    assert test_run_request["properties"]["scope"]["oneOf"] == [
+        {"$ref": "#/components/schemas/WorkflowTestRunSingleScope"},
+        {"$ref": "#/components/schemas/WorkflowTestRunWorkflowScope"},
+        {"$ref": "#/components/schemas/WorkflowTestRunBlockScope"},
     ]
-    assert schemas["CreateWorkflowTestRunAllRequest"]["required"] == ["workflow_id"]
+    assert test_run_request["properties"]["scope"]["discriminator"][
+        "propertyName"
+    ] == "type"
+    assert schemas["WorkflowTestRunSingleScope"]["required"] == ["type", "test_id"]
+    assert schemas["WorkflowTestRunWorkflowScope"]["required"] == ["type"]
+    assert schemas["WorkflowTestRunBlockScope"]["required"] == ["type", "block_id"]
+
+
+def test_generated_openapi_does_not_expose_split_mime_data_name() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+    serialized = json.dumps(generated_openapi)
+    schemas = generated_openapi["components"]["schemas"]
+
+    assert "MIMEData" + "Input" not in serialized
+    assert "MimeData" + "Input" not in serialized
+    assert "MIMEData" + "-Input" not in serialized
+    assert "MIMEData" in schemas
+    assert schemas["MIMEData"]["required"] == ["filename", "url"]
+    assert schemas["MIMEData"]["properties"]["mime_type"]["readOnly"] is True
 
 
 def test_generated_openapi_uses_dereferenced_workflow_artifact_schema() -> None:
