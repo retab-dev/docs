@@ -4167,7 +4167,7 @@
           "Workflow Block Tests"
         ],
         "summary": "Create Test Run",
-        "description": "Create a workflow-scoped test run.\n\nScoping identity comes from the body — ``workflow_id`` and/or\n``test_id`` per ``CreateWorkflowTestRunRequest``.",
+        "description": "Create a workflow-scoped test run.\n\n``workflow_id`` is the execution context. Optional ``scope`` narrows the\nrun to one saved test or one block; omitted scope runs all workflow tests.",
         "operationId": "create_test_run",
         "security": [
           {
@@ -10838,7 +10838,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEDataInput"
+                "$ref": "#/components/schemas/MIMEData"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -10918,7 +10918,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEDataInput"
+                "$ref": "#/components/schemas/MIMEData"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -10975,7 +10975,7 @@
             "description": "Name of the template."
           },
           "document": {
-            "$ref": "#/components/schemas/MIMEDataInput",
+            "$ref": "#/components/schemas/MIMEData",
             "description": "The PDF document to use as the empty template."
           },
           "form_fields": {
@@ -11122,7 +11122,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEDataInput"
+                "$ref": "#/components/schemas/MIMEData"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -11330,7 +11330,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEDataInput"
+                "$ref": "#/components/schemas/MIMEData"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -11396,7 +11396,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEDataInput"
+                "$ref": "#/components/schemas/MIMEData"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -11495,7 +11495,7 @@
           "document": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MIMEDataInput"
+                "$ref": "#/components/schemas/MIMEData"
               },
               {
                 "$ref": "#/components/schemas/FileRef"
@@ -11752,7 +11752,7 @@
                   "$ref": "#/components/schemas/FileRef"
                 },
                 {
-                  "$ref": "#/components/schemas/MIMEDataInput"
+                  "$ref": "#/components/schemas/MIMEData"
                 }
               ]
             },
@@ -11838,15 +11838,34 @@
         ],
         "title": "CreateWorkflowTestRequest"
       },
-      "CreateWorkflowTestRunAllRequest": {
+      "CreateWorkflowTestRunRequest": {
         "properties": {
           "workflow_id": {
             "type": "string",
             "title": "Workflow Id"
           },
-          "n_consensus": {
-            "type": "integer",
-            "title": "N Consensus"
+          "scope": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowTestRunSingleScope"
+              },
+              {
+                "$ref": "#/components/schemas/WorkflowTestRunWorkflowScope"
+              },
+              {
+                "$ref": "#/components/schemas/WorkflowTestRunBlockScope"
+              }
+            ],
+            "title": "Scope",
+            "description": "Optional execution scope. Omit to run every saved test in the workflow.",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "block": "#/components/schemas/WorkflowTestRunBlockScope",
+                "single": "#/components/schemas/WorkflowTestRunSingleScope",
+                "workflow": "#/components/schemas/WorkflowTestRunWorkflowScope"
+              }
+            }
           }
         },
         "additionalProperties": false,
@@ -11854,69 +11873,8 @@
         "required": [
           "workflow_id"
         ],
-        "title": "CreateWorkflowTestRunAllRequest",
-        "description": "Run every saved test in a workflow."
-      },
-      "CreateWorkflowTestRunForTargetRequest": {
-        "properties": {
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "target": {
-            "$ref": "#/components/schemas/WorkflowTestBlockTarget"
-          },
-          "n_consensus": {
-            "type": "integer",
-            "title": "N Consensus"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "workflow_id",
-          "target"
-        ],
-        "title": "CreateWorkflowTestRunForTargetRequest",
-        "description": "Run every workflow test for one target in a workflow."
-      },
-      "CreateWorkflowTestRunForTestRequest": {
-        "properties": {
-          "test_id": {
-            "type": "string",
-            "title": "Test Id"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "n_consensus": {
-            "type": "integer",
-            "title": "N Consensus"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "test_id"
-        ],
-        "title": "CreateWorkflowTestRunForTestRequest",
-        "description": "Run one saved workflow test by test id."
-      },
-      "CreateWorkflowTestRunRequest": {
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/CreateWorkflowTestRunForTestRequest"
-          },
-          {
-            "$ref": "#/components/schemas/CreateWorkflowTestRunForTargetRequest"
-          },
-          {
-            "$ref": "#/components/schemas/CreateWorkflowTestRunAllRequest"
-          }
-        ],
         "title": "CreateWorkflowTestRunRequest",
-        "description": "Request body for POST /v1/workflows/tests/runs. Use exactly one of the single-test, target, or all-tests shapes."
+        "description": "Request body for POST /v1/workflows/tests/runs. Provide a workflow_id and optionally narrow execution with scope.type single or block. Omit scope, or pass scope.type workflow, to run every saved workflow test."
       },
       "Decision": {
         "properties": {
@@ -14526,7 +14484,7 @@
         "properties": {
           "documents": {
             "items": {
-              "$ref": "#/components/schemas/MIMEDataInput"
+              "$ref": "#/components/schemas/MIMEData"
             },
             "type": "array",
             "title": "Documents"
@@ -15364,34 +15322,6 @@
           "rubric"
         ],
         "title": "LlmNotJudgedAsCondition"
-      },
-      "MIMEDataInput": {
-        "properties": {
-          "filename": {
-            "type": "string",
-            "title": "Filename",
-            "description": "The filename of the file",
-            "examples": [
-              "file.pdf",
-              "image.png",
-              "data.txt"
-            ]
-          },
-          "url": {
-            "type": "string",
-            "title": "Url",
-            "description": "The URL of the file in base64 format",
-            "examples": [
-              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "filename",
-          "url"
-        ],
-        "title": "MIMEDataInput"
       },
       "ManualTrigger": {
         "properties": {
@@ -20051,6 +19981,48 @@
         ],
         "title": "WorkflowTestRun"
       },
+      "WorkflowTestRunBlockScope": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "block",
+            "title": "Type"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "block_id"
+        ],
+        "title": "WorkflowTestRunBlockScope",
+        "description": "Run every workflow test for one block in the workflow."
+      },
+      "WorkflowTestRunSingleScope": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "single",
+            "title": "Type"
+          },
+          "test_id": {
+            "type": "string",
+            "title": "Test Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "test_id"
+        ],
+        "title": "WorkflowTestRunSingleScope",
+        "description": "Run one saved workflow test in the workflow."
+      },
       "WorkflowTestRunTiming": {
         "properties": {
           "created_at": {
@@ -20100,6 +20072,22 @@
           "created_at"
         ],
         "title": "WorkflowTestRunTiming"
+      },
+      "WorkflowTestRunWorkflowScope": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "workflow",
+            "title": "Type"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "WorkflowTestRunWorkflowScope",
+        "description": "Run every saved test in the workflow."
       },
       "File": {
         "properties": {
@@ -20279,8 +20267,7 @@
         "type": "object",
         "required": [
           "filename",
-          "url",
-          "mime_type"
+          "url"
         ],
         "title": "MIMEData"
       },

@@ -322,6 +322,36 @@ def _collapse_schema_refs(
     _dedupe_schema_unions(spec)
 
 
+def _make_mime_data_schema_request_safe(spec: dict[str, object]) -> None:
+    """Keep the public MIMEData component usable for request bodies.
+
+    Pydantic emits separate request and response schemas for MIMEData
+    because `mime_type` is a computed response field. The public contract should
+    expose one `MIMEData` name, but SDKs must not require callers to send
+    computed fields.
+    """
+    schemas = (
+        spec.get("components", {}).get("schemas")
+        if isinstance(spec.get("components"), dict)
+        else None
+    )
+    if not isinstance(schemas, dict):
+        return
+    mime_data_schema = schemas.get("MIMEData")
+    if not isinstance(mime_data_schema, dict):
+        return
+    required = mime_data_schema.get("required")
+    if isinstance(required, list):
+        mime_data_schema["required"] = [
+            field_name for field_name in required if field_name != "mime_type"
+        ]
+    properties = mime_data_schema.get("properties")
+    if isinstance(properties, dict):
+        mime_type_schema = properties.get("mime_type")
+        if isinstance(mime_type_schema, dict):
+            mime_type_schema["readOnly"] = True
+
+
 def _dedupe_schema_unions(node: object) -> None:
     """Remove duplicate refs/items from generated anyOf/oneOf arrays."""
     if isinstance(node, dict):
@@ -376,7 +406,6 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
         "FileRecord": "File",
         "GetSourcesResponse": "ExtractionSources",
         "JobResponse": "JobResult",
-        "MIMEData-Input": "MIMEDataInput",
         "MIMEData-Output": "MIMEData",
         "BlockExecutionObject": "BlockExecution",
         "PatchBlockRequest": "UpdateWorkflowBlockRequest",
@@ -408,6 +437,8 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
 
     for old_schema_name, new_schema_name in schema_renames.items():
         _rename_schema(spec, old_schema_name, new_schema_name)
+    _collapse_schema_refs(spec, "MIMEData" + "-Input", "MIMEData")
+    _make_mime_data_schema_request_safe(spec)
 
 
 def _workflow_paginated_schema(

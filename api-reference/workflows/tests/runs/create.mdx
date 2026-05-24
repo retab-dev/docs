@@ -6,23 +6,19 @@ openapi: "POST /v1/workflows/tests/runs"
 Create a workflow-test run against the current workflow draft. A run can execute
 one saved test, every test for one block, or every test in the workflow.
 
-The canonical route is flat: send `workflow_id` in the request body when
-running a workflow-scoped target or all tests. When `test_id` is supplied, the
-workflow can be derived from the saved test.
+The canonical route is flat: send `workflow_id` in the request body and
+optionally narrow execution with `scope`. If `scope` is omitted, every saved
+test in the workflow runs.
 
 The response is a run resource. Use its `id` with the run-id-first endpoints:
 [Get Workflow Test Run](/api-reference/workflows/tests/runs/get), [List Test
 Run Results](/api-reference/workflows/tests/results/list).
 
-The request body is one of three shapes:
+The request body has a workflow context and an optional scope:
 
-- **`test_id`** - run a single test by id; `workflow_id` may be omitted.
-- **`workflow_id` + `target`** - run every test for one block (`{ "type": "block", "block_id": "..." }`).
-- **`workflow_id` only** - run every test in the workflow.
-
-`n_consensus` is optional and only meaningful for extract, split, and classifier
-blocks. Allowed values are `3`, `5`, or `7`; the override applies to this run
-only.
+- **omitted `scope`** - run every saved test in the workflow.
+- **`scope.type = "single"`** - run one saved test by `test_id`.
+- **`scope.type = "block"`** - run every saved test for one block by `block_id`.
 
 <RequestExample>
 
@@ -33,7 +29,10 @@ client = Retab()
 
 run = client.workflows.tests.runs.create(
     workflow_id="wf_abc123xyz",
-    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+    scope={
+        "type": "single",
+        "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
+    },
 )
 
 print(run.id, run.lifecycle.status)
@@ -46,7 +45,10 @@ const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const run = await client.workflows.tests.runs.create({
   workflowId: "wf_abc123xyz",
-  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  scope: {
+    type: "single",
+    testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  },
 });
 
 console.log(run.id, run.lifecycle.status);
@@ -73,7 +75,10 @@ func main() {
 
 	run, err := client.Workflows.Tests.Runs.Create(ctx, retab.CreateWorkflowTestRunRequest{
 		WorkflowID: "wf_abc123xyz",
-		TestID:     "wfnodetest_hsLEQiM61ez9Piv147MWk",
+		Scope: retab.WorkflowTestRunSingleScope{
+			Type:   "single",
+			TestID: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+		},
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -90,14 +95,17 @@ client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 run = client.workflow_test_runs.create(
   workflow_id: 'wf_abc123xyz',
-  test_id: 'wfnodetest_hsLEQiM61ez9Piv147MWk',
+  scope: {
+    type: 'single',
+    test_id: 'wfnodetest_hsLEQiM61ez9Piv147MWk',
+  },
 )
 
 puts "#{run.id} #{run.lifecycle.status}"
 ```
 
 ```rust Rust
-use retab::models::CreateWorkflowTestRunForTestRequest;
+use retab::models::{CreateWorkflowTestRunRequest, WorkflowTestRunSingleScope};
 use retab::resources::workflow_test_runs::CreateParams;
 use retab::Retab;
 
@@ -105,14 +113,15 @@ use retab::Retab;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    let mut for_test = CreateWorkflowTestRunForTestRequest::new(
-        "wfnodetest_hsLEQiM61ez9Piv147MWk",
-    );
-    for_test.workflow_id = Some("wf_abc123xyz".into());
-
     let run = client
         .workflow_test_runs()
-        .create(CreateParams::new(for_test.into()))
+        .create(CreateParams::new(CreateWorkflowTestRunRequest {
+            workflow_id: "wf_abc123xyz".into(),
+            scope: Some(WorkflowTestRunSingleScope {
+                type_: "single".into(),
+                test_id: "wfnodetest_hsLEQiM61ez9Piv147MWk".into(),
+            }.into()),
+        }))
         .await?;
     println!("{} {:?}", run.id, run.lifecycle);
     Ok(())
@@ -142,7 +151,11 @@ var result = await client.WorkflowTestRuns.CreateAsync(
     new WorkflowTestRunsCreateOptions
     {
         WorkflowId = "wf_abc123xyz",
-        TestId = "wfnodetest_hsLEQiM61ez9Piv147MWk",
+        Scope = new WorkflowTestRunSingleScope
+        {
+            Type = "single",
+            TestId = "wfnodetest_hsLEQiM61ez9Piv147MWk",
+        },
     }
 );
 Console.WriteLine(result);
@@ -156,7 +169,10 @@ curl -X 'POST' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
     "workflow_id": "wf_abc123xyz",
-    "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk"
+    "scope": {
+      "type": "single",
+      "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk"
+    }
   }'
 
 # All tests for one block
@@ -166,8 +182,7 @@ curl -X 'POST' \
   -H 'Api-Key: <your-api-key>' \
   -d '{
     "workflow_id": "wf_abc123xyz",
-    "target": { "type": "block", "block_id": "block_extract_invoice" },
-    "n_consensus": 5
+    "scope": { "type": "block", "block_id": "block_extract_invoice" }
   }'
 ```
 
