@@ -396,12 +396,13 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
         # FastAPI/pydantic emits the public File class with its module FQN
         # because there are two same-named classes in the project (the
         # storage `libs.db_models.FileRecord` and the public
-        # `types.files.File`). Map the FQN to the short name for the
+        # `services.v1.files.models.File`). Map the FQN to the short name for the
         # public response. The legacy `FileRecord → File` rename below
         # used to handle this when FileRecord WAS the public response;
         # keep it for defense-in-depth in case FileRecord ever leaks back
         # into the spec (today it shouldn't — every file route projects
         # through `_to_public_file` before serializing).
+        "main_server__services__v1__files__models__File": "File",
         "main_server__types__files__File": "File",
         "FileRecord": "File",
         "GetSourcesResponse": "ExtractionSources",
