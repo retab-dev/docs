@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import sys
 from argparse import ArgumentParser
@@ -59,6 +60,30 @@ OPENAPI_FRONTMATTER_RE = re.compile(
     r"^openapi:\s*[\"'](?P<method>[A-Z]+)\s+(?P<path>[^\"']+)[\"']",
     re.MULTILINE,
 )
+
+OPENAPI_GENERATION_ENV_DEFAULTS: dict[str, str] = {
+    "AUTHKIT_DOMAIN": "openapi-generation.authkit.app",
+    "ENV_NAME": "dev",
+    "FERNET_ENCRYPTION_KEY": "openapi-generation-key",
+    "FFDNET_SERVER_BASE_URL": "http://127.0.0.1:4004",
+    "FRONT_BASE_URL": "http://localhost:3000",
+    "GOOGLE_PROJECT_ID": "openapi-generation",
+    "GOOGLE_STORAGE_BUCKET_NAME": "openapi-generation",
+    "MONGODB_URI": "mongodb://127.0.0.1:27017/openapi_generation",
+    "STRIPE_METER_ID": "openapi_generation_meter",
+    "STRIPE_PUBLISHABLE_KEY": "pk_test_openapi_generation",
+    "STRIPE_SECRET_KEY": "sk_test_openapi_generation",
+    "STRIPE_WEBHOOK_SECRET": "whsec_openapi_generation",
+    "VALKEY_HOST": "127.0.0.1",
+    "VALKEY_PORT": "6379",
+    "WORKOS_API_KEY": "sk_test_openapi_generation",
+    "WORKOS_CLIENT_ID": "client_openapi_generation",
+}
+
+
+def _seed_openapi_generation_env() -> None:
+    for key, value in OPENAPI_GENERATION_ENV_DEFAULTS.items():
+        os.environ.setdefault(key, value)
 
 
 def _collect_schema_refs(node: object, refs: set[str]) -> None:
@@ -594,6 +619,7 @@ def generate_openapi(output_path: Path | None = None) -> None:
     backend_main_server = repo_root / "backend" / "main_server"
     if str(backend_main_server) not in sys.path:
         sys.path.insert(0, str(backend_main_server))
+    _seed_openapi_generation_env()
 
     from main_server.main import app
 
