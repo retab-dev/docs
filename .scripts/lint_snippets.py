@@ -1634,6 +1634,11 @@ def main() -> int:
         help="Skip grouped SDK language coverage checks.",
     )
     parser.add_argument(
+        "--structural-only",
+        action="store_true",
+        help="Run docs snippet structure checks without language toolchains.",
+    )
+    parser.add_argument(
         "--filter",
         default="",
         help="Substring filter on the source file path (e.g. 'primitives').",
@@ -1677,7 +1682,9 @@ def main() -> int:
             issues.extend(check_placeholder_sdk_tabs(all_groups))
 
     # --- Python --------------------------------------------------------
-    if args.language in {"all", "python"}:
+    if args.structural_only:
+        pass
+    elif args.language in {"all", "python"}:
         py_snippets = [s for s in by_lang.get("python", []) if is_self_contained_python(s)]
         py_files: list[tuple[Snippet, Path]] = []
         for snippet in py_snippets:
@@ -1688,7 +1695,7 @@ def main() -> int:
             issues.extend(lint_python_batch_pyright(py_files))
 
     # --- TypeScript ----------------------------------------------------
-    if args.language in {"all", "typescript"} and not args.no_tsc:
+    if not args.structural_only and args.language in {"all", "typescript"} and not args.no_tsc:
         ts_snippets: list[Snippet] = []
         ts_snippets.extend(
             s for s in by_lang.get("typescript", []) if is_self_contained_ts(s)
@@ -1700,7 +1707,7 @@ def main() -> int:
         issues.extend(lint_typescript_batch(ts_files))
 
     # --- Go ------------------------------------------------------------
-    if args.language in {"all", "go"} and not args.no_go:
+    if not args.structural_only and args.language in {"all", "go"} and not args.no_go:
         go_files: list[tuple[Snippet, Path]] = []
         for snippet in (s for s in by_lang.get("go", []) if is_self_contained_go(s)):
             file_path = write_snippet(snippet)
@@ -1708,7 +1715,7 @@ def main() -> int:
         issues.extend(lint_go_batch(go_files))
 
     # --- Rust ----------------------------------------------------------
-    if args.language in {"all", "rust"} and not args.no_rust:
+    if not args.structural_only and args.language in {"all", "rust"} and not args.no_rust:
         rust_files: list[tuple[Snippet, Path]] = []
         for snippet in (
             s for s in by_lang.get("rust", []) if is_self_contained_rust(s)
@@ -1718,13 +1725,13 @@ def main() -> int:
         issues.extend(lint_rust_batch(rust_files))
 
     # --- PHP -----------------------------------------------------------
-    if args.language in {"all", "php"} and not args.no_php:
+    if not args.structural_only and args.language in {"all", "php"} and not args.no_php:
         for snippet in (s for s in by_lang.get("php", []) if is_self_contained_php(s)):
             file_path = write_snippet(snippet)
             issues.extend(lint_php(snippet, file_path))
 
     # --- Ruby ----------------------------------------------------------
-    if args.language in {"all", "ruby"} and not args.no_ruby:
+    if not args.structural_only and args.language in {"all", "ruby"} and not args.no_ruby:
         for snippet in (
             s for s in by_lang.get("ruby", []) if is_self_contained_ruby(s)
         ):
@@ -1732,7 +1739,7 @@ def main() -> int:
             issues.extend(lint_ruby(snippet, file_path))
 
     # --- .NET ----------------------------------------------------------
-    if args.language in {"all", "dotnet"} and not args.no_dotnet:
+    if not args.structural_only and args.language in {"all", "dotnet"} and not args.no_dotnet:
         dotnet_files: list[tuple[Snippet, Path]] = []
         for snippet in (
             s for s in by_lang.get("dotnet", []) if is_self_contained_dotnet(s)
@@ -1742,7 +1749,7 @@ def main() -> int:
         issues.extend(lint_dotnet_batch(dotnet_files))
 
     # --- Java ----------------------------------------------------------
-    if args.language in {"all", "java"} and not args.no_java:
+    if not args.structural_only and args.language in {"all", "java"} and not args.no_java:
         java_files: list[tuple[Snippet, Path]] = []
         for snippet in (
             s for s in by_lang.get("java", []) if is_self_contained_java(s)
