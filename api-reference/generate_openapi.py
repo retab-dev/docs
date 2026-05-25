@@ -1,6 +1,7 @@
 import json
 import re
 import sys
+from argparse import ArgumentParser
 from pathlib import Path
 
 
@@ -588,7 +589,7 @@ def _normalize_workflow_read_docs(spec: dict[str, object]) -> None:
         _rename_schema(spec, old_schema_name, new_schema_name)
 
 
-def generate_openapi() -> None:
+def generate_openapi(output_path: Path | None = None) -> None:
     repo_root = Path(__file__).resolve().parents[3]
     backend_main_server = repo_root / "backend" / "main_server"
     if str(backend_main_server) not in sys.path:
@@ -644,7 +645,9 @@ def generate_openapi() -> None:
     _print_public_routes(spec)
 
     # Write updated spec to file
-    output_path = Path(__file__).resolve().parent / "openapi.json"
+    if output_path is None:
+        output_path = Path(__file__).resolve().parent / "openapi.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w") as f:
         json.dump(spec, f, indent=2, ensure_ascii=False)
 
@@ -676,5 +679,17 @@ def _print_public_routes(spec: dict[str, object]) -> None:
         print(f"  {method:<6} {url}")
 
 
+def main() -> None:
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Write the generated OpenAPI JSON to this path.",
+    )
+    args = parser.parse_args()
+    generate_openapi(output_path=args.output)
+
+
 if __name__ == "__main__":
-    generate_openapi()
+    main()
