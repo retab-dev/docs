@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -23,6 +24,28 @@ REQUIRED_SNIPPET_LANGUAGES = {
     "curl": {"bash", "curl", "sh", "shell"},
 }
 GENERATED_OPENAPI = DOCS_ROOT / "api-reference" / "openapi.json"
+
+
+def test_main_accepts_custom_output_path(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "openapi.generated.json"
+    calls: list[Path | None] = []
+
+    def fake_generate_openapi(output_path: Path | None = None) -> None:
+        calls.append(output_path)
+
+    monkeypatch.setattr(generate_openapi, "generate_openapi", fake_generate_openapi)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["generate_openapi.py", "--output", str(output_path)],
+    )
+
+    generate_openapi.main()
+
+    assert calls == [output_path]
 
 
 def _code_fence_languages(markdown: str) -> set[str]:

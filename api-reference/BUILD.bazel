@@ -1,0 +1,56 @@
+load("//tools/bazel:defs.bzl", "PYTHON_VENV_TAGS")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "openapi_inputs",
+    srcs = glob([
+        "**/*.mdx",
+        "*.py",
+    ]) + [
+        "//backend/main_server:sources",
+        "//open-source/docs:docs_json",
+    ],
+)
+
+filegroup(
+    name = "checked_openapi_json",
+    srcs = ["openapi.json"],
+)
+
+filegroup(
+    name = "unit_test_sources",
+    srcs = glob(["unit_tests/**/*.py"]) + [
+        ":checked_openapi_json",
+        ":openapi_inputs",
+    ],
+)
+
+genrule(
+    name = "openapi_json",
+    srcs = [":openapi_inputs"],
+    outs = ["openapi.generated.json"],
+    cmd = "$(location //tools/bazel:generate_openapi) $@",
+    local = True,
+    tags = PYTHON_VENV_TAGS,
+    tools = ["//tools/bazel:generate_openapi"],
+)
+
+sh_test(
+    name = "openapi_check",
+    srcs = ["//tools/bazel:check_openapi.sh"],
+    data = [
+        "//tools/bazel:generate_openapi.sh",
+        ":openapi_inputs",
+        "openapi.json",
+    ],
+    tags = PYTHON_VENV_TAGS + ["generated-check"],
+)
+
+sh_test(
+    name = "generator_unit_tests",
+    srcs = ["//tools/bazel:run_pytest.sh"],
+    args = ["open-source/docs/api-reference/unit_tests/test_generate_openapi_filter.py"],
+    data = [":unit_test_sources"],
+    tags = PYTHON_VENV_TAGS,
+)
