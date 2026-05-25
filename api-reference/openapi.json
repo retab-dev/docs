@@ -18,7 +18,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthStatusResponse"
+                  "$ref": "#/components/schemas/AuthStatus"
                 }
               }
             }
@@ -60,10 +60,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EnvironmentListResponse"
+                  "$ref": "#/components/schemas/EnvironmentList"
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -95,12 +98,12 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EnvironmentResponse"
+                  "$ref": "#/components/schemas/Environment"
                 }
               }
             }
@@ -164,7 +167,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EnvironmentResponse"
+                  "$ref": "#/components/schemas/Environment"
                 }
               }
             }
@@ -214,7 +217,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EnvironmentUpdateRequest"
+                "$ref": "#/components/schemas/UpdateEnvironmentRequest"
               }
             }
           }
@@ -225,7 +228,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EnvironmentResponse"
+                  "$ref": "#/components/schemas/Environment"
                 }
               }
             }
@@ -271,15 +274,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnvironmentResponse"
-                }
-              }
-            }
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -9764,6 +9760,44 @@
         "title": "AssertionSpec",
         "description": "Block-test assertion against one declared output handle.\n\n``target`` is the only supported shape: an output handle id and an\noptional relative path inside that handle's payload."
       },
+      "AuthStatus": {
+        "properties": {
+          "authenticated": {
+            "type": "boolean",
+            "title": "Authenticated",
+            "default": true
+          },
+          "auth_method": {
+            "type": "string",
+            "title": "Auth Method"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthStatusEnvironment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthStatusKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "auth_method"
+        ],
+        "title": "AuthStatus"
+      },
       "AuthStatusEnvironment": {
         "properties": {
           "id": {
@@ -9830,55 +9864,6 @@
         },
         "type": "object",
         "title": "AuthStatusKey"
-      },
-      "AuthStatusResponse": {
-        "properties": {
-          "authenticated": {
-            "type": "boolean",
-            "title": "Authenticated",
-            "default": true
-          },
-          "auth_method": {
-            "type": "string",
-            "title": "Auth Method"
-          },
-          "organization_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Organization Id"
-          },
-          "environment": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AuthStatusEnvironment"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "key": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AuthStatusKey"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "auth_method"
-        ],
-        "title": "AuthStatusResponse"
       },
       "AwaitingReviewRun": {
         "properties": {
@@ -13117,42 +13102,7 @@
         ],
         "title": "EndsWithCondition"
       },
-      "EnvironmentCreateRequest": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "production",
-              "non_production"
-            ],
-            "title": "Type",
-            "default": "non_production"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "EnvironmentCreateRequest"
-      },
-      "EnvironmentListResponse": {
-        "properties": {
-          "environments": {
-            "items": {
-              "$ref": "#/components/schemas/EnvironmentResponse"
-            },
-            "type": "array",
-            "title": "Environments"
-          }
-        },
-        "type": "object",
-        "title": "EnvironmentListResponse"
-      },
-      "EnvironmentResponse": {
+      "Environment": {
         "properties": {
           "id": {
             "type": "string",
@@ -13192,24 +13142,45 @@
           "name",
           "type"
         ],
-        "title": "EnvironmentResponse"
+        "title": "Environment"
       },
-      "EnvironmentUpdateRequest": {
+      "EnvironmentCreateRequest": {
         "properties": {
           "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "production",
+              "non_production"
+            ],
+            "title": "Type",
+            "default": "non_production"
           }
         },
         "type": "object",
-        "title": "EnvironmentUpdateRequest"
+        "required": [
+          "name"
+        ],
+        "title": "EnvironmentCreateRequest"
+      },
+      "EnvironmentList": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Environment"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "title": "EnvironmentList"
       },
       "EqualsCondition": {
         "properties": {
@@ -18045,6 +18016,23 @@
         },
         "type": "object",
         "title": "UpdateEditTemplateRequest"
+      },
+      "UpdateEnvironmentRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "title": "UpdateEnvironmentRequest"
       },
       "UpdateExperimentRequest": {
         "properties": {
