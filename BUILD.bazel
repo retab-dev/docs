@@ -1,6 +1,47 @@
+load("//tools/bazel:defs.bzl", "PYTHON_VENV_TAGS")
+
 package(default_visibility = ["//visibility:public"])
 
 filegroup(
     name = "docs_json",
     srcs = ["docs.json"],
+)
+
+filegroup(
+    name = "docs_sources",
+    srcs = glob([
+        "**/*.md",
+        "**/*.mdx",
+        ".scripts/*.py",
+        "unit_tests/**/*.py",
+        "workflows/unit_tests/**/*.py",
+    ]) + [
+        ":docs_json",
+    ],
+)
+
+sh_test(
+    name = "docs_graph_checks",
+    srcs = ["//tools/bazel:run_pytest.sh"],
+    args = ["open-source/docs/unit_tests/test_check_docs_graph.py"],
+    data = [":docs_sources"],
+    tags = PYTHON_VENV_TAGS,
+)
+
+sh_test(
+    name = "snippet_structure",
+    srcs = ["//tools/bazel:run_docs_snippet_structure.sh"],
+    data = [":docs_sources"],
+    tags = PYTHON_VENV_TAGS,
+)
+
+test_suite(
+    name = "docs_quality",
+    tests = [
+        ":docs_graph_checks",
+        ":snippet_structure",
+        "//open-source/docs/api-reference:generator_unit_tests",
+        "//open-source/docs/api-reference:openapi_check",
+        "//open-source/docs/api-reference:snippet_unit_tests",
+    ],
 )

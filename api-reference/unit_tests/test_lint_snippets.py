@@ -1,6 +1,7 @@
 import importlib.util
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 
 MODULE_PATH = Path(__file__).resolve().parents[2] / ".scripts" / "lint_snippets.py"
@@ -211,3 +212,8 @@ def test_workflow_yaml_examples_include_metadata_id() -> None:
 
         assert '"name: invoice workflow\\n"' not in text
         assert "metadata:\n  id:" in text
+
+
+def test_structural_only_skips_language_toolchains() -> None:
+    with patch.object(sys, "argv", ["lint_snippets.py", "--structural-only"]):
+        assert lint_snippets.main() == 0
