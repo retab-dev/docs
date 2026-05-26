@@ -1,3 +1,4 @@
+load("//tools/bazel:docs_snippets.bzl", "docs_sdk_snippet_lints")
 load("//tools/bazel:defs.bzl", "PYTHON_VENV_TAGS")
 
 package(default_visibility = ["//visibility:public"])
@@ -41,95 +42,97 @@ sh_test(
 )
 
 sh_test(
-    name = "snippet_lint_python",
-    srcs = ["//tools/bazel:run_docs_snippet_lint.sh"],
-    args = ["python"],
-    data = [
-        ":docs_sources",
-        "//open-source/sdk:generation_inputs",
-    ],
+    name = "smoke",
+    srcs = ["//tools/bazel:run_docs_smoke.sh"],
+    data = [":docs_sources"],
+    tags = PYTHON_VENV_TAGS + ["runtime-smoke"],
+)
+
+SDK_SNIPPET_LANGUAGE_SPECS = [
+    {
+        "flag": "--python-sdk-root",
+        "language": "python",
+        "sdk": "//open-source/sdk:generated_python_sdk",
+        "snippet": "snippet_lint_python",
+    },
+    {
+        "flag": "--node-sdk-root",
+        "language": "typescript",
+        "sdk": "//open-source/sdk:generated_node_sdk",
+        "snippet": "snippet_lint_typescript",
+    },
+    {
+        "flag": "--go-sdk-root",
+        "language": "go",
+        "sdk": "//open-source/sdk:generated_go_sdk",
+        "snippet": "snippet_lint_go",
+    },
+    {
+        "flag": "--rust-sdk-root",
+        "language": "rust",
+        "sdk": "//open-source/sdk:generated_rust_sdk",
+        "snippet": "snippet_lint_rust",
+    },
+    {
+        "flag": "--dotnet-sdk-root",
+        "language": "dotnet",
+        "sdk": "//open-source/sdk:generated_dotnet_sdk",
+        "snippet": "snippet_lint_dotnet",
+    },
+    {
+        "flag": "--php-sdk-root",
+        "language": "php",
+        "sdk": "//open-source/sdk:generated_php_sdk",
+        "snippet": "snippet_lint_php",
+    },
+    {
+        "flag": "--ruby-sdk-root",
+        "language": "ruby",
+        "sdk": "//open-source/sdk:generated_ruby_sdk",
+        "snippet": "snippet_lint_ruby",
+    },
+    {
+        "flag": "--java-sdk-root",
+        "language": "java",
+        "sdk": "//open-source/sdk:generated_java_sdk",
+        "snippet": "snippet_lint_java",
+    },
+]
+
+docs_sdk_snippet_lints(
+    specs = SDK_SNIPPET_LANGUAGE_SPECS,
     tags = SDK_SNIPPET_TAGS,
 )
 
-sh_test(
-    name = "snippet_lint_typescript",
-    srcs = ["//tools/bazel:run_docs_snippet_lint.sh"],
-    args = ["typescript"],
-    data = [
-        ":docs_sources",
-        "//open-source/sdk:generation_inputs",
-    ],
-    tags = SDK_SNIPPET_TAGS,
+genquery(
+    name = "sdk_snippet_targets_query",
+    expression = "filter(\"^//open-source/docs:snippet_lint_\", kind(\"sh_test rule\", deps(//open-source/docs:docs_sdk_snippet_lints_only)))",
+    scope = ["//open-source/docs:docs_sdk_snippet_lints_only"],
+    strict = False,
 )
 
 sh_test(
-    name = "snippet_lint_go",
-    srcs = ["//tools/bazel:run_docs_snippet_lint.sh"],
-    args = ["go"],
-    data = [
-        ":docs_sources",
-        "//open-source/sdk:generation_inputs",
+    name = "generated_sdk_snippet_graph_check",
+    srcs = ["//tools/bazel:run_generated_sdk_snippet_graph_check.sh"],
+    args = [
+        "--targets-file",
+        "$(location :sdk_snippet_targets_query)",
+    ] + [
+        "--path=%s=$(location :%s_generated_sdk_path_query)" % (spec["language"], spec["snippet"])
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
     ],
-    tags = SDK_SNIPPET_TAGS,
-)
-
-sh_test(
-    name = "snippet_lint_rust",
-    srcs = ["//tools/bazel:run_docs_snippet_lint.sh"],
-    args = ["rust"],
     data = [
-        ":docs_sources",
-        "//open-source/sdk:generation_inputs",
+        ":sdk_snippet_targets_query",
+        "//tools/bazel:sdk_snippet_graph",
+    ] + [
+        ":%s_generated_sdk_path_query" % spec["snippet"]
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
     ],
-    tags = SDK_SNIPPET_TAGS,
-)
-
-sh_test(
-    name = "snippet_lint_dotnet",
-    srcs = ["//tools/bazel:run_docs_snippet_lint.sh"],
-    args = ["dotnet"],
-    data = [
-        ":docs_sources",
-        "//open-source/sdk:generation_inputs",
-    ],
-    tags = SDK_SNIPPET_TAGS,
-)
-
-sh_test(
-    name = "snippet_lint_php",
-    srcs = ["//tools/bazel:run_docs_snippet_lint.sh"],
-    args = ["php"],
-    data = [
-        ":docs_sources",
-        "//open-source/sdk:generation_inputs",
-    ],
-    tags = SDK_SNIPPET_TAGS,
-)
-
-sh_test(
-    name = "snippet_lint_ruby",
-    srcs = ["//tools/bazel:run_docs_snippet_lint.sh"],
-    args = ["ruby"],
-    data = [
-        ":docs_sources",
-        "//open-source/sdk:generation_inputs",
-    ],
-    tags = SDK_SNIPPET_TAGS,
-)
-
-sh_test(
-    name = "snippet_lint_java",
-    srcs = ["//tools/bazel:run_docs_snippet_lint.sh"],
-    args = ["java"],
-    data = [
-        ":docs_sources",
-        "//open-source/sdk:generation_inputs",
-    ],
-    tags = SDK_SNIPPET_TAGS,
+    tags = PYTHON_VENV_TAGS,
 )
 
 test_suite(
-    name = "docs_sdk_snippets",
+    name = "docs_sdk_snippet_lints_only",
     tests = [
         ":snippet_lint_python",
         ":snippet_lint_typescript",
@@ -137,21 +140,29 @@ test_suite(
         ":snippet_lint_rust",
         ":snippet_lint_php",
         ":snippet_lint_ruby",
+        ":snippet_lint_java",
+        ":snippet_lint_dotnet",
+    ],
+)
+
+test_suite(
+    name = "docs_sdk_snippets",
+    tests = [
+        ":docs_sdk_snippet_lints_only",
+        ":generated_sdk_snippet_graph_check",
     ],
 )
 
 test_suite(
     name = "experimental_docs_sdk_snippets",
-    tests = [
-        ":snippet_lint_dotnet",
-        ":snippet_lint_java",
-    ],
+    tests = [],
 )
 
 test_suite(
     name = "docs_quality",
     tests = [
         ":docs_graph_checks",
+        ":smoke",
         ":snippet_structure",
         "//open-source/docs/api-reference:generator_unit_tests",
         "//open-source/docs/api-reference:openapi_check",
@@ -160,9 +171,30 @@ test_suite(
 )
 
 test_suite(
+    name = "format_check",
+    tests = [
+        ":snippet_structure",
+    ],
+)
+
+test_suite(
     name = "lint",
     tests = [
         ":docs_graph_checks",
         ":snippet_structure",
+    ],
+)
+
+test_suite(
+    name = "typecheck",
+    tests = [
+        ":docs_graph_checks",
+    ],
+)
+
+test_suite(
+    name = "quality",
+    tests = [
+        ":docs_quality",
     ],
 )

@@ -41,6 +41,7 @@ import os
 import py_compile
 import re
 import shutil
+import stat
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -48,11 +49,22 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DOCS_ROOT = REPO_ROOT / "open-source" / "docs"
+PY_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "python"
+PY_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_PYTHON_SDK_ROOT", PY_SDK)).resolve()
 NODE_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "node"
+NODE_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_NODE_SDK_ROOT", NODE_SDK))
 GO_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "go"
+GO_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_GO_SDK_ROOT", GO_SDK))
 RUST_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "rust"
+RUST_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_RUST_SDK_ROOT", RUST_SDK))
 JAVA_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "java"
+JAVA_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_JAVA_SDK_ROOT", JAVA_SDK))
 DOTNET_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "dotnet"
+DOTNET_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_DOTNET_SDK_ROOT", DOTNET_SDK))
+PHP_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "php"
+PHP_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_PHP_SDK_ROOT", PHP_SDK))
+RUBY_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "ruby"
+RUBY_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_RUBY_SDK_ROOT", RUBY_SDK))
 PY_VENV = REPO_ROOT / "backend" / "main_server" / ".venv"
 
 RUFF = PY_VENV / "bin" / "ruff"
@@ -67,10 +79,21 @@ PHP = shutil.which("php")
 RUBY = shutil.which("ruby")
 DOTNET = shutil.which("dotnet")
 JAVAC = shutil.which("javac")
-NUGET_PACKAGES = Path.home() / ".nuget" / "packages"
 
 SNIPPET_ROOT = DOCS_ROOT / ".snippets"
 SNIPPET_DIR = SNIPPET_ROOT / f"run_{os.getpid()}"
+
+os.environ.setdefault(
+    "NUGET_PACKAGES",
+    str(REPO_ROOT / ".cache" / "bazel-local-home" / "nuget-packages"),
+)
+os.environ.setdefault(
+    "DOTNET_CLI_HOME",
+    str(REPO_ROOT / ".cache" / "bazel-local-home" / "dotnet"),
+)
+os.environ.setdefault("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "1")
+os.environ.setdefault("DOTNET_NOLOGO", "1")
+NUGET_PACKAGES = Path(os.environ["NUGET_PACKAGES"])
 
 LANG_ALIASES: dict[str, str] = {
     "python": "python",
@@ -739,9 +762,6 @@ def lint_python(snippet: Snippet, file_path: Path) -> list[LintIssue]:
     return issues
 
 
-PY_SDK_SRC = REPO_ROOT / "open-source" / "sdk" / "clients" / "python"
-
-
 def lint_python_batch_pyright(
     snippet_files: list[tuple[Snippet, Path]],
 ) -> list[LintIssue]:
@@ -752,10 +772,19 @@ def lint_python_batch_pyright(
         return []
     if not snippet_files:
         return []
+    if not (PY_SDK_FOR_SNIPPETS / "retab").is_dir():
+        return [
+            LintIssue.for_snippet(
+                snippet_files[0][0],
+                "python sdk",
+                f"SDK root is missing retab package: {PY_SDK_FOR_SNIPPETS}",
+            )
+        ]
 
     # Pyright doesn't follow editable installs reliably. Pin the SDK source
-    # via `extraPaths` so `from retab import ...` resolves to the in-repo
-    # package — the same source the generated SDK ships.
+    # via `extraPaths` so `from retab import ...` resolves to the SDK tree
+    # under test. Bazel points this at the declared generated artifact; direct
+    # script usage falls back to the checked-in SDK.
     py_dir = SNIPPET_DIR / "python"
     pyright_cfg = py_dir / "pyrightconfig.json"
     pyright_cfg.write_text(
@@ -786,7 +815,7 @@ def lint_python_batch_pyright(
                 # call-shape mismatches — stay at error level.
                 "reportAttributeAccessIssue": "error",
                 "reportCallIssue": "error",
-                "extraPaths": [str(PY_SDK_SRC)],
+                "extraPaths": [str(PY_SDK_FOR_SNIPPETS)],
             },
             indent=2,
         ),
@@ -843,7 +872,14 @@ def lint_python_batch_pyright(
 # ---------------------------------------------------------------------------
 
 
-TSCONFIG_TEMPLATE: dict[str, object] = {
+def _tsconfig_template(node_sdk_root: Path) -> dict[str, object]:
+    if (node_sdk_root / "dist" / "index.d.ts").exists():
+        node_entrypoint = "./node-sdk/dist/index.d.ts"
+        node_wildcard = "./node-sdk/dist/*"
+    else:
+        node_entrypoint = "./node-sdk/src/index.ts"
+        node_wildcard = "./node-sdk/src/*"
+    return {
     "compilerOptions": {
         "target": "ES2022",
         "module": "ESNext",
@@ -867,19 +903,19 @@ TSCONFIG_TEMPLATE: dict[str, object] = {
         # real SDK drift.
         "types": ["node"],
         "typeRoots": [
-            "./node-sdk/node_modules/@types",
+            "./node-deps/node_modules/@types",
         ],
         "baseUrl": ".",
         "paths": {
-            "@retab/node": ["./node-sdk/dist/index.d.ts"],
-            "@retab/node/*": ["./node-sdk/dist/*"],
+            "@retab/node": [node_entrypoint],
+            "@retab/node/*": [node_wildcard],
             # Allow snippets that import `zod` directly to resolve from
             # the SDK's installed copy (the SDK depends on zod itself).
-            "zod": ["./node-sdk/node_modules/zod/index.d.ts"],
+            "zod": ["./node-deps/node_modules/zod/index.d.ts"],
         },
     },
     "include": ["snippets/**/*"],
-}
+    }
 
 
 def _prepare_ts_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
@@ -890,17 +926,22 @@ def _prepare_ts_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
     if ws.exists():
         shutil.rmtree(ws)
     ws.mkdir(parents=True)
-    # Symlink the built SDK so tsc resolves `@retab/node` to the same
-    # declarations a consumer would see after `npm install @retab/node`.
+    # Symlink the SDK under test. Bazel may point this at a declared generated
+    # tree, while direct script usage falls back to the checked-in SDK.
     sdk_link = ws / "node-sdk"
-    sdk_link.symlink_to(NODE_SDK)
+    sdk_link.symlink_to(NODE_SDK_FOR_SNIPPETS)
+    deps_link = ws / "node-deps"
+    deps_link.symlink_to(NODE_SDK)
     snippets_dir = ws / "snippets"
     snippets_dir.mkdir()
     for snippet, src in snippet_files:
         dst = snippets_dir / src.name
         dst.write_text(snippet.code, encoding="utf-8")
     tsconfig = ws / "tsconfig.json"
-    tsconfig.write_text(json.dumps(TSCONFIG_TEMPLATE, indent=2), encoding="utf-8")
+    tsconfig.write_text(
+        json.dumps(_tsconfig_template(NODE_SDK_FOR_SNIPPETS), indent=2),
+        encoding="utf-8",
+    )
     return ws
 
 
@@ -1017,13 +1058,13 @@ def _prepare_go_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
                 "go 1.23",
                 "",
                 "require github.com/retab-dev/retab/clients/go v0.0.0",
-                f"replace github.com/retab-dev/retab/clients/go => {GO_SDK}",
+                f"replace github.com/retab-dev/retab/clients/go => {GO_SDK_FOR_SNIPPETS}",
                 "",
             ]
         ),
         encoding="utf-8",
     )
-    sdk_go_sum = GO_SDK / "go.sum"
+    sdk_go_sum = GO_SDK_FOR_SNIPPETS / "go.sum"
     if sdk_go_sum.exists():
         shutil.copyfile(sdk_go_sum, ws / "go.sum")
     for snippet, src in snippet_files:
@@ -1127,7 +1168,7 @@ def _prepare_rust_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
                 'edition = "2021"',
                 "",
                 "[dependencies]",
-                f'retab = {{ path = "{RUST_SDK}" }}',
+                f'retab = {{ path = "{RUST_SDK_FOR_SNIPPETS}" }}',
                 'tokio = { version = "1", features = ["rt-multi-thread", "macros"] }',
                 'reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }',
                 'serde_json = "1"',
@@ -1195,7 +1236,37 @@ def normalise_php_snippet(code: str) -> str:
     return "<?php\n" + code
 
 
+def _sdk_root_issue(
+    snippet: Snippet,
+    tool: str,
+    sdk_root: Path,
+    required_files: tuple[str, ...],
+) -> LintIssue | None:
+    if not sdk_root.exists():
+        return LintIssue.for_snippet(
+            snippet,
+            tool,
+            f"SDK root does not exist: {sdk_root}",
+        )
+    for required_file in required_files:
+        if not (sdk_root / required_file).exists():
+            return LintIssue.for_snippet(
+                snippet,
+                tool,
+                f"SDK root is missing {required_file}: {sdk_root}",
+            )
+    return None
+
+
 def lint_php(snippet: Snippet, file_path: Path) -> list[LintIssue]:
+    sdk_issue = _sdk_root_issue(
+        snippet,
+        "php sdk",
+        PHP_SDK_FOR_SNIPPETS,
+        ("composer.json", "lib/Client.php"),
+    )
+    if sdk_issue is not None:
+        return [sdk_issue]
     if PHP is None:
         return []
     file_path.write_text(normalise_php_snippet(snippet.code), encoding="utf-8")
@@ -1211,6 +1282,14 @@ def lint_php(snippet: Snippet, file_path: Path) -> list[LintIssue]:
 
 
 def lint_ruby(snippet: Snippet, file_path: Path) -> list[LintIssue]:
+    sdk_issue = _sdk_root_issue(
+        snippet,
+        "ruby sdk",
+        RUBY_SDK_FOR_SNIPPETS,
+        ("retab.gemspec", "lib/retab.rb"),
+    )
+    if sdk_issue is not None:
+        return [sdk_issue]
     if RUBY is None:
         return []
     result = subprocess.run(
@@ -1222,6 +1301,22 @@ def lint_ruby(snippet: Snippet, file_path: Path) -> list[LintIssue]:
         return []
     output = ((result.stderr or "") + (result.stdout or "")).strip()
     return [LintIssue.for_snippet(snippet, "ruby -c", output)]
+
+
+def _copy_bazel_sdk_tree_for_build(language: str, source: Path) -> Path:
+    dst = SNIPPET_DIR / f"_{language}_sdk"
+    shutil.rmtree(dst, ignore_errors=True)
+    shutil.copytree(
+        source,
+        dst,
+        symlinks=True,
+        ignore=shutil.ignore_patterns(".gradle", "bin", "build", "obj", "target"),
+    )
+    for path in [dst, *dst.rglob("*")]:
+        if path.is_symlink():
+            continue
+        path.chmod(path.stat().st_mode | stat.S_IWUSR)
+    return dst
 
 
 # ---------------------------------------------------------------------------
@@ -1272,7 +1367,13 @@ def _dotnet_sdk_root() -> Path | None:
     return candidates[-1] if candidates else None
 
 
-def _dotnet_references() -> list[Path]:
+def _dotnet_sdk_for_build() -> Path:
+    if "RETAB_DOTNET_SDK_ROOT" not in os.environ:
+        return DOTNET_SDK
+    return _copy_bazel_sdk_tree_for_build("dotnet", DOTNET_SDK_FOR_SNIPPETS)
+
+
+def _dotnet_references(dotnet_sdk: Path) -> list[Path]:
     sdk_root = _dotnet_sdk_root()
     if sdk_root is None:
         return []
@@ -1282,7 +1383,7 @@ def _dotnet_references() -> list[Path]:
     refs = list(ref_dirs[-1].glob("*.dll")) if ref_dirs else []
     refs.extend(
         [
-            DOTNET_SDK / "bin" / "Debug" / "net8.0" / "Retab.dll",
+            dotnet_sdk / "bin" / "Debug" / "net8.0" / "Retab.dll",
             NUGET_PACKAGES
             / "newtonsoft.json"
             / "13.0.3"
@@ -1306,10 +1407,19 @@ def _dotnet_csc() -> Path | None:
 def lint_dotnet_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue]:
     if not snippet_files or DOTNET is None:
         return []
+    dotnet_sdk_issue = _sdk_root_issue(
+        snippet_files[0][0],
+        "dotnet sdk",
+        DOTNET_SDK_FOR_SNIPPETS,
+        ("Retab.csproj", "src/Retab.Generated.cs"),
+    )
+    if dotnet_sdk_issue is not None:
+        return [dotnet_sdk_issue]
+    dotnet_sdk = _dotnet_sdk_for_build()
     sdk_build_cmd = [
         DOTNET,
         "build",
-        str(DOTNET_SDK / "Retab.csproj"),
+        str(dotnet_sdk / "Retab.csproj"),
         "--nologo",
         "--verbosity",
         "quiet",
@@ -1331,7 +1441,7 @@ def lint_dotnet_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIss
 
     ws = _prepare_dotnet_workspace(snippet_files)
     csc = _dotnet_csc()
-    refs = _dotnet_references()
+    refs = _dotnet_references(dotnet_sdk)
     if csc is None or not refs:
         return []
     by_stem = {src.stem: snippet for snippet, src in snippet_files}
@@ -1438,7 +1548,13 @@ def normalise_java_snippet(code: str) -> str:
     )
 
 
-def _java_classpath() -> str | None:
+def _java_sdk_for_build() -> Path:
+    if "RETAB_JAVA_SDK_ROOT" not in os.environ:
+        return JAVA_SDK
+    return _copy_bazel_sdk_tree_for_build("java", JAVA_SDK_FOR_SNIPPETS)
+
+
+def _java_classpath(java_sdk: Path) -> str | None:
     if MAVEN is None:
         return None
     sdk_classes_dir = SNIPPET_DIR / "_javasdk_classes"
@@ -1459,7 +1575,7 @@ def _java_classpath() -> str | None:
         ],
         capture_output=True,
         text=True,
-        cwd=str(JAVA_SDK),
+        cwd=str(java_sdk),
     )
     if sdk_build.returncode != 0:
         return None
@@ -1474,7 +1590,7 @@ def _java_classpath() -> str | None:
         ],
         capture_output=True,
         text=True,
-        cwd=str(JAVA_SDK),
+        cwd=str(java_sdk),
     )
     if cp_result.returncode != 0:
         return None
@@ -1501,7 +1617,16 @@ def _javac_is_usable() -> bool:
 def lint_java_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue]:
     if not snippet_files or not _javac_is_usable():
         return []
-    classpath = _java_classpath()
+    java_sdk_issue = _sdk_root_issue(
+        snippet_files[0][0],
+        "java sdk",
+        JAVA_SDK_FOR_SNIPPETS,
+        ("pom.xml", "src/main/java/com/retab/RetabClient.java"),
+    )
+    if java_sdk_issue is not None:
+        return [java_sdk_issue]
+    java_sdk = _java_sdk_for_build()
+    classpath = _java_classpath(java_sdk)
     if classpath is None:
         return []
     classes_dir = SNIPPET_DIR / "_javaclasses"
