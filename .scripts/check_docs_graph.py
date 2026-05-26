@@ -8,6 +8,8 @@ checks the pieces Bazel should be able to reason about cheaply:
 - duplicate docs.json page entries are reported
 - local markdown and JSX href links resolve to checked-in docs pages
 - internal redirect destinations resolve to checked-in docs pages
+- API reference pages with `openapi:` frontmatter resolve to public OpenAPI
+  routes, unless they are explicitly documented as docs-only API pages
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from urllib.parse import urlparse
 
 DOCS_ROOT = Path(__file__).resolve().parents[1]
 DOCS_JSON = DOCS_ROOT / "docs.json"
+OPENAPI_JSON = DOCS_ROOT / "api-reference" / "openapi.json"
 
 DOC_EXTENSIONS = (".mdx", ".md")
 DOC_FILE_GLOBS = ("**/*.mdx", "**/*.md")
@@ -30,6 +33,21 @@ IGNORED_PATH_PARTS = {".snippets", ".pytest_cache"}
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\((?P<href>[^)]+)\)")
 HTML_HREF_RE = re.compile(r"href=[\"'](?P<href>[^\"']+)[\"']")
 FENCED_CODE_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
+OPENAPI_FRONTMATTER_RE = re.compile(
+    r"^---\s*\n(?:(?!^---$).)*?^openapi:\s*[\"']?"
+    r"(?P<method>[A-Z]+)\s+(?P<path>/[^\"'\n]+)[\"']?\s*$",
+    re.MULTILINE | re.DOTALL,
+)
+OPENAPI_HTTP_METHODS = {
+    "delete",
+    "get",
+    "patch",
+    "post",
+    "put",
+}
+DOCS_ONLY_API_REFERENCE_ROUTES: set[tuple[str, str]] = {
+    ("post", "/v1/workflows/{workflow_id}/diagnose-graph"),
+}
 
 
 @dataclass(frozen=True)
@@ -87,6 +105,13 @@ def page_candidates(page: str, root: Path = DOCS_ROOT) -> tuple[Path, ...]:
 
 def page_exists(page: str, root: Path = DOCS_ROOT) -> bool:
     return any(candidate.exists() for candidate in page_candidates(page, root))
+
+
+def page_file(page: str, root: Path = DOCS_ROOT) -> Path:
+    for candidate in page_candidates(page, root):
+        if candidate.exists():
+            return candidate
+    return page_candidates(page, root)[0]
 
 
 def normalized_local_href(href: str, source: Path) -> str | None:
@@ -185,6 +210,60 @@ def validate_redirect_destinations(config: dict[str, object]) -> list[DocsGraphI
     return issues
 
 
+def _normalize_openapi_path(path: str) -> str:
+    return path.split("?", 1)[0]
+
+
+def _collect_public_openapi_routes(openapi_path: Path) -> set[tuple[str, str]]:
+    spec = json.loads(openapi_path.read_text())
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return set()
+
+    routes: set[tuple[str, str]] = set()
+    for path, path_item in paths.items():
+        if not isinstance(path, str) or not isinstance(path_item, dict):
+            continue
+        for method in path_item:
+            if method in OPENAPI_HTTP_METHODS:
+                routes.add((method, path))
+    return routes
+
+
+def validate_api_reference_routes_match_public_openapi(
+    config: dict[str, object],
+    root: Path = DOCS_ROOT,
+    openapi_path: Path = OPENAPI_JSON,
+) -> list[DocsGraphIssue]:
+    issues: list[DocsGraphIssue] = []
+    public_routes = _collect_public_openapi_routes(openapi_path)
+
+    for page in iter_navigation_pages(config.get("navigation", {})):
+        if not page.startswith("api-reference/") or not page_exists(page, root):
+            continue
+        markdown_file = page_file(page, root)
+        match = OPENAPI_FRONTMATTER_RE.search(markdown_file.read_text())
+        if match is None:
+            continue
+
+        method = match.group("method").lower()
+        path = _normalize_openapi_path(match.group("path"))
+        route = (method, path)
+        if route in public_routes or route in DOCS_ONLY_API_REFERENCE_ROUTES:
+            continue
+        route_label = f"{method.upper()} {path}"
+        issues.append(
+            DocsGraphIssue(
+                markdown_file,
+                f"API reference page {page!r} documents "
+                f"{route_label!r}, but that route is not present in the "
+                "public OpenAPI spec",
+            )
+        )
+
+    return issues
+
+
 def collect_issues() -> list[DocsGraphIssue]:
     config = load_docs_config()
     files = iter_doc_files()
@@ -192,6 +271,7 @@ def collect_issues() -> list[DocsGraphIssue]:
     issues.extend(validate_navigation_pages(config))
     issues.extend(validate_markdown_links(files))
     issues.extend(validate_redirect_destinations(config))
+    issues.extend(validate_api_reference_routes_match_public_openapi(config))
     return issues
 
 
