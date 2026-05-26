@@ -1,3 +1,4 @@
+load("//tools/bazel:artifact_lifecycle.bzl", "retab_generated_artifact_lifecycle")
 load("//tools/bazel:defs.bzl", "PYTHON_VENV_TAGS")
 
 package(default_visibility = ["//visibility:public"])
@@ -46,6 +47,18 @@ sh_test(
         "openapi.json",
     ],
     tags = PYTHON_VENV_TAGS + ["generated-check"],
+)
+
+retab_generated_artifact_lifecycle(
+    name = "openapi",
+    update_script = "//tools/bazel:update_openapi.sh",
+    update_data = [":openapi_inputs"],
+    downstream = [
+        "//api-quality:unit_tests",
+        "//open-source/docs:docs_sdk_snippets",
+        "//open-source/sdk:generated_sdks",
+    ],
+    tags = PYTHON_VENV_TAGS,
 )
 
 sh_test(
