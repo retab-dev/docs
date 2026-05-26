@@ -19,6 +19,10 @@ DIAGNOSTIC_PATH_SUFFIXES: tuple[str, ...] = (
     "/benchmark",
 )
 PUBLIC_OPENAPI_EXCLUDED_ROUTES: set[tuple[str, str]] = {
+    ("get", "/v1/auth/status"),
+    ("get", "/v1/environments"),
+    ("post", "/v1/environments"),
+    ("get", "/v1/environments/{environment_id}"),
     ("post", "/v1/workflows/{workflow_id}/diagnose-graph"),
 }
 
