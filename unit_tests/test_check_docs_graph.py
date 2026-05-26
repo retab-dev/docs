@@ -72,5 +72,66 @@ func verify(body []byte, signature string, secret string) {}
     assert check_docs_graph.iter_local_hrefs(source) == ["../api-reference/introduction"]
 
 
+def test_api_reference_navigation_rejects_openapi_page_missing_from_public_spec(
+    tmp_path: Path,
+) -> None:
+    docs_root = tmp_path / "docs"
+    widgets_reference = docs_root / "api-reference" / "widgets"
+    auth_reference = docs_root / "api-reference" / "auth"
+    widgets_reference.mkdir(parents=True)
+    auth_reference.mkdir(parents=True)
+    (widgets_reference / "list.mdx").write_text(
+        '---\nopenapi: "GET /v1/widgets"\n---\n'
+    )
+    (auth_reference / "status.mdx").write_text(
+        '---\nopenapi: "GET /v1/auth/status"\n---\n'
+    )
+    config = {
+        "navigation": [
+            "api-reference/widgets/list",
+            "api-reference/auth/status",
+        ]
+    }
+    openapi_path = docs_root / "api-reference" / "openapi.json"
+    openapi_path.write_text(
+        '{"paths": {"/v1/widgets": {"get": {"operationId": "list_widgets"}}}}\n'
+    )
+
+    issues = check_docs_graph.validate_api_reference_routes_match_public_openapi(
+        config,
+        docs_root,
+        openapi_path,
+    )
+
+    assert [issue.message for issue in issues] == [
+        (
+            "API reference page 'api-reference/auth/status' documents "
+            "'GET /v1/auth/status', but that route is not present in the "
+            "public OpenAPI spec"
+        )
+    ]
+
+
+def test_docs_only_api_reference_route_can_be_explicitly_allowed(tmp_path: Path) -> None:
+    docs_root = tmp_path / "docs"
+    diagnose_reference = docs_root / "api-reference" / "workflows"
+    diagnose_reference.mkdir(parents=True)
+    (diagnose_reference / "diagnose-graph.mdx").write_text(
+        '---\nopenapi: "POST /v1/workflows/{workflow_id}/diagnose-graph"\n---\n'
+    )
+    config = {"navigation": ["api-reference/workflows/diagnose-graph"]}
+    openapi_path = docs_root / "api-reference" / "openapi.json"
+    openapi_path.write_text('{"paths": {}}\n')
+
+    assert (
+        check_docs_graph.validate_api_reference_routes_match_public_openapi(
+            config,
+            docs_root,
+            openapi_path,
+        )
+        == []
+    )
+
+
 def test_current_docs_graph_is_consistent() -> None:
     assert [issue.display() for issue in check_docs_graph.collect_issues()] == []
