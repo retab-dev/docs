@@ -196,6 +196,69 @@ def test_strips_public_openapi_excluded_routes_even_when_documented(
     }
 
 
+def test_strips_cli_only_auth_and_environment_routes_even_when_documented(
+    tmp_path: Path,
+) -> None:
+    docs_root = tmp_path / "docs"
+    auth_reference = docs_root / "api-reference" / "auth"
+    environments_reference = docs_root / "api-reference" / "environments"
+    widgets_reference = docs_root / "api-reference" / "widgets"
+    auth_reference.mkdir(parents=True)
+    environments_reference.mkdir(parents=True)
+    widgets_reference.mkdir(parents=True)
+    (docs_root / "docs.json").write_text(
+        json.dumps(
+            {
+                "navigation": [
+                    "api-reference/widgets/list",
+                    "api-reference/auth/status",
+                    "api-reference/environments/list",
+                    "api-reference/environments/create",
+                    "api-reference/environments/get",
+                ]
+            }
+        )
+    )
+    (widgets_reference / "list.mdx").write_text(
+        '---\nopenapi: "GET /v1/widgets"\n---\n'
+    )
+    (auth_reference / "status.mdx").write_text(
+        '---\nopenapi: "GET /v1/auth/status"\n---\n'
+    )
+    (environments_reference / "list.mdx").write_text(
+        '---\nopenapi: "GET /v1/environments"\n---\n'
+    )
+    (environments_reference / "create.mdx").write_text(
+        '---\nopenapi: "POST /v1/environments"\n---\n'
+    )
+    (environments_reference / "get.mdx").write_text(
+        '---\nopenapi: "GET /v1/environments/{environment_id}"\n---\n'
+    )
+    spec = {
+        "paths": {
+            "/v1/widgets": {"get": {"operationId": "list_widgets"}},
+            "/v1/auth/status": {"get": {"operationId": "get_auth_status"}},
+            "/v1/environments": {
+                "get": {"operationId": "list_organization_environments"},
+                "post": {"operationId": "create_organization_environment"},
+            },
+            "/v1/environments/{environment_id}": {
+                "get": {"operationId": "get_organization_environment"}
+            },
+        }
+    }
+
+    generate_openapi._strip_routes_not_in_api_reference_markdown(
+        spec,
+        docs_root / "docs.json",
+        docs_root,
+    )
+
+    assert spec["paths"] == {
+        "/v1/widgets": {"get": {"operationId": "list_widgets"}}
+    }
+
+
 def test_missing_docs_json_api_reference_page_fails(tmp_path: Path) -> None:
     docs_root = tmp_path / "docs"
     docs_root.mkdir()
