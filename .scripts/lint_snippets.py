@@ -72,6 +72,7 @@ PYTHON = PY_VENV / "bin" / "python"
 PYRIGHT = PY_VENV / "bin" / "pyright"
 TSC = NODE_SDK / "node_modules" / "typescript" / "bin" / "tsc"
 
+NODE = shutil.which("node")
 GO = shutil.which("go")
 CARGO = shutil.which("cargo")
 MAVEN = shutil.which("mvn")
@@ -950,13 +951,14 @@ def lint_typescript_batch(
 ) -> list[LintIssue]:
     if not snippet_files:
         return []
-    if not TSC.exists():
+    if not TSC.exists() or not NODE:
         return []
     ws = _prepare_ts_workspace(snippet_files)
     # `tsc` emits diagnostics to stdout when --pretty=false and writes nothing
     # on success.
     result = subprocess.run(
         [
+            NODE,
             str(TSC),
             "-p",
             str(ws / "tsconfig.json"),
