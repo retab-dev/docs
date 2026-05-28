@@ -307,9 +307,9 @@ def test_workflow_create_request_docs_publish_shape_variants() -> None:
     ]
     assert discriminated_branch["discriminator"]["propertyName"] == "type"
     assert {"type": "null"} in scope_schema["anyOf"]
-    assert schemas["WorkflowTestRunSingleScope"]["required"] == ["type", "test_id"]
+    assert schemas["WorkflowTestRunSingleScope"]["required"] == ["test_id", "type"]
     assert schemas["WorkflowTestRunWorkflowScope"]["required"] == ["type"]
-    assert schemas["WorkflowTestRunBlockScope"]["required"] == ["type", "block_id"]
+    assert schemas["WorkflowTestRunBlockScope"]["required"] == ["block_id", "type"]
 
 
 def test_generated_openapi_does_not_expose_split_mime_data_name() -> None:
@@ -830,7 +830,7 @@ def test_generated_experiment_metrics_use_kind_discriminator_and_public_flows() 
         assert schemas[schema_name]["properties"]["kind"]["const"] == kind
 
     flow_schema = schemas["ExperimentConfusionFlowMetric"]
-    assert flow_schema["required"] == ["source", "target", "score"]
+    assert flow_schema["required"] == ["score", "source", "target"]
     assert set(flow_schema["properties"]) == {"source", "target", "score"}
 
 
@@ -856,3 +856,100 @@ def test_generated_workflow_assertion_component_names_are_language_neutral() -> 
         "AnyItemMatchesCondition",
     ):
         assert schema_name in schemas
+
+
+def test_canonicalize_spec_sorts_schema_and_path_maps() -> None:
+    spec = {
+        "paths": {
+            "/v1/zebra": {"get": {}},
+            "/v1/alpha": {"get": {}},
+            "/v1/mike": {"get": {}},
+        },
+        "components": {
+            "schemas": {
+                "Zebra": {"title": "Zebra"},
+                "Alpha": {"title": "Alpha"},
+                "Mike": {"title": "Mike"},
+            }
+        },
+    }
+
+    generate_openapi._canonicalize_spec(spec)
+
+    assert list(spec["paths"]) == ["/v1/alpha", "/v1/mike", "/v1/zebra"]
+    assert list(spec["components"]["schemas"]) == ["Alpha", "Mike", "Zebra"]
+
+
+def test_canonicalize_spec_sorts_required_arrays_but_leaves_other_orderings() -> None:
+    spec = {
+        "components": {
+            "schemas": {
+                "Widget": {
+                    "type": "object",
+                    "required": ["name", "id", "created_at"],
+                    "properties": {
+                        "name": {"type": "string"},
+                        "id": {"type": "string"},
+                        "created_at": {"type": "string"},
+                        "color": {"enum": ["red", "green", "blue"]},
+                    },
+                }
+            }
+        }
+    }
+
+    generate_openapi._canonicalize_spec(spec)
+
+    widget = spec["components"]["schemas"]["Widget"]
+    # required is set-semantics, so it is sorted for stable diffs.
+    assert widget["required"] == ["created_at", "id", "name"]
+    # property order is meaningful/stable and must be left untouched.
+    assert list(widget["properties"]) == ["name", "id", "created_at", "color"]
+    # enum order can carry meaning and must be left untouched.
+    assert widget["properties"]["color"]["enum"] == ["red", "green", "blue"]
+
+
+def test_canonicalize_spec_leaves_boolean_required_untouched() -> None:
+    spec = {
+        "paths": {
+            "/v1/things": {
+                "get": {
+                    "parameters": [
+                        {"name": "cursor", "in": "query", "required": False},
+                        {"name": "id", "in": "path", "required": True},
+                    ]
+                }
+            }
+        }
+    }
+
+    generate_openapi._canonicalize_spec(spec)
+
+    parameters = spec["paths"]["/v1/things"]["get"]["parameters"]
+    assert parameters[0]["required"] is False
+    assert parameters[1]["required"] is True
+
+
+def test_committed_openapi_is_in_canonical_order() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+
+    paths = generated_openapi["paths"]
+    assert list(paths) == sorted(paths)
+
+    schemas = generated_openapi["components"]["schemas"]
+    assert list(schemas) == sorted(schemas)
+
+    def _assert_required_sorted(node: object) -> None:
+        if isinstance(node, dict):
+            required = node.get("required")
+            if isinstance(required, list) and all(
+                isinstance(item, str) for item in required
+            ):
+                assert required == sorted(required)
+            for value in node.values():
+                _assert_required_sorted(value)
+        elif isinstance(node, list):
+            for item in node:
+                _assert_required_sorted(item)
+
+    _assert_required_sorted(generated_openapi)

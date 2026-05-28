@@ -692,6 +692,54 @@ def _normalize_workflow_read_docs(spec: dict[str, object]) -> None:
         _rename_schema(spec, old_schema_name, new_schema_name)
 
 
+def _sort_required_arrays(node: object) -> None:
+    """Sort every JSON Schema ``required`` array in place.
+
+    ``required`` is a set in JSON Schema semantics, so its order is meaningless
+    to consumers but unstable across regenerations (it follows model field order,
+    which shifts when unrelated fields move). Sorting it keeps regenerated diffs
+    legible. Boolean ``required`` (e.g. on parameters) is left untouched.
+    """
+    if isinstance(node, dict):
+        required = node.get("required")
+        if isinstance(required, list) and all(isinstance(item, str) for item in required):
+            node["required"] = sorted(required)
+        for value in node.values():
+            _sort_required_arrays(value)
+    elif isinstance(node, list):
+        for item in node:
+            _sort_required_arrays(item)
+
+
+def _canonicalize_spec(spec: dict[str, object]) -> None:
+    """Reorder the spec into a deterministic shape so regenerated diffs stay legible.
+
+    Only orderings that carry no semantic meaning are sorted:
+
+      * the ``components.schemas`` map, by schema name. The rename and
+        pagination passes ``pop`` and re-insert schemas, so emission order
+        otherwise depends on which overlays ran, not on the API surface.
+      * the ``paths`` map, by path.
+      * every object schema's ``required`` array (set semantics).
+
+    Property order, ``enum`` order, and ``anyOf``/``oneOf`` member order are
+    left as the backend emits them: those are stable per model definition and
+    can carry meaning (discriminator order, enum-default conventions in some
+    SDK generators).
+    """
+    paths = spec.get("paths")
+    if isinstance(paths, dict):
+        spec["paths"] = {key: paths[key] for key in sorted(paths)}
+
+    components = spec.get("components")
+    if isinstance(components, dict):
+        schemas = components.get("schemas")
+        if isinstance(schemas, dict):
+            components["schemas"] = {key: schemas[key] for key in sorted(schemas)}
+
+    _sort_required_arrays(spec)
+
+
 def generate_openapi(output_path: Path | None = None) -> None:
     repo_root = Path(__file__).resolve().parents[3]
     backend_main_server = repo_root / "backend" / "main_server"
@@ -752,6 +800,9 @@ def generate_openapi(output_path: Path | None = None) -> None:
     # Keep only schemas reachable from the published API surface.
     _prune_unreferenced_schemas(spec)
 
+    # Canonicalize ordering so regenerations produce minimal, legible diffs.
+    _canonicalize_spec(spec)
+
     _print_public_routes(spec)
 
     # Write updated spec to file
@@ -760,6 +811,7 @@ def generate_openapi(output_path: Path | None = None) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w") as f:
         json.dump(spec, f, indent=2, ensure_ascii=False)
+        f.write("\n")
 
 
 def _print_public_routes(spec: dict[str, object]) -> None:
