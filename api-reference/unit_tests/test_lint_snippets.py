@@ -64,6 +64,100 @@ def _fake_node_deps(root: Path) -> Path:
     return deps
 
 
+def test_cached_success_runs_work_once(tmp_path: Path) -> None:
+    calls = 0
+
+    def work() -> list[lint_snippets.LintIssue]:
+        nonlocal calls
+        calls += 1
+        return []
+
+    cache_dir = tmp_path / "success-cache"
+
+    assert lint_snippets.cached_success(cache_dir, "test cache", work) == []
+    assert lint_snippets.cached_success(cache_dir, "test cache", work) == []
+
+    assert calls == 1
+    assert (cache_dir / "success").exists()
+
+
+def test_cached_success_does_not_mark_failed_work(tmp_path: Path) -> None:
+    issue = lint_snippets.LintIssue.for_snippet(
+        _snippet("python", "broken"),
+        "checker",
+        "failed",
+    )
+
+    def work() -> list[lint_snippets.LintIssue]:
+        return [issue]
+
+    cache_dir = tmp_path / "success-cache"
+
+    assert lint_snippets.cached_success(cache_dir, "test cache", work) == [issue]
+
+    assert not (cache_dir / "success").exists()
+
+
+def test_cache_lock_removes_lock_after_success(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "cache"
+    lock_dir = tmp_path / "cache.lock"
+
+    with lint_snippets.cache_lock(cache_dir, "test cache"):
+        assert lock_dir.exists()
+
+    assert not lock_dir.exists()
+
+
+def test_cache_lock_recovers_stale_pid_lock(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "cache"
+    lock_dir = tmp_path / "cache.lock"
+    lock_dir.mkdir()
+    (lock_dir / "pid").write_text("123456789", encoding="utf-8")
+
+    with patch.object(lint_snippets, "_process_exists", return_value=False):
+        with lint_snippets.cache_lock(cache_dir, "test cache"):
+            assert lock_dir.exists()
+
+    assert not lock_dir.exists()
+
+
+def test_cached_tree_reuses_ready_cache_dir(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "tree-cache"
+    cache_dir.mkdir()
+    (cache_dir / "ready").write_text("ok\n", encoding="utf-8")
+
+    def populate(_: Path) -> None:
+        raise AssertionError("ready cache should not be populated")
+
+    assert lint_snippets.cached_tree(
+        cache_dir,
+        lambda path: (path / "ready").exists(),
+        populate,
+        "tree cache",
+    ) == cache_dir
+
+
+def test_cached_tree_cleans_stale_tmp_dir(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "tree-cache"
+    stale_tmp = tmp_path / ".tree-cache.stale.tmp"
+    stale_tmp.mkdir()
+    (stale_tmp / "stale").write_text("stale\n", encoding="utf-8")
+
+    def populate(tmp_dir: Path) -> None:
+        tmp_dir.mkdir(parents=True)
+        (tmp_dir / "ready").write_text("ok\n", encoding="utf-8")
+
+    assert lint_snippets.cached_tree(
+        cache_dir,
+        lambda path: (path / "ready").exists(),
+        populate,
+        "tree cache",
+    ) == cache_dir
+
+    assert not stale_tmp.exists()
+    assert (cache_dir / "ready").exists()
+
+
 def test_required_sdk_group_languages_cover_every_public_sdk() -> None:
     assert lint_snippets.REQUIRED_SDK_GROUP_LANGUAGES == (
         "python",
@@ -656,6 +750,33 @@ def test_php_and_ruby_batch_helpers_run_every_snippet(tmp_path: Path) -> None:
     assert lint_snippets._run_parallel_snippet_lints(snippet_files, lint_one) == []
 
     assert sorted(seen) == sorted(file_path for _, file_path in snippet_files)
+
+
+def test_php_cached_batch_reuses_successful_result(tmp_path: Path) -> None:
+    php_sdk = tmp_path / "php-sdk"
+    (php_sdk / "lib").mkdir(parents=True)
+    (php_sdk / "composer.json").write_text("{}\n", encoding="utf-8")
+    (php_sdk / "composer.lock").write_text("{}\n", encoding="utf-8")
+    (php_sdk / "lib" / "Client.php").write_text("<?php\n", encoding="utf-8")
+    snippet_files = [
+        (_snippet("php", "use Retab\\Client;\n$client = new Client();\n"), tmp_path / "a.php"),
+    ]
+    calls = 0
+
+    def fake_batch(_: list[tuple[lint_snippets.Snippet, Path]]) -> list[lint_snippets.LintIssue]:
+        nonlocal calls
+        calls += 1
+        return []
+
+    with (
+        patch.object(lint_snippets, "PHP_SDK_FOR_SNIPPETS", php_sdk),
+        patch.object(lint_snippets, "PHP_SNIPPET_SUCCESS_CACHE_DIR", tmp_path / "cache"),
+        patch.object(lint_snippets, "lint_php_batch", side_effect=fake_batch),
+    ):
+        assert lint_snippets.lint_php_cached_batch(snippet_files) == []
+        assert lint_snippets.lint_php_cached_batch(snippet_files) == []
+
+    assert calls == 1
 
 
 def test_python_batch_runs_ruff_once_for_all_syntax_valid_snippets(tmp_path: Path) -> None:

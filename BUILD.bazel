@@ -211,6 +211,13 @@ genquery(
     strict = False,
 )
 
+genquery(
+    name = "docs_sdk_snippets_core_tests_query",
+    expression = "tests(//open-source/docs:docs_sdk_snippets_core)",
+    scope = ["//open-source/docs:docs_sdk_snippets_core"],
+    strict = False,
+)
+
 sh_test(
     name = "generated_sdk_snippet_graph_check",
     srcs = ["//tools/bazel:run_generated_sdk_snippet_graph_check.sh"],
@@ -237,6 +244,50 @@ sh_test(
     tags = PYTHON_VENV_TAGS,
 )
 
+sh_test(
+    name = "docs_snippet_regression_guard",
+    srcs = ["//tools/bazel:run_docs_snippet_regression_guard.sh"],
+    args = [
+        "--aggregate-tests-file",
+        "$(location :docs_sdk_snippets_core_tests_query)",
+    ] + [
+        "--openapi-json-path=%s=$(location :%s_openapi_json_path_query)" % (spec["language"], spec["snippet"])
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ] + [
+        "--checked-openapi-path=%s=$(location :%s_checked_openapi_path_query)" % (spec["language"], spec["snippet"])
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ] + [
+        "--manifest-deps=%s=$(location :%s_manifest_deps_query)" % (spec["language"], spec["snippet"])
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ] + [
+        "--docs-sources-deps=%s=$(location :%s_docs_sources_deps_query)" % (spec["language"], spec["snippet"])
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ] + [
+        "--shared-runner-deps=%s=$(location :%s_shared_runner_deps_query)" % (spec["language"], spec["snippet"])
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ],
+    data = [
+        ":docs_sdk_snippets_core_tests_query",
+        "//tools/bazel:docs_snippet_regression_guard",
+    ] + [
+        ":%s_openapi_json_path_query" % spec["snippet"]
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ] + [
+        ":%s_checked_openapi_path_query" % spec["snippet"]
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ] + [
+        ":%s_manifest_deps_query" % spec["snippet"]
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ] + [
+        ":%s_docs_sources_deps_query" % spec["snippet"]
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ] + [
+        ":%s_shared_runner_deps_query" % spec["snippet"]
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ],
+    tags = PYTHON_VENV_TAGS,
+)
+
 test_suite(
     name = "docs_sdk_snippet_lints_only",
     tests = [
@@ -252,11 +303,19 @@ test_suite(
 )
 
 test_suite(
-    name = "docs_sdk_snippets",
+    name = "docs_sdk_snippets_core",
     tests = [
         ":docs_sdk_snippet_lints_only",
         ":generated_sdk_snippet_graph_check",
         ":snippet_lint_structure",
+    ],
+)
+
+test_suite(
+    name = "docs_sdk_snippets",
+    tests = [
+        ":docs_sdk_snippets_core",
+        ":docs_snippet_regression_guard",
     ],
 )
 
