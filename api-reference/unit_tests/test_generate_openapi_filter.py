@@ -322,7 +322,13 @@ def test_generated_openapi_does_not_expose_split_mime_data_name() -> None:
     assert "MIMEData" + "-Input" not in serialized
     assert "MIMEData" in schemas
     assert schemas["MIMEData"]["required"] == ["filename", "url"]
-    assert schemas["MIMEData"]["properties"]["mime_type"]["readOnly"] is True
+    # ``mime_type`` is intentionally NOT part of the MIMEData wire
+    # contract anymore. The previous design exposed it as a
+    # ``readOnly`` computed field; now it's a Python-side
+    # ``@property`` on the backend (see ``types/mime.py``), derived
+    # from filename/url, and never serialized. This pinning catches
+    # any accidental reintroduction of the field on the wire.
+    assert "mime_type" not in schemas["MIMEData"]["properties"]
 
 
 def test_generated_openapi_uses_dereferenced_workflow_artifact_schema() -> None:
