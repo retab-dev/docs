@@ -164,6 +164,12 @@ TS_SNIPPET_WORKSPACE_CACHE_DIR = Path(
         str(CACHE_REPO_ROOT / ".cache" / "docs-snippet-ts-workspaces"),
     )
 ).resolve()
+PHP_SNIPPET_SUCCESS_CACHE_DIR = Path(
+    os.environ.get(
+        "RETAB_PHP_SNIPPET_SUCCESS_CACHE_DIR",
+        str(CACHE_REPO_ROOT / ".cache" / "docs-snippet-php-success"),
+    )
+).resolve()
 
 LANG_ALIASES: dict[str, str] = {
     "python": "python",
@@ -954,6 +960,118 @@ def _remove_tree(path: Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
 
+def _update_hash_with_files(
+    digest,
+    root: Path,
+    patterns: tuple[str, ...],
+) -> None:
+    for pattern in patterns:
+        for path in sorted(root.glob(pattern)):
+            if not path.is_file():
+                continue
+            digest.update(str(path.relative_to(root)).encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(path.read_bytes())
+            digest.update(b"\0")
+
+
+def hash_files(root: Path, patterns: tuple[str, ...]) -> str:
+    digest = hashlib.sha256()
+    _update_hash_with_files(digest, root, patterns)
+    return digest.hexdigest()[:24]
+
+
+def hash_snippets(
+    snippet_files: list[tuple[Snippet, Path]],
+    normalise: Callable[[Snippet, Path], str],
+) -> str:
+    digest = hashlib.sha256()
+    for snippet, src in snippet_files:
+        digest.update(src.name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(normalise(snippet, src).encode("utf-8"))
+        digest.update(b"\0")
+    return digest.hexdigest()[:24]
+
+
+@contextmanager
+def cache_lock(cache_dir: Path, label: str, timeout_seconds: float = 300):
+    lock_dir = cache_dir.with_name(cache_dir.name + ".lock")
+    lock_dir.parent.mkdir(parents=True, exist_ok=True)
+    start = time.monotonic()
+    while True:
+        try:
+            lock_dir.mkdir()
+            (lock_dir / "pid").write_text(str(os.getpid()), encoding="utf-8")
+            break
+        except FileExistsError:
+            try:
+                lock_pid = int((lock_dir / "pid").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                lock_pid = 0
+            if lock_pid and not _process_exists(lock_pid):
+                _remove_tree(lock_dir)
+                continue
+            if time.monotonic() - start > timeout_seconds:
+                raise RuntimeError(f"timed out waiting for {label} lock: {lock_dir}")
+            time.sleep(0.1)
+    try:
+        yield
+    finally:
+        _remove_tree(lock_dir)
+
+
+def cached_success(
+    cache_dir: Path,
+    label: str,
+    work: Callable[[], list[LintIssue]],
+) -> list[LintIssue]:
+    success_marker = cache_dir / "success"
+    if success_marker.exists():
+        return []
+    with cache_lock(cache_dir, label):
+        if success_marker.exists():
+            return []
+        issues = work()
+        if issues:
+            success_marker.unlink(missing_ok=True)
+            return issues
+        _write_text_if_changed(success_marker, "ok\n")
+        return []
+
+
+def cached_tree(
+    cache_dir: Path,
+    is_ready: Callable[[Path], bool],
+    populate: Callable[[Path], None],
+    label: str,
+) -> Path:
+    if is_ready(cache_dir):
+        return cache_dir
+    cache_dir.parent.mkdir(parents=True, exist_ok=True)
+    with cache_lock(cache_dir, label):
+        if is_ready(cache_dir):
+            return cache_dir
+        for stale_tmp_dir in cache_dir.parent.glob(f".{cache_dir.name}.*.tmp"):
+            _remove_tree(stale_tmp_dir)
+        tmp_dir = cache_dir.parent / f".{cache_dir.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp"
+        _remove_tree(tmp_dir)
+        try:
+            populate(tmp_dir)
+            _make_tree_user_writable(tmp_dir)
+            try:
+                tmp_dir.rename(cache_dir)
+            except OSError:
+                if not is_ready(cache_dir):
+                    shutil.copytree(tmp_dir, cache_dir, symlinks=True)
+                    _make_tree_user_writable(cache_dir)
+                _remove_tree(tmp_dir)
+        except Exception:
+            _remove_tree(tmp_dir)
+            raise
+    return cache_dir
+
+
 def _lint_python_syntax(snippet: Snippet, file_path: Path) -> list[LintIssue]:
     try:
         py_compile.compile(str(file_path), doraise=True)
@@ -1028,20 +1146,14 @@ def lint_python(snippet: Snippet, file_path: Path) -> list[LintIssue]:
 
 
 def _python_sdk_fingerprint(python_sdk: Path) -> str:
-    digest = hashlib.sha256()
-    paths = [
-        python_sdk / "pyproject.toml",
-        python_sdk / "requirements.txt",
-        *sorted((python_sdk / "retab").rglob("*.py")),
-    ]
-    for path in paths:
-        if not path.exists():
-            continue
-        digest.update(str(path.relative_to(python_sdk)).encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(path.read_bytes())
-        digest.update(b"\0")
-    return digest.hexdigest()[:24]
+    return hash_files(
+        python_sdk,
+        (
+            "pyproject.toml",
+            "requirements.txt",
+            "retab/**/*.py",
+        ),
+    )
 
 
 def _python_success_cache_key(
@@ -1055,11 +1167,7 @@ def _python_success_cache_key(
     digest.update(b"\0")
     digest.update(str(PYRIGHT if run_pyright else "no-pyright").encode("utf-8"))
     digest.update(b"\0")
-    for snippet, src in snippet_files:
-        digest.update(src.name.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(snippet.code.encode("utf-8"))
-        digest.update(b"\0")
+    digest.update(hash_snippets(snippet_files, lambda snippet, _: snippet.code).encode("utf-8"))
     return digest.hexdigest()[:24]
 
 
@@ -1073,20 +1181,14 @@ def lint_python_cached_batch(
         snippet_files,
         run_pyright,
     )
-    success_marker = cache_dir / "success"
-    if success_marker.exists():
-        return []
-    with _workspace_lock(cache_dir, "Python snippet lint"):
-        if success_marker.exists():
-            return []
+
+    def work() -> list[LintIssue]:
         issues = lint_python_batch(snippet_files)
         if not issues and run_pyright:
             issues.extend(lint_python_batch_pyright(snippet_files))
-        if not issues:
-            _write_text_if_changed(success_marker, "ok\n")
-        else:
-            success_marker.unlink(missing_ok=True)
         return issues
+
+    return cached_success(cache_dir, "Python snippet lint", work)
 
 
 def lint_python_batch_pyright(
@@ -1245,21 +1347,8 @@ def _tsconfig_template(node_sdk_root: Path) -> dict[str, object]:
     }
 
 
-def _hash_tree(digest: "hashlib._Hash", root: Path, patterns: tuple[str, ...]) -> None:
-    for pattern in patterns:
-        for path in sorted(root.glob(pattern)):
-            if not path.is_file():
-                continue
-            digest.update(str(path.relative_to(root)).encode("utf-8"))
-            digest.update(b"\0")
-            digest.update(path.read_bytes())
-            digest.update(b"\0")
-
-
 def _node_sdk_fingerprint(node_sdk: Path) -> str:
-    digest = hashlib.sha256()
-    _hash_tree(
-        digest,
+    return hash_files(
         node_sdk,
         (
             "package.json",
@@ -1268,56 +1357,25 @@ def _node_sdk_fingerprint(node_sdk: Path) -> str:
             "dist/**/*.d.ts",
         ),
     )
-    return digest.hexdigest()[:24]
 
 
 def _ts_workspace_cache_key(snippet_files: list[tuple[Snippet, Path]]) -> str:
     digest = hashlib.sha256()
     digest.update(_node_sdk_fingerprint(NODE_SDK_FOR_SNIPPETS).encode("utf-8"))
     digest.update(b"\0")
-    _hash_tree(
-        digest,
-        NODE_SDK,
-        (
-            "package-lock.json",
-            "node_modules/typescript/package.json",
-            "node_modules/@types/node/package.json",
-            "node_modules/zod/package.json",
-        ),
+    digest.update(
+        hash_files(
+            NODE_SDK,
+            (
+                "package-lock.json",
+                "node_modules/typescript/package.json",
+                "node_modules/@types/node/package.json",
+                "node_modules/zod/package.json",
+            ),
+        ).encode("utf-8")
     )
-    for snippet, src in snippet_files:
-        digest.update(src.name.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(snippet.code.encode("utf-8"))
-        digest.update(b"\0")
+    digest.update(hash_snippets(snippet_files, lambda snippet, _: snippet.code).encode("utf-8"))
     return digest.hexdigest()[:24]
-
-
-@contextmanager
-def _workspace_lock(ws: Path, label: str, timeout_seconds: float = 300):
-    lock_dir = ws.with_name(ws.name + ".lock")
-    lock_dir.parent.mkdir(parents=True, exist_ok=True)
-    start = time.monotonic()
-    while True:
-        try:
-            lock_dir.mkdir()
-            (lock_dir / "pid").write_text(str(os.getpid()), encoding="utf-8")
-            break
-        except FileExistsError:
-            try:
-                lock_pid = int((lock_dir / "pid").read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                lock_pid = 0
-            if lock_pid and not _process_exists(lock_pid):
-                shutil.rmtree(lock_dir, ignore_errors=True)
-                continue
-            if time.monotonic() - start > timeout_seconds:
-                raise RuntimeError(f"timed out waiting for {label} lock: {lock_dir}")
-            time.sleep(0.1)
-    try:
-        yield
-    finally:
-        shutil.rmtree(lock_dir, ignore_errors=True)
 
 
 def _ts_workspace_for_snippets(snippet_files: list[tuple[Snippet, Path]]) -> Path:
@@ -1327,31 +1385,21 @@ def _ts_workspace_for_snippets(snippet_files: list[tuple[Snippet, Path]]) -> Pat
 def _node_sdk_for_ts_snippets() -> Path:
     fingerprint = _node_sdk_fingerprint(NODE_SDK_FOR_SNIPPETS)
     cache_dir = TS_SNIPPET_WORKSPACE_CACHE_DIR / "node-sdk-cache" / fingerprint
-    if (cache_dir / "package.json").exists():
-        return cache_dir
 
-    cache_dir.parent.mkdir(parents=True, exist_ok=True)
-    with _workspace_lock(cache_dir, "TypeScript SDK cache"):
-        if (cache_dir / "package.json").exists():
-            return cache_dir
-        for stale_tmp_dir in cache_dir.parent.glob(f".{fingerprint}.*.tmp"):
-            _remove_tree(stale_tmp_dir)
-        tmp_dir = cache_dir.parent / f".{fingerprint}.{os.getpid()}.{uuid.uuid4().hex}.tmp"
+    def populate(tmp_dir: Path) -> None:
         shutil.copytree(
             NODE_SDK_FOR_SNIPPETS,
             tmp_dir,
             symlinks=True,
             ignore=shutil.ignore_patterns("node_modules"),
         )
-        _make_tree_user_writable(tmp_dir)
-        try:
-            tmp_dir.rename(cache_dir)
-        except OSError:
-            if not (cache_dir / "package.json").exists():
-                shutil.copytree(tmp_dir, cache_dir, symlinks=True)
-                _make_tree_user_writable(cache_dir)
-            _remove_tree(tmp_dir)
-        return cache_dir
+
+    return cached_tree(
+        cache_dir,
+        lambda path: (path / "package.json").exists(),
+        populate,
+        "TypeScript SDK cache",
+    )
 
 
 def _prepare_ts_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
@@ -1392,7 +1440,7 @@ def lint_typescript_batch(
     if not TSC.exists() or not NODE:
         return []
     ws = _ts_workspace_for_snippets(snippet_files)
-    with _workspace_lock(ws, "TypeScript snippet workspace"):
+    with cache_lock(ws, "TypeScript snippet workspace"):
         ws = _prepare_ts_workspace(snippet_files)
         result = subprocess.run(
             [
@@ -1491,31 +1539,19 @@ def normalise_go_snippet(code: str) -> str:
 
 
 def _go_sdk_fingerprint(go_sdk: Path) -> str:
-    digest = hashlib.sha256()
-    paths = [
-        go_sdk / "go.mod",
-        go_sdk / "go.sum",
-        *sorted(go_sdk.glob("*.go")),
-    ]
-    for path in paths:
-        if not path.exists():
-            continue
-        digest.update(str(path.relative_to(go_sdk)).encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(path.read_bytes())
-        digest.update(b"\0")
-    return digest.hexdigest()[:24]
+    return hash_files(go_sdk, ("go.mod", "go.sum", "*.go"))
 
 
 def _go_workspace_cache_key(snippet_files: list[tuple[Snippet, Path]]) -> str:
     digest = hashlib.sha256()
     digest.update(_go_sdk_fingerprint(GO_SDK_FOR_SNIPPETS).encode("utf-8"))
     digest.update(b"\0")
-    for snippet, src in snippet_files:
-        digest.update(src.stem.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(normalise_go_snippet(snippet.code).encode("utf-8"))
-        digest.update(b"\0")
+    digest.update(
+        hash_snippets(
+            snippet_files,
+            lambda snippet, _: normalise_go_snippet(snippet.code),
+        ).encode("utf-8")
+    )
     return digest.hexdigest()[:24]
 
 
@@ -1557,12 +1593,8 @@ def lint_go_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue]:
     if not snippet_files or GO is None:
         return []
     ws = _go_workspace_for_snippets(snippet_files)
-    success_marker = ws / ".lint_success"
-    if success_marker.exists():
-        return []
-    with _workspace_lock(ws, "Go snippet workspace"):
-        if success_marker.exists():
-            return []
+
+    def work() -> list[LintIssue]:
         ws = _prepare_go_workspace(snippet_files)
         result = subprocess.run(
             [GO, "test", "-mod=mod", "./..."],
@@ -1571,33 +1603,33 @@ def lint_go_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue]:
             cwd=str(ws),
         )
         if result.returncode == 0:
-            _write_text_if_changed(success_marker, "ok\n")
             return []
-        success_marker.unlink(missing_ok=True)
-    output = (result.stdout or "") + (result.stderr or "")
-    by_name = {src.stem: snippet for snippet, src in snippet_files}
-    issues: list[LintIssue] = []
-    diag_re = re.compile(
-        r"^(?:# .+|(?P<path>snippets/(?P<name>[^/]+)/main\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<msg>.+))$"
-    )
-    for raw in output.splitlines():
-        m = diag_re.match(raw.strip())
-        if m is None or m.group("name") is None:
-            continue
-        snippet = by_name.get(m.group("name"))
-        if snippet is None:
-            continue
-        issues.append(
-            LintIssue.for_snippet(
-                snippet,
-                "go",
-                f"{m.group('msg')} (line {m.group('line')})",
-            )
+        output = (result.stdout or "") + (result.stderr or "")
+        by_name = {src.stem: snippet for snippet, src in snippet_files}
+        issues: list[LintIssue] = []
+        diag_re = re.compile(
+            r"^(?:# .+|(?P<path>snippets/(?P<name>[^/]+)/main\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<msg>.+))$"
         )
-    if not issues and output.strip():
-        snippet = snippet_files[0][0]
-        issues.append(LintIssue.for_snippet(snippet, "go", output.strip()))
-    return issues
+        for raw in output.splitlines():
+            m = diag_re.match(raw.strip())
+            if m is None or m.group("name") is None:
+                continue
+            snippet = by_name.get(m.group("name"))
+            if snippet is None:
+                continue
+            issues.append(
+                LintIssue.for_snippet(
+                    snippet,
+                    "go",
+                    f"{m.group('msg')} (line {m.group('line')})",
+                )
+            )
+        if not issues and output.strip():
+            snippet = snippet_files[0][0]
+            issues.append(LintIssue.for_snippet(snippet, "go", output.strip()))
+        return issues
+
+    return cached_success(ws, "Go snippet workspace", work)
 
 
 # ---------------------------------------------------------------------------
@@ -1643,11 +1675,12 @@ def _rust_workspace_cache_key(snippet_files: list[tuple[Snippet, Path]]) -> str:
     digest = hashlib.sha256()
     digest.update(_rust_sdk_fingerprint(RUST_SDK_FOR_SNIPPETS).encode("utf-8"))
     digest.update(b"\0")
-    for snippet, src in snippet_files:
-        digest.update(src.name.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(normalise_rust_snippet(snippet.code).encode("utf-8"))
-        digest.update(b"\0")
+    digest.update(
+        hash_snippets(
+            snippet_files,
+            lambda snippet, _: normalise_rust_snippet(snippet.code),
+        ).encode("utf-8")
+    )
     return digest.hexdigest()[:24]
 
 
@@ -1658,79 +1691,27 @@ def _rust_workspace_for_snippets(snippet_files: list[tuple[Snippet, Path]]) -> P
 
 
 def _rust_sdk_fingerprint(rust_sdk: Path) -> str:
-    digest = hashlib.sha256()
-    paths = [
-        rust_sdk / "Cargo.toml",
-        rust_sdk / "Cargo.lock",
-        *sorted((rust_sdk / "src").rglob("*.rs")),
-    ]
-    for path in paths:
-        if not path.exists():
-            continue
-        digest.update(str(path.relative_to(rust_sdk)).encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(path.read_bytes())
-        digest.update(b"\0")
-    return digest.hexdigest()[:24]
+    return hash_files(rust_sdk, ("Cargo.toml", "Cargo.lock", "src/**/*.rs"))
 
 
 def _rust_sdk_for_snippets() -> Path:
     fingerprint = _rust_sdk_fingerprint(RUST_SDK_FOR_SNIPPETS)
     cache_dir = RUST_SNIPPET_SDK_CACHE_DIR / fingerprint
-    if (cache_dir / "Cargo.toml").exists():
-        return cache_dir
 
-    RUST_SNIPPET_SDK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    with _rust_sdk_cache_lock(cache_dir):
-        if (cache_dir / "Cargo.toml").exists():
-            return cache_dir
-
-        for stale_tmp_dir in RUST_SNIPPET_SDK_CACHE_DIR.glob(f".{fingerprint}.*.tmp"):
-            _remove_tree(stale_tmp_dir)
-
-        tmp_dir = RUST_SNIPPET_SDK_CACHE_DIR / f".{fingerprint}.{os.getpid()}.{uuid.uuid4().hex}.tmp"
+    def populate(tmp_dir: Path) -> None:
         shutil.copytree(
             RUST_SDK_FOR_SNIPPETS,
             tmp_dir,
             symlinks=True,
             ignore=shutil.ignore_patterns("target"),
         )
-        _make_tree_user_writable(tmp_dir)
-        try:
-            tmp_dir.rename(cache_dir)
-        except OSError:
-            if not (cache_dir / "Cargo.toml").exists():
-                shutil.copytree(tmp_dir, cache_dir, symlinks=True)
-                _make_tree_user_writable(cache_dir)
-            _remove_tree(tmp_dir)
-        return cache_dir
 
-
-@contextmanager
-def _rust_sdk_cache_lock(cache_dir: Path):
-    lock_dir = cache_dir.with_name(cache_dir.name + ".lock")
-    lock_dir.parent.mkdir(parents=True, exist_ok=True)
-    start = time.monotonic()
-    while True:
-        try:
-            lock_dir.mkdir()
-            (lock_dir / "pid").write_text(str(os.getpid()), encoding="utf-8")
-            break
-        except FileExistsError:
-            try:
-                lock_pid = int((lock_dir / "pid").read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                lock_pid = 0
-            if lock_pid and not _process_exists(lock_pid):
-                _remove_tree(lock_dir)
-                continue
-            if time.monotonic() - start > 600:
-                raise RuntimeError(f"timed out waiting for Rust SDK cache lock: {lock_dir}")
-            time.sleep(0.1)
-    try:
-        yield
-    finally:
-        _remove_tree(lock_dir)
+    return cached_tree(
+        cache_dir,
+        lambda path: (path / "Cargo.toml").exists(),
+        populate,
+        "Rust SDK cache",
+    )
 
 
 def _prepare_rust_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
@@ -1775,33 +1756,6 @@ def _prepare_rust_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
     return ws
 
 
-@contextmanager
-def _rust_workspace_lock(ws: Path):
-    lock_dir = ws.with_name(ws.name + ".lock")
-    lock_dir.parent.mkdir(parents=True, exist_ok=True)
-    start = time.monotonic()
-    while True:
-        try:
-            lock_dir.mkdir()
-            (lock_dir / "pid").write_text(str(os.getpid()), encoding="utf-8")
-            break
-        except FileExistsError:
-            try:
-                lock_pid = int((lock_dir / "pid").read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                lock_pid = 0
-            if lock_pid and not _process_exists(lock_pid):
-                shutil.rmtree(lock_dir, ignore_errors=True)
-                continue
-            if time.monotonic() - start > 600:
-                raise RuntimeError(f"timed out waiting for Rust snippet workspace lock: {lock_dir}")
-            time.sleep(0.1)
-    try:
-        yield
-    finally:
-        shutil.rmtree(lock_dir, ignore_errors=True)
-
-
 def _process_exists(pid: int) -> bool:
     try:
         os.kill(pid, 0)
@@ -1816,7 +1770,7 @@ def lint_rust_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue
     if not snippet_files or CARGO is None:
         return []
     ws = _rust_workspace_for_snippets(snippet_files)
-    with _rust_workspace_lock(ws):
+    with cache_lock(ws, "Rust snippet workspace", timeout_seconds=600):
         ws = _prepare_rust_workspace(snippet_files)
         command = [CARGO, "check", "--message-format", "short"]
         if RUST_SNIPPET_TARGET_DIR is not None:
@@ -1919,7 +1873,11 @@ def lint_php(snippet: Snippet, file_path: Path) -> list[LintIssue]:
         return [sdk_issue]
     if PHP is None:
         return []
-    file_path.write_text(normalise_php_snippet(snippet.code), encoding="utf-8")
+    return _lint_php_syntax(snippet, file_path)
+
+
+def _lint_php_syntax(snippet: Snippet, file_path: Path) -> list[LintIssue]:
+    _write_text_if_changed(file_path, normalise_php_snippet(snippet.code))
     result = subprocess.run(
         [PHP, "-l", str(file_path)],
         capture_output=True,
@@ -1932,7 +1890,52 @@ def lint_php(snippet: Snippet, file_path: Path) -> list[LintIssue]:
 
 
 def lint_php_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue]:
-    return _run_parallel_snippet_lints(snippet_files, lint_php)
+    if not snippet_files:
+        return []
+    sdk_issue = _sdk_root_issue(
+        snippet_files[0][0],
+        "php sdk",
+        PHP_SDK_FOR_SNIPPETS,
+        ("composer.json", "lib/Client.php"),
+    )
+    if sdk_issue is not None:
+        return [sdk_issue]
+    if PHP is None:
+        return []
+    return _run_parallel_snippet_lints(snippet_files, _lint_php_syntax)
+
+
+def _php_sdk_fingerprint(php_sdk: Path) -> str:
+    return hash_files(
+        php_sdk,
+        (
+            "composer.json",
+            "composer.lock",
+            "lib/**/*.php",
+        ),
+    )
+
+
+def _php_success_cache_key(snippet_files: list[tuple[Snippet, Path]]) -> str:
+    digest = hashlib.sha256()
+    digest.update(_php_sdk_fingerprint(PHP_SDK_FOR_SNIPPETS).encode("utf-8"))
+    digest.update(b"\0")
+    digest.update(str(PHP or "no-php").encode("utf-8"))
+    digest.update(b"\0")
+    digest.update(
+        hash_snippets(
+            snippet_files,
+            lambda snippet, _: normalise_php_snippet(snippet.code),
+        ).encode("utf-8")
+    )
+    return digest.hexdigest()[:24]
+
+
+def lint_php_cached_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue]:
+    if not snippet_files:
+        return []
+    cache_dir = PHP_SNIPPET_SUCCESS_CACHE_DIR / _php_success_cache_key(snippet_files)
+    return cached_success(cache_dir, "PHP snippet lint", lambda: lint_php_batch(snippet_files))
 
 
 def lint_ruby(snippet: Snippet, file_path: Path) -> list[LintIssue]:
@@ -2111,19 +2114,7 @@ def _dotnet_sdk_for_build() -> Path:
 
 
 def _dotnet_sdk_fingerprint(dotnet_sdk: Path) -> str:
-    digest = hashlib.sha256()
-    paths = [
-        dotnet_sdk / "Retab.csproj",
-        *sorted((dotnet_sdk / "src").rglob("*.cs")),
-    ]
-    for path in paths:
-        if not path.exists():
-            continue
-        digest.update(str(path.relative_to(dotnet_sdk)).encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(path.read_bytes())
-        digest.update(b"\0")
-    return digest.hexdigest()[:24]
+    return hash_files(dotnet_sdk, ("Retab.csproj", "src/**/*.cs"))
 
 
 def _build_dotnet_sdk_for_snippets(
@@ -2218,6 +2209,10 @@ def _dotnet_compile_cache_key(
     csc: Path,
     refs: list[Path],
 ) -> str:
+    class_name_by_source = {
+        src.name: f"Snippet_{index:04d}"
+        for index, (_, src) in enumerate(snippet_files)
+    }
     digest = hashlib.sha256()
     digest.update(_dotnet_sdk_fingerprint(dotnet_sdk).encode("utf-8"))
     digest.update(b"\0")
@@ -2225,15 +2220,15 @@ def _dotnet_compile_cache_key(
     digest.update(b"\0")
     digest.update(_fingerprint_paths_by_stat([csc, *refs]).encode("utf-8"))
     digest.update(b"\0")
-    for index, (snippet, src) in enumerate(snippet_files):
-        digest.update(src.name.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(
-            normalise_dotnet_snippet(snippet.code, f"Snippet_{index:04d}").encode(
-                "utf-8"
-            )
-        )
-        digest.update(b"\0")
+    digest.update(
+        hash_snippets(
+            snippet_files,
+            lambda snippet, src: normalise_dotnet_snippet(
+                snippet.code,
+                class_name_by_source[src.name],
+            ),
+        ).encode("utf-8")
+    )
     return digest.hexdigest()[:24]
 
 
@@ -2273,13 +2268,9 @@ def lint_dotnet_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIss
         csc,
         refs,
     )
-    success_marker = compile_cache_dir / "success"
-    if success_marker.exists():
-        return []
     by_name = {src.name: snippet for snippet, src in snippet_files}
-    with _workspace_lock(compile_cache_dir, ".NET snippet compile"):
-        if success_marker.exists():
-            return []
+
+    def work() -> list[LintIssue]:
         ws = _prepare_dotnet_workspace(snippet_files)
         response_file = ws / "csc.rsp"
         snippet_sources = [ws / src.name for _, src in snippet_files]
@@ -2315,36 +2306,36 @@ def lint_dotnet_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIss
                 )
             ]
         if result.returncode == 0:
-            _write_text_if_changed(success_marker, "ok\n")
             return []
-        success_marker.unlink(missing_ok=True)
-    issues: list[LintIssue] = []
-    output = (result.stdout or "") + (result.stderr or "")
-    matched_diagnostic = False
-    diag_re = re.compile(
-        r"(?P<file>[^:()]+\.cs)\((?P<line>\d+),(?P<col>\d+)\):\s+"
-        r"(?P<level>error|warning)\s+(?P<code>CS\d+):\s+(?P<msg>.+?)(?:\s+\[|$)"
-    )
-    for raw in output.splitlines():
-        m = diag_re.search(raw.strip())
-        if m is None:
-            continue
-        matched_diagnostic = True
-        if m.group("level") != "error":
-            continue
-        snippet = by_name.get(Path(m.group("file")).name)
-        if snippet is None:
-            continue
-        issue = LintIssue.for_snippet(
-            snippet,
-            "dotnet",
-            f"{m.group('code')} {m.group('msg')} (line {m.group('line')})",
+        issues: list[LintIssue] = []
+        output = (result.stdout or "") + (result.stderr or "")
+        matched_diagnostic = False
+        diag_re = re.compile(
+            r"(?P<file>[^:()]+\.cs)\((?P<line>\d+),(?P<col>\d+)\):\s+"
+            r"(?P<level>error|warning)\s+(?P<code>CS\d+):\s+(?P<msg>.+?)(?:\s+\[|$)"
         )
-        if issue not in issues:
-            issues.append(issue)
-    if not matched_diagnostic and output.strip():
-        issues.append(LintIssue.for_snippet(snippet_files[0][0], "dotnet", output.strip()))
-    return issues
+        for raw in output.splitlines():
+            m = diag_re.search(raw.strip())
+            if m is None:
+                continue
+            matched_diagnostic = True
+            if m.group("level") != "error":
+                continue
+            snippet = by_name.get(Path(m.group("file")).name)
+            if snippet is None:
+                continue
+            issue = LintIssue.for_snippet(
+                snippet,
+                "dotnet",
+                f"{m.group('code')} {m.group('msg')} (line {m.group('line')})",
+            )
+            if issue not in issues:
+                issues.append(issue)
+        if not matched_diagnostic and output.strip():
+            issues.append(LintIssue.for_snippet(snippet_files[0][0], "dotnet", output.strip()))
+        return issues
+
+    return cached_success(compile_cache_dir, ".NET snippet compile", work)
 
 
 # ---------------------------------------------------------------------------
@@ -2398,46 +2389,7 @@ def _java_sdk_for_build() -> Path:
 
 
 def _java_sdk_fingerprint(java_sdk: Path) -> str:
-    digest = hashlib.sha256()
-    paths = [
-        java_sdk / "pom.xml",
-        *sorted((java_sdk / "src" / "main" / "java").rglob("*.java")),
-    ]
-    for path in paths:
-        if not path.exists():
-            continue
-        digest.update(str(path.relative_to(java_sdk)).encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(path.read_bytes())
-        digest.update(b"\0")
-    return digest.hexdigest()[:24]
-
-
-@contextmanager
-def _java_sdk_cache_lock(cache_dir: Path):
-    lock_dir = cache_dir.with_name(cache_dir.name + ".lock")
-    lock_dir.parent.mkdir(parents=True, exist_ok=True)
-    start = time.monotonic()
-    while True:
-        try:
-            lock_dir.mkdir()
-            (lock_dir / "pid").write_text(str(os.getpid()), encoding="utf-8")
-            break
-        except FileExistsError:
-            try:
-                lock_pid = int((lock_dir / "pid").read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                lock_pid = 0
-            if lock_pid and not _process_exists(lock_pid):
-                shutil.rmtree(lock_dir, ignore_errors=True)
-                continue
-            if time.monotonic() - start > 300:
-                raise RuntimeError(f"timed out waiting for Java SDK cache lock: {lock_dir}")
-            time.sleep(0.1)
-    try:
-        yield
-    finally:
-        shutil.rmtree(lock_dir, ignore_errors=True)
+    return hash_files(java_sdk, ("pom.xml", "src/main/java/**/*.java"))
 
 
 def _cached_java_classpath(cache_dir: Path) -> str | None:
@@ -2615,7 +2567,7 @@ def _java_classpath(java_sdk: Path) -> str | None:
     cached = _cached_java_classpath(cache_dir)
     if cached is not None:
         return cached
-    with _java_sdk_cache_lock(cache_dir):
+    with cache_lock(cache_dir, "Java SDK cache"):
         cached = _cached_java_classpath(cache_dir)
         if cached is not None:
             return cached
@@ -2653,23 +2605,25 @@ def _java_compile_cache_key(
     java_sdk: Path,
     classpath: str,
 ) -> str:
+    class_name_by_source = {
+        src.name: _java_wrapper_class_name(index)
+        for index, (_, src) in enumerate(snippet_files)
+    }
     digest = hashlib.sha256()
     digest.update(_java_sdk_fingerprint(java_sdk).encode("utf-8"))
     digest.update(b"\0")
     digest.update(classpath.encode("utf-8"))
     digest.update(b"\0")
-    for index, (snippet, src) in enumerate(snippet_files):
-        class_name = _java_wrapper_class_name(index)
-        digest.update(src.name.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(
-            normalise_java_snippet(
+    digest.update(
+        hash_snippets(
+            snippet_files,
+            lambda snippet, src: normalise_java_snippet(
                 snippet.code,
-                wrapper_class_name=class_name,
+                wrapper_class_name=class_name_by_source[src.name],
                 rename_explicit_class=_java_has_explicit_class(snippet.code),
-            ).encode("utf-8")
-        )
-        digest.update(b"\0")
+            ),
+        ).encode("utf-8")
+    )
     return digest.hexdigest()[:24]
 
 
@@ -2693,19 +2647,16 @@ def lint_java_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue
         java_sdk,
         classpath,
     )
-    success_marker = compile_cache_dir / "success"
-    if success_marker.exists():
-        return []
-    classes_dir = SNIPPET_DIR / "_javaclasses"
-    shutil.rmtree(classes_dir, ignore_errors=True)
-    classes_dir.mkdir(parents=True, exist_ok=True)
-    issues: list[LintIssue] = []
     by_path = {str(path): snippet for snippet, path in snippet_files}
     diag_re = re.compile(
         r"^(?P<file>.+\.java):(?P<line>\d+):\s+error:\s+(?P<msg>.+)$"
     )
 
-    def run_javac(source_files: list[Path], batch_index: int) -> list[LintIssue]:
+    def run_javac(
+        source_files: list[Path],
+        batch_index: int,
+        classes_dir: Path,
+    ) -> list[LintIssue]:
         if not source_files:
             return []
         batch_classes_dir = classes_dir / f"batch_{batch_index:04d}"
@@ -2750,28 +2701,25 @@ def lint_java_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue
             )
         return local_issues
 
-    java_files: list[Path] = []
-    for index, (snippet, file_path) in enumerate(snippet_files):
-        class_name = _java_wrapper_class_name(index)
-        file_path.write_text(
-            normalise_java_snippet(
-                snippet.code,
-                wrapper_class_name=class_name,
-                rename_explicit_class=_java_has_explicit_class(snippet.code),
-            ),
-            encoding="utf-8",
-        )
-        java_files.append(file_path)
+    def work() -> list[LintIssue]:
+        classes_dir = SNIPPET_DIR / "_javaclasses"
+        shutil.rmtree(classes_dir, ignore_errors=True)
+        classes_dir.mkdir(parents=True, exist_ok=True)
+        java_files: list[Path] = []
+        for index, (snippet, file_path) in enumerate(snippet_files):
+            class_name = _java_wrapper_class_name(index)
+            file_path.write_text(
+                normalise_java_snippet(
+                    snippet.code,
+                    wrapper_class_name=class_name,
+                    rename_explicit_class=_java_has_explicit_class(snippet.code),
+                ),
+                encoding="utf-8",
+            )
+            java_files.append(file_path)
+        return run_javac(java_files, 0, classes_dir)
 
-    with _workspace_lock(compile_cache_dir, "Java snippet compile"):
-        if success_marker.exists():
-            return []
-        issues.extend(run_javac(java_files, 0))
-        if not issues:
-            _write_text_if_changed(success_marker, "ok\n")
-        else:
-            success_marker.unlink(missing_ok=True)
-    return issues
+    return cached_success(compile_cache_dir, "Java snippet compile", work)
 
 
 # ---------------------------------------------------------------------------
@@ -3029,7 +2977,7 @@ def main() -> int:
             for snippet in (s for s in by_lang.get("php", []) if is_self_contained_php(s)):
                 file_path = write_snippet(snippet)
                 php_files.append((snippet, file_path))
-            issues.extend(lint_php_batch(php_files))
+            issues.extend(lint_php_cached_batch(php_files))
 
     # --- Ruby ----------------------------------------------------------
     if not args.structural_only and args.language in {"all", "ruby"} and not args.no_ruby:
