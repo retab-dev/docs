@@ -14,10 +14,20 @@ filegroup(
 )
 
 filegroup(
-    name = "docs_sources",
+    name = "docs_content_sources",
     srcs = glob([
         "**/*.md",
         "**/*.mdx",
+    ], exclude = [
+        ".snippets/**",
+    ]),
+)
+
+filegroup(
+    name = "docs_sources",
+    srcs = [
+        ":docs_content_sources",
+    ] + glob([
         ".scripts/*.py",
         "unit_tests/**/*.py",
         "workflows/unit_tests/**/*.py",
@@ -28,12 +38,18 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "snippet_lint_script",
+    srcs = [".scripts/lint_snippets.py"],
+)
+
 sh_test(
     name = "docs_graph_checks",
     srcs = ["//tools/bazel:run_pytest.sh"],
     args = ["open-source/docs/unit_tests/test_check_docs_graph.py"],
     data = [
-        ":docs_sources",
+        ":docs_content_sources",
+        "unit_tests/test_check_docs_graph.py",
         "//open-source/docs/api-reference:checked_openapi_json",
     ],
     tags = PYTHON_VENV_TAGS,
@@ -49,77 +65,105 @@ sh_binary(
         "//open-source/docs:snippet_structure",
         "//open-source/docs:docs_quality",
     ],
-    data = [":docs_sources"],
+    data = [":docs_content_sources"],
     tags = PYTHON_VENV_TAGS + ["manual", "generated-update"],
 )
 
 sh_test(
     name = "snippet_structure",
     srcs = ["//tools/bazel:run_docs_snippet_structure.sh"],
-    data = [":docs_sources"],
+    data = [":docs_content_sources"],
     tags = PYTHON_VENV_TAGS,
 )
 
 sh_test(
     name = "smoke",
     srcs = ["//tools/bazel:run_docs_smoke.sh"],
-    data = [":docs_sources"],
+    data = [":docs_content_sources"],
     tags = PYTHON_VENV_TAGS + ["runtime-smoke"],
+)
+
+genrule(
+    name = "snippet_manifest",
+    srcs = [
+        ":docs_content_sources",
+        ":snippet_lint_script",
+    ],
+    outs = ["snippet_manifest.json"],
+    cmd = "$(location //tools/bazel:run_docs_snippet_lint.sh) all --write-manifest $$PWD/$@",
+    tags = PYTHON_VENV_TAGS,
+    tools = ["//tools/bazel:run_docs_snippet_lint.sh"],
 )
 
 SDK_SNIPPET_LANGUAGE_SPECS = [
     {
         "flag": "--python-sdk-root",
         "language": "python",
-        "sdk": "//open-source/sdk:generated_python_sdk",
+        "sdk": "//open-source/sdk:snippet_python_sdk",
         "snippet": "snippet_lint_python",
     },
     {
         "flag": "--node-sdk-root",
         "language": "typescript",
-        "sdk": "//open-source/sdk:generated_node_sdk",
+        "sdk": "//open-source/sdk:snippet_node_sdk",
         "snippet": "snippet_lint_typescript",
     },
     {
         "flag": "--go-sdk-root",
         "language": "go",
-        "sdk": "//open-source/sdk:generated_go_sdk",
+        "sdk": "//open-source/sdk:snippet_go_sdk",
         "snippet": "snippet_lint_go",
     },
     {
         "flag": "--rust-sdk-root",
         "language": "rust",
-        "sdk": "//open-source/sdk:generated_rust_sdk",
+        "sdk": "//open-source/sdk:snippet_rust_sdk",
         "snippet": "snippet_lint_rust",
     },
     {
         "flag": "--dotnet-sdk-root",
         "language": "dotnet",
-        "sdk": "//open-source/sdk:generated_dotnet_sdk",
+        "sdk": "//open-source/sdk:snippet_dotnet_sdk",
         "snippet": "snippet_lint_dotnet",
     },
     {
         "flag": "--php-sdk-root",
         "language": "php",
-        "sdk": "//open-source/sdk:generated_php_sdk",
+        "sdk": "//open-source/sdk:snippet_php_sdk",
         "snippet": "snippet_lint_php",
     },
     {
         "flag": "--ruby-sdk-root",
         "language": "ruby",
-        "sdk": "//open-source/sdk:generated_ruby_sdk",
+        "sdk": "//open-source/sdk:snippet_ruby_sdk",
         "snippet": "snippet_lint_ruby",
     },
     {
         "flag": "--java-sdk-root",
         "language": "java",
-        "sdk": "//open-source/sdk:generated_java_sdk",
+        "sdk": "//open-source/sdk:snippet_java_sdk",
         "snippet": "snippet_lint_java",
     },
 ]
 
 docs_sdk_snippet_lints(
     specs = SDK_SNIPPET_LANGUAGE_SPECS,
+    tags = SDK_SNIPPET_TAGS,
+)
+
+sh_test(
+    name = "snippet_lint_structure",
+    srcs = ["//tools/bazel:run_docs_snippet_lint.sh"],
+    args = [
+        "all",
+        "--manifest",
+        "$(location :snippet_manifest)",
+        "--structural-only",
+    ],
+    data = [
+        ":snippet_lint_script",
+        ":snippet_manifest",
+    ],
     tags = SDK_SNIPPET_TAGS,
 )
 
@@ -176,12 +220,18 @@ sh_test(
     ] + [
         "--path=%s=$(location :%s_generated_sdk_path_query)" % (spec["language"], spec["snippet"])
         for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ] + [
+        "--inputs=%s=$(location :%s_sdk_inputs_query)" % (spec["language"], spec["snippet"])
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
     ],
     data = [
         ":sdk_snippet_targets_query",
         "//tools/bazel:sdk_snippet_graph",
     ] + [
         ":%s_generated_sdk_path_query" % spec["snippet"]
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ] + [
+        ":%s_sdk_inputs_query" % spec["snippet"]
         for spec in SDK_SNIPPET_LANGUAGE_SPECS
     ],
     tags = PYTHON_VENV_TAGS,
@@ -206,6 +256,7 @@ test_suite(
     tests = [
         ":docs_sdk_snippet_lints_only",
         ":generated_sdk_snippet_graph_check",
+        ":snippet_lint_structure",
     ],
 )
 
@@ -220,7 +271,7 @@ sh_binary(
         "//:api_surface_checks",
         "//open-source/docs:docs_quality",
     ],
-    data = [":docs_sources"],
+    data = [":docs_content_sources"],
     tags = PYTHON_VENV_TAGS + ["manual", "generated-update"],
 )
 
