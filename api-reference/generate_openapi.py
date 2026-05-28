@@ -274,6 +274,111 @@ def _normalize_public_operation_ids(spec: dict[str, object]) -> None:
             operation["operationId"] = public_operation_id
 
 
+def _inject_container_defaults(spec: dict[str, object]) -> None:
+    """Restore JSON Schema ``default`` values that the FastAPI/Pydantic
+    pipeline drops for optional fields, so generated SDKs emit idiomatic
+    defaults instead of nullable placeholders.
+
+    Three classes of fields end up without a ``default`` in the raw
+    FastAPI spec even though the Pydantic model defines one:
+
+    1. ``default_factory=list`` and ``default_factory=dict``.
+       Pydantic v2 deliberately omits a JSON Schema ``default`` for any
+       ``default_factory`` because the factory might be non-deterministic.
+       For ``list``/``dict`` the default IS deterministic (empty
+       container), so we inject ``default: []`` / ``default: {}``.
+
+    2. Bare ``Any`` fields with ``Field(default=None)``.
+       Pydantic emits ``"default": null`` for these, but FastAPI strips
+       ``default: null`` during its own openapi pass to keep the spec
+       "clean". We restore it so the SDK knows the field is nullable
+       and defaults to ``None`` — without this, the SDK generator falls
+       back to producing a required-looking ``Any`` field.
+
+    Both fix the same downstream symptom: generated SDKs producing
+    ``field: T | None = None`` (or no default at all) where the backend
+    model actually defines a concrete default. With the defaults
+    restored, the SDK emits ``field: list[T] = []`` / ``field: dict[K,V]
+    = {}`` / ``field: Any = None``, matching backend runtime behavior.
+
+    Conservative invariants (apply to every injection):
+
+      * The property is NOT in the schema's ``required`` set — we never
+        invent defaults for required fields.
+      * The property has no existing ``default`` key — we never
+        overwrite an explicit default the model declared.
+      * The property is NOT nullable — a nullable shape already carries
+        ``None`` as an absence sentinel; leaving the default unset lets
+        the SDK choose between ``None`` and an empty value.
+
+    What we deliberately do NOT touch:
+
+      * ``$ref``-typed optional fields with ``default_factory=SomeClass``.
+        Surfacing those would require instantiating the referenced model
+        and serializing its own defaults; doing that lossily (e.g. by
+        injecting ``default: {}``) would make the spec lie about the
+        actual structured default. Leave them to manual widening.
+      * ``oneOf``/``anyOf`` unions without a null branch. These are
+        discriminated-union shapes where injecting an arbitrary default
+        could collide with the union's discriminator semantics.
+    """
+    schemas = spec.get("components", {}).get("schemas")  # type: ignore[union-attr]
+    if not isinstance(schemas, dict):
+        return
+
+    for schema in schemas.values():
+        if not isinstance(schema, dict):
+            continue
+        properties = schema.get("properties")
+        if not isinstance(properties, dict):
+            continue
+        required = set(schema.get("required") or [])
+        for prop_name, prop_sch in properties.items():
+            if not isinstance(prop_sch, dict):
+                continue
+            if prop_name in required:
+                continue
+            if "default" in prop_sch:
+                continue
+
+            # Skip nullable shapes — None is already the absence sentinel.
+            type_field = prop_sch.get("type")
+            if isinstance(type_field, list) and "null" in type_field:
+                continue
+            if prop_sch.get("nullable") is True:
+                continue
+            if any(
+                isinstance(b, dict) and b.get("type") == "null"
+                for combinator in ("anyOf", "oneOf")
+                for b in prop_sch.get(combinator) or []
+            ):
+                continue
+
+            if type_field == "array":
+                prop_sch["default"] = []
+            elif type_field == "object":
+                # Either a plain object schema or the
+                # ``additionalProperties``-typed map shape Pydantic emits
+                # for ``dict[K, V]``. Both want ``{}``.
+                prop_sch["default"] = {}
+            elif (
+                type_field is None
+                and "$ref" not in prop_sch
+                and "anyOf" not in prop_sch
+                and "oneOf" not in prop_sch
+                and "allOf" not in prop_sch
+                and "enum" not in prop_sch
+                and "const" not in prop_sch
+            ):
+                # Bare schema with no constraints — this is an ``Any``
+                # field that Pydantic typed as ``Any = Field(default=None)``.
+                # FastAPI strips ``default: null`` from the emitted spec;
+                # restore it so the SDK generates a nullable Any field
+                # with ``None`` as the default instead of a required
+                # opaque type.
+                prop_sch["default"] = None
+
+
 def _strip_legacy_from_enums(node: object) -> None:
     """Remove legacy URL entries from any "enum" list deep in the spec."""
     if isinstance(node, dict):
@@ -657,6 +762,12 @@ def generate_openapi(output_path: Path | None = None) -> None:
 
     # Strip legacy URLs from any enum lists (e.g. Jobs endpoint enum)
     _strip_legacy_from_enums(spec)
+
+    # Surface default_factory=list/dict as default: []/{} so generated
+    # SDKs emit idiomatic empty-container defaults instead of nullable
+    # placeholders. Runs before public-schema-name normalization so the
+    # injection sees stable property shapes.
+    _inject_container_defaults(spec)
 
     _normalize_public_schema_names(spec)
     _normalize_workflow_read_docs(spec)
