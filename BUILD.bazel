@@ -151,6 +151,29 @@ docs_sdk_snippet_lints(
     tags = SDK_SNIPPET_TAGS,
 )
 
+sh_binary(
+    name = "docs_sdk_snippets_benchmark",
+    srcs = ["//tools/bazel:run_docs_snippet_benchmark.sh"],
+    args = [
+        "--manifest",
+        "$(location :snippet_manifest)",
+        "--runner",
+        "$(location //tools/bazel:run_docs_snippet_lint.sh)",
+    ] + [
+        "%s=%s" % (spec["flag"], "$(location %s)" % spec["sdk"])
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ],
+    data = [
+        ":snippet_manifest",
+        "//tools/bazel:docs_snippet_benchmark",
+        "//tools/bazel:run_docs_snippet_lint.sh",
+    ] + [
+        spec["sdk"]
+        for spec in SDK_SNIPPET_LANGUAGE_SPECS
+    ],
+    tags = SDK_SNIPPET_TAGS,
+)
+
 sh_test(
     name = "snippet_lint_structure",
     srcs = ["//tools/bazel:run_docs_snippet_lint.sh"],
