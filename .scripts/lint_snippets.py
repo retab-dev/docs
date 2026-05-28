@@ -1579,8 +1579,8 @@ def _prepare_go_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
     sdk_go_sum = GO_SDK_FOR_SNIPPETS / "go.sum"
     if sdk_go_sum.exists():
         shutil.copyfile(sdk_go_sum, ws / "go.sum")
-    for snippet, src in snippet_files:
-        snippet_dir = ws / "snippets" / src.stem
+    for index, (snippet, src) in enumerate(snippet_files):
+        snippet_dir = ws / "snippets" / f"{src.stem}_{index:03d}"
         snippet_dir.mkdir(parents=True)
         _write_text_if_changed(
             snippet_dir / "main.go",
@@ -1605,7 +1605,10 @@ def lint_go_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue]:
         if result.returncode == 0:
             return []
         output = (result.stdout or "") + (result.stderr or "")
-        by_name = {src.stem: snippet for snippet, src in snippet_files}
+        by_name = {
+            f"{src.stem}_{index:03d}": snippet
+            for index, (snippet, src) in enumerate(snippet_files)
+        }
         issues: list[LintIssue] = []
         diag_re = re.compile(
             r"^(?:# .+|(?P<path>snippets/(?P<name>[^/]+)/main\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<msg>.+))$"
