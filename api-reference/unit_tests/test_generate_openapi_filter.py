@@ -293,14 +293,20 @@ def test_workflow_create_request_docs_publish_shape_variants() -> None:
         "workflow_id",
         "scope",
     }
-    assert test_run_request["properties"]["scope"]["oneOf"] == [
+    # ``scope`` is optional, so pydantic wraps the discriminated union
+    # in an ``anyOf: [<union>, {type: null}]`` envelope. The inner branch
+    # carries the real ``oneOf`` + ``discriminator``.
+    scope_schema = test_run_request["properties"]["scope"]
+    discriminated_branch = next(
+        b for b in scope_schema["anyOf"] if "oneOf" in b
+    )
+    assert discriminated_branch["oneOf"] == [
         {"$ref": "#/components/schemas/WorkflowTestRunSingleScope"},
         {"$ref": "#/components/schemas/WorkflowTestRunWorkflowScope"},
         {"$ref": "#/components/schemas/WorkflowTestRunBlockScope"},
     ]
-    assert test_run_request["properties"]["scope"]["discriminator"][
-        "propertyName"
-    ] == "type"
+    assert discriminated_branch["discriminator"]["propertyName"] == "type"
+    assert {"type": "null"} in scope_schema["anyOf"]
     assert schemas["WorkflowTestRunSingleScope"]["required"] == ["type", "test_id"]
     assert schemas["WorkflowTestRunWorkflowScope"]["required"] == ["type"]
     assert schemas["WorkflowTestRunBlockScope"]["required"] == ["type", "block_id"]
