@@ -51,6 +51,17 @@ BANNED_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.compile(r"internal storage model", re.IGNORECASE),
     ),
     ("mentions persistence-only fields", re.compile(r"persistence-only", re.IGNORECASE)),
+    (
+        "leaks internal storage row / sidecar mechanics",
+        re.compile(
+            r"\b(storage row|store path|step row|queue handle|storage model|sidecar)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "describes a field/model as internal instead of documenting it",
+        re.compile(r"\binternal(ly)?\b", re.IGNORECASE),
+    ),
     ("mentions tenant isolation", re.compile(r"tenant isolation", re.IGNORECASE)),
     (
         "explains a temporary compatibility hack",
@@ -72,10 +83,27 @@ BANNED_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
     ("uses security-design jargon", re.compile(r"confused-deputy", re.IGNORECASE)),
     ("leaks pipeline enrichment internals", re.compile(r"enrichment pass", re.IGNORECASE)),
+    ("references an internal design doc", re.compile(r"API_DESIGN", re.IGNORECASE)),
+    (
+        "leaks the id-generation scheme",
+        re.compile(r"<nanoid>|\bnanoid\b", re.IGNORECASE),
+    ),
+    ("uses design-rationale jargon", re.compile(r"denormalized", re.IGNORECASE)),
     # Pydantic/FastAPI implementation terms.
     (
         "names Pydantic/FastAPI internals",
         re.compile(r"\b(pydantic|fastapi|default_factory|model_validate)\b", re.IGNORECASE),
+    ),
+    # Meta descriptions that restate the HTTP method/path instead of saying what
+    # the endpoint/body does. "Body for POST /v1/..." reads as boilerplate in the
+    # rendered docs; describe the action instead.
+    (
+        "restates the route instead of describing the action",
+        re.compile(
+            r"\b(request )?body for\b.*\b(POST|GET|PATCH|PUT|DELETE)\b"
+            r"|^\s*(POST|GET|PATCH|PUT|DELETE)\s+/",
+            re.IGNORECASE | re.MULTILINE,
+        ),
     ),
     # RST/Sphinx syntax that Markdown (Mintlify) does not render.
     (
@@ -87,9 +115,17 @@ BANNED_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 
 
 def _iter_description_strings(node: object, location: str):
-    """Yield (location, text) for every description/summary in the spec."""
+    """Yield (location, text) for every description/summary in the spec.
+
+    Discriminator ``mapping`` objects are skipped: their keys are
+    discriminator *values* (e.g. ``summary``, ``by_document``) and their
+    values are ``$ref`` strings, not prose — a key that happens to be named
+    ``summary`` there is not a documentation string.
+    """
     if isinstance(node, dict):
         for key, value in node.items():
+            if key == "mapping":
+                continue
             if key in ("description", "summary") and isinstance(value, str):
                 yield (f"{location}/{key}", value)
             else:
