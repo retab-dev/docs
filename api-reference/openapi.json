@@ -7382,13 +7382,13 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 20,
+              "maximum": 1000,
               "minimum": 1,
-              "description": "Maximum number of steps to return per page (1-20). Capped at 20 because each step hydrates its handle payloads from the artifact store; use cursor pagination for the rest.",
-              "default": 20,
+              "description": "Maximum number of steps to return per page (1-1000). Defaults to 5 because each step hydrates its handle payloads from the artifact store; raise it deliberately when you need a larger page, and use cursor pagination for the rest.",
+              "default": 5,
               "title": "Limit"
             },
-            "description": "Maximum number of steps to return per page (1-20). Capped at 20 because each step hydrates its handle payloads from the artifact store; use cursor pagination for the rest."
+            "description": "Maximum number of steps to return per page (1-1000). Defaults to 5 because each step hydrates its handle payloads from the artifact store; raise it deliberately when you need a larger page, and use cursor pagination for the rest."
           }
         ],
         "responses": {
@@ -9114,31 +9114,6 @@
         ],
         "title": "ApiCallInvocationWorkflowArtifact",
         "description": "Record of an API-call block's outbound HTTP request during a run.\n\nLists each request `attempts` made (including retries) and any `error`\nif the call ultimately failed."
-      },
-      "ApiTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "api",
-            "title": "Type",
-            "default": "api"
-          },
-          "api_key_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Api Key Id",
-            "description": "API key id used to start the run, when known"
-          }
-        },
-        "type": "object",
-        "title": "ApiTrigger",
-        "description": "Run started programmatically via the public API."
       },
       "ApproveReviewRequest": {
         "properties": {
@@ -12841,43 +12816,6 @@
         "title": "EditWorkflowArtifact",
         "description": "An edit produced by a workflow run, tagged with its artifact `operation` and creation time."
       },
-      "EmailTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "email",
-            "title": "Type",
-            "default": "email"
-          },
-          "sender": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sender",
-            "description": "Sender email address, when known"
-          },
-          "subject": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject",
-            "description": "Email subject, when known"
-          }
-        },
-        "type": "object",
-        "title": "EmailTrigger",
-        "description": "Run started by an inbound email."
-      },
       "EndsWithCondition": {
         "properties": {
           "kind": {
@@ -15731,31 +15669,6 @@
         "title": "MIMEData",
         "description": "A file represented by its `filename` and a base64 data `url`."
       },
-      "ManualTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "manual",
-            "title": "Type",
-            "default": "manual"
-          },
-          "user_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "User Id",
-            "description": "User who started the run, when known"
-          }
-        },
-        "type": "object",
-        "title": "ManualTrigger",
-        "description": "Manual run started by a user from the dashboard."
-      },
       "ManualWorkflowTestSource": {
         "properties": {
           "type": {
@@ -16769,27 +16682,6 @@
         "title": "RejectReviewRequest",
         "description": "Reject a specific version of a review, with a required reason."
       },
-      "RestartTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "restart",
-            "title": "Type",
-            "default": "restart"
-          },
-          "parent_run_id": {
-            "type": "string",
-            "title": "Parent Run Id",
-            "description": "ID of the parent run that was restarted"
-          }
-        },
-        "type": "object",
-        "required": [
-          "parent_run_id"
-        ],
-        "title": "RestartTrigger",
-        "description": "Run created by restarting a parent run."
-      },
       "RetabUsage": {
         "properties": {
           "credits": {
@@ -17442,44 +17334,11 @@
             ],
             "title": "Completed At",
             "description": "When the run finished executing"
-          },
-          "review_waiting_started_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Review Waiting Started At",
-            "description": "When the current awaiting_review period started"
-          },
-          "accumulated_review_waiting_ms": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Accumulated Review Waiting Ms",
-            "description": "Accumulated time spent waiting for review across the run",
-            "default": 0
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms",
-            "description": "Total run duration in milliseconds. Backfilled from `completed_at - started_at` on read when not stored."
           }
         },
         "type": "object",
         "title": "RunTiming",
-        "description": "Timing information for a run.\n\n`duration_ms` is the elapsed time between `started_at` and `completed_at`."
+        "description": "Timing information for a run.\n\nThree event timestamps that consumers cannot reconstruct on their own.\nWall-clock duration is a trivial `completed_at - started_at` subtraction\ndone client-side; it is not stored or exposed."
       },
       "RunningRun": {
         "properties": {
@@ -17545,27 +17404,6 @@
         "type": "object",
         "title": "RunningWorkflowTestRun",
         "description": "The test run is executing assertions."
-      },
-      "ScheduleTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "schedule",
-            "title": "Type",
-            "default": "schedule"
-          },
-          "schedule_id": {
-            "type": "string",
-            "title": "Schedule Id",
-            "description": "ID of the schedule that fired this run"
-          }
-        },
-        "type": "object",
-        "required": [
-          "schedule_id"
-        ],
-        "title": "ScheduleTrigger",
-        "description": "Run started by a workflow schedule."
       },
       "SimilarityGteCondition": {
         "properties": {
@@ -18038,6 +17876,30 @@
         ],
         "title": "Subdocument"
       },
+      "TriggerInfo": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "api",
+              "schedule",
+              "webhook",
+              "email",
+              "custom",
+              "restart"
+            ],
+            "title": "Type",
+            "description": "What started this run"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "TriggerInfo",
+        "description": "Public summary of what started a run: just the trigger category.\n\nThe full per-variant detail (schedule_id, parent_run_id, sender, ...) is\nkept internally on `StoredWorkflowRun.trigger` but intentionally not\nexposed in the public API surface."
+      },
       "UpdateEditTemplateRequest": {
         "properties": {
           "name": {
@@ -18449,31 +18311,6 @@
           "passed"
         ],
         "title": "VerdictSummary"
-      },
-      "WebhookTrigger": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "webhook",
-            "title": "Type",
-            "default": "webhook"
-          },
-          "webhook_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Webhook Id",
-            "description": "ID of the webhook configuration, when known"
-          }
-        },
-        "type": "object",
-        "title": "WebhookTrigger",
-        "description": "Run started by an inbound webhook."
       },
       "WhileLoopTerminationWorkflowArtifact": {
         "properties": {
@@ -19167,8 +19004,13 @@
             "type": "string",
             "title": "Id"
           },
-          "workflow": {
-            "$ref": "#/components/schemas/WorkflowSnapshotRef"
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "workflow_version_id": {
+            "type": "string",
+            "title": "Workflow Version Id"
           },
           "trigger": {
             "$ref": "#/components/schemas/ExperimentRunTrigger"
@@ -19300,7 +19142,8 @@
           "n_consensus",
           "timing",
           "trigger",
-          "workflow"
+          "workflow_id",
+          "workflow_version_id"
         ],
         "title": "WorkflowExperimentRun",
         "description": "A single execution of an experiment, identified by `id`."
@@ -19898,44 +19741,19 @@
             "title": "Id",
             "description": "Unique ID for this run"
           },
-          "workflow": {
-            "$ref": "#/components/schemas/WorkflowSnapshotRef",
-            "description": "Workflow + version reference"
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id",
+            "description": "ID of the workflow that was run"
+          },
+          "workflow_version_id": {
+            "type": "string",
+            "title": "Workflow Version Id",
+            "description": "Content-addressed workflow version used for this run."
           },
           "trigger": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ManualTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/ApiTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/ScheduleTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/WebhookTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/EmailTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/RestartTrigger"
-              }
-            ],
-            "title": "Trigger",
-            "description": "What started this run",
-            "discriminator": {
-              "propertyName": "type",
-              "mapping": {
-                "api": "#/components/schemas/ApiTrigger",
-                "email": "#/components/schemas/EmailTrigger",
-                "manual": "#/components/schemas/ManualTrigger",
-                "restart": "#/components/schemas/RestartTrigger",
-                "schedule": "#/components/schemas/ScheduleTrigger",
-                "webhook": "#/components/schemas/WebhookTrigger"
-              }
-            }
+            "$ref": "#/components/schemas/TriggerInfo",
+            "description": "What started this run"
           },
           "lifecycle": {
             "oneOf": [
@@ -19991,7 +19809,8 @@
           "lifecycle",
           "timing",
           "trigger",
-          "workflow"
+          "workflow_id",
+          "workflow_version_id"
         ],
         "title": "WorkflowRun",
         "description": "A single execution of a workflow."
@@ -20016,27 +19835,6 @@
           "list_metadata"
         ],
         "title": "WorkflowRunList"
-      },
-      "WorkflowSnapshotRef": {
-        "properties": {
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id",
-            "description": "ID of the workflow that was run"
-          },
-          "version_id": {
-            "type": "string",
-            "title": "Version Id",
-            "description": "Content-addressed workflow version used for this run."
-          }
-        },
-        "type": "object",
-        "required": [
-          "version_id",
-          "workflow_id"
-        ],
-        "title": "WorkflowSnapshotRef",
-        "description": "Reference to the workflow and immutable version that drove the run."
       },
       "WorkflowStep": {
         "properties": {
@@ -20729,42 +20527,16 @@
             "type": "string",
             "title": "Id"
           },
-          "workflow": {
-            "$ref": "#/components/schemas/WorkflowSnapshotRef"
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "workflow_version_id": {
+            "type": "string",
+            "title": "Workflow Version Id"
           },
           "trigger": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ManualTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/ApiTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/ScheduleTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/WebhookTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/EmailTrigger"
-              },
-              {
-                "$ref": "#/components/schemas/RestartTrigger"
-              }
-            ],
-            "title": "Trigger",
-            "discriminator": {
-              "propertyName": "type",
-              "mapping": {
-                "api": "#/components/schemas/ApiTrigger",
-                "email": "#/components/schemas/EmailTrigger",
-                "manual": "#/components/schemas/ManualTrigger",
-                "restart": "#/components/schemas/RestartTrigger",
-                "schedule": "#/components/schemas/ScheduleTrigger",
-                "webhook": "#/components/schemas/WebhookTrigger"
-              }
-            }
+            "$ref": "#/components/schemas/TriggerInfo"
           },
           "lifecycle": {
             "oneOf": [
@@ -20854,7 +20626,8 @@
           "timing",
           "total_tests",
           "trigger",
-          "workflow"
+          "workflow_id",
+          "workflow_version_id"
         ],
         "title": "WorkflowTestRun",
         "description": "A batch execution of a workflow's tests, with overall `lifecycle`, `timing`, and pass/fail `counts`."
