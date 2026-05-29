@@ -1,0 +1,162 @@
+---
+title: "Discard Draft"
+openapi: "POST /v1/workflows/{workflow_id}/discard-draft"
+---
+
+Discard all unpublished draft changes and restore the workflow to its last published version. The blocks and edges are recreated from the published snapshot, so the draft you see in the editor matches what new runs execute.
+
+This is the inverse of [Publish Workflow](/api-reference/workflows/publish): publish promotes the draft to a new version; discard throws the draft away and rolls back to the current published version. The workflow must already be published — there is no published state to restore to otherwise.
+
+<RequestExample>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+workflow = client.workflows.discard_draft("wf_abc123xyz")
+
+print(workflow.published.version_id)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const workflow = await client.workflows.discard_draft("wf_abc123xyz");
+
+console.log(workflow.published.versionId);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	workflow, err := client.Workflows.DiscardDraft(ctx, "wf_abc123xyz")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if workflow.Published != nil {
+		fmt.Println(workflow.Published.VersionID)
+	}
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+workflow = client.workflows.discard_draft(workflow_id: 'wf_abc123xyz')
+
+puts workflow.published.version_id
+```
+
+```rust Rust
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let workflow = client.workflows().discard_draft("wf_abc123xyz").await?;
+
+    if let Some(published) = &workflow.published {
+        println!("{}", published.version_id.as_deref().unwrap_or(""));
+    }
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflows()->discardDraft(
+    workflowId: 'wf_abc123xyz',
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var result = await client.Workflows.DiscardDraftAsync("wf_abc123xyz");
+Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.workflows().discardDraft("wf_abc123xyz");
+    System.out.println(result);
+  }
+}
+```
+
+```curl cURL
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123xyz/discard-draft' \
+  -H 'Api-Key: <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "wf_abc123xyz",
+  "name": "Invoice Processing",
+  "description": "Extract invoice fields and route for review",
+  "published": {
+    "version_id": "ver_8zJfV7T9qK2mP4xN6bR1cD3eF5gH7iJ9",
+    "published_at": "2026-05-01T14:30:00Z"
+  },
+  "created_at": "2026-04-30T17:00:00Z",
+  "updated_at": "2026-05-01T14:30:00Z"
+}
+```
+
+```json 400
+{
+  "detail": "Cannot discard draft: workflow has no published version to restore."
+}
+```
+
+```json 404
+{
+  "detail": "Workflow not found"
+}
+```
+
+</ResponseExample>
