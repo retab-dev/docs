@@ -5,7 +5,7 @@ description: Review, correct, and decide on gated workflow block outputs
 
 ## Overview
 
-When a workflow reaches a block with `config.review` and the predicate fires, the run pauses and creates a review. Address the review by its opaque `id`, such as `rev_...`; workflow context like `workflow_run_id`, `block_id`, `step_id`, and `iteration_key` is metadata for filtering and grounding.
+When a workflow reaches a block with `config.review` and the predicate fires, the run pauses and creates a review. Address the review by its opaque `id`, such as `rev_...`; workflow context like `run_id`, `block_id`, `step_id`, and `iteration_key` is metadata for filtering and grounding.
 
 Reviews hold gate metadata and the terminal decision. Review versions hold immutable output snapshots and are managed separately through `reviews.versions.*`.
 
@@ -14,7 +14,7 @@ Reviews hold gate metadata and the terminal decision. Review versions hold immut
 | Field | What it holds |
 | --- | --- |
 | `id` | Opaque review id. |
-| `workflow_run_id` | Run that is paused for review. |
+| `run_id` | Run that is paused for review. |
 | `block_id` | Workflow block that produced the reviewed output. |
 | `step_id` | Exact execution step under review. |
 | `decision` | Terminal verdict, or `null` while awaiting review. |
@@ -46,7 +46,7 @@ queue = client.workflows.reviews.list(
 )
 
 for item in queue.data:
-    print(item.id, item.workflow_run_id, item.block_id)
+    print(item.id, item.run_id, item.block_id)
 ```
 
 ### 2. Inspect the output
@@ -57,11 +57,11 @@ review = client.workflows.reviews.get(item.id)
 versions = client.workflows.reviews.versions.list(review_id=review.id)
 seed_version = next(v for v in versions.data if v.parent_id is None)
 
-print(review.workflow_run_id, review.step_id)
+print(review.run_id, review.step_id)
 print(seed_version.snapshot)
 ```
 
-Use `workflow_run_id` and `step_id` to inspect the source step and document before deciding.
+Use `run_id` and `step_id` to inspect the source step and document before deciding.
 
 ### 3. Correct if needed
 
