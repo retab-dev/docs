@@ -12,8 +12,8 @@ Pagination uses `before` / `after` cursors:
 
 Filter tips:
 
-- `status` is single-valued; `statuses` accepts a comma-separated string or a list (e.g. `"completed,error"`).
-- Same pattern for `trigger_type` (single) vs. `trigger_types` (multiple).
+- `status` filters to a single run status (e.g. `"completed"`).
+- `trigger_type` filters to a single trigger type (e.g. `"api"`).
 - `from_date` / `to_date` accept either `YYYY-MM-DD` strings or Python `date` objects (the SDK serializes them).
 - `fields` lets you slim the response down to just the keys you need (e.g. `"id,lifecycle,timing"`).
 
@@ -33,10 +33,10 @@ runs = client.workflows.runs.list(
     sort_by="created_at",
 )
 
-# Failed and pending runs in the last 7 days
+# Failed runs in the last 7 days
 recent_failures = client.workflows.runs.list(
     workflow_id="wf_abc123xyz",
-    statuses=["error", "pending"],
+    status="error",
     from_date=date(2026, 4, 24),
     to_date=date(2026, 5, 1),
     limit=50,
@@ -70,7 +70,7 @@ const runs = await client.workflows.runs.list({
 
 const recentFailures = await client.workflows.runs.list({
   workflowId: "wf_abc123xyz",
-  statuses: "error,pending",
+  status: "error",
   fromDate: "2026-04-24",
   toDate: "2026-05-01",
   limit: 50,
@@ -116,7 +116,7 @@ func main() {
 	recentFailures, err := client.Workflows.Runs.List(ctx, &retab.WorkflowRunsListParams{
 		PaginationParams: retab.PaginationParams{Limit: ptr(50)},
 		WorkflowID:       ptr("wf_abc123xyz"),
-		Statuses:         ptr("error,pending"),
+		Status:           ptr(retab.WorkflowRunsStatus("error")),
 		FromDate:         ptr("2026-04-24"),
 		ToDate:           ptr("2026-05-01"),
 	})
@@ -153,10 +153,10 @@ runs = client.workflow_runs.list(
   sort_by: 'created_at',
 )
 
-# Failed and pending runs in the last 7 days
+# Failed runs in the last 7 days
 recent_failures = client.workflow_runs.list(
   workflow_id: 'wf_abc123xyz',
-  statuses: ['error', 'pending'],
+  status: 'error',
   from_date: Date.new(2026, 4, 24),
   to_date: Date.new(2026, 5, 1),
   limit: 50,
@@ -194,7 +194,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .workflows().runs()
         .list(ListParams {
             workflow_id: Some("wf_abc123xyz".into()),
-            statuses: Some("error,pending".into()),
+            status: Some(retab::enums::WorkflowRunsStatus::Error),
             from_date: Some("2026-04-24".into()),
             to_date: Some("2026-05-01".into()),
             limit: Some(50),
@@ -247,7 +247,7 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().runs().list("wf_abc123", null, null, null, null, null, null, null, null, null, null, null, null, 10L, null, "created_at");
+    var result = client.workflows().runs().list("wf_abc123", null, null, null, null, null, null, null, null, null, null, 10L, null, "created_at");
     System.out.println(result);
   }
 }
@@ -259,9 +259,9 @@ curl -X 'GET' \
   'https://api.retab.com/v1/workflows/runs?workflow_id=wf_abc123xyz&limit=20&order=desc&sort_by=created_at' \
   -H 'Api-Key: <your-api-key>'
 
-# Multi-status filter + date range
+# Status filter + date range
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/runs?workflow_id=wf_abc123xyz&statuses=error%2Cpending&from_date=2026-04-24&to_date=2026-05-01&limit=50' \
+  'https://api.retab.com/v1/workflows/runs?workflow_id=wf_abc123xyz&status=error&from_date=2026-04-24&to_date=2026-05-01&limit=50' \
   -H 'Api-Key: <your-api-key>'
 ```
 

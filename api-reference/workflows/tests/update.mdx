@@ -95,7 +95,7 @@ func main() {
 	if _, err := client.Workflows.Tests.Update(ctx, testID, &retab.WorkflowTestsUpdateParams{
 		Assertion: &retab.AssertionSpec{
 			Target:    retab.OutputTarget{OutputHandleID: "output-json-0", Path: ptr("vendor.name")},
-			Condition: &retab.ExistCondition{Kind: ptr("exists")},
+			Condition: retab.ConditionFromExistCondition(retab.ExistCondition{Kind: ptr("exists")}),
 		},
 	}); err != nil {
 		log.Fatal(err)
@@ -103,9 +103,9 @@ func main() {
 
 	// Re-capture inputs from a different run.
 	if _, err := client.Workflows.Tests.Update(ctx, testID, &retab.WorkflowTestsUpdateParams{
-		Source: &retab.ManualWorkflowTestSource{
+		Source: ptr(retab.WorkflowTestSourceFromManualWorkflowTestSource(retab.ManualWorkflowTestSource{
 			Type: ptr("manual"),
-		},
+		})),
 	}); err != nil {
 		log.Fatal(err)
 	}
