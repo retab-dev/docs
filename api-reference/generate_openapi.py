@@ -555,6 +555,11 @@ def _workflow_paginated_schema(
         return False
 
     schemas[schema_name] = {
+        "description": (
+            f"A page of `{item_schema_name}` resources. `data` holds the "
+            f"items and `list_metadata` carries the `before`/`after` "
+            f"cursors; pass `after` to fetch the next page."
+        ),
         "properties": {
             "data": {
                 "items": {"$ref": f"#/components/schemas/{item_schema_name}"},
