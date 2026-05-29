@@ -101,6 +101,20 @@ os.environ.setdefault(
 )
 os.environ.setdefault("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "1")
 os.environ.setdefault("DOTNET_NOLOGO", "1")
+# The Bazel `code_snippet_lint` target runs no-sandbox but with a scrubbed
+# environment (HOME is not propagated), so `go test` cannot derive
+# GOPATH/GOMODCACHE/GOCACHE and fails with "module cache not found". Mirror the
+# NUGET/DOTNET cache wiring above and point go at writable repo-local caches;
+# the single external dep (go-querystring) is fetched once and reused (the
+# target is no-sandbox, so network access is available).
+os.environ.setdefault(
+    "GOMODCACHE",
+    str(REPO_ROOT / ".cache" / "bazel-local-home" / "go" / "pkg" / "mod"),
+)
+os.environ.setdefault(
+    "GOCACHE",
+    str(REPO_ROOT / ".cache" / "bazel-local-home" / "go-build"),
+)
 NUGET_PACKAGES = Path(os.environ["NUGET_PACKAGES"])
 _RUST_SNIPPET_TARGET_DIR = os.environ.get("RETAB_RUST_SNIPPET_TARGET_DIR") or os.environ.get(
     "CARGO_TARGET_DIR"
