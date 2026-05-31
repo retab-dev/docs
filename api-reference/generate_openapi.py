@@ -5,6 +5,10 @@ import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
+import yaml
+
+
+PUBLIC_API_ROUTES_PATH = Path(__file__).resolve().parent / "public_api_routes.yaml"
 
 LEGACY_DOCUMENT_PATH_PREFIX = "/v1/documents/"
 LEGACY_REVIEW_DECISION_PATH_PREFIX = (
@@ -18,15 +22,6 @@ DIAGNOSTIC_PATH_SUFFIXES: tuple[str, ...] = (
     "/stress-test",
     "/benchmark",
 )
-PUBLIC_OPENAPI_EXCLUDED_ROUTES: set[tuple[str, str]] = {
-    ("get", "/v1/auth/status"),
-    ("get", "/v1/environments"),
-    ("post", "/v1/environments"),
-    ("get", "/v1/environments/{environment_id}"),
-    ("post", "/v1/files/analyze"),
-    ("post", "/v1/workflows/{workflow_id}/diagnose-graph"),
-}
-
 LEGACY_EDIT_PATHS: set[str] = {
     "/v1/edit/agent/fill",
     "/v1/edit/agent/edits",
@@ -201,25 +196,80 @@ def _collect_api_reference_openapi_routes(
     return routes
 
 
-def _strip_routes_not_in_api_reference_markdown(
-    spec: dict[str, object],
-    docs_json_path: Path,
-    docs_root: Path,
-) -> None:
-    """Keep only operations documented by api-reference markdown in docs.json.
+def _parse_route_entry(entry: object, source: Path) -> tuple[str, str]:
+    """Parse a ``"METHOD /v1/path"`` manifest entry into ``(method, path)``."""
+    if not isinstance(entry, str):
+        raise ValueError(f"{source} route entry is not a string: {entry!r}")
+    parts = entry.split()
+    if len(parts) != 2:
+        raise ValueError(
+            f'{source} route entry must be "METHOD /path", got {entry!r}'
+        )
+    method, path = parts[0].lower(), _normalize_openapi_path(parts[1])
+    if method not in OPENAPI_HTTP_METHODS:
+        raise ValueError(f"{source} has unsupported route method {method!r}")
+    if not path.startswith("/"):
+        raise ValueError(f"{source} route path must be absolute: {path!r}")
+    return method, path
 
-    The docs navigation is the source of truth for the public API reference:
-    first list all `api-reference/...` markdown pages from docs.json, then read
-    each page's `openapi: "METHOD /v1/path"` field and filter the generated
-    spec to those exact method/path pairs.
+
+def _load_public_route_manifest(
+    manifest_path: Path,
+) -> dict[str, set[tuple[str, str]]]:
+    """Load the authoritative public-route allow-list from YAML.
+
+    Returns the two declared route sets, ``sdk_routes`` (published to the
+    generated spec/SDKs) and ``documentation_only_routes`` (documented for
+    humans but deliberately not part of the SDK surface).
     """
-    allowed_routes = _collect_api_reference_openapi_routes(
-        _list_api_reference_markdown_files(docs_json_path, docs_root)
-    )
-    allowed_routes -= PUBLIC_OPENAPI_EXCLUDED_ROUTES
+    manifest = yaml.safe_load(manifest_path.read_text())
+    if not isinstance(manifest, dict):
+        raise ValueError(f"{manifest_path} must be a YAML mapping")
+
+    sections: dict[str, set[tuple[str, str]]] = {}
+    for key in ("sdk_routes", "documentation_only_routes"):
+        entries = manifest.get(key) or []
+        if not isinstance(entries, list):
+            raise ValueError(f"{manifest_path}:{key} must be a list of routes")
+        routes: set[tuple[str, str]] = set()
+        for entry in entries:
+            route = _parse_route_entry(entry, manifest_path)
+            if route in routes:
+                raise ValueError(
+                    f"{manifest_path}:{key} has duplicate route {entry!r}"
+                )
+            routes.add(route)
+        sections[key] = routes
+
+    overlap = sections["sdk_routes"] & sections["documentation_only_routes"]
+    if overlap:
+        raise ValueError(
+            f"{manifest_path} lists routes in both sections: {sorted(overlap)}"
+        )
+    return sections
+
+
+def _load_public_sdk_routes(manifest_path: Path) -> set[tuple[str, str]]:
+    """Return the published SDK route allow-list from the manifest."""
+    return _load_public_route_manifest(manifest_path)["sdk_routes"]
+
+
+def _strip_routes_not_in_public_manifest(
+    spec: dict[str, object],
+    manifest_path: Path,
+) -> None:
+    """Keep only operations listed under ``sdk_routes`` in the manifest.
+
+    ``public_api_routes.yaml`` is the single source of truth for the public
+    API surface: every method/path pair not declared there is stripped from the
+    generated spec (and therefore from the SDKs/CLI). The docs navigation is
+    kept consistent with the manifest by a separate test, not at generation
+    time.
+    """
+    allowed_routes = _load_public_sdk_routes(manifest_path)
     if not allowed_routes:
         raise RuntimeError(
-            f"No API reference OpenAPI routes found from docs navigation: {docs_json_path}"
+            f"No public SDK routes declared in manifest: {manifest_path}"
         )
 
     paths = spec.get("paths")
@@ -776,12 +826,7 @@ def generate_openapi(output_path: Path | None = None) -> None:
         ):
             spec["paths"].pop(path, None)
 
-    docs_root = repo_root / "open-source" / "docs"
-    _strip_routes_not_in_api_reference_markdown(
-        spec,
-        docs_json_path=docs_root / "docs.json",
-        docs_root=docs_root,
-    )
+    _strip_routes_not_in_public_manifest(spec, PUBLIC_API_ROUTES_PATH)
 
     # Strip legacy URLs from any enum lists (e.g. Jobs endpoint enum)
     _strip_legacy_from_enums(spec)
