@@ -2310,6 +2310,18 @@
               "type": "string",
               "title": "Parse Id"
             }
+          },
+          {
+            "name": "include_output",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "When false, returns a cheap status-only projection (no output), served from cache for in-flight background runs.",
+              "default": true,
+              "title": "Include Output"
+            },
+            "description": "When false, returns a cheap status-only projection (no output), served from cache for in-flight background runs."
           }
         ],
         "responses": {
@@ -2367,6 +2379,59 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/parses/{parse_id}/cancel": {
+      "post": {
+        "tags": [
+          "Parses"
+        ],
+        "summary": "Cancel Parse",
+        "operationId": "cancel_parse",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "parse_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Parse Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Parse"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -11218,6 +11283,12 @@
             "title": "Bust Cache",
             "description": "If true, skip the LLM cache and force a fresh completion",
             "default": false
+          },
+          "background": {
+            "type": "boolean",
+            "title": "Background",
+            "description": "If true, run asynchronously: returns immediately with status 'queued' and an empty output. Poll GET /v1/<primitive>/{id} until status is terminal. Mutually exclusive with stream.",
+            "default": false
           }
         },
         "type": "object",
@@ -15396,6 +15467,31 @@
             "$ref": "#/components/schemas/ParseOutput",
             "description": "The parsed document content"
           },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "queued",
+              "in_progress",
+              "completed",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "description": "Lifecycle status. The synchronous path returns 'completed'. Background runs progress pending -> queued -> in_progress -> completed | failed | cancelled.",
+            "default": "pending"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrimitiveError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error details when a background run fails; null otherwise. Always present so consumers can read it without an existence check."
+          },
           "usage": {
             "anyOf": [
               {
@@ -15523,6 +15619,31 @@
           "output": {
             "$ref": "#/components/schemas/ParseOutput",
             "description": "The parsed document content"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "queued",
+              "in_progress",
+              "completed",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "description": "Lifecycle status. The synchronous path returns 'completed'. Background runs progress pending -> queued -> in_progress -> completed | failed | cancelled.",
+            "default": "pending"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrimitiveError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error details when a background run fails; null otherwise. Always present so consumers can read it without an existence check."
           },
           "usage": {
             "anyOf": [
