@@ -716,11 +716,6 @@ def _normalize_public_list_response_docs(spec: dict[str, object]) -> None:
         if _workflow_paginated_schema(schemas, schema_name, item_schema_name):
             _set_get_response_schema(paths, path, schema_name)
 
-    _rename_schema(spec, "JobListResponse", "JobList")
-    job_list_schema = schemas.get("JobList")
-    if isinstance(job_list_schema, dict):
-        job_list_schema["description"] = "List response for GET /v1/jobs."
-
 
 def _normalize_workflow_read_docs(spec: dict[str, object]) -> None:
     """Apply public workflow read-model documentation overlays."""

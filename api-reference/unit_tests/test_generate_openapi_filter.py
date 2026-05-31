@@ -662,7 +662,6 @@ def test_generated_list_responses_use_public_schema_names() -> None:
         "/v1/edits/templates": ("EditTemplateList", "EditTemplate"),
         "/v1/extractions": ("ExtractionList", "Extraction"),
         "/v1/files": ("FileList", "File"),
-        "/v1/jobs": ("JobList", "JobListItem"),
         "/v1/parses": ("ParseList", "Parse"),
         "/v1/partitions": ("PartitionList", "Partition"),
         "/v1/splits": ("SplitList", "Split"),
@@ -705,7 +704,14 @@ def test_generated_list_responses_use_public_schema_names() -> None:
 
     assert "PaginatedList" not in schemas
     assert not any(name.startswith("PaginatedList_") for name in schemas)
-    assert "JobListResponse" not in schemas
+
+
+def test_generated_openapi_excludes_jobs_routes() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+
+    assert [
+        path for path in generated_openapi["paths"] if path.startswith("/v1/jobs")
+    ] == []
 
 
 def test_generated_review_version_docs_use_public_version_id_and_actor() -> None:
