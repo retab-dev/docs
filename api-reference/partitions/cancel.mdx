@@ -1,0 +1,136 @@
+---
+title: "Cancel Partition"
+openapi: "POST /v1/partitions/{partition_id}/cancel"
+---
+
+Cancel an in-flight background `Partition` run (one created with `background: true`). Cancellation is idempotent: a run that has already reached a terminal state (`completed`, `failed`, or `cancelled`) is returned unchanged rather than erroring.
+
+<RequestExample>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+partition = client.partitions.create_partition_cancel("prtn_01G34H8J2K")
+print(partition.status)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const partition = await client.partitions.create_partition_cancel("prtn_01G34H8J2K");
+console.log(partition.status);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	partition, err := client.Partitions.CreateCancel(context.Background(), "prtn_01G34H8J2K")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(partition.Status)
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var partition = client.partitions().createCancel("prtn_01G34H8J2K");
+    System.out.println(partition.getStatus());
+  }
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+partition = client.partitions.create_partition_cancel(partition_id: 'prtn_01G34H8J2K')
+puts partition.status
+```
+
+```rust Rust
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let partition = client.partitions().create_partition_cancel("prtn_01G34H8J2K").await?;
+    println!("{:?}", partition.status);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$partition = $client->partitions()->createPartitionCancel('prtn_01G34H8J2K');
+echo $partition->status?->value . PHP_EOL;
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var partition = await client.Partitions.CreateCancelAsync("prtn_01G34H8J2K");
+Console.WriteLine(partition.Status);
+```
+
+```curl cURL
+curl -X POST \
+  'https://api.retab.com/v1/partitions/prtn_01G34H8J2K/cancel' \
+  -H "Api-Key: $RETAB_API_KEY"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "prtn_01G34H8J2K",
+  "status": "cancelled",
+  "error": null
+}
+```
+
+```json 404
+{
+  "detail": "partition 'prtn_01G34H8J2K' not found"
+}
+```
+
+</ResponseExample>

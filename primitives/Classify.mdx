@@ -486,8 +486,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let classification = client.classifications().create(params).await?;
 
-    println!("Document classified as: {}", classification.output.category);
-    println!("Reasoning: {}", classification.output.reasoning);
+    println!("Document classified as: {}", classification.output.as_ref().unwrap().category);
+    println!("Reasoning: {}", classification.output.as_ref().unwrap().reasoning);
 
     Ok(())
 }
@@ -500,7 +500,7 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.classifications().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null);
+    var result = client.classifications().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null);
     System.out.println(result);
   }
 }
@@ -822,15 +822,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let classification = client.classifications().create(params).await?;
 
-        match classification.output.category.as_str() {
+        match classification.output.as_ref().unwrap().category.as_str() {
             "invoice" => process_invoice(attachment),
             "quote" => queue_for_review(attachment),
             "marketing" => archive_document(attachment),
             _ => {}
         }
 
-        println!("{}: {}", attachment.name, classification.output.category);
-        let reasoning = &classification.output.reasoning;
+        println!("{}: {}", attachment.name, classification.output.as_ref().unwrap().category);
+        let reasoning = &classification.output.as_ref().unwrap().reasoning;
         let preview = &reasoning[..reasoning.len().min(100)];
         println!("  Reason: {preview}...");
     }
@@ -845,7 +845,7 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.classifications().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null);
+    var result = client.classifications().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null);
     System.out.println(result);
   }
 }

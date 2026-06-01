@@ -1,0 +1,145 @@
+# Authoritative declaration of the public API surface.
+#
+# This file is the single source of truth for which routes are public. It
+# replaces the old "docs.json navigation minus a PUBLIC_OPENAPI_EXCLUDED_ROUTES
+# deny-list" arrangement with an explicit allow-list (whitelist).
+#
+# How it is used:
+#   * generate_openapi.py filters the live FastAPI spec down to exactly the
+#     entries under `sdk_routes`. Anything not listed here is stripped from
+#     openapi.json and therefore never reaches the generated SDKs/CLI.
+#   * unit_tests/test_generate_openapi_filter.py asserts the docs stay in sync:
+#     every documented api-reference page (the `openapi:` frontmatter routes
+#     reachable from docs.json navigation) must be classified here as either an
+#     `sdk_routes` entry or a `documentation_only_routes` entry, and vice versa.
+#
+# Each entry is a single "METHOD /v1/path" string. Paths use the OpenAPI
+# templated form (e.g. `{classification_id}`) and must match the FastAPI route.
+#
+# To add a public route: add it under `sdk_routes`, document it with an
+# api-reference page wired into docs.json, then regenerate openapi.json and the
+# SDKs. To document a route for humans without shipping an SDK method for it,
+# add it under `documentation_only_routes` instead.
+
+# Routes published to openapi.json and the generated SDKs/CLI.
+sdk_routes:
+  # classifications
+  - GET /v1/classifications
+  - POST /v1/classifications
+  - GET /v1/classifications/{classification_id}
+  - DELETE /v1/classifications/{classification_id}
+  - POST /v1/classifications/{classification_id}/cancel
+  # edits
+  - GET /v1/edits
+  - POST /v1/edits
+  - GET /v1/edits/templates
+  - POST /v1/edits/templates
+  - GET /v1/edits/templates/{template_id}
+  - DELETE /v1/edits/templates/{template_id}
+  - PATCH /v1/edits/templates/{template_id}
+  - GET /v1/edits/{edit_id}
+  - DELETE /v1/edits/{edit_id}
+  - POST /v1/edits/{edit_id}/cancel
+  # extractions
+  - GET /v1/extractions
+  - POST /v1/extractions
+  - GET /v1/extractions/{extraction_id}
+  - DELETE /v1/extractions/{extraction_id}
+  - POST /v1/extractions/{extraction_id}/cancel
+  - GET /v1/extractions/{extraction_id}/sources
+  # files
+  - GET /v1/files
+  - POST /v1/files/upload
+  - POST /v1/files/upload/{file_id}/complete
+  - GET /v1/files/{file_id}
+  - GET /v1/files/{file_id}/download-link
+  # parses
+  - GET /v1/parses
+  - POST /v1/parses
+  - GET /v1/parses/{parse_id}
+  - DELETE /v1/parses/{parse_id}
+  - POST /v1/parses/{parse_id}/cancel
+  # partitions
+  - GET /v1/partitions
+  - POST /v1/partitions
+  - GET /v1/partitions/{partition_id}
+  - DELETE /v1/partitions/{partition_id}
+  - POST /v1/partitions/{partition_id}/cancel
+  # schemas
+  - POST /v1/schemas/generate
+  # splits
+  - GET /v1/splits
+  - POST /v1/splits
+  - GET /v1/splits/{split_id}
+  - DELETE /v1/splits/{split_id}
+  - POST /v1/splits/{split_id}/cancel
+  # workflows
+  - GET /v1/workflows
+  - POST /v1/workflows
+  - GET /v1/workflows/artifacts
+  - GET /v1/workflows/artifacts/{artifact_id}
+  - GET /v1/workflows/blocks
+  - POST /v1/workflows/blocks
+  - GET /v1/workflows/blocks/executions
+  - POST /v1/workflows/blocks/executions
+  - GET /v1/workflows/blocks/{block_id}
+  - DELETE /v1/workflows/blocks/{block_id}
+  - PATCH /v1/workflows/blocks/{block_id}
+  - GET /v1/workflows/edges
+  - POST /v1/workflows/edges
+  - GET /v1/workflows/edges/{edge_id}
+  - DELETE /v1/workflows/edges/{edge_id}
+  - GET /v1/workflows/experiments
+  - POST /v1/workflows/experiments
+  - GET /v1/workflows/experiments/metrics
+  - GET /v1/workflows/experiments/results
+  - GET /v1/workflows/experiments/results/{result_id}
+  - GET /v1/workflows/experiments/runs
+  - POST /v1/workflows/experiments/runs
+  - GET /v1/workflows/experiments/runs/{run_id}
+  - POST /v1/workflows/experiments/runs/{run_id}/cancel
+  - GET /v1/workflows/experiments/{experiment_id}
+  - DELETE /v1/workflows/experiments/{experiment_id}
+  - PATCH /v1/workflows/experiments/{experiment_id}
+  - GET /v1/workflows/reviews
+  - GET /v1/workflows/reviews/versions
+  - POST /v1/workflows/reviews/versions
+  - GET /v1/workflows/reviews/versions/{version_id}
+  - GET /v1/workflows/reviews/{review_id}
+  - POST /v1/workflows/reviews/{review_id}/approve
+  - POST /v1/workflows/reviews/{review_id}/reject
+  - GET /v1/workflows/runs
+  - POST /v1/workflows/runs
+  - POST /v1/workflows/runs/export
+  - GET /v1/workflows/runs/{run_id}
+  - DELETE /v1/workflows/runs/{run_id}
+  - POST /v1/workflows/runs/{run_id}/cancel
+  - POST /v1/workflows/spec/apply
+  - POST /v1/workflows/spec/plan
+  - POST /v1/workflows/spec/validate
+  - GET /v1/workflows/spec/{workflow_id}
+  - GET /v1/workflows/steps
+  - GET /v1/workflows/steps/{step_id}
+  - GET /v1/workflows/tests
+  - POST /v1/workflows/tests
+  - GET /v1/workflows/tests/results
+  - GET /v1/workflows/tests/results/{result_id}
+  - GET /v1/workflows/tests/runs
+  - POST /v1/workflows/tests/runs
+  - GET /v1/workflows/tests/runs/{run_id}
+  - POST /v1/workflows/tests/runs/{run_id}/cancel
+  - GET /v1/workflows/tests/{test_id}
+  - DELETE /v1/workflows/tests/{test_id}
+  - PATCH /v1/workflows/tests/{test_id}
+  - GET /v1/workflows/{workflow_id}
+  - DELETE /v1/workflows/{workflow_id}
+  - PATCH /v1/workflows/{workflow_id}
+  - POST /v1/workflows/{workflow_id}/discard-draft
+  - POST /v1/workflows/{workflow_id}/publish
+
+# Routes documented in the api-reference for humans but deliberately excluded
+# from the generated SDK surface. These have an api-reference page (so they
+# appear in the hosted docs) but produce no SDK/CLI operation.
+documentation_only_routes:
+  # Graph diagnostics helper used by the dashboard, not a public SDK operation.
+  - POST /v1/workflows/{workflow_id}/diagnose-graph
