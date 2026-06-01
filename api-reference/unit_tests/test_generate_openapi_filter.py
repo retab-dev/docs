@@ -121,8 +121,28 @@ def test_collects_openapi_fields_from_referenced_markdown(tmp_path: Path) -> Non
     }
 
 
-def test_strips_routes_not_listed_in_docs_markdown(tmp_path: Path) -> None:
-    docs_json_path, docs_root = _write_docs_tree(tmp_path)
+def _write_route_manifest(
+    tmp_path: Path,
+    sdk_routes: list[str],
+    documentation_only_routes: list[str] | None = None,
+) -> Path:
+    manifest: dict[str, list[str]] = {"sdk_routes": sdk_routes}
+    if documentation_only_routes is not None:
+        manifest["documentation_only_routes"] = documentation_only_routes
+    manifest_path = tmp_path / "public_api_routes.yaml"
+    # JSON is a YAML subset, so this is a valid manifest yaml.safe_load reads.
+    manifest_path.write_text(json.dumps(manifest))
+    return manifest_path
+
+
+def test_strips_routes_not_listed_in_public_manifest(tmp_path: Path) -> None:
+    manifest_path = _write_route_manifest(
+        tmp_path,
+        sdk_routes=[
+            "GET /v1/widgets",
+            "POST /v1/widgets/{widget_id}/nested",
+        ],
+    )
     spec = {
         "paths": {
             "/v1/widgets": {
@@ -138,11 +158,7 @@ def test_strips_routes_not_listed_in_docs_markdown(tmp_path: Path) -> None:
         }
     }
 
-    generate_openapi._strip_routes_not_in_api_reference_markdown(
-        spec,
-        docs_json_path,
-        docs_root,
-    )
+    generate_openapi._strip_routes_not_in_public_manifest(spec, manifest_path)
 
     assert spec["paths"] == {
         "/v1/widgets": {"get": {"operationId": "list_widgets"}},
@@ -152,111 +168,81 @@ def test_strips_routes_not_listed_in_docs_markdown(tmp_path: Path) -> None:
     }
 
 
-def test_strips_public_openapi_excluded_routes_even_when_documented(
-    tmp_path: Path,
-) -> None:
-    docs_root = tmp_path / "docs"
-    workflows_reference = docs_root / "api-reference" / "workflows"
-    widgets_reference = docs_root / "api-reference" / "widgets"
-    workflows_reference.mkdir(parents=True)
-    widgets_reference.mkdir(parents=True)
-    (docs_root / "docs.json").write_text(
-        json.dumps(
-            {
-                "navigation": [
-                    "api-reference/widgets/list",
-                    "api-reference/workflows/diagnose-graph",
-                ]
-            }
-        )
-    )
-    (widgets_reference / "list.mdx").write_text(
-        '---\nopenapi: "GET /v1/widgets"\n---\n'
-    )
-    (workflows_reference / "diagnose-graph.mdx").write_text(
-        '---\nopenapi: "POST /v1/workflows/{workflow_id}/diagnose-graph"\n---\n'
+def test_documentation_only_routes_are_not_published(tmp_path: Path) -> None:
+    # Routes documented for humans but listed under documentation_only_routes
+    # (never under sdk_routes) must be stripped from the published spec.
+    manifest_path = _write_route_manifest(
+        tmp_path,
+        sdk_routes=["GET /v1/widgets"],
+        documentation_only_routes=[
+            "POST /v1/files/analyze",
+            "POST /v1/workflows/{workflow_id}/diagnose-graph",
+        ],
     )
     spec = {
         "paths": {
             "/v1/widgets": {"get": {"operationId": "list_widgets"}},
+            "/v1/files/analyze": {"post": {"operationId": "analyze_files"}},
             "/v1/workflows/{workflow_id}/diagnose-graph": {
                 "post": {"operationId": "diagnose_workflow_graph"}
             },
         }
     }
 
-    generate_openapi._strip_routes_not_in_api_reference_markdown(
-        spec,
-        docs_root / "docs.json",
-        docs_root,
-    )
+    generate_openapi._strip_routes_not_in_public_manifest(spec, manifest_path)
 
     assert spec["paths"] == {
         "/v1/widgets": {"get": {"operationId": "list_widgets"}}
     }
 
 
-def test_strips_cli_only_auth_and_environment_routes_even_when_documented(
-    tmp_path: Path,
-) -> None:
-    docs_root = tmp_path / "docs"
-    auth_reference = docs_root / "api-reference" / "auth"
-    environments_reference = docs_root / "api-reference" / "environments"
-    widgets_reference = docs_root / "api-reference" / "widgets"
-    auth_reference.mkdir(parents=True)
-    environments_reference.mkdir(parents=True)
-    widgets_reference.mkdir(parents=True)
-    (docs_root / "docs.json").write_text(
-        json.dumps(
-            {
-                "navigation": [
-                    "api-reference/widgets/list",
-                    "api-reference/auth/status",
-                    "api-reference/environments/list",
-                    "api-reference/environments/create",
-                    "api-reference/environments/get",
-                ]
-            }
-        )
-    )
-    (widgets_reference / "list.mdx").write_text(
-        '---\nopenapi: "GET /v1/widgets"\n---\n'
-    )
-    (auth_reference / "status.mdx").write_text(
-        '---\nopenapi: "GET /v1/auth/status"\n---\n'
-    )
-    (environments_reference / "list.mdx").write_text(
-        '---\nopenapi: "GET /v1/environments"\n---\n'
-    )
-    (environments_reference / "create.mdx").write_text(
-        '---\nopenapi: "POST /v1/environments"\n---\n'
-    )
-    (environments_reference / "get.mdx").write_text(
-        '---\nopenapi: "GET /v1/environments/{environment_id}"\n---\n'
-    )
-    spec = {
-        "paths": {
-            "/v1/widgets": {"get": {"operationId": "list_widgets"}},
-            "/v1/auth/status": {"get": {"operationId": "get_auth_status"}},
-            "/v1/environments": {
-                "get": {"operationId": "list_organization_environments"},
-                "post": {"operationId": "create_organization_environment"},
-            },
-            "/v1/environments/{environment_id}": {
-                "get": {"operationId": "get_organization_environment"}
-            },
-        }
-    }
-
-    generate_openapi._strip_routes_not_in_api_reference_markdown(
-        spec,
-        docs_root / "docs.json",
-        docs_root,
+def test_load_public_route_manifest_parses_both_sections(tmp_path: Path) -> None:
+    manifest_path = _write_route_manifest(
+        tmp_path,
+        sdk_routes=["GET /v1/widgets", "POST /v1/widgets"],
+        documentation_only_routes=["POST /v1/files/analyze"],
     )
 
-    assert spec["paths"] == {
-        "/v1/widgets": {"get": {"operationId": "list_widgets"}}
+    sections = generate_openapi._load_public_route_manifest(manifest_path)
+
+    assert sections["sdk_routes"] == {
+        ("get", "/v1/widgets"),
+        ("post", "/v1/widgets"),
     }
+    assert sections["documentation_only_routes"] == {
+        ("post", "/v1/files/analyze"),
+    }
+
+
+def test_load_public_route_manifest_rejects_overlap(tmp_path: Path) -> None:
+    manifest_path = _write_route_manifest(
+        tmp_path,
+        sdk_routes=["GET /v1/widgets"],
+        documentation_only_routes=["GET /v1/widgets"],
+    )
+
+    with pytest.raises(ValueError, match="both sections"):
+        generate_openapi._load_public_route_manifest(manifest_path)
+
+
+def test_load_public_route_manifest_rejects_duplicate(tmp_path: Path) -> None:
+    manifest_path = _write_route_manifest(
+        tmp_path,
+        sdk_routes=["GET /v1/widgets", "GET /v1/widgets"],
+    )
+
+    with pytest.raises(ValueError, match="duplicate route"):
+        generate_openapi._load_public_route_manifest(manifest_path)
+
+
+def test_load_public_route_manifest_rejects_unknown_method(tmp_path: Path) -> None:
+    manifest_path = _write_route_manifest(
+        tmp_path,
+        sdk_routes=["FETCH /v1/widgets"],
+    )
+
+    with pytest.raises(ValueError, match="unsupported route method"):
+        generate_openapi._load_public_route_manifest(manifest_path)
 
 
 def test_missing_docs_json_api_reference_page_fails(tmp_path: Path) -> None:
@@ -602,13 +588,11 @@ def test_api_reference_openapi_frontmatter_omits_query_strings() -> None:
     assert offenders == {}, json.dumps(offenders, indent=2, sort_keys=True)
 
 
-def test_generated_openapi_routes_match_docs_json_markdown_openapi_fields() -> None:
-    markdown_files = generate_openapi._list_api_reference_markdown_files(
-        REAL_DOCS_JSON,
-        DOCS_ROOT,
+def test_generated_openapi_routes_match_public_route_manifest() -> None:
+    manifest = generate_openapi._load_public_route_manifest(
+        generate_openapi.PUBLIC_API_ROUTES_PATH
     )
-    docs_routes = generate_openapi._collect_api_reference_openapi_routes(markdown_files)
-    docs_routes -= generate_openapi.PUBLIC_OPENAPI_EXCLUDED_ROUTES
+    sdk_routes = manifest["sdk_routes"]
     generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
 
     spec_routes: set[tuple[str, str]] = set()
@@ -617,7 +601,31 @@ def test_generated_openapi_routes_match_docs_json_markdown_openapi_fields() -> N
             if method in generate_openapi.OPENAPI_HTTP_METHODS:
                 spec_routes.add((method, path))
 
-    assert spec_routes == docs_routes
+    # The published spec is exactly the manifest's sdk_routes allow-list.
+    assert spec_routes == sdk_routes
+
+
+def test_docs_navigation_matches_public_route_manifest() -> None:
+    """docs.json is tested against the manifest, not the other way around.
+
+    Every api-reference page documented in docs.json must be classified by the
+    manifest as either a published SDK route or an explicit documentation-only
+    route, and every manifest route must be documented. In set terms:
+    ``docs_routes == sdk_routes | documentation_only_routes``.
+    """
+    manifest = generate_openapi._load_public_route_manifest(
+        generate_openapi.PUBLIC_API_ROUTES_PATH
+    )
+    docs_routes = generate_openapi._collect_api_reference_openapi_routes(
+        generate_openapi._list_api_reference_markdown_files(
+            REAL_DOCS_JSON,
+            DOCS_ROOT,
+        )
+    )
+
+    assert docs_routes == (
+        manifest["sdk_routes"] | manifest["documentation_only_routes"]
+    )
 
 
 def test_generated_workflow_lists_use_typed_paginated_schemas() -> None:
@@ -654,7 +662,6 @@ def test_generated_list_responses_use_public_schema_names() -> None:
         "/v1/edits/templates": ("EditTemplateList", "EditTemplate"),
         "/v1/extractions": ("ExtractionList", "Extraction"),
         "/v1/files": ("FileList", "File"),
-        "/v1/jobs": ("JobList", "JobListItem"),
         "/v1/parses": ("ParseList", "Parse"),
         "/v1/partitions": ("PartitionList", "Partition"),
         "/v1/splits": ("SplitList", "Split"),
@@ -697,7 +704,14 @@ def test_generated_list_responses_use_public_schema_names() -> None:
 
     assert "PaginatedList" not in schemas
     assert not any(name.startswith("PaginatedList_") for name in schemas)
-    assert "JobListResponse" not in schemas
+
+
+def test_generated_openapi_excludes_jobs_routes() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+
+    assert [
+        path for path in generated_openapi["paths"] if path.startswith("/v1/jobs")
+    ] == []
 
 
 def test_generated_review_version_docs_use_public_version_id_and_actor() -> None:

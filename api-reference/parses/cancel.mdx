@@ -1,0 +1,136 @@
+---
+title: "Cancel Parse"
+openapi: "POST /v1/parses/{parse_id}/cancel"
+---
+
+Cancel an in-flight background `Parse` run (one created with `background: true`). Cancellation is idempotent: a run that has already reached a terminal state (`completed`, `failed`, or `cancelled`) is returned unchanged rather than erroring.
+
+<RequestExample>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+parse = client.parses.cancel("prs_01G34H8J2K")
+print(parse.status)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const parse = await client.parses.cancel("prs_01G34H8J2K");
+console.log(parse.status);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	parse, err := client.Parses.Cancel(context.Background(), "prs_01G34H8J2K")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(parse.Status)
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var parse = client.parses().cancel("prs_01G34H8J2K");
+    System.out.println(parse.getStatus());
+  }
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+parse = client.parses.cancel(parse_id: 'prs_01G34H8J2K')
+puts parse.status
+```
+
+```rust Rust
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let parse = client.parses().cancel("prs_01G34H8J2K").await?;
+    println!("{:?}", parse.status);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$parse = $client->parses()->cancel('prs_01G34H8J2K');
+echo $parse->status?->value . PHP_EOL;
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var parse = await client.Parses.CancelAsync("prs_01G34H8J2K");
+Console.WriteLine(parse.Status);
+```
+
+```curl cURL
+curl -X POST \
+  'https://api.retab.com/v1/parses/prs_01G34H8J2K/cancel' \
+  -H "Api-Key: $RETAB_API_KEY"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "prs_01G34H8J2K",
+  "status": "cancelled",
+  "error": null
+}
+```
+
+```json 404
+{
+  "detail": "parse 'prs_01G34H8J2K' not found"
+}
+```
+
+</ResponseExample>
