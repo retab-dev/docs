@@ -645,7 +645,17 @@ PUBLIC_PAGINATED_LIST_ROUTES: tuple[tuple[str, str, str], ...] = (
     ("/v1/workflows", "WorkflowList", "Workflow"),
     ("/v1/workflows/artifacts", "WorkflowArtifactList", "WorkflowArtifact"),
     ("/v1/workflows/blocks", "WorkflowBlockList", "WorkflowBlock"),
+    (
+        "/v1/workflows/blocks/versions",
+        "WorkflowBlockVersionList",
+        "WorkflowBlockVersion",
+    ),
     ("/v1/workflows/edges", "WorkflowEdgeList", "WorkflowEdge"),
+    (
+        "/v1/workflows/edges/versions",
+        "WorkflowEdgeVersionList",
+        "WorkflowEdgeVersion",
+    ),
     ("/v1/workflows/experiments", "WorkflowExperimentList", "WorkflowExperiment"),
     (
         "/v1/workflows/experiments/results",
@@ -666,6 +676,11 @@ PUBLIC_PAGINATED_LIST_ROUTES: tuple[tuple[str, str, str], ...] = (
         "/v1/workflows/reviews/versions",
         "WorkflowReviewVersionList",
         "WorkflowReviewVersion",
+    ),
+    (
+        "/v1/workflows/versions",
+        "WorkflowGraphVersionList",
+        "WorkflowGraphVersion",
     ),
     ("/v1/workflows/runs", "WorkflowRunList", "WorkflowRun"),
     ("/v1/workflows/blocks/executions", "BlockExecutionList", "BlockExecution"),
