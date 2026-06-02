@@ -1855,6 +1855,182 @@
         }
       }
     },
+    "/v1/files/blueprints": {
+      "post": {
+        "tags": [
+          "Files",
+          "File Blueprints"
+        ],
+        "summary": "Create File Blueprint",
+        "description": "Create a Document Blueprint for an uploaded file.",
+        "operationId": "create_file_blueprint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFileBlueprintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileBlueprint"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ]
+      }
+    },
+    "/v1/files/blueprints/{blueprint_id}": {
+      "get": {
+        "tags": [
+          "Files",
+          "File Blueprints"
+        ],
+        "summary": "Get File Blueprint",
+        "description": "Retrieve a file blueprint by id.",
+        "operationId": "get_file_blueprint",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "blueprint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Blueprint Id"
+            }
+          },
+          {
+            "name": "include_output",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "When false, returns a cheap status-only projection (no output), served from cache for in-flight background runs.",
+              "default": true,
+              "title": "Include Output"
+            },
+            "description": "When false, returns a cheap status-only projection (no output), served from cache for in-flight background runs."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileBlueprint"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/blueprints/{blueprint_id}/cancel": {
+      "post": {
+        "tags": [
+          "Files",
+          "File Blueprints"
+        ],
+        "summary": "Cancel File Blueprint",
+        "description": "Cancel an in-flight background file blueprint.",
+        "operationId": "cancel_file_blueprint",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "blueprint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Blueprint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileBlueprint"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/files/upload": {
       "post": {
         "tags": [
@@ -2889,20 +3065,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PartialSchema"
+                  "$ref": "#/components/schemas/main_server__services__v1__schemas__models__SchemaGeneration"
                 }
               }
             }
-          },
-          "202": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Job"
-                }
-              }
-            },
-            "description": "Accepted"
           },
           "422": {
             "description": "Validation Error",
@@ -11189,6 +11355,55 @@
         "title": "CreateExtractionRequest",
         "description": "Request to run a structured extraction on a single document.\n\nExtends the base extraction request with the `document` to process (either\ninline content or a reference to a previously uploaded file) and a `stream`\nflag that controls whether results are returned incrementally."
       },
+      "CreateFileBlueprintRequest": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "title": "File Id",
+            "description": "File id to analyze."
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "instant",
+                  "reasoning"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode",
+            "description": "Optional analysis depth override. Omit to let Retab choose."
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent",
+            "description": "Optional user intent used to guide the blueprint analysis."
+          },
+          "background": {
+            "type": "boolean",
+            "title": "Background",
+            "description": "If true, run asynchronously: returns immediately with status 'queued' and an empty output. Poll GET /v1/<primitive>/{id} until status is terminal. Mutually exclusive with stream.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_id"
+        ],
+        "title": "CreateFileBlueprintRequest",
+        "description": "Public create-file-blueprint request body."
+      },
       "CreateFileUploadResponse": {
         "properties": {
           "fileId": {
@@ -14565,6 +14780,128 @@
         "title": "File",
         "description": "An uploaded file: its `id`, `filename`, MIME type, page count, and timestamps."
       },
+      "FileBlueprint": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "file.blueprint",
+            "title": "Object",
+            "default": "file.blueprint"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier of the file blueprint."
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileRef",
+            "description": "Information about the analyzed file."
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "instant",
+                  "reasoning"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode",
+            "description": "Analysis depth used or requested."
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent",
+            "description": "User intent supplied with the blueprint request."
+          },
+          "output": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Output",
+            "description": "The generated Document Blueprint payload.",
+            "default": {}
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "queued",
+              "in_progress",
+              "completed",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "description": "Lifecycle status. The synchronous path returns 'completed'. Background runs progress pending -> queued -> in_progress -> completed | failed | cancelled.",
+            "default": "pending"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrimitiveError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error details when a background run fails; null otherwise. Always present so consumers can read it without an existence check."
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "id"
+        ],
+        "title": "FileBlueprint",
+        "description": "A document blueprint generated from an uploaded file."
+      },
       "FileHandleInput": {
         "properties": {
           "type": {
@@ -14819,14 +15156,10 @@
             "description": "Resolution of the image sent to the LLM",
             "default": 192
           },
-          "stream": {
-            "type": "boolean",
-            "title": "Stream",
-            "default": false
-          },
           "background": {
             "type": "boolean",
             "title": "Background",
+            "description": "If true, run asynchronously: returns immediately with status 'queued'. Poll GET /v1/schemas/generate/{schema_generation_id} until status is terminal.",
             "default": false
           }
         },
@@ -14850,284 +15183,6 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
-      },
-      "Job": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Job id, generated by the server."
-          },
-          "object": {
-            "type": "string",
-            "const": "job",
-            "title": "Object",
-            "default": "job"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "validating",
-              "queued",
-              "in_progress",
-              "completed",
-              "failed",
-              "cancelled",
-              "expired"
-            ],
-            "title": "Status",
-            "default": "validating"
-          },
-          "endpoint": {
-            "type": "string",
-            "enum": [
-              "/v1/extractions",
-              "/v1/parses",
-              "/v1/splits",
-              "/v1/partitions",
-              "/v1/classifications",
-              "/v1/schemas/generate",
-              "/v1/files/analyze",
-              "/v1/files/blueprints",
-              "/v1/edits",
-              "/v1/edits/templates/generate",
-              "/v1/evals/extract/process",
-              "/v1/evals/extract/extract"
-            ],
-            "title": "Endpoint"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/JobError"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "warnings": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/JobWarning"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Warnings"
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
-          },
-          "started_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Started At"
-          },
-          "completed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Completed At"
-          },
-          "expires_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expires At"
-          },
-          "metadata": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "string"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metadata"
-          },
-          "cancelled": {
-            "type": "boolean",
-            "title": "Cancelled",
-            "default": false
-          },
-          "attempt_count": {
-            "type": "integer",
-            "title": "Attempt Count",
-            "default": 0
-          },
-          "last_attempt_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Attempt At"
-          },
-          "last_failure_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Failure Code"
-          },
-          "request": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Request"
-          },
-          "response": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/JobResult"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Response"
-          }
-        },
-        "type": "object",
-        "required": [
-          "endpoint",
-          "id"
-        ],
-        "title": "Job",
-        "description": "Core Job object following OpenAI-style specification.\n\nRepresents a single asynchronous job that can be polled for status\nand result retrieval."
-      },
-      "JobError": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "title": "Code"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Details"
-          }
-        },
-        "type": "object",
-        "required": [
-          "code",
-          "message"
-        ],
-        "title": "JobError",
-        "description": "Error details when job fails."
-      },
-      "JobResult": {
-        "properties": {
-          "status_code": {
-            "type": "integer",
-            "title": "Status Code"
-          },
-          "body": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Body"
-          }
-        },
-        "type": "object",
-        "required": [
-          "body",
-          "status_code"
-        ],
-        "title": "JobResult",
-        "description": "Public response returned when job completes successfully."
-      },
-      "JobWarning": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "title": "Code"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Details"
-          }
-        },
-        "type": "object",
-        "required": [
-          "code",
-          "message"
-        ],
-        "title": "JobWarning",
-        "description": "Warning details when non-fatal issues occur."
       },
       "JsonHandleInput": {
         "properties": {
@@ -15975,41 +16030,6 @@
         ],
         "title": "ParseWorkflowArtifact",
         "description": "A parse produced by a workflow run, tagged with its artifact `operation` and creation time."
-      },
-      "PartialSchema": {
-        "properties": {
-          "object": {
-            "type": "string",
-            "title": "Object",
-            "default": "schema"
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
-          },
-          "json_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Json Schema",
-            "default": {}
-          },
-          "strict": {
-            "type": "boolean",
-            "title": "Strict",
-            "default": true
-          }
-        },
-        "type": "object",
-        "title": "PartialSchema",
-        "description": "A generated JSON schema with its `json_schema` body and `strict` flag."
       },
       "Partition": {
         "properties": {
@@ -20726,6 +20746,71 @@
         ],
         "title": "WorkflowTestRunWorkflowScope",
         "description": "Run every saved test in the workflow."
+      },
+      "main_server__services__v1__schemas__models__SchemaGeneration": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "title": "Object",
+            "default": "schema"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Schema",
+            "default": {}
+          },
+          "strict": {
+            "type": "boolean",
+            "title": "Strict",
+            "default": true
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier of the schema generation."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "queued",
+              "in_progress",
+              "completed",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "description": "Lifecycle status. The synchronous path returns 'completed'. Background runs progress pending -> queued -> in_progress -> completed | failed | cancelled.",
+            "default": "pending"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrimitiveError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error details when a background run fails; null otherwise. Always present so consumers can read it without an existence check."
+          }
+        },
+        "type": "object",
+        "title": "SchemaGeneration",
+        "description": "Public generated schema response."
       }
     },
     "securitySchemes": {
