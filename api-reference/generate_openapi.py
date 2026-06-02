@@ -38,6 +38,9 @@ LEGACY_EDIT_PATHS: set[str] = {
     "/v1/edit/templates/edits/count",
     "/v1/edit/templates/edits/{edit_id}",
 }
+LEGACY_ENUM_ENDPOINTS: set[str] = {
+    "/v1/files/analyze",
+}
 
 LEGACY_SCHEMA_NAMES: set[str] = {
     "ClassifyRequest",
@@ -443,6 +446,7 @@ def _strip_legacy_from_enums(node: object) -> None:
                         and (
                             item.startswith(LEGACY_DOCUMENT_PATH_PREFIX)
                             or item in LEGACY_EDIT_PATHS
+                            or item in LEGACY_ENUM_ENDPOINTS
                         )
                     )
                 ]

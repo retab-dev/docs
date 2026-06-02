@@ -714,6 +714,14 @@ def test_generated_openapi_excludes_jobs_routes() -> None:
     ] == []
 
 
+def test_generated_openapi_strips_legacy_files_analyze_endpoint_enum() -> None:
+    generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
+    serialized = json.dumps(generated_openapi)
+
+    assert "/v1/files/analyze" not in serialized
+    assert "/v1/files/blueprints" in generated_openapi["paths"]
+
+
 def test_generated_review_version_docs_use_public_version_id_and_actor() -> None:
     generated_openapi = json.loads(GENERATED_OPENAPI.read_text())
 
