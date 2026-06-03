@@ -1,0 +1,342 @@
+---
+title: Workflow Tables
+description: Create CSV-backed lookup tables and mount them into workflows.
+---
+
+Workflow tables are shared CSV-backed resources that workflows can query,
+validate, download, and mount into Function blocks. They are useful for stable
+reference data such as carrier codes, port mappings, product catalogs, tax
+rules, country lists, customer aliases, and reconciliation thresholds.
+
+Tables are scoped to the current environment. Any workflow in that environment
+can use the table by ID.
+
+## What tables are for
+
+Use workflow tables when your workflow needs external reference data that should
+be maintained separately from the workflow graph:
+
+- map extracted names to internal IDs
+- fuzzy-match vendors, ports, products, or locations
+- validate extracted values against an approved list
+- enrich extraction results with metadata from a catalog
+- keep business rules editable without changing Function block code
+
+<Note>
+  Tables are designed for lookup and reference data. They are not a row-by-row
+  transactional database. To change table contents, upload a replacement CSV.
+</Note>
+
+## Data model
+
+A table stores:
+
+| Field | Description |
+| --- | --- |
+| `id` | Stable table ID, for example `tbl_ports`. |
+| `name` | Human-readable table name. |
+| `filename` | Original CSV filename. |
+| `row_count` | Number of parsed data rows. |
+| `columns` | Inferred or overridden column schemas. |
+| `sample_rows` | First parsed rows for quick previews. |
+| `source_file_id` | Stored original CSV file. |
+| `snapshot_file_id` | Internal parquet snapshot used for fast reads. |
+| `metadata` | User-defined table metadata. |
+| `created_at`, `updated_at` | Table timestamps. |
+
+Each column has:
+
+| Field | Description |
+| --- | --- |
+| `name` | Header name from the CSV. |
+| `json_schema` | Inferred or overridden JSON schema. |
+| `sample_values` | Up to three sample non-empty values. |
+| `required` | Whether the column is considered required. |
+| `unique` | Whether the column is considered unique. |
+
+## CSV upload rules
+
+Create and replace operations accept a `multipart/form-data` upload with a
+`file` field containing CSV bytes.
+
+Current upload guardrails:
+
+| Rule | Behavior |
+| --- | --- |
+| Maximum file size | `20 MiB` hard cap. Larger files return `413`. |
+| Empty files | Rejected. |
+| Encodings | `utf-8-sig`, `utf-8`, and `latin-1` are supported. |
+| Delimiters | Comma, semicolon, tab, and pipe are detected automatically. |
+| Header row | Required. At least one named header must exist. |
+| Header names | Trimmed before storage. Duplicate names are rejected. |
+| Unnamed columns | Allowed only if every cell in that unnamed column is empty. |
+| Blank cells | Trimmed and stored as `null`. |
+
+Trailing empty spreadsheet columns are ignored, but unnamed columns with data are
+rejected because there is no stable column name to expose downstream.
+
+## Schema inference
+
+When you upload a CSV without schema overrides, Retab infers each column's JSON
+schema from its non-empty values.
+
+Inference recognizes:
+
+| CSV values | Inferred schema |
+| --- | --- |
+| `true`, `false` | `{ "type": "boolean" }` |
+| `2026-01-01` | `{ "type": "string", "format": "date" }` |
+| `2026-01-01T12:30:00Z` | `{ "type": "string", "format": "date-time" }` |
+| `12:30` or `12:30:00` | `{ "type": "string", "format": "time" }` |
+| Integers | `{ "type": "integer" }` |
+| Decimal or scientific numbers | `{ "type": "number" }` |
+| JSON objects | `{ "type": "object" }` |
+| JSON arrays | `{ "type": "array" }` |
+| Mixed or unrecognized values | `{ "type": "string" }` |
+
+If a column contains blanks, the inferred type becomes nullable, for example:
+
+```json
+{ "type": ["number", "null"] }
+```
+
+Long integer-looking values and values with leading zeroes are treated as
+identifier-like strings instead of numbers. This prevents IDs such as
+`0012345` or 18-digit account numbers from losing precision or formatting.
+
+## Schema overrides
+
+You can override inferred column types during create or replace by sending a
+`column_schema_overrides` multipart form field. The value is a JSON array of
+objects with `name` and `json_schema`.
+
+```bash
+curl https://api.retab.com/v1/tables \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -F "name=Ports" \
+  -F "file=@./ports.csv" \
+  -F 'column_schema_overrides=[
+    {"name":"unlocode","json_schema":{"type":"string"}},
+    {"name":"latitude","json_schema":{"type":["number","null"]}},
+    {"name":"opened_on","json_schema":{"type":"string","format":"date"}}
+  ]'
+```
+
+Override rules:
+
+- supported base types are `string`, `integer`, `number`, `boolean`, `object`,
+  and `array`
+- nullable schemas must be a single base type plus `null`
+- supported string formats are `date`, `date-time`, and `time`
+- override names must match CSV headers after trimming
+- duplicate overrides are rejected
+
+Rows are coerced to the selected schema. If a value cannot be coerced, the
+upload fails with a validation error for that column.
+
+## Create a table
+
+Use `POST /v1/tables` to create a table from a CSV:
+
+```bash
+curl https://api.retab.com/v1/tables \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -F "name=Carriers" \
+  -F "file=@./carriers.csv"
+```
+
+See [Create Table](/api-reference/tables/create) for the full API reference.
+
+## Replace table contents
+
+Tables use a CSV-as-database write model. There are no row, column, or cell
+mutation endpoints. To change data, replace the full CSV:
+
+```bash
+curl -X PUT https://api.retab.com/v1/tables/tbl_carriers \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -F "file=@./carriers.csv"
+```
+
+Replacing a table updates the original CSV, regenerates the internal snapshot,
+updates the schema and sample rows, and preserves the table ID.
+
+See [Replace Table CSV](/api-reference/tables/replace) for the full API
+reference.
+
+## Update metadata
+
+Use `PATCH /v1/tables/{table_id}` to rename a table or update metadata. This
+does not change rows, columns, cells, or the backing CSV.
+
+```bash
+curl -X PATCH https://api.retab.com/v1/tables/tbl_carriers \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Carrier Codes","metadata":{"owner":"ops"}}'
+```
+
+See [Update Table](/api-reference/tables/update) for the full API reference.
+
+## Query rows
+
+Use `POST /v1/tables/{table_id}/query` to read rows. Queries are read-only.
+
+```bash
+curl -X POST https://api.retab.com/v1/tables/tbl_carriers/query \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filters": [
+      {"column":"country","operator":"eq","value":"FR"}
+    ],
+    "sort": [
+      {"column":"name","direction":"asc"}
+    ],
+    "select": ["name", "code", "country"],
+    "offset": 0,
+    "limit": 100
+  }'
+```
+
+The maximum query `limit` is `500`.
+
+Supported filter operators:
+
+| Operator | Meaning |
+| --- | --- |
+| `eq`, `ne` | Equals / not equals. |
+| `gt`, `gte`, `lt`, `lte` | Numeric or ordered comparisons. |
+| `contains`, `not_contains` | Substring matching. |
+| `starts_with`, `ends_with` | Prefix or suffix matching. |
+| `in`, `not_in` | Membership checks. |
+| `between` | Range check. |
+| `is_empty`, `is_not_empty` | Empty string checks. |
+| `is_null`, `is_not_null` | Null checks. |
+
+Query requests also support:
+
+| Field | Purpose |
+| --- | --- |
+| `search` | Search text across all or selected columns. |
+| `case_sensitive` | Toggle case-sensitive filters/search. |
+| `select` | Return only selected columns. |
+| `distinct` | Return distinct values for one column. |
+| `group_by` | Group results by one or more columns. |
+| `aggregations` | Compute `count`, `count_distinct`, `min`, `max`, `sum`, or `avg`. |
+| `sample` | Return a random sample, size `1` to `500`. |
+| `tail` | Return last rows, size `1` to `500`. |
+| `count_only` | Return counts without row data. |
+| `include_explain` | Include normalized query details in the response. |
+| `viewer_mode` | Use `windowed` for dashboard-style virtual scrolling. |
+
+See [Query Table](/api-reference/tables/query) for the full API reference.
+
+## Inspect and validate
+
+Use these endpoints to inspect table shape:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /v1/tables` | List tables in the current environment. |
+| `GET /v1/tables/{table_id}` | Get metadata, schema, and sample rows. |
+| `GET /v1/tables/{table_id}/schema` | Get column schemas. |
+| `GET /v1/tables/{table_id}/profile` | Get row counts, null counts, distinct counts, ranges, and samples. |
+| `GET /v1/tables/{table_id}/download` | Download the backing CSV. |
+| `POST /v1/tables/{table_id}/validate` | Validate required columns, column types, non-empty rules, and uniqueness. |
+
+Example validation request:
+
+```bash
+curl -X POST https://api.retab.com/v1/tables/tbl_ports/validate \
+  -H "Api-Key: $RETAB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "required_columns": ["unlocode", "name"],
+    "columns": {
+      "unlocode": {"type":"string", "is_not_empty": true},
+      "opened_on": {"type":"string", "format":"date"}
+    },
+    "unique": [["unlocode"]]
+  }'
+```
+
+The response contains diagnostics and `has_errors`.
+
+## Mount tables in Function blocks
+
+Function blocks can mount workflow tables as CSV files in the sandbox. Use this
+when code needs to join, search, or fuzzy-match against table data.
+
+```json
+{
+  "language": "Python",
+  "mounts": {
+    "tables": [
+      {
+        "table_id": "tbl_ports",
+        "path": "/tmp/data/ports.csv",
+        "format": "csv"
+      }
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "unlocode": { "type": ["string", "null"] }
+    }
+  }
+}
+```
+
+Mount paths must be absolute and should live under `/tmp` or `/data`. The
+`format` field defaults to `csv`; `csv` is the supported table mount format for
+Function blocks.
+
+<Note>
+  Legacy `table_refs` configs with `mount_path` are still normalized, but new
+  workflow configs should use `mounts.tables` with `path`.
+</Note>
+
+## Function lookup example
+
+Once mounted, the table is just a CSV file. You can use `duckdb`, `pandas`, the
+standard `csv` module, or string matching libraries such as `rapidfuzz`.
+
+```python
+from models import Input, Output
+import duckdb
+
+def transform(input_data: Input) -> Output:
+    db = duckdb.connect(":memory:")
+    db.execute("CREATE TABLE carriers AS SELECT * FROM read_csv('/tmp/data/carriers.csv')")
+    row = db.execute(
+        """
+        SELECT code
+        FROM carriers
+        ORDER BY jaro_winkler_similarity(name, ?) DESC
+        LIMIT 1
+        """,
+        [input_data.carrier_name],
+    ).fetchone()
+    return Output(carrier_code=row[0] if row else None)
+```
+
+## Best practices
+
+- Keep tables focused on stable reference data.
+- Use clear, unique header names.
+- Prefer string schemas for IDs, postal codes, account numbers, and other
+  identifier-like values.
+- Validate required columns before relying on a table in production workflows.
+- Replace the whole CSV when changing contents, and keep source CSVs in version
+  control when business-critical.
+- Keep mounted paths predictable, for example `/tmp/data/carriers.csv`.
+- Use `profile` to check null counts and distinct counts after upload.
+
+## Related pages
+
+- [Functions](/workflows/Functions)
+- [Create Table](/api-reference/tables/create)
+- [Query Table](/api-reference/tables/query)
+- [Validate Table](/api-reference/tables/validate)
