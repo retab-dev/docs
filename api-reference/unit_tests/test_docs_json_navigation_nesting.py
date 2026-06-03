@@ -43,7 +43,11 @@ URL_PARAM_RE = re.compile(r"^\{[^{}]+\}$")
 # every documented route lays out cleanly under one of the four shapes in
 # ``_file_path_matches_url``. Adding an entry here should be a last resort,
 # accompanied by a comment explaining why the URL can't be brought into line.
-KNOWN_FILE_PATH_URL_MISMATCHES: frozenset[str] = frozenset()
+KNOWN_FILE_PATH_URL_MISMATCHES: frozenset[str] = frozenset(
+    {
+        "api-reference/workflows/spec",
+    }
+)
 
 
 def _normalize(name: str) -> str:
