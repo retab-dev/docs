@@ -1,0 +1,142 @@
+---
+title: "Validate Block Config"
+openapi: "POST /v1/workflows/blocks/{block_id}/validate-config"
+---
+
+Dry-run an assembled block config against the target block without mutating the
+workflow draft.
+
+Use this before pushing a locally edited block config bundle when you want the
+backend to apply the same validation policy used by block updates.
+
+<RequestExample>
+
+```python Python
+import os
+import requests
+
+response = requests.post(
+    "https://api.retab.com/v1/workflows/blocks/extract-1/validate-config",
+    headers={"Api-Key": os.environ["RETAB_API_KEY"]},
+    json={
+        "config": {
+            "model": "retab-small",
+            "json_schema": {"type": "object", "properties": {}},
+        },
+        "config_mode": "replace",
+    },
+)
+response.raise_for_status()
+print(response.json()["config_hash"])
+```
+
+```typescript TypeScript
+const response = await fetch(
+  "https://api.retab.com/v1/workflows/blocks/extract-1/validate-config",
+  {
+    method: "POST",
+    headers: {
+      "Api-Key": process.env.RETAB_API_KEY!,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      config: {
+        model: "retab-small",
+        json_schema: { type: "object", properties: {} },
+      },
+      config_mode: "replace",
+    }),
+  },
+);
+
+if (!response.ok) throw new Error(await response.text());
+console.log((await response.json()).config_hash);
+```
+
+```go Go
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	body, _ := json.Marshal(map[string]any{
+		"config": map[string]any{
+			"model":       "retab-small",
+			"json_schema": map[string]any{"type": "object", "properties": map[string]any{}},
+		},
+		"config_mode": "replace",
+	})
+
+	req, _ := http.NewRequest(
+		"POST",
+		"https://api.retab.com/v1/workflows/blocks/extract-1/validate-config",
+		bytes.NewReader(body),
+	)
+	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+
+	var payload map[string]any
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(payload["config_hash"])
+}
+```
+
+```java Java
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+var body = """
+  {
+    "config": {
+      "model": "retab-small",
+      "json_schema": {"type": "object", "properties": {}}
+    },
+    "config_mode": "replace"
+  }
+  """;
+
+var request = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.retab.com/v1/workflows/blocks/extract-1/validate-config"))
+    .header("Api-Key", System.getenv("RETAB_API_KEY"))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(body))
+    .build();
+
+var response = HttpClient.newHttpClient()
+    .send(request, HttpResponse.BodyHandlers.ofString());
+
+System.out.println(response.body());
+```
+
+```bash cURL
+curl --request POST \
+  'https://api.retab.com/v1/workflows/blocks/extract-1/validate-config' \
+  --header "Api-Key: $RETAB_API_KEY" \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "config": {
+      "model": "retab-small",
+      "json_schema": {"type": "object", "properties": {}}
+    },
+    "config_mode": "replace"
+  }'
+```
+
+</RequestExample>
