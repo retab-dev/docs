@@ -97,6 +97,12 @@ rm -rf ~/.retab              # removes the binary and config dir
 
 The CLI supports two auth modes. **Pick OAuth on your laptop, API keys in CI.**
 
+<Tip>
+  API keys are environment-scoped. Use `rt_test_...` for development and CI,
+  `rt_live_...` for production. See [Environments overview](/environments/overview)
+  and [CLI environments](/environments/cli) for the full model.
+</Tip>
+
 ### Browser OAuth (default on workstations)
 
 ```sh
@@ -111,18 +117,21 @@ The redirect lands on `http://127.0.0.1:<random-port>/callback` — nothing leav
 
 Any of these three paths works, in order of precedence:
 
-1. **Flag**: `--api-key sk_live_…` on a single command.
-2. **Env**: `RETAB_API_KEY=sk_live_…` exported in the shell or CI runner.
-3. **Stored**: `retab auth login --api-key sk_live_…` to persist to `~/.retab/config.json`.
+1. **Flag**: `--api-key rt_live_…` on a single command.
+2. **Env**: `RETAB_API_KEY=rt_live_…` exported in the shell or CI runner.
+3. **Stored**: `retab auth login --api-key rt_live_…` to persist to `~/.retab/config.json`.
 
 In a CI job you typically want option 2:
 
 ```sh
-export RETAB_API_KEY=sk_live_…
+export RETAB_API_KEY=rt_live_…
 retab extractions list
 ```
 
-Get a key from the [dashboard settings](https://retab.com/dashboard/settings).
+Get a key from the [dashboard settings](https://retab.com/dashboard/settings). Use a
+`rt_test_...` key for local development and CI, and a `rt_live_...` key for
+production. Legacy `sk_retab_...` keys still work and resolve to production.
+See [API keys](/environments/api-keys) for the full reference.
 
 ### Precedence
 
@@ -148,7 +157,7 @@ Prints (as JSON) which source was used, the redacted credential, the API base UR
 
 ```sh
 retab auth login                          # OAuth — overwrites any stored API key
-retab auth login --api-key sk_live_…      # API key — overwrites any stored OAuth tokens
+retab auth login --api-key rt_live_…      # API key — overwrites any stored OAuth tokens
 retab auth login --browser=false          # interactive prompt for an API key, no browser
 retab auth logout                         # deletes ~/.retab/config.json entirely
 ```
