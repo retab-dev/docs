@@ -1,0 +1,137 @@
+---
+title: Migration and FAQ
+description: Move existing Retab integrations onto the environments model
+---
+
+The environments feature ships with full backward compatibility. Existing
+API keys, workflows, files, runs, jobs, webhooks, and secrets continue to
+work exactly as before — they are all scoped to **production**.
+
+This page covers what changes, what does not, and the common pitfalls
+when adopting environments.
+
+## What changes for existing customers
+
+- Every organization now has two environments: `production` (default)
+  and `test`.
+- All existing resources are scoped to `production`. No data was moved
+  and no resources were duplicated.
+- All existing `sk_retab_...` keys continue to authenticate and resolve
+  to `production`. They appear in the dashboard under **Live keys** with
+  a *legacy* label.
+- New keys created from the dashboard use the `rt_test_` and `rt_live_`
+  prefixes.
+- `GET /v1/auth/status` now returns the resolved `environment_slug` and
+  `environment_id` for the current credential.
+- API responses include an `environment` field where it is useful for
+  disambiguation.
+
+Nothing in your existing integration must change immediately.
+
+## Starting to use the test environment
+
+1. Open the dashboard and go to **Developer settings**.
+2. In the **Test keys** section, click **Create test key** and copy the
+   `rt_test_...` value.
+3. Use it from the SDK or CLI:
+
+   ```bash
+   export RETAB_API_KEY=rt_test_...
+   ```
+
+   or store it as a CLI profile:
+
+   ```bash
+   retab env add test --api-key rt_test_...
+   ```
+4. The first call you make against the test environment creates whatever
+   resources you need — workflows, files, runs — inside the test
+   namespace. Nothing crosses into production.
+
+When you are ready to ship the workflow to production, promote it from
+the dashboard or via the API — see [Promotion](/environments/promotion).
+
+## Common pitfalls
+
+### `RETAB_BASE_URL` is not how you switch environments
+
+`RETAB_BASE_URL` selects the Retab deployment URL (production API, a
+local dev server, a private region). It does not select your customer
+environment. Setting `RETAB_BASE_URL=https://api.retab.com` and expecting
+"production" is wrong — set `RETAB_API_KEY=rt_live_...` instead.
+
+### `--live` with an explicit key is rejected
+
+The CLI fails when a flag and an explicit key disagree on the target
+environment:
+
+```text
+error: --live cannot be combined with RETAB_API_KEY; the key already
+selects the environment
+```
+
+If `RETAB_API_KEY` is already exported, drop `--live` — the env var key
+already picks the environment. If you want to override, pass
+`--api-key rt_live_...` explicitly instead.
+
+### Cross-environment lookups return `404`
+
+Trying to read or mutate a `test` resource id with a live key (or vice
+versa) returns `404 Not Found`, not `403`. This is intentional — it
+prevents leaking the existence of resources across environments.
+
+### Webhook secrets are not shared
+
+Rotating the test signing secret does not affect production. If you have
+production webhook receivers, make sure they verify against the
+production signing secret, not the test one. See
+[Webhooks and secrets](/environments/webhooks-and-secrets).
+
+### Production runs cannot use test secrets
+
+A workflow promoted from test will fail to publish or run in production
+if it references secrets that do not exist in production. The promotion
+response surfaces `missing_secrets` so you can fix this before publishing.
+
+## FAQ
+
+### Do I need to migrate my legacy `sk_retab_` keys?
+
+No. They continue to work as production keys indefinitely. Mint a fresh
+`rt_live_...` key the next time you would have rotated anyway so the
+prefix matches the environment.
+
+### Can I create resources in production from a test key?
+
+No. A test key returns `404` for any production resource id and cannot
+create production resources. Use a live key.
+
+### Is test usage billed?
+
+Test usage is recorded separately and excluded from your production
+analytics. Billing treatment of test usage is a product decision per
+plan — by default it is recorded but not billed.
+
+### Can dashboard users access both environments?
+
+Yes. Organization membership is global. The dashboard exposes an
+environment switcher in the chrome that toggles which namespace you are
+viewing. Per-environment permissions may ship later, but for MVP all
+organization members can switch environments.
+
+### Can I create custom environments beyond `test` and `production`?
+
+The server today has two environment types (`test` and `production`).
+The CLI lets you create custom **profile slugs** (`staging`, `qa`,
+`demo`, ...) that each point at a `rt_test_` or `rt_live_` key, so you
+can organize multiple credentials under names that match your
+infrastructure — but the underlying server-side environment is always
+`test` or `production`.
+
+### Where do I look first when something is in the wrong environment?
+
+Run `retab auth status` (or hit `GET /v1/auth/status` from your client).
+It returns the server's resolved environment for the current credential —
+not the key prefix, not a flag, not a header. If `resolved_environment`
+disagrees with where the data was supposed to land, the credential is
+the source of the mismatch.
