@@ -569,6 +569,10 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
         "JobResponse": "JobResult",
         "MIMEData-Output": "MIMEData",
         "BlockExecutionObject": "BlockExecution",
+        "Body_create_table_v1_tables_post": "CreateWorkflowTableUploadRequest",
+        "Body_replace_table_v1_tables__table_id__put": (
+            "ReplaceWorkflowTableUploadRequest"
+        ),
         "PatchBlockRequest": "UpdateWorkflowBlockRequest",
         "PatchWorkflowRequest": "UpdateWorkflowRequest",
         "PartitionRequest": "CreatePartitionRequest",
@@ -762,6 +766,29 @@ def _normalize_workflow_read_docs(spec: dict[str, object]) -> None:
         _rename_schema(spec, old_schema_name, new_schema_name)
 
 
+def _normalize_public_file_download_docs(spec: dict[str, object]) -> None:
+    """Document CSV downloads as binary file responses, not JSON bodies."""
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return
+
+    path_item = paths.get("/v1/tables/{table_id}/download")
+    if not isinstance(path_item, dict):
+        return
+
+    operation = path_item.get("get")
+    if not isinstance(operation, dict):
+        return
+
+    response = operation.get("responses", {}).get("200")
+    if not isinstance(response, dict):
+        return
+
+    response["content"] = {
+        "text/csv": {"schema": {"type": "string", "format": "binary"}}
+    }
+
+
 def _sort_required_arrays(node: object) -> None:
     """Sort every JSON Schema ``required`` array in place.
 
@@ -853,6 +880,7 @@ def generate_openapi(output_path: Path | None = None) -> None:
 
     _normalize_public_schema_names(spec)
     _normalize_workflow_read_docs(spec)
+    _normalize_public_file_download_docs(spec)
     _normalize_public_operation_ids(spec)
 
     # Strip unused legacy request/response schemas that only belonged to the
