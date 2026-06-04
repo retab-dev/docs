@@ -1,11 +1,11 @@
 ---
-title: "Apply Workflow Spec to Existing Workflow"
-openapi: "POST /v1/workflows/{workflow_id}/spec/apply"
+title: "Plan Workflow Spec Against Existing Workflow"
+openapi: "POST /v1/workflows/{workflow_id}/spec/plan"
 ---
 
-Apply a declarative workflow YAML spec to an existing workflow draft.
+Compute the reconcile plan for a declarative workflow YAML spec against a specific existing workflow draft. This does not mutate workflow state.
 
-The `workflow_id` in the URL is the update target. If the YAML includes `metadata.id`, Retab treats it as source context and does not use it to choose a different workflow.
+The `workflow_id` in the URL is the plan target. If the YAML includes `metadata.id`, Retab treats it as source context and does not use it to choose a different workflow.
 
 <RequestExample>
 
@@ -14,13 +14,13 @@ from retab import Retab
 
 client = Retab()
 
-updated = client.workflows.spec.apply_to_workflow(
+plan = client.workflows.create_plan(
     "wf_abc123",
     yaml_definition,
 )
 
-print(updated.workflow_id)
-print(updated.summary.has_changes)
+print(plan.workflow_id)
+print(plan.rendered_plan)
 ```
 
 ```typescript TypeScript
@@ -28,13 +28,13 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const updated = await client.workflows.spec.apply_to_workflow(
+const plan = await client.workflows.create_plan(
   "wf_abc123",
   yamlDefinition,
 );
 
-console.log(updated.workflowId);
-console.log(updated.summary.hasChanges);
+console.log(plan.workflowId);
+console.log(plan.renderedPlan);
 ```
 
 ```go Go
@@ -72,15 +72,15 @@ spec:
   edges: []
 `
 
-	result, err := client.Workflows.Spec.ApplyToWorkflow(ctx, "wf_abc123", &retab.WorkflowSpecApplyToWorkflowParams{
+	plan, err := client.Workflows.CreatePlan(ctx, "wf_abc123", &retab.WorkflowsCreatePlanParams{
 		YamlDefinition: yamlDefinition,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(result.WorkflowID)
-	fmt.Println(result.Summary)
+	fmt.Println(plan.WorkflowID)
+fmt.Println(plan.RenderedPlan)
 }
 ```
 
@@ -89,18 +89,18 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-result = client.workflows.spec.apply_to_workflow(
+plan = client.workflows.create_plan(
   workflow_id: 'wf_abc123',
   yaml_definition: yaml_definition
 )
 
-puts result.workflow_id
-puts result.summary.has_changes
+puts plan.workflow_id
+puts plan.rendered_plan
 ```
 
 ```rust Rust
 use retab::models::DeclarativeWorkflowRequest;
-use retab::resources::workflow_spec::ApplyToWorkflowParams;
+use retab::resources::workflows::CreatePlanParams;
 use retab::Retab;
 
 #[tokio::main]
@@ -123,20 +123,18 @@ spec:
   edges: []
 "#;
 
-    let result = client
-        .workflows().spec()
-        .apply_to_workflow(
+    let plan = client
+        .workflows()
+        .create_plan(
             "wf_abc123",
-            ApplyToWorkflowParams::new(DeclarativeWorkflowRequest::new(
+            CreatePlanParams::new(DeclarativeWorkflowRequest::new(
                 yaml_definition,
             )),
         )
         .await?;
 
-    println!("{}", result.workflow_id);
-    if let Some(summary) = &result.summary {
-        println!("{:?}", summary.has_changes);
-    }
+    println!("{}", plan.workflow_id);
+    println!("{}", plan.rendered_plan.as_deref().unwrap_or(""));
     Ok(())
 }
 ```
@@ -166,11 +164,11 @@ spec:
   edges: []
 YAML;
 
-$result = $client->workflows()->spec()->applyToWorkflow(
+$plan = $client->workflows()->createPlan(
     'wf_abc123',
     yamlDefinition: $yamlDefinition,
 );
-print_r($result);
+print_r($plan);
 ```
 
 ```csharp C#
@@ -197,11 +195,11 @@ spec:
   edges: []
 """;
 
-var result = await client.Workflows.Spec.ApplyToWorkflowAsync(
+var plan = await client.Workflows.CreatePlanAsync(
     "wf_abc123",
-    new WorkflowSpecApplyToWorkflowOptions { YamlDefinition = yamlDefinition }
+    new WorkflowsCreatePlanOptions { YamlDefinition = yamlDefinition }
 );
-Console.WriteLine(result);
+Console.WriteLine(plan);
 ```
 
 ```java Java
@@ -211,51 +209,22 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().spec().applyToWorkflow(
+    var plan = client.workflows().createPlan(
         "wf_abc123",
         "metadata:\n  id: source_workflow\n"
     );
-    System.out.println(result);
+    System.out.println(plan);
   }
 }
 ```
 
-```curl cURL
-curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/wf_abc123/spec/apply' \
+```bash cURL
+curl -X POST 'https://api.retab.com/v1/workflows/wf_abc123/spec/plan' \
+  -H "Api-Key: $RETAB_API_KEY" \
   -H 'Content-Type: application/json' \
-  -H 'Api-Key: <your-api-key>' \
   -d '{
-    "yaml_definition": "apiVersion: workflows.retab.com/v1alpha2\nkind: Workflow\nmetadata:\n  id: source_workflow\n  name: Invoice Workflow\nspec:\n  blocks:\n    start:\n      type: start_json\n      label: Input JSON\n      config:\n        json_schema:\n          type: object\n  edges: []\n"
+    "yaml_definition": "apiVersion: workflows.retab.com/v1alpha2\nkind: Workflow\nmetadata:\n  name: Invoice Workflow\nspec:\n  blocks: {}\n  edges: []\n"
   }'
 ```
 
 </RequestExample>
-
-<ResponseExample>
-
-```json 200
-{
-  "workflow_id": "wf_abc123",
-  "created": false,
-  "block_count": 1,
-  "edge_count": 0,
-  "diagnostics": {
-    "issues": []
-  },
-  "format_version": "workflows-plan/v1",
-  "summary": {
-    "add": 0,
-    "change": 1,
-    "destroy": 0,
-    "replace": 0,
-    "noop": 0,
-    "total": 1,
-    "has_changes": true
-  },
-  "resource_changes": [],
-  "rendered_plan": "Updated workflow draft."
-}
-```
-
-</ResponseExample>

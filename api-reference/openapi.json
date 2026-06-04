@@ -10578,6 +10578,70 @@
           }
         }
       }
+    },
+    "/v1/workflows/{workflow_id}/spec/plan": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Plan Workflow Spec For Existing Workflow",
+        "description": "Preview applying a declarative YAML spec to an existing workflow draft.\n\nThe URL workflow id is the plan target. Any workflow id in the YAML is\ntreated as source context.",
+        "operationId": "plan_workflow_spec_for_existing_workflow",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclarativeWorkflowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeclarativePlanResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -20919,6 +20983,17 @@
             "type": "string",
             "format": "date-time",
             "title": "Updated At"
+          },
+          "capabilities": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowCapabilities"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Server-derived permissions for the current actor."
           }
         },
         "type": "object",
@@ -21198,16 +21273,6 @@
             "title": "Workflow Id",
             "description": "Source workflow ID"
           },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id",
-            "description": "Organization ID for data isolation"
-          },
-          "environment_id": {
-            "type": "string",
-            "title": "Environment Id",
-            "description": "Customer environment ID for data isolation"
-          },
           "workflow_version_id": {
             "type": "string",
             "title": "Workflow Version Id",
@@ -21297,20 +21362,6 @@
             ],
             "title": "Config"
           },
-          "field_ref_snapshot": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "string"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Field Ref Snapshot"
-          },
           "resolved_schemas": {
             "anyOf": [
               {
@@ -21338,15 +21389,14 @@
         "type": "object",
         "required": [
           "block_id",
-          "environment_id",
+          "created_at",
           "id",
-          "organization_id",
           "type",
           "workflow_id",
           "workflow_version_id"
         ],
         "title": "WorkflowBlockVersion",
-        "description": "Immutable block snapshot derived from a workflow version."
+        "description": "Public block version resource without tenant or storage-only fields."
       },
       "WorkflowBlockVersionDiff": {
         "properties": {
@@ -21399,6 +21449,53 @@
           "list_metadata"
         ],
         "title": "WorkflowBlockVersionList"
+      },
+      "WorkflowCapabilities": {
+        "properties": {
+          "can_view": {
+            "type": "boolean",
+            "title": "Can View",
+            "default": false
+          },
+          "can_edit": {
+            "type": "boolean",
+            "title": "Can Edit",
+            "default": false
+          },
+          "can_run": {
+            "type": "boolean",
+            "title": "Can Run",
+            "default": false
+          },
+          "can_review": {
+            "type": "boolean",
+            "title": "Can Review",
+            "default": false
+          },
+          "can_publish": {
+            "type": "boolean",
+            "title": "Can Publish",
+            "default": false
+          },
+          "can_manage_members": {
+            "type": "boolean",
+            "title": "Can Manage Members",
+            "default": false
+          },
+          "can_manage_settings": {
+            "type": "boolean",
+            "title": "Can Manage Settings",
+            "default": false
+          },
+          "can_delete": {
+            "type": "boolean",
+            "title": "Can Delete",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "WorkflowCapabilities",
+        "description": "Server-derived permissions for the current actor.\n\nThese fields are response-only. They should not be persisted on\n``StoredWorkflow`` documents."
       },
       "WorkflowConfigBlock": {
         "properties": {
@@ -21659,16 +21756,6 @@
             "title": "Workflow Id",
             "description": "Source workflow ID"
           },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id",
-            "description": "Organization ID for data isolation"
-          },
-          "environment_id": {
-            "type": "string",
-            "title": "Environment Id",
-            "description": "Customer environment ID for data isolation"
-          },
           "workflow_version_id": {
             "type": "string",
             "title": "Workflow Version Id",
@@ -21719,17 +21806,16 @@
         },
         "type": "object",
         "required": [
+          "created_at",
           "edge_id",
-          "environment_id",
           "id",
-          "organization_id",
           "source",
           "target",
           "workflow_id",
           "workflow_version_id"
         ],
         "title": "WorkflowEdgeVersion",
-        "description": "Immutable edge snapshot derived from a workflow version."
+        "description": "Public edge version resource without tenant fields."
       },
       "WorkflowEdgeVersionDiff": {
         "properties": {
@@ -22493,14 +22579,6 @@
             "type": "string",
             "title": "Workflow Id"
           },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id"
-          },
-          "environment_id": {
-            "type": "string",
-            "title": "Environment Id"
-          },
           "blocks": {
             "items": {
               "$ref": "#/components/schemas/WorkflowConfigBlock"
@@ -22542,13 +22620,11 @@
         "type": "object",
         "required": [
           "created_at",
-          "environment_id",
           "id",
-          "organization_id",
           "workflow_id"
         ],
         "title": "WorkflowGraphVersion",
-        "description": "Public workflow version resource."
+        "description": "Public workflow version resource without tenant fields."
       },
       "WorkflowGraphVersionDiff": {
         "properties": {
