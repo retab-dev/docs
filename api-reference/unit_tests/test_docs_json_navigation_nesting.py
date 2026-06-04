@@ -45,7 +45,7 @@ URL_PARAM_RE = re.compile(r"^\{[^{}]+\}$")
 # accompanied by a comment explaining why the URL can't be brought into line.
 KNOWN_FILE_PATH_URL_MISMATCHES: frozenset[str] = frozenset(
     {
-        "api-reference/workflows/spec",
+        "api-reference/workflows/spec/apply-to",
     }
 )
 

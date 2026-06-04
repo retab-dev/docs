@@ -1,0 +1,125 @@
+---
+title: "Apply Workflow Spec to Existing Workflow"
+openapi: "POST /v1/workflows/{workflow_id}/spec/apply"
+---
+
+Apply a declarative workflow YAML spec to an existing workflow draft.
+
+The `workflow_id` in the URL is the update target. If the YAML includes `metadata.id`, Retab treats it as source context and does not use it to choose a different workflow.
+
+<RequestExample>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+updated = client.workflows.spec.apply_to_workflow(
+    "wf_abc123",
+    yaml_definition,
+)
+
+print(updated.workflow_id)
+print(updated.summary.has_changes)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const updated = await client.workflows.spec.apply_to_workflow(
+  "wf_abc123",
+  yamlDefinition,
+);
+
+console.log(updated.workflowId);
+console.log(updated.summary.hasChanges);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	yamlDefinition := `apiVersion: workflows.retab.com/v1alpha2
+kind: Workflow
+metadata:
+  id: source_workflow
+  name: Invoice Workflow
+spec:
+  blocks:
+    start:
+      type: start_json
+      label: Input JSON
+      config:
+        json_schema:
+          type: object
+  edges: []
+`
+
+	result, err := client.Workflows.Spec.ApplyToWorkflow(ctx, "wf_abc123", &retab.WorkflowSpecApplyToWorkflowParams{
+		YamlDefinition: yamlDefinition,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(result.WorkflowID)
+	fmt.Println(result.Summary)
+}
+```
+
+```curl cURL
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/wf_abc123/spec/apply' \
+  -H 'Content-Type: application/json' \
+  -H 'Api-Key: <your-api-key>' \
+  -d '{
+    "yaml_definition": "apiVersion: workflows.retab.com/v1alpha2\nkind: Workflow\nmetadata:\n  id: source_workflow\n  name: Invoice Workflow\nspec:\n  blocks:\n    start:\n      type: start_json\n      label: Input JSON\n      config:\n        json_schema:\n          type: object\n  edges: []\n"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "workflow_id": "wf_abc123",
+  "created": false,
+  "block_count": 1,
+  "edge_count": 0,
+  "diagnostics": {
+    "issues": []
+  },
+  "format_version": "workflows-plan/v1",
+  "summary": {
+    "add": 0,
+    "change": 1,
+    "destroy": 0,
+    "replace": 0,
+    "noop": 0,
+    "total": 1,
+    "has_changes": true
+  },
+  "resource_changes": [],
+  "rendered_plan": "Updated workflow draft."
+}
+```
+
+</ResponseExample>
