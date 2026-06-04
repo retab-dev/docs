@@ -1056,13 +1056,25 @@ def test_workflow_spec_dotnet_examples_pass_required_yaml_definition() -> None:
     for relative_path, option_name in (
         ("api-reference/workflows/spec/validate.mdx", "WorkflowSpecValidateOptions"),
         ("api-reference/workflows/spec/plan.mdx", "WorkflowSpecPlanOptions"),
+        ("api-reference/workflows/spec/plan-to.mdx", "WorkflowsCreatePlanOptions"),
         ("api-reference/workflows/spec/apply.mdx", "WorkflowSpecApplyOptions"),
+        (
+            "api-reference/workflows/spec/apply-to.mdx",
+            "WorkflowSpecApplyToWorkflowOptions",
+        ),
     ):
         text = (lint_snippets.DOCS_ROOT / relative_path).read_text()
 
         assert f"new {option_name}())" not in text
         assert f"new {option_name} {{ YamlDefinition = yamlDefinition }}" in text
         assert "client.WorkflowSpecs." not in text
+
+
+def test_workflow_spec_export_php_example_uses_nested_workflows_service() -> None:
+    text = (lint_snippets.DOCS_ROOT / "api-reference/workflows/spec.mdx").read_text()
+
+    assert "$client->workflowSpec()->get(" not in text
+    assert "$client->workflows()->spec()->get('wf_abc123')" in text
 
 
 def test_workflow_yaml_examples_include_metadata_id() -> None:
