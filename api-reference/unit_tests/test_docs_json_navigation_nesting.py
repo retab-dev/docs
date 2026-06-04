@@ -39,13 +39,15 @@ API_REFERENCE_TAB_NAME = "API Reference"
 API_REFERENCE_ROOT_GROUP_NAME = "API Reference"
 URL_PARAM_RE = re.compile(r"^\{[^{}]+\}$")
 
-# Pages allowed to violate the file-path / URL alignment rule. Kept empty —
-# every documented route lays out cleanly under one of the four shapes in
-# ``_file_path_matches_url``. Adding an entry here should be a last resort,
-# accompanied by a comment explaining why the URL can't be brought into line.
+# Pages allowed to violate the file-path / URL alignment rule. The workflow spec
+# target-specific actions collide with the collection-level names:
+# ``/workflows/spec/plan`` and ``/workflows/{workflow_id}/spec/plan`` would both
+# naturally map to ``workflows/spec/plan``. The docs use ``plan-to`` /
+# ``apply-to`` for the target-specific variants to keep the navigation readable.
 KNOWN_FILE_PATH_URL_MISMATCHES: frozenset[str] = frozenset(
     {
         "api-reference/workflows/spec/apply-to",
+        "api-reference/workflows/spec/plan-to",
     }
 )
 
