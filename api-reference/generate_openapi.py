@@ -205,9 +205,7 @@ def _parse_route_entry(entry: object, source: Path) -> tuple[str, str]:
         raise ValueError(f"{source} route entry is not a string: {entry!r}")
     parts = entry.split()
     if len(parts) != 2:
-        raise ValueError(
-            f'{source} route entry must be "METHOD /path", got {entry!r}'
-        )
+        raise ValueError(f'{source} route entry must be "METHOD /path", got {entry!r}')
     method, path = parts[0].lower(), _normalize_openapi_path(parts[1])
     if method not in OPENAPI_HTTP_METHODS:
         raise ValueError(f"{source} has unsupported route method {method!r}")
@@ -238,9 +236,7 @@ def _load_public_route_manifest(
         for entry in entries:
             route = _parse_route_entry(entry, manifest_path)
             if route in routes:
-                raise ValueError(
-                    f"{manifest_path}:{key} has duplicate route {entry!r}"
-                )
+                raise ValueError(f"{manifest_path}:{key} has duplicate route {entry!r}")
             routes.add(route)
         sections[key] = routes
 
@@ -569,19 +565,21 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
         "JobResponse": "JobResult",
         "MIMEData-Output": "MIMEData",
         "BlockExecutionObject": "BlockExecution",
+        "Body_create_table": "CreateWorkflowTableUploadRequest",
         "Body_create_table_v1_tables_post": "CreateWorkflowTableUploadRequest",
+        "Body_table_create_v1_tables_post": "CreateWorkflowTableUploadRequest",
+        "Body_replace_table": "ReplaceWorkflowTableUploadRequest",
         "Body_replace_table_v1_tables__table_id__put": (
+            "ReplaceWorkflowTableUploadRequest"
+        ),
+        "Body_table_replace_v1_tables__table_id__put": (
             "ReplaceWorkflowTableUploadRequest"
         ),
         "PatchBlockRequest": "UpdateWorkflowBlockRequest",
         "PatchWorkflowRequest": "UpdateWorkflowRequest",
         "PartitionRequest": "CreatePartitionRequest",
-        "main_server__types__classifications__Category": (
-            "ClassificationCategory"
-        ),
-        "main_server__types__classifications__Classification": (
-            "Classification"
-        ),
+        "main_server__types__classifications__Category": ("ClassificationCategory"),
+        "main_server__types__classifications__Classification": ("Classification"),
         "main_server__types__edits__BBox": "BoundingBox",
         "main_server__types__edits__EditConfig": "EditConfig",
         "main_server__types__edits__EditRequest": "CreateEditRequest",
@@ -713,9 +711,7 @@ def _set_get_response_schema(
         return
 
     try:
-        response = get_operation["responses"]["200"]["content"][
-            "application/json"
-        ]
+        response = get_operation["responses"]["200"]["content"]["application/json"]
     except KeyError:
         return
     if isinstance(response, dict):
@@ -799,7 +795,9 @@ def _sort_required_arrays(node: object) -> None:
     """
     if isinstance(node, dict):
         required = node.get("required")
-        if isinstance(required, list) and all(isinstance(item, str) for item in required):
+        if isinstance(required, list) and all(
+            isinstance(item, str) for item in required
+        ):
             node["required"] = sorted(required)
         for value in node.values():
             _sort_required_arrays(value)
