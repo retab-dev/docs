@@ -3777,18 +3777,6 @@
         ],
         "summary": "Table.List",
         "operationId": "list_tables",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTableListResponse"
-                }
-              }
-            }
-          }
-        },
         "security": [
           {
             "HTTPBearer": []
@@ -3799,7 +3787,49 @@
           {
             "API Key": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return tables belonging to this project. Use the shared project's id to list the organization's shared tables.",
+              "title": "Project Id"
+            },
+            "description": "Only return tables belonging to this project. Use the shared project's id to list the organization's shared tables."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowTableListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       },
       "post": {
         "tags": [
@@ -3807,15 +3837,26 @@
         ],
         "summary": "Table.Create",
         "operationId": "create_table",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "Master Key": []
+          },
+          {
+            "API Key": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/CreateWorkflowTableUploadRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -3838,18 +3879,7 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          },
-          {
-            "Master Key": []
-          },
-          {
-            "API Key": []
-          }
-        ]
+        }
       }
     },
     "/v1/tables/{table_id}": {
@@ -4466,6 +4496,24 @@
               "default": "updated_at",
               "title": "Sort By"
             }
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return workflows belonging to this project. Use the shared project's id to list the organization's shared workflows.",
+              "title": "Project Id"
+            },
+            "description": "Only return workflows belonging to this project. Use the shared project's id to list the organization's shared workflows."
           }
         ],
         "responses": {
@@ -14148,6 +14196,17 @@
               }
             ],
             "title": "Column Schema Overrides"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
           }
         },
         "type": "object",
@@ -23502,6 +23561,18 @@
           "filename": {
             "type": "string",
             "title": "Filename"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id",
+            "description": "Project that owns this table. Null means the organization's shared workflows project."
           },
           "source_file_id": {
             "type": "string",
