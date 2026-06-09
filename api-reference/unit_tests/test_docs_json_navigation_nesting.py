@@ -39,15 +39,18 @@ API_REFERENCE_TAB_NAME = "API Reference"
 API_REFERENCE_ROOT_GROUP_NAME = "API Reference"
 URL_PARAM_RE = re.compile(r"^\{[^{}]+\}$")
 
-# Pages allowed to violate the file-path / URL alignment rule. The workflow spec
-# target-specific actions collide with the collection-level names:
-# ``/workflows/spec/plan`` and ``/workflows/{workflow_id}/spec/plan`` would both
-# naturally map to ``workflows/spec/plan``. The docs use ``plan-to`` /
-# ``apply-to`` for the target-specific variants to keep the navigation readable.
+# Pages allowed to violate the file-path / URL alignment rule. The
+# target-specific spec actions (``POST /v1/workflows/{workflow_id}/spec/plan``
+# and ``.../spec/apply``) are documented as top-level workflow actions —
+# ``workflows/plan-to`` / ``workflows/apply-to`` — because they act on a
+# workflow object (like ``workflows/publish``) and the SDK folds them into the
+# top-level ``workflows.plan`` / ``workflows.apply`` methods. Their file path
+# (``workflows/plan-to``) therefore intentionally does not mirror the URL's
+# ``.../spec/...`` segments.
 KNOWN_FILE_PATH_URL_MISMATCHES: frozenset[str] = frozenset(
     {
-        "api-reference/workflows/spec/apply-to",
-        "api-reference/workflows/spec/plan-to",
+        "api-reference/workflows/apply-to",
+        "api-reference/workflows/plan-to",
     }
 )
 

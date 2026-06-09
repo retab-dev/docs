@@ -14,10 +14,7 @@ from retab import Retab
 
 client = Retab()
 
-updated = client.workflows.spec.apply_to_workflow(
-    "wf_abc123",
-    yaml_definition,
-)
+updated = client.workflows.apply(yaml_definition, workflow_id="wf_abc123")
 
 print(updated.workflow_id)
 print(updated.summary.has_changes)
@@ -28,10 +25,7 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const updated = await client.workflows.spec.apply_to_workflow(
-  "wf_abc123",
-  yamlDefinition,
-);
+const updated = await client.workflows.apply(yamlDefinition, undefined, "wf_abc123");
 
 console.log(updated.workflowId);
 console.log(updated.summary.hasChanges);
@@ -72,9 +66,7 @@ spec:
   edges: []
 `
 
-	result, err := client.Workflows.Spec.ApplyToWorkflow(ctx, "wf_abc123", &retab.WorkflowSpecApplyToWorkflowParams{
-		YamlDefinition: yamlDefinition,
-	})
+	result, err := client.Workflows.Apply(ctx, &retab.WorkflowsApplyParams{YamlDefinition: yamlDefinition, WorkflowID: retab.Ptr("wf_abc123")})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -89,18 +81,15 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-result = client.workflows.spec.apply_to_workflow(
-  workflow_id: 'wf_abc123',
-  yaml_definition: yaml_definition
-)
+updated = client.workflows.apply(yaml_definition: yaml_definition, workflow_id: 'wf_abc123')
 
-puts result.workflow_id
-puts result.summary.has_changes
+puts updated.workflow_id
+puts updated.summary.has_changes
 ```
 
 ```rust Rust
 use retab::models::DeclarativeWorkflowRequest;
-use retab::resources::workflow_spec::ApplyToWorkflowParams;
+use retab::resources::workflows::ApplyParams;
 use retab::Retab;
 
 #[tokio::main]
@@ -124,13 +113,11 @@ spec:
 "#;
 
     let result = client
-        .workflows().spec()
-        .apply_to_workflow(
-            "wf_abc123",
-            ApplyToWorkflowParams::new(DeclarativeWorkflowRequest::new(
-                yaml_definition,
-            )),
-        )
+        .workflows()
+        .apply(ApplyParams {
+            body: DeclarativeWorkflowRequest::new(yaml_definition),
+            workflow_id: Some("wf_abc123".to_string()),
+        })
         .await?;
 
     println!("{}", result.workflow_id);
@@ -166,10 +153,7 @@ spec:
   edges: []
 YAML;
 
-$result = $client->workflows()->spec()->applyToWorkflow(
-    'wf_abc123',
-    yamlDefinition: $yamlDefinition,
-);
+$result = $client->workflows()->apply(yamlDefinition: $yamlDefinition, workflowId: 'wf_abc123');
 print_r($result);
 ```
 
@@ -197,10 +181,7 @@ spec:
   edges: []
 """;
 
-var result = await client.Workflows.Spec.ApplyToWorkflowAsync(
-    "wf_abc123",
-    new WorkflowSpecApplyToWorkflowOptions { YamlDefinition = yamlDefinition }
-);
+var result = await client.Workflows.ApplyAsync(new WorkflowsApplyOptions { YamlDefinition = yamlDefinition, WorkflowId = "wf_abc123" });
 Console.WriteLine(result);
 ```
 
@@ -211,10 +192,10 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().spec().applyToWorkflow(
-        "wf_abc123",
+    var result = client.workflows().apply(
         "metadata:\n  id: source_workflow\n",
-        null
+        null,
+        "wf_abc123"
     );
     System.out.println(result);
   }

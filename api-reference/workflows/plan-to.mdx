@@ -14,10 +14,7 @@ from retab import Retab
 
 client = Retab()
 
-plan = client.workflows.create_plan(
-    "wf_abc123",
-    yaml_definition,
-)
+plan = client.workflows.plan(yaml_definition, workflow_id="wf_abc123")
 
 print(plan.workflow_id)
 print(plan.rendered_plan)
@@ -28,10 +25,7 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const plan = await client.workflows.create_plan(
-  "wf_abc123",
-  yamlDefinition,
-);
+const plan = await client.workflows.plan(yamlDefinition, undefined, "wf_abc123");
 
 console.log(plan.workflowId);
 console.log(plan.renderedPlan);
@@ -72,8 +66,9 @@ spec:
   edges: []
 `
 
-	plan, err := client.Workflows.CreatePlan(ctx, "wf_abc123", &retab.WorkflowsCreatePlanParams{
+	plan, err := client.Workflows.Plan(ctx, &retab.WorkflowsPlanParams{
 		YamlDefinition: yamlDefinition,
+		WorkflowID:     retab.Ptr("wf_abc123"),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -89,10 +84,7 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-plan = client.workflows.create_plan(
-  workflow_id: 'wf_abc123',
-  yaml_definition: yaml_definition
-)
+plan = client.workflows.plan(yaml_definition: yaml_definition, workflow_id: 'wf_abc123')
 
 puts plan.workflow_id
 puts plan.rendered_plan
@@ -100,7 +92,7 @@ puts plan.rendered_plan
 
 ```rust Rust
 use retab::models::DeclarativeWorkflowRequest;
-use retab::resources::workflows::CreatePlanParams;
+use retab::resources::workflows::PlanParams;
 use retab::Retab;
 
 #[tokio::main]
@@ -125,12 +117,10 @@ spec:
 
     let plan = client
         .workflows()
-        .create_plan(
-            "wf_abc123",
-            CreatePlanParams::new(DeclarativeWorkflowRequest::new(
-                yaml_definition,
-            )),
-        )
+        .plan(PlanParams {
+            body: DeclarativeWorkflowRequest::new(yaml_definition),
+            workflow_id: Some("wf_abc123".to_string()),
+        })
         .await?;
 
     println!("{}", plan.workflow_id);
@@ -164,10 +154,7 @@ spec:
   edges: []
 YAML;
 
-$plan = $client->workflows()->createPlan(
-    'wf_abc123',
-    yamlDefinition: $yamlDefinition,
-);
+$plan = $client->workflows()->plan(yamlDefinition: $yamlDefinition, workflowId: 'wf_abc123');
 print_r($plan);
 ```
 
@@ -195,10 +182,7 @@ spec:
   edges: []
 """;
 
-var plan = await client.Workflows.CreatePlanAsync(
-    "wf_abc123",
-    new WorkflowsCreatePlanOptions { YamlDefinition = yamlDefinition }
-);
+var plan = await client.Workflows.PlanAsync(new WorkflowsPlanOptions { YamlDefinition = yamlDefinition, WorkflowId = "wf_abc123" });
 Console.WriteLine(plan);
 ```
 
@@ -209,10 +193,10 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var plan = client.workflows().createPlan(
-        "wf_abc123",
+    var plan = client.workflows().plan(
         "metadata:\n  id: source_workflow\n",
-        null
+        null,
+        "wf_abc123"
     );
     System.out.println(plan);
   }
