@@ -98,30 +98,31 @@ spec:
         handle: input-file-source_doc
 ```
 
-The SDK exposes the spec lifecycle under `client.workflows.spec`:
+The SDK exposes `validate()` and `get()` under `client.workflows.spec`, while
+`plan()` and `apply()` live on the top-level `client.workflows` resource:
 
 <CodeGroup>
 ```python Python
 validation = client.workflows.spec.validate(yaml_definition)
-plan = client.workflows.spec.plan(yaml_definition)
-created = client.workflows.spec.apply(yaml_definition)
-updated = client.workflows.spec.apply_to_workflow("wf_abc123", yaml_definition)
+plan = client.workflows.plan(yaml_definition)
+created = client.workflows.apply(yaml_definition)
+updated = client.workflows.apply(yaml_definition, workflow_id="wf_abc123")
 exported = client.workflows.spec.get(created.workflow_id)
 ```
 
 ```typescript TypeScript
 const validation = await client.workflows.spec.validate(yamlDefinition);
-const plan = await client.workflows.spec.plan(yamlDefinition);
-const created = await client.workflows.spec.apply(yamlDefinition);
-const updated = await client.workflows.spec.apply_to_workflow("wf_abc123", yamlDefinition);
+const plan = await client.workflows.plan(yamlDefinition);
+const created = await client.workflows.apply(yamlDefinition);
+const updated = await client.workflows.apply(yamlDefinition, undefined, "wf_abc123");
 const exported = await client.workflows.spec.get(created.workflowId);
 ```
 
 ```php PHP
 $validation = $client->workflows()->spec()->validate($yamlDefinition);
-$plan = $client->workflows()->spec()->plan($yamlDefinition);
-$created = $client->workflows()->spec()->apply($yamlDefinition);
-$updated = $client->workflows()->spec()->applyToWorkflow('wf_abc123', $yamlDefinition);
+$plan = $client->workflows()->plan(yamlDefinition: $yamlDefinition);
+$created = $client->workflows()->apply(yamlDefinition: $yamlDefinition);
+$updated = $client->workflows()->apply(yamlDefinition: $yamlDefinition, workflowId: 'wf_abc123');
 $exported = $client->workflows()->spec()->get($created->workflowId);
 ```
 
@@ -131,9 +132,9 @@ require 'retab'
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 validation = client.workflows.spec.validate(yaml_definition: yaml_definition)
-plan = client.workflows.spec.plan(yaml_definition: yaml_definition)
-created = client.workflows.spec.apply(yaml_definition: yaml_definition)
-updated = client.workflows.spec.apply_to_workflow(workflow_id: 'wf_abc123', yaml_definition: yaml_definition)
+plan = client.workflows.plan(yaml_definition: yaml_definition)
+created = client.workflows.apply(yaml_definition: yaml_definition)
+updated = client.workflows.apply(yaml_definition: yaml_definition, workflow_id: 'wf_abc123')
 exported = client.workflows.spec.get(workflow_id: created.workflow_id)
 ```
 
@@ -170,15 +171,14 @@ spec:
 var validation = await client.Workflows.Spec.ValidateAsync(
     new WorkflowSpecValidateOptions { YamlDefinition = yamlDefinition }
 );
-var plan = await client.Workflows.Spec.PlanAsync(
-    new WorkflowSpecPlanOptions { YamlDefinition = yamlDefinition }
+var plan = await client.Workflows.PlanAsync(
+    new WorkflowsPlanOptions { YamlDefinition = yamlDefinition }
 );
-var created = await client.Workflows.Spec.ApplyAsync(
-    new WorkflowSpecApplyOptions { YamlDefinition = yamlDefinition }
+var created = await client.Workflows.ApplyAsync(
+    new WorkflowsApplyOptions { YamlDefinition = yamlDefinition }
 );
-var updated = await client.Workflows.Spec.ApplyToWorkflowAsync(
-    "wf_abc123",
-    new WorkflowSpecApplyToWorkflowOptions { YamlDefinition = yamlDefinition }
+var updated = await client.Workflows.ApplyAsync(
+    new WorkflowsApplyOptions { YamlDefinition = yamlDefinition, WorkflowId = "wf_abc123" }
 );
 var exported = await client.Workflows.Spec.GetAsync(created.WorkflowId);
 ```
@@ -224,15 +224,15 @@ spec:
 	if err != nil {
 		log.Fatal(err)
 	}
-	plan, err := client.Workflows.Spec.Plan(context.Background(), &retab.WorkflowSpecPlanParams{YamlDefinition: yamlDefinition})
+	plan, err := client.Workflows.Plan(context.Background(), &retab.WorkflowsPlanParams{YamlDefinition: yamlDefinition})
 	if err != nil {
 		log.Fatal(err)
 	}
-	created, err := client.Workflows.Spec.Apply(context.Background(), &retab.WorkflowSpecApplyParams{YamlDefinition: yamlDefinition})
+	created, err := client.Workflows.Apply(context.Background(), &retab.WorkflowsApplyParams{YamlDefinition: yamlDefinition})
 	if err != nil {
 		log.Fatal(err)
 	}
-	updated, err := client.Workflows.Spec.ApplyToWorkflow(context.Background(), "wf_abc123", &retab.WorkflowSpecApplyToWorkflowParams{YamlDefinition: yamlDefinition})
+	updated, err := client.Workflows.Apply(context.Background(), &retab.WorkflowsApplyParams{YamlDefinition: yamlDefinition, WorkflowID: retab.Ptr("wf_abc123")})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -246,7 +246,7 @@ spec:
 ```
 
 ```rust Rust
-use retab::{models::DeclarativeWorkflowRequest, resources::workflow_spec, Retab};
+use retab::{models::DeclarativeWorkflowRequest, resources::{workflow_spec, workflows}, Retab};
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 let yaml_definition = r#"apiVersion: workflows.retab.com/v1alpha2
@@ -274,19 +274,19 @@ let validation = client
     .validate(workflow_spec::ValidateParams::new(DeclarativeWorkflowRequest::new(yaml_definition.clone())))
     .await?;
 let plan = client
-    .workflows().spec()
-    .plan(workflow_spec::PlanParams::new(DeclarativeWorkflowRequest::new(yaml_definition.clone())))
+    .workflows()
+    .plan(workflows::PlanParams::new(DeclarativeWorkflowRequest::new(yaml_definition.clone())))
     .await?;
 let created = client
-    .workflows().spec()
-    .apply(workflow_spec::ApplyParams::new(DeclarativeWorkflowRequest::new(yaml_definition.clone())))
+    .workflows()
+    .apply(workflows::ApplyParams::new(DeclarativeWorkflowRequest::new(yaml_definition.clone())))
     .await?;
 let updated = client
-    .workflows().spec()
-    .apply_to_workflow(
-        "wf_abc123",
-        workflow_spec::ApplyToWorkflowParams::new(DeclarativeWorkflowRequest::new(yaml_definition.clone())),
-    )
+    .workflows()
+    .apply(workflows::ApplyParams {
+        body: DeclarativeWorkflowRequest::new(yaml_definition.clone()),
+        workflow_id: Some("wf_abc123".to_string()),
+    })
     .await?;
 let exported = client.workflows().spec().get(&created.workflow_id).await?;
 
@@ -309,9 +309,9 @@ public final class Example {
 </CodeGroup>
 
 Use `validate()` for parse and handle checks, `plan()` to preview changes,
-`apply()` to create a new workflow from YAML, `apply_to_workflow()` to modify an
-existing workflow draft, and `get()` to get canonical YAML from an existing
-workflow.
+`apply()` to create a new workflow from YAML, `apply(..., workflow_id=...)` to
+modify an existing workflow draft, and `get()` to get canonical YAML from an
+existing workflow.
 `plan()` and `apply()` return Terraform-style `summary`, `resource_changes`,
 and `rendered_plan` fields so clients can inspect exactly what changed.
 Call `client.workflows.publish(workflow_id)` separately when the draft should
@@ -325,7 +325,7 @@ For endpoint details, see:
 - [Validate Workflow Spec](/api-reference/workflows/spec/validate)
 - [Plan Workflow Spec](/api-reference/workflows/spec/plan)
 - [Apply Workflow Spec](/api-reference/workflows/spec/apply)
-- [Apply Workflow Spec to Existing Workflow](/api-reference/workflows/spec/apply-to)
+- [Apply Workflow Spec to Existing Workflow](/api-reference/workflows/apply-to)
 - [Export Workflow Spec](/api-reference/workflows/spec)
 
 ## Edit Mode vs Run Mode

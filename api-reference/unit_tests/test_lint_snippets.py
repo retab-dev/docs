@@ -1056,10 +1056,10 @@ def test_workflow_spec_dotnet_examples_pass_required_yaml_definition() -> None:
     for relative_path, option_name in (
         ("api-reference/workflows/spec/validate.mdx", "WorkflowSpecValidateOptions"),
         ("api-reference/workflows/spec/plan.mdx", "WorkflowSpecPlanOptions"),
-        ("api-reference/workflows/spec/plan-to.mdx", "WorkflowsCreatePlanOptions"),
+        ("api-reference/workflows/plan-to.mdx", "WorkflowsCreatePlanOptions"),
         ("api-reference/workflows/spec/apply.mdx", "WorkflowSpecApplyOptions"),
         (
-            "api-reference/workflows/spec/apply-to.mdx",
+            "api-reference/workflows/apply-to.mdx",
             "WorkflowSpecApplyToWorkflowOptions",
         ),
     ):
