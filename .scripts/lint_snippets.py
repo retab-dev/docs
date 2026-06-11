@@ -1595,7 +1595,7 @@ def _prepare_go_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
         shutil.copyfile(sdk_go_sum, ws / "go.sum")
     for index, (snippet, src) in enumerate(snippet_files):
         snippet_dir = ws / "snippets" / f"{src.stem}_{index:03d}"
-        snippet_dir.mkdir(parents=True)
+        snippet_dir.mkdir(parents=True, exist_ok=True)
         _write_text_if_changed(
             snippet_dir / "main.go",
             normalise_go_snippet(snippet.code),
@@ -1615,6 +1615,7 @@ def lint_go_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue]:
             capture_output=True,
             text=True,
             cwd=str(ws),
+            env={**os.environ, "GOWORK": "off"},
         )
         if result.returncode == 0:
             return []

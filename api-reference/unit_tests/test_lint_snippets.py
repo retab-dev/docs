@@ -375,10 +375,10 @@ def test_go_batch_reuses_successful_content_cached_workspace(tmp_path: Path) -> 
     snippet_files = [
         (_snippet("go", 'import retab "github.com/retab-dev/retab/clients/go"\n_ = retab.Retab{}\n'), tmp_path / "snippet.go")
     ]
-    calls: list[tuple[list[str], Path]] = []
+    calls: list[tuple[list[str], Path, dict[str, str]]] = []
 
     def fake_run(command: list[str], **kwargs: object) -> object:
-        calls.append((command, Path(str(kwargs["cwd"]))))
+        calls.append((command, Path(str(kwargs["cwd"])), dict(kwargs["env"])))
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     with (
@@ -393,6 +393,7 @@ def test_go_batch_reuses_successful_content_cached_workspace(tmp_path: Path) -> 
     assert len(calls) == 1
     assert calls[0][0] == ["go", "test", "-mod=mod", "./..."]
     assert calls[0][1].parent == tmp_path / "cache"
+    assert calls[0][2]["GOWORK"] == "off"
 
 
 def test_dotnet_contextual_fragment_without_client_declaration_is_not_standalone() -> None:
@@ -1055,13 +1056,10 @@ def test_rust_batch_uses_content_cached_workspace_by_default(tmp_path: Path) -> 
 def test_workflow_spec_dotnet_examples_pass_required_yaml_definition() -> None:
     for relative_path, option_name in (
         ("api-reference/workflows/spec/validate.mdx", "WorkflowSpecValidateOptions"),
-        ("api-reference/workflows/spec/plan.mdx", "WorkflowSpecPlanOptions"),
-        ("api-reference/workflows/plan-to.mdx", "WorkflowsCreatePlanOptions"),
-        ("api-reference/workflows/spec/apply.mdx", "WorkflowSpecApplyOptions"),
-        (
-            "api-reference/workflows/apply-to.mdx",
-            "WorkflowSpecApplyToWorkflowOptions",
-        ),
+        ("api-reference/workflows/spec/plan.mdx", "WorkflowsPlanOptions"),
+        ("api-reference/workflows/plan-to.mdx", "WorkflowsPlanOptions"),
+        ("api-reference/workflows/spec/apply.mdx", "WorkflowsApplyOptions"),
+        ("api-reference/workflows/apply-to.mdx", "WorkflowsApplyOptions"),
     ):
         text = (lint_snippets.DOCS_ROOT / relative_path).read_text()
 

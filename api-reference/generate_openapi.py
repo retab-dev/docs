@@ -586,6 +586,7 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
         "main_server__types__edits__FormField-Input": "EditFormFieldInput",
         "main_server__types__edits__FormField-Output": "EditFormFieldOutput",
         "main_server__types__mime__OCR": "OCR",
+        "main_server__types__mime__MIMEData": "MIMEData",
         "main_server__types__mime__Page": "Page",
         "main_server__types__parses__Parse": "Parse",
         "main_server__types__parses__ParseRequest": "CreateParseRequest",
@@ -596,6 +597,7 @@ def _normalize_public_schema_names(spec: dict[str, object]) -> None:
             "SplitSubdocumentLikelihood"
         ),
         "main_server__types__splits__Subdocument": "SplitSubdocument",
+        "retab_core__types__mime__MIMEData": "MIMEData",
     }
 
     for old_schema_name, new_schema_name in schema_renames.items():
