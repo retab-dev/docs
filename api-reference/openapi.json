@@ -24890,8 +24890,13 @@
             "type": "string",
             "title": "Workflow Id"
           },
-          "target": {
-            "$ref": "#/components/schemas/WorkflowTestBlockTarget"
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "block_type": {
+            "type": "string",
+            "title": "Block Type"
           },
           "execution_fingerprint": {
             "anyOf": [
@@ -24947,35 +24952,55 @@
               }
             ]
           },
-          "source": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ManualWorkflowTestSource"
-              },
-              {
-                "$ref": "#/components/schemas/RunStepWorkflowTestSource"
+          "handle_inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
               }
-            ],
-            "title": "Source",
-            "discriminator": {
-              "propertyName": "type",
-              "mapping": {
-                "manual": "#/components/schemas/ManualWorkflowTestSource",
-                "run_step": "#/components/schemas/RunStepWorkflowTestSource"
-              }
-            }
+            },
+            "type": "object",
+            "title": "Handle Inputs",
+            "default": {}
           },
-          "outputs": {
+          "handle_outputs": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/JsonHandleInput"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FileHandleInput"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "file": "#/components/schemas/FileHandleInput",
+                      "json": "#/components/schemas/JsonHandleInput"
+                    }
+                  }
+                },
                 "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Outputs"
+            "title": "Handle Outputs"
           },
           "routing_decisions": {
             "anyOf": [
@@ -25037,9 +25062,9 @@
         },
         "type": "object",
         "required": [
+          "block_id",
+          "block_type",
           "id",
-          "source",
-          "target",
           "test_id",
           "workflow_id"
         ],
