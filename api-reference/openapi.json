@@ -11762,6 +11762,69 @@
         ],
         "title": "BetweenCondition"
       },
+      "BlockExecFileHandleInput": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/BlockExecFileRef"
+          },
+          "type": {
+            "type": "string",
+            "const": "file",
+            "title": "Type",
+            "default": "file"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "BlockExecFileHandleInput"
+      },
+      "BlockExecFileRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "ID of the file"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename of the file"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the file"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "id",
+          "mime_type"
+        ],
+        "title": "BlockExecFileRef",
+        "description": "Public/shared file reference used across SDK and customer-facing APIs."
+      },
+      "BlockExecJsonHandleInput": {
+        "properties": {
+          "data": {
+            "title": "Data",
+            "default": null
+          },
+          "type": {
+            "type": "string",
+            "const": "json",
+            "title": "Type",
+            "default": "json"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BlockExecJsonHandleInput"
+      },
       "BlockExecution": {
         "properties": {
           "id": {
@@ -11773,6 +11836,11 @@
             "type": "string",
             "title": "Workflow Id",
             "description": "Workflow the block belongs to"
+          },
+          "workflow_version_id": {
+            "type": "string",
+            "title": "Workflow Version Id",
+            "description": "Workflow version whose source run supplied inputs"
           },
           "source_run_id": {
             "type": "string",
@@ -11792,22 +11860,38 @@
           "lifecycle": {
             "oneOf": [
               {
+                "$ref": "#/components/schemas/PendingBlockExecutionLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/QueuedBlockExecutionLifecycle"
+              },
+              {
+                "$ref": "#/components/schemas/RunningBlockExecutionLifecycle"
+              },
+              {
                 "$ref": "#/components/schemas/CompletedBlockExecutionLifecycle"
               },
               {
                 "$ref": "#/components/schemas/ErrorBlockExecutionLifecycle"
               },
               {
+                "$ref": "#/components/schemas/CancelledBlockExecutionLifecycle"
+              },
+              {
                 "$ref": "#/components/schemas/SkippedBlockExecutionLifecycle"
               }
             ],
             "title": "Lifecycle",
-            "description": "Terminal lifecycle state for this block execution. One of `{status: 'completed'}`, `{status: 'error', message: ...}`, or `{status: 'skipped', reason: ...}`.",
+            "description": "Lifecycle state for this block execution.",
             "discriminator": {
               "propertyName": "status",
               "mapping": {
+                "cancelled": "#/components/schemas/CancelledBlockExecutionLifecycle",
                 "completed": "#/components/schemas/CompletedBlockExecutionLifecycle",
                 "error": "#/components/schemas/ErrorBlockExecutionLifecycle",
+                "pending": "#/components/schemas/PendingBlockExecutionLifecycle",
+                "queued": "#/components/schemas/QueuedBlockExecutionLifecycle",
+                "running": "#/components/schemas/RunningBlockExecutionLifecycle",
                 "skipped": "#/components/schemas/SkippedBlockExecutionLifecycle"
               }
             }
@@ -11815,8 +11899,24 @@
           "handle_inputs": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/BlockExecJsonHandleInput"
+                        },
+                        {
+                          "$ref": "#/components/schemas/BlockExecFileHandleInput"
+                        }
+                      ]
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               {
                 "type": "null"
@@ -11839,8 +11939,24 @@
           "handle_outputs": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/BlockExecJsonHandleInput"
+                        },
+                        {
+                          "$ref": "#/components/schemas/BlockExecFileHandleInput"
+                        }
+                      ]
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               {
                 "type": "null"
@@ -11881,6 +11997,34 @@
             "format": "date-time",
             "title": "Created At",
             "description": "When the block execution record was created"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At",
+            "description": "When the block execution started"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Completed At",
+            "description": "When the block execution completed"
+          },
+          "handle_inputs_fingerprint": {
+            "type": "string",
+            "title": "Handle Inputs Fingerprint"
+          },
+          "workflow_draft_fingerprint": {
+            "type": "string",
+            "title": "Workflow Draft Fingerprint"
+          },
+          "block_config_fingerprint": {
+            "type": "string",
+            "title": "Block Config Fingerprint"
+          },
+          "execution_fingerprint": {
+            "type": "string",
+            "title": "Execution Fingerprint"
           },
           "block_config": {
             "anyOf": [
@@ -11934,7 +12078,7 @@
           "workflow_id"
         ],
         "title": "BlockExecution",
-        "description": "The result of executing a single workflow block.\n\nThe terminal state is carried by the `lifecycle` field, which is one of\ncompleted, error, or skipped."
+        "description": "The result of executing a single workflow block.\n\nThe execution state is carried by the `lifecycle` field."
       },
       "BlockExecutionList": {
         "description": "A page of `BlockExecution` resources. `data` holds the items and `list_metadata` carries the `before`/`after` cursors; pass `after` to fetch the next page.",
@@ -12139,6 +12283,23 @@
         ],
         "title": "CancelWorkflowResponse",
         "description": "Response for cancel workflow endpoint."
+      },
+      "CancelledBlockExecutionLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Status",
+            "default": "cancelled"
+          },
+          "reason": {
+            "title": "Reason",
+            "default": null
+          }
+        },
+        "type": "object",
+        "title": "CancelledBlockExecutionLifecycle",
+        "description": "The execution was intentionally stopped before completion."
       },
       "CancelledStepLifecycle": {
         "properties": {
@@ -18649,6 +18810,19 @@
         "title": "PartitionWorkflowArtifact",
         "description": "A partition produced by a workflow run, tagged with its artifact `operation` and creation time."
       },
+      "PendingBlockExecutionLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "pending",
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "title": "PendingBlockExecutionLifecycle",
+        "description": "The execution row exists but has not been dispatched."
+      },
       "PendingRun": {
         "properties": {
           "status": {
@@ -18947,6 +19121,19 @@
         },
         "type": "object",
         "title": "QueryWorkflowTableRequest"
+      },
+      "QueuedBlockExecutionLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "title": "QueuedBlockExecutionLifecycle",
+        "description": "Dispatch has been requested for this execution."
       },
       "QueuedStepLifecycle": {
         "properties": {
@@ -19706,6 +19893,19 @@
         "type": "object",
         "title": "RunTiming",
         "description": "Timing information for a run.\n\nThree event timestamps that consumers cannot reconstruct on their own.\nWall-clock duration is a trivial `completed_at - started_at` subtraction\ndone client-side; it is not stored or exposed."
+      },
+      "RunningBlockExecutionLifecycle": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "running",
+            "title": "Status",
+            "default": "running"
+          }
+        },
+        "type": "object",
+        "title": "RunningBlockExecutionLifecycle",
+        "description": "The executor has started this block execution."
       },
       "RunningRun": {
         "properties": {
@@ -24525,6 +24725,37 @@
         "title": "WorkflowTest",
         "description": "A saved workflow test: a target block, an input `source`, and the `assertion` evaluated against its output."
       },
+      "WorkflowTestArtifactRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "extraction",
+              "split",
+              "classification",
+              "parse",
+              "edit",
+              "partition",
+              "conditional_evaluation",
+              "review_trigger_evaluation",
+              "while_loop_termination",
+              "api_call_invocation",
+              "function_invocation"
+            ],
+            "title": "Operation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "operation"
+        ],
+        "title": "WorkflowTestArtifactRef"
+      },
       "WorkflowTestBlockTarget": {
         "properties": {
           "type": {
@@ -24572,7 +24803,7 @@
             "type": "string",
             "title": "Id"
           },
-          "run_id": {
+          "workflow_test_run_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -24581,7 +24812,7 @@
                 "type": "null"
               }
             ],
-            "title": "Run Id"
+            "title": "Workflow Test Run Id"
           },
           "test_id": {
             "type": "string",
@@ -24705,6 +24936,16 @@
               }
             ],
             "title": "Block Config Fingerprint"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowTestArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "source": {
             "oneOf": [
