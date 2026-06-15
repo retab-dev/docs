@@ -1177,6 +1177,14 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "Streaming extraction chunks",
+            "content": {
+              "application/stream+json": {
+                "schema": {}
+              }
+            }
+          },
           "201": {
             "description": "Successful Response",
             "content": {
@@ -1187,12 +1195,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "202": {
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Extraction"
                 }
               }
             }
@@ -11766,10 +11774,10 @@
             "title": "Workflow Id",
             "description": "Workflow the block belongs to"
           },
-          "run_id": {
+          "source_run_id": {
             "type": "string",
-            "title": "Run Id",
-            "description": "Run whose inputs were used"
+            "title": "Source Run Id",
+            "description": "Workflow run whose inputs were used"
           },
           "block_id": {
             "type": "string",
@@ -11887,7 +11895,7 @@
             "title": "Block Config",
             "description": "The draft block config used for this block execution"
           },
-          "step_id": {
+          "source_step_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -11896,7 +11904,7 @@
                 "type": "null"
               }
             ],
-            "title": "Step Id",
+            "title": "Source Step Id",
             "description": "The step ID that was used for inputs (includes iteration prefix if applicable)"
           },
           "available_iterations": {
@@ -11922,7 +11930,7 @@
           "block_type",
           "id",
           "lifecycle",
-          "run_id",
+          "source_run_id",
           "workflow_id"
         ],
         "title": "BlockExecution",
@@ -17196,7 +17204,7 @@
             "default": "file"
           },
           "document": {
-            "$ref": "#/components/schemas/MaterializedDocument"
+            "$ref": "#/components/schemas/FileRef"
           }
         },
         "additionalProperties": false,
@@ -17848,50 +17856,6 @@
           "pattern"
         ],
         "title": "MatchesRegexCondition"
-      },
-      "MaterializedDocument": {
-        "properties": {
-          "original_id": {
-            "type": "string",
-            "title": "Original Id"
-          },
-          "filename": {
-            "type": "string",
-            "title": "Filename"
-          },
-          "mime_type": {
-            "type": "string",
-            "title": "Mime Type"
-          },
-          "gcs_uri": {
-            "type": "string",
-            "title": "Gcs Uri"
-          },
-          "size_bytes": {
-            "type": "integer",
-            "title": "Size Bytes",
-            "default": 0
-          },
-          "content_fingerprint": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Fingerprint"
-          }
-        },
-        "type": "object",
-        "required": [
-          "filename",
-          "gcs_uri",
-          "mime_type",
-          "original_id"
-        ],
-        "title": "MaterializedDocument"
       },
       "MetricsStaleErrorLastRun": {
         "properties": {
@@ -22196,9 +22160,9 @@
             "type": "string",
             "title": "Id"
           },
-          "run_id": {
+          "experiment_run_id": {
             "type": "string",
-            "title": "Run Id"
+            "title": "Experiment Run Id"
           },
           "experiment_id": {
             "type": "string",
@@ -22277,6 +22241,28 @@
             "title": "Handle Inputs",
             "default": {}
           },
+          "handle_outputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Handle Outputs",
+            "default": {}
+          },
           "artifact": {
             "anyOf": [
               {
@@ -22298,13 +22284,13 @@
           "block_type",
           "document_id",
           "experiment_id",
+          "experiment_run_id",
           "id",
           "lifecycle",
-          "run_id",
           "timing"
         ],
         "title": "WorkflowExperimentResult",
-        "description": "One experiment result for a single document, addressed by `run_id` and `document_id`."
+        "description": "One experiment block execution for a single document, addressed by `experiment_run_id` and `document_id`."
       },
       "WorkflowExperimentResultList": {
         "description": "A page of `WorkflowExperimentResult` resources. `data` holds the items and `list_metadata` carries the `before`/`after` cursors; pass `after` to fetch the next page.",
