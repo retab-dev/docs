@@ -1053,6 +1053,100 @@ def test_rust_batch_uses_content_cached_workspace_by_default(tmp_path: Path) -> 
     assert (cargo_calls[0][1] / "src" / "snippets" / "snippet.rs").exists()
 
 
+def test_resolve_rust_target_dir_defaults_to_shared_persistent_cache(tmp_path: Path) -> None:
+    resolved = lint_snippets._resolve_rust_target_dir(None, None, tmp_path)
+
+    assert resolved == (tmp_path / ".cache" / "docs-snippet-rust-target").resolve()
+
+
+def test_resolve_rust_target_dir_honours_explicit_overrides(tmp_path: Path) -> None:
+    explicit = tmp_path / "explicit-target"
+    cargo = tmp_path / "cargo-target"
+
+    # RETAB_RUST_SNIPPET_TARGET_DIR wins over CARGO_TARGET_DIR ...
+    assert lint_snippets._resolve_rust_target_dir(
+        str(explicit), str(cargo), tmp_path
+    ) == explicit.resolve()
+    # ... and CARGO_TARGET_DIR is used when the retab-specific var is unset/blank.
+    assert lint_snippets._resolve_rust_target_dir(
+        "  ", str(cargo), tmp_path
+    ) == cargo.resolve()
+
+
+def test_default_rust_target_dir_is_shared_so_deps_are_compiled_once() -> None:
+    # The whole point of the cache-efficiency change: by default snippets share a
+    # single Cargo target dir instead of each workspace keeping its own target/.
+    assert lint_snippets.RUST_SNIPPET_TARGET_DIR is not None
+
+
+def test_prune_cache_entries_removes_old_orphans_beyond_keep_last(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    day = 86400
+    base = lint_snippets.time.time() - 40 * day
+    entries = []
+    for index in range(12):
+        entry = cache_dir / f"entry-{index:02d}"
+        entry.mkdir()
+        (entry / "payload").write_text("x", encoding="utf-8")
+        # Distinct, strictly-decreasing mtimes: higher index == older.
+        mtime = base - index * day
+        os.utime(entry, (mtime, mtime))
+        entries.append(entry)
+
+    removed = lint_snippets.prune_cache_entries(cache_dir, keep_last=8, max_age_days=14)
+
+    # The 8 most-recently-modified survive; the 4 oldest (also past the age
+    # cutoff) are reclaimed.
+    assert sorted(removed) == sorted(entries[8:])
+    surviving = sorted(p.name for p in cache_dir.iterdir())
+    assert surviving == [f"entry-{i:02d}" for i in range(8)]
+
+
+def test_prune_cache_entries_keeps_recently_used_even_beyond_keep_last(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    now = lint_snippets.time.time()
+    for index in range(10):
+        entry = cache_dir / f"entry-{index:02d}"
+        entry.mkdir()
+        os.utime(entry, (now, now))
+
+    removed = lint_snippets.prune_cache_entries(cache_dir, keep_last=8, max_age_days=14)
+
+    # Nothing is old enough to evict, so an actively-warm cache is left intact.
+    assert removed == []
+    assert len(list(cache_dir.iterdir())) == 10
+
+
+def test_prune_cache_entries_skips_lock_and_tmp_dirs(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    old = lint_snippets.time.time() - 90 * 86400
+    lock = cache_dir / "entry.lock"
+    tmp = cache_dir / ".entry.123.tmp"
+    for control in (lock, tmp):
+        control.mkdir()
+        os.utime(control, (old, old))
+    for index in range(10):
+        entry = cache_dir / f"entry-{index:02d}"
+        entry.mkdir()
+        mtime = old + index
+        os.utime(entry, (mtime, mtime))
+
+    removed = lint_snippets.prune_cache_entries(cache_dir, keep_last=2, max_age_days=14)
+
+    # Coordination dirs are never treated as cache entries.
+    assert lock.exists()
+    assert tmp.exists()
+    assert lock not in removed
+    assert tmp not in removed
+
+
+def test_prune_cache_entries_noop_on_missing_dir(tmp_path: Path) -> None:
+    assert lint_snippets.prune_cache_entries(tmp_path / "absent") == []
+
+
 def test_workflow_spec_dotnet_examples_pass_required_yaml_definition() -> None:
     for relative_path, option_name in (
         ("api-reference/workflows/spec/validate.mdx", "WorkflowSpecValidateOptions"),

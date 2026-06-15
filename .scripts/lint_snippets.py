@@ -116,13 +116,31 @@ os.environ.setdefault(
     str(REPO_ROOT / ".cache" / "bazel-local-home" / "go-build"),
 )
 NUGET_PACKAGES = Path(os.environ["NUGET_PACKAGES"])
-_RUST_SNIPPET_TARGET_DIR = os.environ.get("RETAB_RUST_SNIPPET_TARGET_DIR") or os.environ.get(
-    "CARGO_TARGET_DIR"
-)
-RUST_SNIPPET_TARGET_DIR = (
-    Path(_RUST_SNIPPET_TARGET_DIR).resolve()
-    if _RUST_SNIPPET_TARGET_DIR
-    else None
+def _resolve_rust_target_dir(
+    env_target: str | None,
+    cargo_target: str | None,
+    cache_root: Path,
+) -> Path:
+    """Resolve the shared Cargo target dir for Rust doc snippets.
+
+    Defaulting to a single, persistent, shared target dir (rather than letting
+    each content-addressed workspace keep its own ~300MB ``target/``) means the
+    snippet dependencies (tokio/reqwest/serde + the retab SDK) are compiled once
+    and reused across runs. Previously every snippet-set change spawned a fresh
+    workspace whose ``target/`` was never garbage-collected, accumulating to tens
+    of GB. An explicit ``RETAB_RUST_SNIPPET_TARGET_DIR``/``CARGO_TARGET_DIR``
+    still wins so callers can override the location.
+    """
+    raw = (env_target or "").strip() or (cargo_target or "").strip()
+    if raw:
+        return Path(raw).resolve()
+    return (cache_root / ".cache" / "docs-snippet-rust-target").resolve()
+
+
+RUST_SNIPPET_TARGET_DIR = _resolve_rust_target_dir(
+    os.environ.get("RETAB_RUST_SNIPPET_TARGET_DIR"),
+    os.environ.get("CARGO_TARGET_DIR"),
+    CACHE_REPO_ROOT,
 )
 RUST_SNIPPET_WORKSPACE_CACHE_DIR = Path(
     os.environ.get(
@@ -972,6 +990,45 @@ def _remove_tree(path: Path) -> None:
         return
     _make_tree_user_writable(path)
     shutil.rmtree(path, ignore_errors=True)
+
+
+def prune_cache_entries(
+    cache_dir: Path,
+    keep_last: int = 8,
+    max_age_days: float = 14.0,
+) -> list[Path]:
+    """Bound a content/fingerprint-addressed cache directory (best effort).
+
+    Snippet caches key each entry by a content hash, so an entry is orphaned the
+    moment its inputs change and is never reclaimed otherwise — over weeks they
+    pile up to tens of GB. This removes entries that are BOTH older than
+    ``max_age_days`` AND outside the ``keep_last`` most-recently-modified, so an
+    actively-reused cache is never pruned while stale orphans are. Lock and
+    in-progress ``.tmp`` directories are skipped. Returns the removed paths.
+    """
+    if not cache_dir.is_dir():
+        return []
+    entries: list[tuple[float, Path]] = []
+    for child in cache_dir.iterdir():
+        if child.name.endswith(".lock") or child.name.endswith(".tmp"):
+            continue
+        if child.is_symlink() or not child.is_dir():
+            continue
+        try:
+            mtime = child.stat().st_mtime
+        except OSError:
+            continue
+        entries.append((mtime, child))
+    if len(entries) <= keep_last:
+        return []
+    entries.sort(key=lambda item: item[0], reverse=True)
+    cutoff = time.time() - max_age_days * 86400
+    removed: list[Path] = []
+    for mtime, child in entries[keep_last:]:
+        if mtime < cutoff:
+            _remove_tree(child)
+            removed.append(child)
+    return removed
 
 
 def _update_hash_with_files(
@@ -2745,6 +2802,34 @@ def lint_java_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue
 # ---------------------------------------------------------------------------
 
 
+# Content/fingerprint-addressed caches whose entries are orphaned when their
+# inputs change. Each is a directory of hash-named subdirs; bound them so stale
+# orphans don't accumulate indefinitely. The shared Rust/Cargo target dir is
+# deliberately excluded — it is a single Cargo-managed tree, not a collection of
+# disposable entries.
+PRUNABLE_SNIPPET_CACHE_DIRS: tuple[Path, ...] = (
+    RUST_SNIPPET_WORKSPACE_CACHE_DIR,
+    RUST_SNIPPET_SDK_CACHE_DIR,
+    GO_SNIPPET_WORKSPACE_CACHE_DIR,
+    TS_SNIPPET_WORKSPACE_CACHE_DIR,
+    DOTNET_SNIPPET_SDK_CACHE_DIR,
+    DOTNET_SNIPPET_COMPILE_CACHE_DIR,
+    JAVA_SNIPPET_SDK_CACHE_DIR,
+    JAVA_SNIPPET_COMPILE_CACHE_DIR,
+    PYTHON_SNIPPET_SUCCESS_CACHE_DIR,
+    PHP_SNIPPET_SUCCESS_CACHE_DIR,
+)
+
+
+def prune_snippet_caches() -> None:
+    """Best-effort GC backstop over all content-addressed snippet caches."""
+    for cache_dir in PRUNABLE_SNIPPET_CACHE_DIRS:
+        try:
+            prune_cache_entries(cache_dir)
+        except OSError:
+            continue
+
+
 def reset_snippet_dir() -> None:
     if SNIPPET_DIR.exists():
         shutil.rmtree(SNIPPET_DIR)
@@ -2917,6 +3002,9 @@ def main() -> int:
 
     with timer.record("scratch.reset"):
         reset_snippet_dir()
+
+    with timer.record("cache.prune"):
+        prune_snippet_caches()
 
     with timer.record("snippets.index_by_language"):
         by_lang: dict[str, list[Snippet]] = {}
