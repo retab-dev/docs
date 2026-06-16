@@ -3,10 +3,9 @@ load("//tools/bazel:defs.bzl", "LOCAL_TAGS", "PYTHON_VENV_TAGS")
 
 package(default_visibility = ["//visibility:public"])
 
-# The public openapi.json is generated from the Go main_server (Huma routes) by
-# //tools/bazel:generate_openapi -> backend/main_server_go/cmd/publicspec, applying
-# the public route whitelist in public_api_routes.yaml. Output is byte-identical to
-# the retired Python generator (open-source/docs/api-reference/generate_openapi.py).
+# The public openapi.json is generated from the FastAPI main_server app by
+# //tools/bazel:generate_openapi, applying the public route whitelist in
+# public_api_routes.yaml.
 filegroup(
     name = "openapi_inputs",
     srcs = glob([
@@ -14,7 +13,7 @@ filegroup(
         "*.py",
     ]) + [
         "public_api_routes.yaml",
-        "//backend/main_server_go:sources",
+        "//backend/main_server:sources",
         "//open-source/docs:docs_json",
     ],
 )
@@ -52,8 +51,8 @@ genrule(
         "public_api_routes.yaml",
     ],
     outs = ["openapi.generated.json"],
-    cmd = "$(location //backend/main_server_go/cmd/publicspec) $(location public_api_routes.yaml) $@",
-    tools = ["//backend/main_server_go/cmd/publicspec"],
+    cmd = "$(location //tools/bazel:generate_openapi) $@",
+    tools = ["//tools/bazel:generate_openapi"],
 )
 
 sh_test(
@@ -80,10 +79,7 @@ retab_generated_artifact_lifecycle(
     tags = LOCAL_TAGS,
 )
 
-# NOTE: generate_openapi.py (the Python public-spec generator) is retired — the
-# byte-identical generator is now backend/main_server_go/cmd/publicspec. This test
-# still pins the legacy Python filter logic; it is removed with old-python in the
-# decommission's deletion wave.
+# Pins the public OpenAPI filter/overlay behavior used by generate_openapi.py.
 sh_test(
     name = "generator_unit_tests",
     srcs = ["//tools/bazel:run_pytest.sh"],
