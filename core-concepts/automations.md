@@ -77,7 +77,7 @@ schema = {
 
 response = requests.post(
 "https://api.retab.com/v1/processors",
-headers={"Api-Key": api_key},
+headers={"Authorization": f"Bearer {api_key}"},
 json={
 "name": "Invoice Processor",
 "model": "retab-small",
@@ -127,7 +127,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("RETAB_API_KEY"))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -158,7 +158,7 @@ uri = URI('https://api.retab.com/v1/processors')
 http = Net::HTTP.new(uri.host, uri.port)
 http.use_ssl = true
 request = Net::HTTP::Post.new(uri)
-request['Api-Key'] = ENV['RETAB_API_KEY']
+request['Authorization'] = "Bearer #{ENV['RETAB_API_KEY']}"
 request['Content-Type'] = 'application/json'
 request.body = {
   name: 'Invoice Processor',
@@ -183,7 +183,7 @@ const schema = {
 const response = await fetch("https://api.retab.com/v1/processors", {
   method: "POST",
   headers: {
-    "Api-Key": process.env.RETAB_API_KEY!,
+    "Authorization": `Bearer ${process.env.RETAB_API_KEY!}`,
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
@@ -206,7 +206,7 @@ let schema = serde_json::json!({
 
 let processor: serde_json::Value = reqwest::Client::new()
     .post("https://api.retab.com/v1/processors")
-    .header("Api-Key", api_key)
+    .header("Authorization", format!("Bearer {}", api_key))
     .json(&serde_json::json!({
         "name": "Invoice Processor",
         "model": "retab-small",
@@ -225,7 +225,7 @@ using System.Net.Http.Json;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 using var http = new HttpClient();
-http.DefaultRequestHeaders.Add("Api-Key", apiKey);
+http.DefaultRequestHeaders.Add("Authorization", "Bearer " + apiKey);
 
 var response = await http.PostAsJsonAsync("https://api.retab.com/v1/processors", new
 {
@@ -244,7 +244,7 @@ $ch = curl_init('https://api.retab.com/v1/processors');
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER => ['Api-Key: ' . getenv('RETAB_API_KEY'), 'Content-Type: application/json'],
+    CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . getenv('RETAB_API_KEY'), 'Content-Type: application/json'],
     CURLOPT_POSTFIELDS => json_encode(['name' => 'Invoice Processor', 'model' => 'retab-small', 'json_schema' => $schema]),
 ]);
 echo curl_exec($ch) . PHP_EOL;
@@ -267,7 +267,7 @@ public final class Example {
 
     HttpRequest request =
         HttpRequest.newBuilder(URI.create("https://api.retab.com/v1/processors"))
-            .header("Api-Key", System.getenv("RETAB_API_KEY"))
+            .header("Authorization", "Bearer " + System.getenv("RETAB_API_KEY"))
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(body))
             .build();
@@ -756,7 +756,7 @@ automation_id = "auto_abc"
 
 webhook_log = requests.post(
 f"https://api.retab.com/v1/processors/automations/tests/webhook/{automation_id}",
-headers={"Api-Key": api_key},
+headers={"Authorization": f"Bearer {api_key}"},
 )
 webhook_log.raise_for_status()
 
@@ -765,7 +765,7 @@ webhook_log.raise_for_status()
 with open("your_invoice_email.eml", "rb") as document:
 upload_log = requests.post(
 f"https://api.retab.com/v1/processors/automations/tests/upload/{automation_id}",
-headers={"Api-Key": api_key},
+headers={"Authorization": f"Bearer {api_key}"},
 files={"file": ("your_invoice_email.eml", document, "message/rfc822")},
 )
 upload_log.raise_for_status()
@@ -804,7 +804,7 @@ func post(url string, body any) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Api-Key", os.Getenv("RETAB_API_KEY"))
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("RETAB_API_KEY"))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -858,7 +858,7 @@ uri = URI("https://api.retab.com/v1/processors/automations/tests/webhook/#{autom
 http = Net::HTTP.new(uri.host, uri.port)
 http.use_ssl = true
 request = Net::HTTP::Post.new(uri)
-request['Api-Key'] = api_key
+request['Authorization'] = "Bearer #{api_key}"
 webhook_log = http.request(request)
 raise "Webhook test failed: #{webhook_log.code}" unless webhook_log.is_a?(Net::HTTPSuccess)
 
@@ -876,7 +876,7 @@ File.open('your_invoice_email.eml', 'rb') do |document|
   body << "\r\n--#{boundary}--\r\n"
 
   upload_req = Net::HTTP::Post.new(upload_uri)
-  upload_req['Api-Key'] = api_key
+  upload_req['Authorization'] = "Bearer #{api_key}"
   upload_req['Content-Type'] = "multipart/form-data; boundary=#{boundary}"
   upload_req.body = body
   upload_log = upload_http.request(upload_req)
@@ -893,14 +893,14 @@ const automationId = "auto_abc";
 
 await fetch(`https://api.retab.com/v1/processors/automations/tests/webhook/${automationId}`, {
   method: "POST",
-  headers: { "Api-Key": process.env.RETAB_API_KEY! },
+  headers: { "Authorization": `Bearer ${process.env.RETAB_API_KEY!}` },
 });
 
 const form = new FormData();
 form.append("file", new Blob([emailBytes], { type: "message/rfc822" }), "your_invoice_email.eml");
 await fetch(`https://api.retab.com/v1/processors/automations/tests/upload/${automationId}`, {
   method: "POST",
-  headers: { "Api-Key": process.env.RETAB_API_KEY! },
+  headers: { "Authorization": `Bearer ${process.env.RETAB_API_KEY!}` },
   body: form,
 });
 ```
@@ -912,7 +912,7 @@ let client = reqwest::Client::new();
 
 client
     .post(format!("https://api.retab.com/v1/processors/automations/tests/webhook/{automation_id}"))
-    .header("Api-Key", &api_key)
+    .header("Authorization", format!("Bearer {}", api_key))
     .send()
     .await?
     .error_for_status()?;
@@ -922,7 +922,7 @@ client
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var automationId = "auto_abc";
 using var http = new HttpClient();
-http.DefaultRequestHeaders.Add("Api-Key", apiKey);
+http.DefaultRequestHeaders.Add("Authorization", "Bearer " + apiKey);
 
 var webhook = await http.PostAsync(
     $"https://api.retab.com/v1/processors/automations/tests/webhook/{automationId}",
@@ -938,7 +938,7 @@ $ch = curl_init("https://api.retab.com/v1/processors/automations/tests/webhook/{
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER => ['Api-Key: ' . getenv('RETAB_API_KEY')],
+    CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . getenv('RETAB_API_KEY')],
 ]);
 echo curl_exec($ch) . PHP_EOL;
 curl_close($ch);
@@ -960,7 +960,7 @@ public final class Example {
     HttpRequest webhookRequest =
         HttpRequest.newBuilder(
                 URI.create("https://api.retab.com/v1/processors/automations/tests/webhook/auto_abc"))
-            .header("Api-Key", System.getenv("RETAB_API_KEY"))
+            .header("Authorization", "Bearer " + System.getenv("RETAB_API_KEY"))
             .POST(HttpRequest.BodyPublishers.ofString("{}"))
             .build();
     System.out.println(http.send(webhookRequest, HttpResponse.BodyHandlers.ofString()).body());
@@ -981,7 +981,7 @@ public final class Example {
     HttpRequest uploadRequest =
         HttpRequest.newBuilder(
                 URI.create("https://api.retab.com/v1/processors/automations/tests/upload/auto_abc"))
-            .header("Api-Key", System.getenv("RETAB_API_KEY"))
+            .header("Authorization", "Bearer " + System.getenv("RETAB_API_KEY"))
             .header("Content-Type", "multipart/form-data; boundary=" + boundary)
             .POST(HttpRequest.BodyPublishers.ofByteArray(payload))
             .build();
