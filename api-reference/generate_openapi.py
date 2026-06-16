@@ -837,6 +837,18 @@ def _canonicalize_spec(spec: dict[str, object]) -> None:
     _sort_required_arrays(spec)
 
 
+def _normalize_public_security(spec: dict[str, object]) -> None:
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return
+    for path_item in paths.values():
+        if not isinstance(path_item, dict):
+            continue
+        for operation in path_item.values():
+            if isinstance(operation, dict) and "security" in operation:
+                operation["security"] = [{"HTTPBearer": []}]
+
+
 def generate_openapi(output_path: Path | None = None) -> None:
     repo_root = Path(__file__).resolve().parents[3]
     backend_main_server = repo_root / "backend" / "main_server"
@@ -850,8 +862,9 @@ def generate_openapi(output_path: Path | None = None) -> None:
 
     # Update security schemes
     spec["components"]["securitySchemes"] = {
-        "API Key": {"type": "apiKey", "in": "header", "name": "Api-Key"}
+        "HTTPBearer": {"type": "http", "scheme": "bearer"}
     }
+    _normalize_public_security(spec)
 
     # Update servers
     spec["servers"] = [{"url": "https://api.retab.com"}]
