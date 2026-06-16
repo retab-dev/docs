@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 import json
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -230,12 +231,49 @@ def _collect_public_openapi_routes(openapi_path: Path) -> set[tuple[str, str]]:
     return routes
 
 
+def resolve_input_path(path: str | Path) -> Path:
+    value = Path(path)
+    candidates: list[Path] = []
+    if value.is_absolute():
+        candidates.append(value)
+    else:
+        repo_root = DOCS_ROOT.parents[1]
+        candidates.extend(
+            [
+                DOCS_ROOT / value,
+                repo_root / value,
+                repo_root / "bazel-bin" / value,
+                Path.cwd() / value,
+            ]
+        )
+        test_srcdir = os.environ.get("TEST_SRCDIR", "")
+        test_workspace = os.environ.get("TEST_WORKSPACE", "")
+        if test_srcdir and test_workspace:
+            candidates.append(Path(test_srcdir) / test_workspace / value)
+        if test_srcdir:
+            candidates.append(Path(test_srcdir) / "_main" / value)
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate.resolve()
+    return value.resolve()
+
+
+def default_openapi_path() -> Path:
+    override = os.environ.get("RETAB_DOCS_OPENAPI_JSON")
+    if override:
+        return resolve_input_path(override)
+    return OPENAPI_JSON
+
+
 def validate_api_reference_routes_match_public_openapi(
     config: dict[str, object],
     root: Path = DOCS_ROOT,
-    openapi_path: Path = OPENAPI_JSON,
+    openapi_path: Path | None = None,
 ) -> list[DocsGraphIssue]:
     issues: list[DocsGraphIssue] = []
+    if openapi_path is None:
+        openapi_path = default_openapi_path()
     public_routes = _collect_public_openapi_routes(openapi_path)
 
     for page in iter_navigation_pages(config.get("navigation", {})):
@@ -264,22 +302,28 @@ def validate_api_reference_routes_match_public_openapi(
     return issues
 
 
-def collect_issues() -> list[DocsGraphIssue]:
+def collect_issues(openapi_path: Path | None = None) -> list[DocsGraphIssue]:
     config = load_docs_config()
     files = iter_doc_files()
     issues: list[DocsGraphIssue] = []
     issues.extend(validate_navigation_pages(config))
     issues.extend(validate_markdown_links(files))
     issues.extend(validate_redirect_destinations(config))
-    issues.extend(validate_api_reference_routes_match_public_openapi(config))
+    issues.extend(
+        validate_api_reference_routes_match_public_openapi(
+            config,
+            openapi_path=openapi_path,
+        )
+    )
     return issues
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.parse_args()
+    parser.add_argument("--openapi", default=None)
+    args = parser.parse_args()
 
-    issues = collect_issues()
+    issues = collect_issues(resolve_input_path(args.openapi) if args.openapi else None)
     if not issues:
         print("docs graph ok")
         return 0
