@@ -244,7 +244,7 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-experiment = client.workflow_experiments.create(
+experiment = client.workflows.experiments.create(
   workflow_id: 'wf_abc123',
   block_id: 'extract-invoice',
   name: 'Q1 invoices',
@@ -268,7 +268,7 @@ use Retab\Resource\NConsensusValue;
 
 $client = new Client();
 
-$experiment = $client->workflowExperiments()->create(
+$experiment = $client->workflows()->experiments()->create(
     workflowId: 'wf_abc123',
     blockId: 'extract-invoice',
     name: 'Q1 invoices',
@@ -414,14 +414,14 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-run = client.experiment_runs.create(experiment_id: experiment.id)
+run = client.workflows.experiments.runs.create(experiment_id: experiment.id)
 
 puts "#{run.id} #{run.lifecycle.status}"
 ```
 
 ```php PHP
 <?php
-$run = $client->experimentRuns()->create(
+$run = $client->workflows()->experiments()->runs()->create(
     experimentId: $experiment->id,
     workflowId: 'wf_abc123',
 );
@@ -574,14 +574,14 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-run = client.experiment_runs.get(run_id: run.id)
+run = client.workflows.experiments.runs.get(run_id: run.id)
 
-results = client.experiment_run_results.list(run_id: run.id)
+results = client.workflows.experiments.results.list(run_id: run.id)
 results.data.each do |result|
   puts "#{result.document_id} #{result.lifecycle.status}"
 end
 
-result = client.experiment_run_results.get(
+result = client.workflows.experiments.results.get(
   run_id: run.id,
   document_id: 'expdoc_xyz',
 )
@@ -590,14 +590,14 @@ puts result.artifact
 
 ```php PHP
 <?php
-$run = $client->experimentRuns()->get($run->id);
+$run = $client->workflows()->experiments()->runs()->get($run->id);
 
-$results = $client->experimentRunResults()->list(runId: $run->id);
+$results = $client->workflows()->experiments()->results()->list(runId: $run->id);
 foreach ($results->data as $result) {
     echo $result->documentId . ' ' . ($result->lifecycle->status ?? '') . PHP_EOL;
 }
 
-$result = $client->experimentRunResults()->get('expdoc_xyz');
+$result = $client->workflows()->experiments()->results()->get('expdoc_xyz');
 print_r($result->artifact);
 ```
 
@@ -787,20 +787,20 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-summary = client.experiment_run_metrics.get(
+summary = client.workflows.experiments.metrics.get(
   run_id: run.id,
   view: 'summary',
 )
 
 # A weak field surfaces in summary.aggregate.likelihoods - drill in
-target_view = client.experiment_run_metrics.get(
+target_view = client.workflows.experiments.metrics.get(
   run_id: run.id,
   view: 'by_target',
   target_path: 'line_items.*.unit_price',
 )
 
 # To see what each voter said for one document/target cell
-votes = client.experiment_run_metrics.get(
+votes = client.workflows.experiments.metrics.get(
   run_id: run.id,
   view: 'votes',
   document_id: 'expdoc_xyz',
@@ -812,20 +812,20 @@ votes = client.experiment_run_metrics.get(
 <?php
 use Retab\Resource\ExperimentRunMetricsView;
 
-$summary = $client->experimentRunMetrics()->get(
+$summary = $client->workflows()->experiments()->metrics()->get(
     runId: $run->id,
     view: ExperimentRunMetricsView::Summary,
 );
 
 // A weak field surfaces in summary.aggregate.likelihoods - drill in
-$targetView = $client->experimentRunMetrics()->get(
+$targetView = $client->workflows()->experiments()->metrics()->get(
     runId: $run->id,
     view: ExperimentRunMetricsView::ByTarget,
     targetPath: 'line_items.*.unit_price',
 );
 
 // To see what each voter said for one document/target cell
-$votes = $client->experimentRunMetrics()->get(
+$votes = $client->workflows()->experiments()->metrics()->get(
     runId: $run->id,
     view: ExperimentRunMetricsView::Votes,
     documentId: 'expdoc_xyz',
@@ -981,12 +981,12 @@ require 'retab'
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 # Change the document set or n_consensus - invalidates existing metrics
-client.workflow_experiments.update(
+client.workflows.experiments.update(
   experiment_id: experiment.id,
   n_consensus: 7,
 )
 
-client.workflow_experiments.delete(experiment_id: experiment.id)
+client.workflows.experiments.delete(experiment_id: experiment.id)
 ```
 
 ```php PHP
@@ -994,12 +994,12 @@ client.workflow_experiments.delete(experiment_id: experiment.id)
 use Retab\Resource\NConsensusValue;
 
 // Change n_consensus — invalidates existing metrics
-$client->workflowExperiments()->update(
+$client->workflows()->experiments()->update(
     experimentId: $experiment->id,
     nConsensus: NConsensusValue::Value7,
 );
 
-$client->workflowExperiments()->delete($experiment->id);
+$client->workflows()->experiments()->delete($experiment->id);
 ```
 
 ```csharp C#

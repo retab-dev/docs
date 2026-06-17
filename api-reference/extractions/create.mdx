@@ -8,13 +8,26 @@ Extract structured data from a document against a JSON schema and persist the re
 <RequestExample>
 
 ```python Python
-from retab import Retab
+from retab import MIMEData, Retab
 
 client = Retab()
 
+document = MIMEData(
+    filename="Invoice.pdf",
+    url="https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf",
+)
+schema = {
+    "type": "object",
+    "properties": {
+        "invoice_number": {"type": "string"},
+        "total": {"type": "number"},
+    },
+    "required": ["invoice_number", "total"],
+}
+
 extraction = client.extractions.create(
-    document="Invoice.pdf",
-    json_schema="Invoice_schema.json",
+    document=document,
+    json_schema=schema,
     model="retab-small",
     n_consensus=1,
     metadata={"source": "docs"},
@@ -30,8 +43,13 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
+const document = {
+  filename: "Invoice.pdf",
+  url: "https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf",
+};
+
 const extraction = await client.extractions.create(
-  "Invoice.pdf",
+  document,
   { type: "object", properties: {} },
   "retab-small",
   undefined,
@@ -65,9 +83,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	document, err := retab.InferMIMEData("Invoice.pdf")
-	if err != nil {
-		log.Fatal(err)
+	document := retab.MIMEData{
+		Filename: "Invoice.pdf",
+		URL:      "https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf",
 	}
 
 	extraction, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
@@ -98,9 +116,23 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
+document = {
+  filename: 'Invoice.pdf',
+  url: 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf',
+}
+
+schema = {
+  type: 'object',
+  properties: {
+    invoice_number: { type: 'string' },
+    total: { type: 'number' },
+  },
+  required: ['invoice_number', 'total'],
+}
+
 extraction = client.extractions.create(
-  document: 'Invoice.pdf',
-  json_schema: 'Invoice_schema.json',
+  document: document,
+  json_schema: schema,
   model: 'retab-small',
   n_consensus: 1,
   metadata: { 'source' => 'docs' },
@@ -113,9 +145,8 @@ puts extraction.output
 
 ```rust Rust
 use retab::resources::extractions::CreateParams;
-use retab::Retab;
+use retab::{MimeData, Retab};
 use serde_json::json;
-use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -130,8 +161,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "required": ["invoice_number", "total"],
     });
     let schema_map = schema.as_object().unwrap().clone().into_iter().collect();
+    let document = MimeData::new(
+        "Invoice.pdf",
+        "https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf",
+    );
 
-    let mut params = CreateParams::new(PathBuf::from("Invoice.pdf"), schema_map);
+    let mut params = CreateParams::new(document, schema_map);
     params.body.model = Some("retab-small".into());
     params.body.n_consensus = Some(1);
     params.body.metadata = Some([("source".to_string(), "docs".to_string())].into_iter().collect());
@@ -154,7 +189,10 @@ use Retab\Client;
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
 $result = $client->extractions()->create(
-    document: 'invoice.pdf',
+    document: [
+        'filename' => 'Invoice.pdf',
+        'url' => 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf',
+    ],
     jsonSchema: ['type' => 'object', 'properties' => []],
 );
 print_r($result);
@@ -162,23 +200,76 @@ print_r($result);
 
 ```csharp C#
 using Retab;
+using System;
+using System.Collections.Generic;
 using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Extractions.CreateAsync(new ExtractionsCreateOptions());
+var document = MimeData.FromUrl(
+    new Uri("https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf"));
+
+var result = await client.Extractions.CreateAsync(new ExtractionsCreateOptions
+{
+    Document = document,
+    JsonSchema = new Dictionary<string, object>
+    {
+        ["type"] = "object",
+        ["properties"] = new Dictionary<string, object>
+        {
+            ["invoice_number"] = new Dictionary<string, object> { ["type"] = "string" },
+            ["total"] = new Dictionary<string, object> { ["type"] = "number" },
+        },
+        ["required"] = new List<string> { "invoice_number", "total" },
+    },
+    Model = "retab-small",
+    NConsensus = 1,
+    Metadata = new Dictionary<string, string> { ["source"] = "docs" },
+});
 Console.WriteLine(result);
 ```
 
 ```java Java
 import com.retab.RetabClient;
+import com.retab.models.MimeData;
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
 
 public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.extractions().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null, null, null, null, null);
+    MimeData document =
+        MimeData.fromUrl(
+            URI.create("https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf"));
+
+    Map<String, Object> jsonSchema =
+        Map.of(
+            "type", "object",
+            "properties",
+                Map.of(
+                    "invoice_number", Map.of("type", "string"),
+                    "total", Map.of("type", "number")),
+            "required", List.of("invoice_number", "total"));
+
+    var result =
+        client
+            .extractions()
+            .create(
+                document,
+                jsonSchema,
+                "retab-small",
+                null,
+                null,
+                1L,
+                Map.of("source", "docs"),
+                null,
+                null,
+                null,
+                null,
+                null);
     System.out.println(result);
   }
 }
@@ -192,7 +283,7 @@ curl -X POST \
   -d '{
   "document": {
     "filename": "Invoice.pdf",
-    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    "url": "https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf"
   },
   "model": "retab-small",
   "image_resolution_dpi": 192,

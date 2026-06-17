@@ -8,12 +8,17 @@ Classify a document into one of the provided categories and persist the result a
 <RequestExample>
 
 ```python Python
-from retab import Retab
+from retab import MIMEData, Retab
 
 client = Retab()
 
+document = MIMEData(
+    filename="invoice.pdf",
+    url="https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice.pdf",
+)
+
 classification = client.classifications.create(
-    document="invoice.pdf",
+    document=document,
     model="retab-small",
     categories=[
         {"name": "invoice", "description": "Invoice documents with billing information"},
@@ -35,7 +40,12 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const classification = await client.classifications.create("invoice.pdf", [
+const document = {
+  filename: "invoice.pdf",
+  url: "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice.pdf",
+};
+
+const classification = await client.classifications.create(document, [
     {
       name: "invoice",
       description: "Invoice documents with billing information",
@@ -69,9 +79,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	document, err := retab.InferMIMEData("invoice.pdf")
-	if err != nil {
-		log.Fatal(err)
+	document := retab.MIMEData{
+		Filename: "invoice.pdf",
+		URL:      "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice.pdf",
 	}
 
 	classification, err := client.Classifications.Create(ctx, &retab.ClassificationsCreateParams{
@@ -100,8 +110,13 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
+document = {
+  filename: 'invoice.pdf',
+  url: 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice.pdf',
+}
+
 classification = client.classifications.create(
-  document: 'invoice.pdf',
+  document: document,
   model: 'retab-small',
   categories: [
     { 'name' => 'invoice', 'description' => 'Invoice documents with billing information' },
@@ -121,8 +136,7 @@ puts "Reasoning: #{classification.output.reasoning}"
 ```rust Rust
 use retab::models::Category;
 use retab::resources::classifications::CreateParams;
-use retab::Retab;
-use std::path::PathBuf;
+use retab::{MimeData, Retab};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -145,8 +159,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             description: Some("Legal contract documents".into()),
         },
     ];
+    let document = MimeData::new(
+        "invoice.pdf",
+        "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice.pdf",
+    );
 
-    let mut params = CreateParams::new(PathBuf::from("invoice.pdf"), categories);
+    let mut params = CreateParams::new(document, categories);
     params.body.model = Some("retab-small".into());
     params.body.first_n_pages = Some(3);
     params.body.instructions = Some("Processing batch from Q4 2024 vendor submissions".into());
@@ -170,31 +188,72 @@ use Retab\Client;
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
 $result = $client->classifications()->create(
-    document: 'invoice.pdf',
+    document: [
+        'filename' => 'invoice.pdf',
+        'url' => 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice.pdf',
+    ],
     categories: [['name' => 'invoice', 'description' => 'Invoice documents']],
 );
 print_r($result);
 ```
 
 ```csharp C#
+using System;
+using System.Collections.Generic;
 using Retab;
 using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Classifications.CreateAsync(new ClassificationsCreateOptions());
+var document = MimeData.FromUrl(
+    new Uri("https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice.pdf"));
+
+var result = await client.Classifications.CreateAsync(new ClassificationsCreateOptions
+{
+    Document = document,
+    Model = "retab-small",
+    Categories = new List<Category>
+    {
+        new Category { Name = "invoice", Description = "Invoice documents with billing information" },
+        new Category { Name = "receipt", Description = "Receipt documents for payments" },
+        new Category { Name = "contract", Description = "Legal contract documents" },
+    },
+    FirstNPages = 3,
+    Instructions = "Processing batch from Q4 2024 vendor submissions",
+    NConsensus = 1,
+});
 Console.WriteLine(result);
 ```
 
 ```java Java
 import com.retab.RetabClient;
+import com.retab.models.Category;
+import com.retab.models.MimeData;
+import java.net.URI;
+import java.util.List;
 
 public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.classifications().create(null, null, "retab-1.5", 10L, "Extract the invoice fields", 10L, null, null);
+    MimeData document = MimeData.fromUrl(
+        URI.create("https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice.pdf"));
+
+    List<Category> categories = List.of(
+        new Category("invoice", null, "Invoice documents with billing information"),
+        new Category("receipt", null, "Receipt documents for payments"),
+        new Category("contract", null, "Legal contract documents"));
+
+    var result = client.classifications().create(
+        document,
+        categories,
+        "retab-small",
+        3L,
+        "Processing batch from Q4 2024 vendor submissions",
+        1L,
+        null,
+        null);
     System.out.println(result);
   }
 }
@@ -208,7 +267,7 @@ curl -X POST \
   -d '{
   "document": {
     "filename": "invoice.pdf",
-    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    "url": "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice.pdf"
   },
   "model": "retab-small",
   "categories": [

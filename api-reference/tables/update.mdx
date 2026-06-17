@@ -5,28 +5,152 @@ openapi: "PATCH /v1/tables/{table_id}"
 
 Update table name or metadata. This does not mutate rows, columns, cells, or the backing CSV contents.
 
+<RequestExample>
+
 ```python Python
-tables = client.tables.update_table(table_id="workflow_table_123", name="Carriers")
+from retab import Retab
+
+client = Retab()
+
+tables = client.tables.update_table(
+    table_id="workflow_table_123",
+    name="Carriers",
+    metadata={"region": "eu"},
+)
+print(tables)
 ```
 
 ```typescript TypeScript
-const tables = await client.tables.update_table("workflow_table_123", {
-  name: "Carriers",
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const tables = await client.tables.update_table("workflow_table_123", "Carriers", {
+  region: "eu",
 });
+console.log(tables);
 ```
 
 ```go Go
-name := "Carriers"
-tables, err := client.Tables.Update(ctx, "workflow_table_123", &retab.TablesUpdateParams{Name: &name})
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	name := "Carriers"
+	metadata := map[string]interface{}{"region": "eu"}
+	tables, err := client.Tables.Update(ctx, "workflow_table_123", &retab.TablesUpdateParams{
+		Name:     &name,
+		Metadata: &metadata,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(*tables)
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+tables = client.tables.update_table(
+  table_id: 'workflow_table_123',
+  name: 'Carriers',
+  metadata: { 'region' => 'eu' },
+)
+puts tables
+```
+
+```rust Rust
+use retab::Retab;
+use retab::models::UpdateWorkflowTableRequest;
+use retab::resources::tables::UpdateTableParams;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let tables = client
+        .tables()
+        .update_table(
+            "workflow_table_123",
+            UpdateTableParams::new(UpdateWorkflowTableRequest {
+                name: Some("Carriers".to_string()),
+                ..Default::default()
+            }),
+        )
+        .await?;
+    println!("{:?}", tables);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->tables()->updateTable(
+    tableId: 'workflow_table_123',
+    name: 'Carriers',
+    metadata: ['region' => 'eu'],
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var result = await client.Tables.UpdateAsync("workflow_table_123", new TablesUpdateOptions
+{
+    Name = "Carriers",
+    Metadata = new Dictionary<string, object> { ["region"] = "eu" },
+});
+Console.WriteLine(result);
 ```
 
 ```java Java
-// Update table metadata with the Retab Java client.
+import com.retab.RetabClient;
+import java.util.Map;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result =
+        client.tables().update("workflow_table_123", "Carriers", Map.of("region", "eu"));
+    System.out.println(result);
+  }
+}
 ```
 
 ```bash cURL
 curl -X PATCH https://api.retab.com/v1/tables/workflow_table_123 \
   -H "Authorization: Bearer $RETAB_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"name":"Carriers"}'
+  -d '{"name":"Carriers","metadata":{"region":"eu"}}'
 ```
+
+</RequestExample>

@@ -6,11 +6,16 @@ openapi: "POST /v1/schemas/generate"
 <RequestExample>
 
 ```python Python
-from retab import Retab
+from retab import MIMEData, Retab
 client = Retab()
 
+document = MIMEData(
+    filename="passport.jpeg",
+    url="https://storage.googleapis.com/retab-docs/passport.jpeg",
+)
+
 response = client.schemas.generate(
-    documents=["passport.jpeg"],
+    documents=[document],
     model="retab-small",      # or any model your plan supports
     image_resolution_dpi=96,
 )
@@ -27,7 +32,12 @@ config();
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const result = await client.schemas.generate(["passport.jpeg"], "retab-small", undefined, 96);
+const document = {
+  filename: "passport.jpeg",
+  url: "https://storage.googleapis.com/retab-docs/passport.jpeg",
+};
+
+const result = await client.schemas.generate([document], "retab-small", undefined, 96);
 ```
 
 ```go Go
@@ -51,9 +61,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	document, err := retab.InferMIMEData("passport.jpeg")
-	if err != nil {
-		log.Fatal(err)
+	document := retab.MIMEData{
+		Filename: "passport.jpeg",
+		URL:      "https://storage.googleapis.com/retab-docs/passport.jpeg",
 	}
 
 	result, err := client.Schemas.Generate(ctx, &retab.SchemasGenerateParams{
@@ -74,8 +84,13 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
+document = {
+  filename: 'passport.jpeg',
+  url: 'https://storage.googleapis.com/retab-docs/passport.jpeg',
+}
+
 response = client.schemas.generate(
-  documents: ['passport.jpeg'],
+  documents: [document],
   model: 'retab-small',
   image_resolution_dpi: 96,
 )
@@ -86,14 +101,17 @@ puts response
 
 ```rust Rust
 use retab::resources::schemas::GenerateParams;
-use retab::Retab;
-use std::path::PathBuf;
+use retab::{MimeData, Retab};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+    let document = MimeData::new(
+        "passport.jpeg",
+        "https://storage.googleapis.com/retab-docs/passport.jpeg",
+    );
 
-    let mut params = GenerateParams::new(vec![PathBuf::from("passport.jpeg")]);
+    let mut params = GenerateParams::new(vec![document]);
     params.body.model = Some("retab-small".into());
     params.body.image_resolution_dpi = Some(96);
 
@@ -114,7 +132,10 @@ use Retab\Client;
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
 $result = $client->schemas()->generate(
-    documents: 'invoice.pdf',
+    documents: [[
+        'filename' => 'passport.jpeg',
+        'url' => 'https://storage.googleapis.com/retab-docs/passport.jpeg',
+    ]],
 );
 print_r($result);
 ```
@@ -151,7 +172,7 @@ curl https://api.retab.com/v1/schemas/generate \
     "documents": [
       {
         "filename": "passport.jpeg",
-        "url": "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..."
+        "url": "https://storage.googleapis.com/retab-docs/passport.jpeg"
       }
     ],
     "model": "retab-small",

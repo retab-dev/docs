@@ -3,34 +3,186 @@ title: "Query Table"
 openapi: "POST /v1/tables/{table_id}/query"
 ---
 
-Read a filtered, sorted, or windowed preview of a CSV table. This route is read-only; table writes replace the whole CSV.
+Read a filtered, sorted, or windowed preview of a CSV table. This route is
+read-only; table writes replace the whole CSV. Pass filter rules, sort rules,
+and a window (`offset`/`limit`) to shape the returned rows.
+
+<RequestExample>
 
 ```python Python
+from retab import Retab
+from retab.types.tables import (
+    WorkflowTableFilterOperator,
+    WorkflowTableFilterRule,
+    WorkflowTableSortRule,
+)
+
+client = Retab()
+
 rows = client.tables.query(
     table_id="workflow_table_123",
+    filters=[
+        WorkflowTableFilterRule(
+            column="countrycode",
+            operator=WorkflowTableFilterOperator.EQ,
+            value="FR",
+        ),
+    ],
+    sort=[WorkflowTableSortRule(column="countrycode")],
     limit=100,
 )
+print(rows)
 ```
 
 ```typescript TypeScript
-const rows = await client.tables.query("workflow_table_123", {
-  limit: 100,
-});
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const rows = await client.tables.query("workflow_table_123", [
+  { column: "countrycode", operator: "eq", value: "FR" },
+]);
+console.log(rows);
 ```
 
 ```go Go
-rows, err := client.Tables.Query(ctx, "workflow_table_123", &retab.TablesQueryParams{
-  Body: map[string]any{"limit": 100},
-})
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rows, err := client.Tables.Query(ctx, "workflow_table_123", &retab.TablesQueryParams{
+		Body: map[string]any{
+			"filters": []map[string]any{
+				{"column": "countrycode", "operator": "eq", "value": "FR"},
+			},
+			"sort":  []map[string]any{{"column": "countrycode", "direction": "asc"}},
+			"limit": 100,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(*rows)
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+rows = client.tables.query(
+  table_id: 'workflow_table_123',
+  filters: [
+    { 'column' => 'countrycode', 'operator' => 'eq', 'value' => 'FR' },
+  ],
+  sort: [{ 'column' => 'countrycode', 'direction' => 'asc' }],
+  limit: 100,
+)
+puts rows
+```
+
+```rust Rust
+use retab::Retab;
+use retab::enums::WorkflowTableFilterOperator;
+use retab::models::{QueryWorkflowTableRequest, WorkflowTableFilterRule, WorkflowTableSortRule};
+use retab::resources::tables::QueryParams;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let rows = client
+        .tables()
+        .query(
+            "workflow_table_123",
+            QueryParams {
+                body: Some(QueryWorkflowTableRequest {
+                    filters: Some(vec![WorkflowTableFilterRule {
+                        value: Some(serde_json::json!("FR")),
+                        ..WorkflowTableFilterRule::new("countrycode", WorkflowTableFilterOperator::Eq)
+                    }]),
+                    sort: Some(vec![WorkflowTableSortRule::new("countrycode")]),
+                    limit: Some(100),
+                    ..Default::default()
+                }),
+            },
+        )
+        .await?;
+    println!("{:?}", rows);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\WorkflowTableFilterOperator;
+use Retab\Resource\WorkflowTableFilterRule;
+use Retab\Resource\WorkflowTableSortRule;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->tables()->query(
+    tableId: 'workflow_table_123',
+    filters: [
+        new WorkflowTableFilterRule(
+            column: 'countrycode',
+            operator: WorkflowTableFilterOperator::Eq,
+            value: 'FR',
+        ),
+    ],
+    sort: [new WorkflowTableSortRule(column: 'countrycode')],
+    limit: 100,
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var result = await client.Tables.QueryAsync("workflow_table_123", new TablesQueryOptions());
+Console.WriteLine(result);
 ```
 
 ```java Java
-// Query table rows for read-only preview.
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.tables().query("workflow_table_123");
+    System.out.println(result);
+  }
+}
 ```
 
 ```bash cURL
 curl -X POST https://api.retab.com/v1/tables/workflow_table_123/query \
   -H "Authorization: Bearer $RETAB_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"limit":100}'
+  -d '{"filters":[{"column":"countrycode","operator":"eq","value":"FR"}],"sort":[{"column":"countrycode","direction":"asc"}],"limit":100}'
 ```
+
+</RequestExample>

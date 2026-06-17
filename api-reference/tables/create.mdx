@@ -3,22 +3,149 @@ title: "Create Table"
 openapi: "POST /v1/tables"
 ---
 
-Create a table by uploading a CSV file. Table contents are updated by replacing the whole CSV, not by row, column, or cell mutations.
+Create a table by uploading a CSV file. Table contents are updated by replacing
+the whole CSV, not by row, column, or cell mutations.
+
+<RequestExample>
 
 ```python Python
-tables = client.tables.create(name="Carriers", file="./carriers.csv")
+from pathlib import Path
+
+from retab import Retab
+
+client = Retab()
+
+tables = client.tables.create(
+    name="Carriers",
+    file=Path("carriers.csv").read_bytes(),
+)
+print(tables)
 ```
 
 ```typescript TypeScript
-const tables = await client.tables.create("Carriers", "./carriers.csv");
+import { readFileSync } from "node:fs";
+
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const tables = await client.tables.create("Carriers", readFileSync("carriers.csv"));
+console.log(tables);
 ```
 
 ```go Go
-tables, err := client.Tables.Create(ctx, &retab.TablesCreateParams{Name: "Carriers", File: "./carriers.csv"})
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	file, err := os.ReadFile("carriers.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tables, err := client.Tables.Create(ctx, &retab.TablesCreateParams{
+		Name: "Carriers",
+		File: file,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(*tables)
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+tables = client.tables.create(
+  name: 'Carriers',
+  file: File.binread('carriers.csv'),
+)
+puts tables
+```
+
+```rust Rust
+use retab::models::CreateWorkflowTableUploadRequest;
+use retab::resources::tables::CreateParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let file = std::fs::read("carriers.csv")?;
+    let tables = client
+        .tables()
+        .create(CreateParams::new(CreateWorkflowTableUploadRequest::new(
+            "Carriers", file,
+        )))
+        .await?;
+    println!("{:?}", tables);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->tables()->create(
+    name: 'Carriers',
+    file: file_get_contents('carriers.csv'),
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var result = await client.Tables.CreateAsync(new TablesCreateOptions
+{
+    Name = "Carriers",
+    File = System.IO.File.ReadAllBytes("carriers.csv"),
+});
+Console.WriteLine(result);
 ```
 
 ```java Java
-// Create a table by uploading a CSV file.
+import com.retab.RetabClient;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    byte[] file = Files.readAllBytes(Path.of("carriers.csv"));
+    var result = client.tables().create("Carriers", file, null, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```bash cURL
@@ -27,3 +154,5 @@ curl https://api.retab.com/v1/tables \
   -F "name=Carriers" \
   -F "file=@./carriers.csv"
 ```
+
+</RequestExample>

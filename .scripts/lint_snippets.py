@@ -894,6 +894,87 @@ def check_placeholder_sdk_tabs(groups: list[CodeGroup]) -> list[LintIssue]:
     return issues
 
 
+# Workflow / experiment / edit-template sub-resources are NESTED on the PHP and
+# Ruby clients (e.g. ``$client->workflows()->blocks()``), never exposed as flat
+# top-level accessors. The flat forms below DO NOT EXIST, but PHP (``php -l``)
+# and Ruby (``ruby -c``) are syntax-only checks, so a call to a non-existent
+# method still "passes". This structural check catches them. Each entry maps the
+# bare sub-resource stem to its nested accessor chain; every nested target was
+# verified against the local PHP/Ruby SDK source. The regex anchors on the full
+# stem, so map order does not matter.
+FLAT_ACCESSOR_NESTED_CHAINS: dict[str, tuple[str, ...]] = {
+    "edit_templates": ("edits", "templates"),
+    "workflow_artifacts": ("workflows", "artifacts"),
+    "workflow_block_executions": ("workflows", "blocks", "executions"),
+    "workflow_blocks": ("workflows", "blocks"),
+    "workflow_edges": ("workflows", "edges"),
+    "workflow_experiments": ("workflows", "experiments"),
+    "workflow_review_versions": ("workflows", "reviews", "versions"),
+    "workflow_reviews": ("workflows", "reviews"),
+    "workflow_runs": ("workflows", "runs"),
+    "workflow_spec": ("workflows", "spec"),
+    "workflow_steps": ("workflows", "steps"),
+    "workflow_test_run_results": ("workflows", "tests", "results"),
+    "workflow_test_runs": ("workflows", "tests", "runs"),
+    "workflow_tests": ("workflows", "tests"),
+    "experiment_run_metrics": ("workflows", "experiments", "metrics"),
+    "experiment_run_results": ("workflows", "experiments", "results"),
+    "experiment_runs": ("workflows", "experiments", "runs"),
+}
+
+
+def _snake_to_camel(stem: str) -> str:
+    head, *rest = stem.split("_")
+    return head + "".join(word.capitalize() for word in rest)
+
+
+# (compiled regex, suggested-nested-call) for each language, derived from the map.
+_PHP_FLAT_ACCESSORS: tuple[tuple[re.Pattern[str], str], ...] = tuple(
+    (
+        re.compile(r"\$client->" + re.escape(_snake_to_camel(stem)) + r"\(\)"),
+        "$client->" + "()->".join(chain) + "()",
+    )
+    for stem, chain in FLAT_ACCESSOR_NESTED_CHAINS.items()
+)
+_RUBY_FLAT_ACCESSORS: tuple[tuple[re.Pattern[str], str], ...] = tuple(
+    (
+        re.compile(r"\bclient\." + re.escape(stem) + r"(?!\w)"),
+        "client." + ".".join(chain),
+    )
+    for stem, chain in FLAT_ACCESSOR_NESTED_CHAINS.items()
+)
+
+
+def check_flat_workflow_accessors(snippets: list[Snippet]) -> list[LintIssue]:
+    """Flag PHP/Ruby snippets that call non-existent flat client accessors.
+
+    PHP and Ruby are syntax-checked only, so a call like ``$client->workflowRuns()``
+    or ``client.workflow_runs`` "passes" even though the accessor does not exist
+    (the real client only exposes nested ``$client->workflows()->runs()`` /
+    ``client.workflows.runs``). This is the only guard against that class of bug.
+    """
+    issues: list[LintIssue] = []
+    for snippet in snippets:
+        if snippet.language == "php":
+            checks = _PHP_FLAT_ACCESSORS
+        elif snippet.language == "ruby":
+            checks = _RUBY_FLAT_ACCESSORS
+        else:
+            continue
+        for pattern, suggestion in checks:
+            if pattern.search(snippet.code):
+                issues.append(
+                    LintIssue.for_snippet(
+                        snippet,
+                        "accessor",
+                        f"'{pattern.pattern}' is not a real client accessor "
+                        "(PHP/Ruby are syntax-checked only, so this is not caught "
+                        f"by compilation). Use the nested form '{suggestion}' instead.",
+                    )
+                )
+    return issues
+
+
 # ---------------------------------------------------------------------------
 # Linters
 # ---------------------------------------------------------------------------
@@ -2934,6 +3015,7 @@ def main() -> int:
     if not args.no_structural_checks:
         with timer.record("structural"):
             issues.extend(check_javascript_fences(all_snippets))
+            issues.extend(check_flat_workflow_accessors(all_snippets))
             if not args.no_codegroup_coverage:
                 issues.extend(check_code_group_coverage(all_groups))
                 issues.extend(check_placeholder_sdk_tabs(all_groups))

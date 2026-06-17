@@ -3,32 +3,223 @@ title: "Validate Table"
 openapi: "POST /v1/tables/{table_id}/validate"
 ---
 
-Validate table shape and column rules against the current CSV snapshot.
+Validate table shape and column rules against the current CSV snapshot. Declare
+required columns, per-column type rules, and unique-key constraints, then read
+the returned diagnostics.
+
+<RequestExample>
 
 ```python Python
-result = client.tables.validate(
-    table_id="tbl_123",
-    required_columns=["countrycode"],
+from retab import Retab
+from retab.types.tables import (
+    WorkflowTableValidationColumnRule,
+    WorkflowTableValidationColumnRuleType,
 )
+
+client = Retab()
+
+result = client.tables.validate(
+    table_id="workflow_table_123",
+    required_columns=["countrycode"],
+    columns={
+        "countrycode": WorkflowTableValidationColumnRule(
+            type=WorkflowTableValidationColumnRuleType.STRING,
+            is_not_empty=True,
+        ),
+    },
+    unique=[["countrycode"]],
+)
+print(result)
 ```
 
 ```typescript TypeScript
-const result = await client.tables.validate("tbl_123", ["countrycode"]);
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const result = await client.tables.validate(
+  "workflow_table_123",
+  ["countrycode"],
+  {
+    countrycode: { type: "string", isNotEmpty: true },
+  },
+  [["countrycode"]]
+);
+console.log(result);
 ```
 
 ```go Go
-result, err := client.Tables.Validate(ctx, "tbl_123", &retab.TablesValidateParams{
-  RequiredColumns: []string{"countrycode"},
-})
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func ptr[T any](v T) *T { return &v }
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	columns := map[string]*retab.WorkflowTableValidationColumnRule{
+		"countrycode": {
+			Type:       ptr(retab.WorkflowTableValidationColumnRuleTypeString),
+			IsNotEmpty: ptr(true),
+		},
+	}
+	result, err := client.Tables.Validate(ctx, "workflow_table_123", &retab.TablesValidateParams{
+		RequiredColumns: []string{"countrycode"},
+		Columns:         &columns,
+		Unique:          [][]string{{"countrycode"}},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(*result)
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+result = client.tables.validate(
+  table_id: 'workflow_table_123',
+  required_columns: ['countrycode'],
+  columns: {
+    'countrycode' => { 'type' => 'string', 'is_not_empty' => true },
+  },
+  unique: [['countrycode']],
+)
+puts result
+```
+
+```rust Rust
+use std::collections::HashMap;
+
+use retab::Retab;
+use retab::enums::WorkflowTableValidationColumnRuleType;
+use retab::models::{WorkflowTableValidationColumnRule, WorkflowTableValidationRequest};
+use retab::resources::tables::ValidateParams;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut columns = HashMap::new();
+    columns.insert(
+        "countrycode".to_string(),
+        WorkflowTableValidationColumnRule {
+            type_: Some(WorkflowTableValidationColumnRuleType::String),
+            is_not_empty: Some(true),
+            ..Default::default()
+        },
+    );
+
+    let result = client
+        .tables()
+        .validate(
+            "workflow_table_123",
+            ValidateParams::new(WorkflowTableValidationRequest {
+                required_columns: Some(vec!["countrycode".to_string()]),
+                columns: Some(columns),
+                unique: Some(vec![vec!["countrycode".to_string()]]),
+            }),
+        )
+        .await?;
+    println!("{:?}", result);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\WorkflowTableValidationColumnRule;
+use Retab\Resource\WorkflowTableValidationColumnRuleType;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->tables()->validate(
+    tableId: 'workflow_table_123',
+    requiredColumns: ['countrycode'],
+    columns: [
+        'countrycode' => new WorkflowTableValidationColumnRule(
+            type: WorkflowTableValidationColumnRuleType::String,
+            isNotEmpty: true,
+        ),
+    ],
+    unique: [['countrycode']],
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var result = await client.Tables.ValidateAsync("workflow_table_123", new TablesValidateOptions
+{
+    RequiredColumns = new List<string> { "countrycode" },
+    Columns = new Dictionary<string, WorkflowTableValidationColumnRule>
+    {
+        ["countrycode"] = new WorkflowTableValidationColumnRule
+        {
+            Type = WorkflowTableValidationColumnRuleType.String,
+            IsNotEmpty = true,
+        },
+    },
+    Unique = new List<List<string>> { new() { "countrycode" } },
+});
+Console.WriteLine(result);
 ```
 
 ```java Java
-// Validate table requirements with the Retab Java client.
+import com.retab.RetabClient;
+import com.retab.models.WorkflowTableValidationColumnRule;
+import com.retab.types.WorkflowTableValidationColumnRuleType;
+import java.util.List;
+import java.util.Map;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var rule =
+        new WorkflowTableValidationColumnRule(
+            WorkflowTableValidationColumnRuleType.STRING, null, true);
+    var result =
+        client
+            .tables()
+            .validate(
+                "workflow_table_123",
+                List.of("countrycode"),
+                Map.of("countrycode", rule),
+                List.of(List.of("countrycode")));
+    System.out.println(result);
+  }
+}
 ```
 
 ```bash cURL
-curl -X POST https://api.retab.com/v1/tables/tbl_123/validate \
+curl -X POST https://api.retab.com/v1/tables/workflow_table_123/validate \
   -H "Authorization: Bearer $RETAB_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"required_columns":["countrycode"]}'
+  -d '{"required_columns":["countrycode"],"columns":{"countrycode":{"type":"string","is_not_empty":true}},"unique":[["countrycode"]]}'
 ```
+
+</RequestExample>
