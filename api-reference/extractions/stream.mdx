@@ -1,0 +1,279 @@
+---
+title: "Create Streaming Extraction"
+openapi: "POST /v1/extractions/stream"
+---
+
+Run a structured extraction on a document and stream partial results as they are
+produced, instead of waiting for the full `Extraction` to be persisted. The
+request body is identical to [`POST /v1/extractions`](/api-reference/extractions/create);
+the response is a stream of `application/stream+json` chunks, each carrying the
+latest partial `output` as the model fills the schema.
+
+<RequestExample>
+
+```python Python
+from retab import MIMEData, Retab
+
+client = Retab()
+
+document = MIMEData(
+    filename="Invoice.pdf",
+    url="https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf",
+)
+schema = {
+    "type": "object",
+    "properties": {
+        "invoice_number": {"type": "string"},
+        "total": {"type": "number"},
+    },
+    "required": ["invoice_number", "total"],
+}
+
+result = client.extractions.create_stream(
+    document=document,
+    json_schema=schema,
+    model="retab-small",
+)
+print(result)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const document = {
+  filename: "Invoice.pdf",
+  url: "https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf",
+};
+
+const result = await client.extractions.create_stream(
+  document,
+  { type: "object", properties: {} },
+  "retab-small",
+);
+
+console.log(result);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func ptr[T any](v T) *T { return &v }
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	document := retab.MIMEData{
+		Filename: "Invoice.pdf",
+		URL:      "https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf",
+	}
+
+	if err := client.Extractions.CreateStream(ctx, &retab.ExtractionsCreateStreamParams{
+		Document:   document,
+		JSONSchema: map[string]any{"type": "object", "properties": map[string]any{}},
+		Model:      ptr("retab-small"),
+	}); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("streaming extraction started")
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+import com.retab.models.MimeData;
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    MimeData document =
+        MimeData.fromUrl(
+            URI.create("https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf"));
+
+    Map<String, Object> jsonSchema =
+        Map.of(
+            "type", "object",
+            "properties",
+                Map.of(
+                    "invoice_number", Map.of("type", "string"),
+                    "total", Map.of("type", "number")),
+            "required", List.of("invoice_number", "total"));
+
+    Object result =
+        client
+            .extractions()
+            .createStream(
+                document, jsonSchema, "retab-small", null, null, 1L, Map.of("source", "docs"),
+                null, null, null, null, null);
+    System.out.println(result);
+  }
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+document = {
+  filename: 'Invoice.pdf',
+  url: 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf',
+}
+
+schema = {
+  type: 'object',
+  properties: {
+    invoice_number: { type: 'string' },
+    total: { type: 'number' },
+  },
+  required: ['invoice_number', 'total'],
+}
+
+result = client.extractions.create_stream(
+  document: document,
+  json_schema: schema,
+  model: 'retab-small',
+)
+
+puts result
+```
+
+```rust Rust
+use retab::resources::extractions::CreateStreamParams;
+use retab::{MimeData, Retab};
+use serde_json::json;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "invoice_number": {"type": "string"},
+            "total": {"type": "number"},
+        },
+        "required": ["invoice_number", "total"],
+    });
+    let schema_map = schema.as_object().unwrap().clone().into_iter().collect();
+    let document = MimeData::new(
+        "Invoice.pdf",
+        "https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf",
+    );
+
+    let mut params = CreateStreamParams::new(document, schema_map);
+    params.body.model = Some("retab-small".into());
+
+    client.extractions().create_stream(params).await?;
+    println!("streaming extraction started");
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->extractions()->createStream(
+    document: [
+        'filename' => 'Invoice.pdf',
+        'url' => 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf',
+    ],
+    jsonSchema: ['type' => 'object', 'properties' => []],
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+using System;
+using System.Collections.Generic;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var document = MimeData.FromUrl(
+    new Uri("https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf"));
+
+await client.Extractions.CreateStreamAsync(new ExtractionsCreateStreamOptions
+{
+    Document = document,
+    JsonSchema = new Dictionary<string, object>
+    {
+        ["type"] = "object",
+        ["properties"] = new Dictionary<string, object>(),
+    },
+    Model = "retab-small",
+});
+Console.WriteLine("streaming extraction started");
+```
+
+```curl cURL
+curl -N -X POST \
+  'https://api.retab.com/v1/extractions/stream' \
+  -H "Authorization: Bearer $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/stream+json' \
+  -d '{
+  "document": {
+    "filename": "Invoice.pdf",
+    "url": "https://my-bucket.s3.us-east-1.amazonaws.com/documents/Invoice.pdf"
+  },
+  "model": "retab-small",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "invoice_number": {"type": "string"},
+      "total": {"type": "number"}
+    },
+    "required": ["invoice_number", "total"]
+  }
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "extr_01G34H8J2K",
+  "file": {
+    "id": "file_6dd6eb00688ad8d1",
+    "filename": "Invoice.pdf",
+    "mime_type": "application/pdf"
+  },
+  "model": "retab-small",
+  "output": {
+    "invoice_number": "INV-2024-0042",
+    "total": 1234.56
+  },
+  "created_at": "2024-03-15T10:30:00Z"
+}
+```
+
+</ResponseExample>
