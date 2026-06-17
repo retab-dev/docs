@@ -1,10 +1,10 @@
 load("//tools/bazel:artifact_lifecycle.bzl", "retab_generated_artifact_lifecycle")
-load("//tools/bazel:defs.bzl", "LOCAL_TAGS", "PYTHON_VENV_TAGS")
+load("//tools/bazel:defs.bzl", "CACHEABLE_HOST_TAGS", "LOCAL_TAGS", "PYTHON_VENV_TAGS")
 
 package(default_visibility = ["//visibility:public"])
 
-# The public openapi.json is generated from the FastAPI main_server app by
-# //tools/bazel:generate_openapi, applying the public route whitelist in
+# The public openapi.json is generated from the Go main_server app by
+# //backend/main_server_go/cmd/publicspec, applying the public route whitelist in
 # public_api_routes.yaml.
 filegroup(
     name = "openapi_inputs",
@@ -13,7 +13,7 @@ filegroup(
         "*.py",
     ]) + [
         "public_api_routes.yaml",
-        "//backend/main_server:sources",
+        "//backend/main_server_go:sources",
         "//open-source/docs:docs_json",
     ],
 )
@@ -52,6 +52,12 @@ genrule(
     ],
     outs = ["openapi.generated.json"],
     cmd = "$(location //tools/bazel:generate_openapi) $@",
+    # generate_openapi runs the host `go` toolchain (`go run ./cmd/publicspec`),
+    # which writes to GOCACHE under the repo-local cache dir. The Bazel sandbox
+    # makes the source tree read-only, so the cache write fails ("operation not
+    # permitted"). Pin to the host toolchain (no-sandbox) while staying remotely
+    # cacheable — the same tag set used by the host-Go check targets.
+    tags = CACHEABLE_HOST_TAGS,
     tools = ["//tools/bazel:generate_openapi"],
 )
 
