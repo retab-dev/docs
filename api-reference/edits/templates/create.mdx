@@ -8,13 +8,18 @@ Register an `EditTemplate` — a PDF plus a set of pre-defined form fields that 
 <RequestExample>
 
 ```python Python
-from retab import Retab
+from retab import MIMEData, Retab
 
 client = Retab()
 
+document = MIMEData(
+    filename="w9_empty.pdf",
+    url="https://my-bucket.s3.us-east-1.amazonaws.com/documents/w9_empty.pdf",
+)
+
 template = client.edits.templates.create(
     name="W-9 Form",
-    document="w9_empty.pdf",
+    document=document,
     form_fields=[
         {
             "key": "full_name",
@@ -39,7 +44,12 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const template = await client.edits.templates.create("W-9 Form", "w9_empty.pdf", [
+const document = {
+  filename: "w9_empty.pdf",
+  url: "https://my-bucket.s3.us-east-1.amazonaws.com/documents/w9_empty.pdf",
+};
+
+const template = await client.edits.templates.create("W-9 Form", document, [
     {
       key: "full_name",
       description: "Full legal name of the taxpayer",
@@ -72,9 +82,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	document, err := retab.InferMIMEData("w9_empty.pdf")
-	if err != nil {
-		log.Fatal(err)
+	document := retab.MIMEData{
+		Filename: "w9_empty.pdf",
+		URL:      "https://my-bucket.s3.us-east-1.amazonaws.com/documents/w9_empty.pdf",
 	}
 
 	template, err := client.Edits.Templates.Create(ctx, &retab.EditTemplatesCreateParams{
@@ -108,9 +118,14 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-template = client.edit_templates.create(
+document = {
+  filename: 'w9_empty.pdf',
+  url: 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/w9_empty.pdf',
+}
+
+template = client.edits.templates.create(
   name: 'W-9 Form',
-  document: 'w9_empty.pdf',
+  document: document,
   form_fields: [
     {
       'key' => 'full_name',
@@ -134,12 +149,15 @@ puts "Template ID: #{template.id}"
 use retab::enums::FieldType;
 use retab::models::{BBox, FormField};
 use retab::resources::edit_templates::CreateParams;
-use retab::Retab;
-use std::path::PathBuf;
+use retab::{MimeData, Retab};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+    let document = MimeData::new(
+        "w9_empty.pdf",
+        "https://my-bucket.s3.us-east-1.amazonaws.com/documents/w9_empty.pdf",
+    );
 
     let form_fields = vec![
         FormField {
@@ -158,7 +176,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     ];
 
-    let params = CreateParams::new("W-9 Form", PathBuf::from("w9_empty.pdf"), form_fields);
+    let params = CreateParams::new("W-9 Form", document, form_fields);
     let template = client.edits().templates().create(params).await?;
 
     println!("Template ID: {}", template.id);
@@ -174,34 +192,90 @@ use Retab\Client;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
-$result = $client->editTemplates()->create(
+$result = $client->edits()->templates()->create(
     name: 'value',
-    document: 'invoice.pdf',
+    document: [
+        'filename' => 'w9_empty.pdf',
+        'url' => 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/w9_empty.pdf',
+    ],
     formFields: [],
 );
 print_r($result);
 ```
 
 ```csharp C#
+using System;
+using System.Collections.Generic;
 using Retab;
 using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Edits.Templates.CreateAsync(new EditTemplatesCreateOptions());
-Console.WriteLine(result);
+var document = MimeData.FromUrl(
+    new Uri("https://my-bucket.s3.us-east-1.amazonaws.com/documents/w9_empty.pdf"));
+
+var template = await client.Edits.Templates.CreateAsync(new EditTemplatesCreateOptions
+{
+    Name = "W-9 Form",
+    Document = document,
+    FormFields = new List<FormField>
+    {
+        new FormField
+        {
+            Key = "full_name",
+            Description = "Full legal name of the taxpayer",
+            Type = FieldType.Text,
+            Bbox = new BBox { Left = 0.15, Top = 0.20, Width = 0.35, Height = 0.03, Page = 1 },
+        },
+        new FormField
+        {
+            Key = "tax_id",
+            Description = "Taxpayer Identification Number",
+            Type = FieldType.Text,
+            Bbox = new BBox { Left = 0.15, Top = 0.28, Width = 0.25, Height = 0.03, Page = 1 },
+        },
+    },
+});
+
+Console.WriteLine($"Template ID: {template.Id}");
 ```
 
 ```java Java
 import com.retab.RetabClient;
+import com.retab.models.BBox;
+import com.retab.models.EditTemplate;
+import com.retab.models.FormField;
+import com.retab.models.MimeData;
+import com.retab.types.FieldType;
+import java.net.URI;
+import java.util.List;
 
 public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.edits().templates().create("Invoice Processing", null, null);
-    System.out.println(result);
+    MimeData document =
+        MimeData.fromUrl(
+            URI.create("https://my-bucket.s3.us-east-1.amazonaws.com/documents/w9_empty.pdf"));
+
+    List<FormField> formFields =
+        List.of(
+            new FormField(
+                new BBox(0.15, 0.20, 0.35, 0.03, 1L),
+                "Full legal name of the taxpayer",
+                FieldType.TEXT,
+                "full_name",
+                null),
+            new FormField(
+                new BBox(0.15, 0.28, 0.25, 0.03, 1L),
+                "Taxpayer Identification Number",
+                FieldType.TEXT,
+                "tax_id",
+                null));
+
+    EditTemplate template = client.edits().templates().create("W-9 Form", document, formFields);
+    System.out.println("Template ID: " + template.getId());
   }
 }
 ```
@@ -215,7 +289,7 @@ curl -X POST \
   "name": "W-9 Form",
   "document": {
     "filename": "w9_empty.pdf",
-    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    "url": "https://my-bucket.s3.us-east-1.amazonaws.com/documents/w9_empty.pdf"
   },
   "form_fields": [
     {

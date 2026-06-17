@@ -8,12 +8,17 @@ Split a multi-page document into labeled subdocuments and return the canonical s
 <RequestExample>
 
 ```python Python
-from retab import Retab
+from retab import MIMEData, Retab
 
 client = Retab()
 
+document = MIMEData(
+    filename="invoice_batch.pdf",
+    url="https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf",
+)
+
 split = client.splits.create(
-    document="invoice_batch.pdf",
+    document=document,
     model="retab-small",
     subdocuments=[
         {
@@ -38,7 +43,12 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const split = await client.splits.create("invoice_batch.pdf", [
+const document = {
+  filename: "invoice_batch.pdf",
+  url: "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf",
+};
+
+const split = await client.splits.create(document, [
     {
       name: "invoice",
       description: "Invoice documents with billing information",
@@ -74,9 +84,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	document, err := retab.InferMIMEData("invoice_batch.pdf")
-	if err != nil {
-		log.Fatal(err)
+	document := retab.MIMEData{
+		Filename: "invoice_batch.pdf",
+		URL:      "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf",
 	}
 
 	split, err := client.Splits.Create(ctx, &retab.SplitsCreateParams{
@@ -106,8 +116,13 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
+document = {
+  filename: 'invoice_batch.pdf',
+  url: 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf',
+}
+
 split = client.splits.create(
-  document: 'invoice_batch.pdf',
+  document: document,
   model: 'retab-small',
   subdocuments: [
     {
@@ -131,12 +146,15 @@ end
 ```rust Rust
 use retab::models::Subdocument;
 use retab::resources::splits::CreateParams;
-use retab::Retab;
-use std::path::PathBuf;
+use retab::{MimeData, Retab};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+    let document = MimeData::new(
+        "invoice_batch.pdf",
+        "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf",
+    );
 
     let subdocuments = vec![
         Subdocument {
@@ -156,7 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     ];
 
-    let mut params = CreateParams::new(PathBuf::from("invoice_batch.pdf"), subdocuments);
+    let mut params = CreateParams::new(document, subdocuments);
     params.body.model = Some("retab-small".into());
     params.body.instructions = Some("Processing Q4 2024 vendor document batch".into());
     params.body.n_consensus = Some(3);
@@ -180,31 +198,77 @@ use Retab\Client;
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
 $result = $client->splits()->create(
-    document: 'invoice.pdf',
-    subdocuments: 'invoice.pdf',
+    document: [
+        'filename' => 'invoice_batch.pdf',
+        'url' => 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf',
+    ],
+    subdocuments: [['name' => 'invoice', 'description' => 'Invoice documents']],
 );
 print_r($result);
 ```
 
 ```csharp C#
+using System;
+using System.Collections.Generic;
 using Retab;
 using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Splits.CreateAsync(new SplitsCreateOptions());
+var document = MimeData.FromUrl(
+    new Uri("https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf"));
+
+var result = await client.Splits.CreateAsync(new SplitsCreateOptions
+{
+    Document = document,
+    Model = "retab-small",
+    Subdocuments = new List<Subdocument>
+    {
+        new Subdocument
+        {
+            Name = "invoice",
+            Description = "Invoice documents with billing information",
+            AllowMultipleInstances = true,
+        },
+        new Subdocument { Name = "receipt", Description = "Receipt documents for payments" },
+        new Subdocument { Name = "contract", Description = "Legal contract documents" },
+    },
+    Instructions = "Processing Q4 2024 vendor document batch",
+    NConsensus = 3,
+    BustCache = false,
+});
+
 Console.WriteLine(result);
 ```
 
 ```java Java
 import com.retab.RetabClient;
+import com.retab.models.MimeData;
+import com.retab.models.Subdocument;
+import java.net.URI;
+import java.util.List;
 
 public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.splits().create(null, null, "retab-1.5", "Extract the invoice fields", 10L, null, null);
+    MimeData document = MimeData.fromUrl(
+        URI.create("https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf"));
+
+    List<Subdocument> subdocuments = List.of(
+        new Subdocument("invoice", "Invoice documents with billing information", true),
+        new Subdocument("receipt", "Receipt documents for payments", null),
+        new Subdocument("contract", "Legal contract documents", null));
+
+    var result = client.splits().create(
+        document,
+        subdocuments,
+        "retab-small",
+        "Processing Q4 2024 vendor document batch",
+        3L,
+        false,
+        null);
     System.out.println(result);
   }
 }
@@ -218,7 +282,7 @@ curl -X POST \
   -d '{
   "document": {
     "filename": "invoice_batch.pdf",
-    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    "url": "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf"
   },
   "model": "retab-small",
   "subdocuments": [

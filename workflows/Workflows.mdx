@@ -1018,7 +1018,7 @@ if extractedData := step.ExtractedData(); extractedData != nil {
 
 ```ruby Ruby
 # Step roster:
-client.workflow_steps.list(run_id: run.id).data.each do |step|
+client.workflows.steps.list(run_id: run.id).data.each do |step|
   puts "#{step.block_id} #{step.lifecycle.status}"
   if step.artifact
     puts "#{step.artifact.operation} #{step.artifact.id}"
@@ -1026,7 +1026,7 @@ client.workflow_steps.list(run_id: run.id).data.each do |step|
 end
 
 # Full execution record for one step:
-step = client.workflow_steps.get(step_id: 'extract-step-id', run_id: run.id)
+step = client.workflows.steps.get(step_id: 'extract-step-id', run_id: run.id)
 puts step.lifecycle.status
 extracted_data = step.handle_outputs['output-json-0']&.data
 puts extracted_data if extracted_data
@@ -1035,7 +1035,7 @@ puts extracted_data if extracted_data
 ```php PHP
 <?php
 // Step roster
-foreach ($client->workflowSteps()->list(runId: $run->id)->data as $step) {
+foreach ($client->workflows()->steps()->list(runId: $run->id)->data as $step) {
     echo $step->blockId . ' ' . ($step->lifecycle->status ?? '') . PHP_EOL;
     if ($step->artifact !== null) {
         echo $step->artifact->operation . ' ' . $step->artifact->id . PHP_EOL;
@@ -1043,7 +1043,7 @@ foreach ($client->workflowSteps()->list(runId: $run->id)->data as $step) {
 }
 
 // Full execution record for one step:
-$step = $client->workflowSteps()->get('extract-block-id', runId: $run->id);
+$step = $client->workflows()->steps()->get('extract-block-id', runId: $run->id);
 echo ($step->lifecycle->status ?? '') . PHP_EOL;
 $extractedData = $step->handleOutputs['output-json-0']->data ?? null;
 if ($extractedData !== null) {
@@ -1157,9 +1157,9 @@ if (step.artifact) {
 ```
 
 ```ruby Ruby
-step = client.workflow_steps.get(step_id: 'conditional-step-id', run_id: run.id)
+step = client.workflows.steps.get(step_id: 'conditional-step-id', run_id: run.id)
 if step.artifact
-  artifact = client.workflow_artifacts.get(artifact_id: step.artifact.id)
+  artifact = client.workflows.artifacts.get(artifact_id: step.artifact.id)
   puts artifact['operation']
   puts artifact['matched_condition_ids']
   puts artifact['evaluations']
@@ -1167,9 +1167,9 @@ end
 ```
 
 ```php PHP
-$step = $client->workflowSteps()->get('conditional-block-id', runId: $run->id);
+$step = $client->workflows()->steps()->get('conditional-block-id', runId: $run->id);
 if ($step->artifact !== null) {
-    $artifact = $client->workflowArtifacts()->get($step->artifact->id);
+    $artifact = $client->workflows()->artifacts()->get($step->artifact->id);
     echo $artifact->operation->value . PHP_EOL;
     print_r($artifact->matchedConditionIds ?? null);
     print_r($artifact->evaluations ?? null);
@@ -1270,7 +1270,7 @@ const conditionRecords = await client.workflows.artifacts.list({
 ```
 
 ```ruby Ruby
-condition_records = client.workflow_artifacts.list(
+condition_records = client.workflows.artifacts.list(
   run_id: run.id,
   operation: 'conditional_evaluation',
 )
@@ -1279,7 +1279,7 @@ condition_records = client.workflow_artifacts.list(
 ```php PHP
 use Retab\Resource\StepArtifactRefOperation;
 
-$conditionRecords = $client->workflowArtifacts()->list(
+$conditionRecords = $client->workflows()->artifacts()->list(
     runId: $run->id,
     operation: StepArtifactRefOperation::ConditionalEvaluation,
 );
@@ -1508,12 +1508,12 @@ require 'retab'
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 workflow = client.workflows.create(name: 'Invoice Pipeline')
-blocks = client.workflow_blocks.list(workflow_id: workflow.id)
+blocks = client.workflows.blocks.list(workflow_id: workflow.id)
 start_document_block = blocks.data.find { |block| block.type == 'start_document' }
 
 raise 'Workflow is missing a start_document block' if start_document_block.nil?
 
-extract_block = client.workflow_blocks.create(
+extract_block = client.workflows.blocks.create(
   workflow_id: workflow.id,
   id: 'extract-invoice',
   type: 'extract',
@@ -1531,7 +1531,7 @@ extract_block = client.workflow_blocks.create(
   },
 )
 
-client.workflow_edges.create(
+client.workflows.edges.create(
   workflow_id: workflow.id,
   id: 'edge-start-to-extract',
   source_block: start_document_block.id,
@@ -1554,7 +1554,7 @@ use Retab\Resource\WorkflowBlockType;
 $client = new Client();
 
 $workflow = $client->workflows()->create(name: 'Invoice Pipeline');
-$blocks = $client->workflowBlocks()->list($workflow->id);
+$blocks = $client->workflows()->blocks()->list($workflow->id);
 
 $startDocumentBlock = null;
 foreach ($blocks->data as $block) {
@@ -1568,7 +1568,7 @@ if ($startDocumentBlock === null) {
     throw new RuntimeException('Workflow is missing a start_document block');
 }
 
-$extractBlock = $client->workflowBlocks()->create(
+$extractBlock = $client->workflows()->blocks()->create(
     workflowId: $workflow->id,
     type: WorkflowBlockCreateRequestType::Extract,
     id: 'extract-invoice',
@@ -1586,7 +1586,7 @@ $extractBlock = $client->workflowBlocks()->create(
     ],
 );
 
-$client->workflowEdges()->create(
+$client->workflows()->edges()->create(
     workflowId: $workflow->id,
     sourceBlock: $startDocumentBlock->id,
     targetBlock: $extractBlock->id,

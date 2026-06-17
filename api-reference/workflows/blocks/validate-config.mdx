@@ -9,118 +9,186 @@ workflow draft.
 Use this before pushing a locally edited block config bundle when you want the
 backend to apply the same validation policy used by block updates.
 
-```python Python
-import os
-import requests
+<RequestExample>
 
-response = requests.post(
-    "https://api.retab.com/v1/workflows/blocks/extract-1/validate-config",
-    headers={"Authorization": f"Bearer {os.environ['RETAB_API_KEY']}"},
-    json={
-        "config": {
-            "model": "retab-small",
-            "json_schema": {"type": "object", "properties": {}},
-        },
-        "config_mode": "replace",
+```python Python
+from retab import Retab
+
+client = Retab()
+
+result = client.workflows.blocks.create_block_validate_config(
+    "extract-1",
+    config={
+        "model": "retab-small",
+        "json_schema": {"type": "object", "properties": {}},
     },
+    config_mode="replace",
 )
-response.raise_for_status()
-print(response.json()["config_hash"])
+print(result)
 ```
 
 ```typescript TypeScript
-const response = await fetch(
-  "https://api.retab.com/v1/workflows/blocks/extract-1/validate-config",
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.RETAB_API_KEY!}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      config: {
-        model: "retab-small",
-        json_schema: { type: "object", properties: {} },
-      },
-      config_mode: "replace",
-    }),
-  },
-);
+import { Retab } from "@retab/node";
 
-if (!response.ok) throw new Error(await response.text());
-console.log((await response.json()).config_hash);
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const result = await client.workflows.blocks.create_block_validate_config(
+  "extract-1",
+  {
+    model: "retab-small",
+    json_schema: { type: "object", properties: {} },
+  },
+  "replace",
+);
+console.log(result);
 ```
 
 ```go Go
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
 	"log"
-	"net/http"
-	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
 )
 
 func main() {
-	body, _ := json.Marshal(map[string]any{
-		"config": map[string]any{
-			"model":       "retab-small",
-			"json_schema": map[string]any{"type": "object", "properties": map[string]any{}},
-		},
-		"config_mode": "replace",
-	})
+	ctx := context.Background()
 
-	req, _ := http.NewRequest(
-		"POST",
-		"https://api.retab.com/v1/workflows/blocks/extract-1/validate-config",
-		bytes.NewReader(body),
-	)
-	req.Header.Set("Authorization", "Bearer "+os.Getenv("RETAB_API_KEY"))
-	req.Header.Set("Content-Type", "application/json")
-
-	res, err := http.DefaultClient.Do(req)
+	client, err := retab.NewClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer res.Body.Close()
 
-	var payload map[string]any
-	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+	mode := retab.UpdateWorkflowBlockRequestConfigModeReplace
+	result, err := client.Workflows.Blocks.CreateBlockValidateConfig(ctx, "extract-1", &retab.WorkflowBlocksCreateBlockValidateConfigParams{
+		Config: map[string]interface{}{
+			"model":       "retab-small",
+			"json_schema": map[string]interface{}{"type": "object", "properties": map[string]interface{}{}},
+		},
+		ConfigMode: &mode,
+	})
+	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(payload["config_hash"])
+	fmt.Println(*result)
 }
 ```
 
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+result = client.workflows.blocks.create_block_validate_config(
+  block_id: 'extract-1',
+  config: {
+    'model' => 'retab-small',
+    'json_schema' => { 'type' => 'object', 'properties' => {} },
+  },
+  config_mode: 'replace',
+)
+puts result
+```
+
+```rust Rust
+use std::collections::HashMap;
+
+use retab::models::ValidateWorkflowBlockConfigRequest;
+use retab::resources::workflow_blocks::CreateBlockValidateConfigParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let mut config = HashMap::new();
+    config.insert("model".to_string(), serde_json::json!("retab-small"));
+    config.insert(
+        "json_schema".to_string(),
+        serde_json::json!({ "type": "object", "properties": {} }),
+    );
+
+    let result = client
+        .workflows()
+        .blocks()
+        .create_block_validate_config(
+            "extract-1",
+            CreateBlockValidateConfigParams::new(ValidateWorkflowBlockConfigRequest::new(config)),
+        )
+        .await?;
+    println!("{:?}", result);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->workflows()->blocks()->createBlockValidateConfig(
+    blockId: 'extract-1',
+    config: [
+        'model' => 'retab-small',
+        'json_schema' => ['type' => 'object', 'properties' => (object) []],
+    ],
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var result = await client.Workflows.Blocks.CreateBlockValidateConfigAsync(
+    "extract-1",
+    new WorkflowBlocksCreateBlockValidateConfigOptions
+    {
+        Config = new Dictionary<string, object>
+        {
+            ["model"] = "retab-small",
+            ["json_schema"] = new Dictionary<string, object>
+            {
+                ["type"] = "object",
+                ["properties"] = new Dictionary<string, object>(),
+            },
+        },
+        ConfigMode = UpdateWorkflowBlockRequestConfigMode.Replace,
+    });
+Console.WriteLine(result);
+```
+
 ```java Java
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import com.retab.RetabClient;
+import com.retab.types.ValidateWorkflowBlockConfigRequestConfigMode;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-var body = """
-  {
-    "config": {
-      "model": "retab-small",
-      "json_schema": {"type": "object", "properties": {}}
-    },
-    "config_mode": "replace"
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    Map<String, Object> config = new LinkedHashMap<>();
+    config.put("model", "retab-small");
+    config.put("json_schema", Map.of("type", "object", "properties", Map.of()));
+
+    var result = client.workflows().blocks().createBlockValidateConfig(
+        "extract-1",
+        null,
+        config,
+        ValidateWorkflowBlockConfigRequestConfigMode.REPLACE);
+    System.out.println(result);
   }
-  """;
-
-var request = HttpRequest.newBuilder()
-    .uri(URI.create("https://api.retab.com/v1/workflows/blocks/extract-1/validate-config"))
-    .header("Authorization", "Bearer " + System.getenv("RETAB_API_KEY"))
-    .header("Content-Type", "application/json")
-    .POST(HttpRequest.BodyPublishers.ofString(body))
-    .build();
-
-var response = HttpClient.newHttpClient()
-    .send(request, HttpResponse.BodyHandlers.ofString());
-
-System.out.println(response.body());
+}
 ```
 
 ```bash cURL
@@ -136,3 +204,5 @@ curl --request POST \
     "config_mode": "replace"
   }'
 ```
+
+</RequestExample>

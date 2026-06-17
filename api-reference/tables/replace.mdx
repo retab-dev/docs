@@ -5,20 +5,144 @@ openapi: "PUT /v1/tables/{table_id}"
 
 Replace the full CSV backing a table. This is the only content update operation for tables.
 
+<RequestExample>
+
 ```python Python
-tables = client.tables.replace(table_id="workflow_table_123", file="./carriers.csv")
+from retab import Retab
+
+client = Retab()
+
+with open("carriers.csv", "rb") as f:
+    file_bytes = f.read()
+
+tables = client.tables.replace(table_id="workflow_table_123", file=file_bytes)
+print(tables)
 ```
 
 ```typescript TypeScript
-const tables = await client.tables.replace("workflow_table_123", "./carriers.csv");
+import { readFileSync } from "node:fs";
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const fileBytes = readFileSync("carriers.csv");
+const tables = await client.tables.replace("workflow_table_123", fileBytes);
+console.log(tables);
 ```
 
 ```go Go
-tables, err := client.Tables.Replace(ctx, "workflow_table_123", &retab.TablesReplaceParams{File: "./carriers.csv"})
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fileBytes, err := os.ReadFile("carriers.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tables, err := client.Tables.Replace(ctx, "workflow_table_123", &retab.TablesReplaceParams{
+		File: fileBytes,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(*tables)
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+tables = client.tables.replace(
+  table_id: 'workflow_table_123',
+  file: File.open('carriers.csv', 'rb'),
+)
+puts tables
+```
+
+```rust Rust
+use retab::Retab;
+use retab::models::ReplaceWorkflowTableUploadRequest;
+use retab::resources::tables::ReplaceParams;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let file_bytes = std::fs::read("carriers.csv")?;
+    let tables = client
+        .tables()
+        .replace(
+            "workflow_table_123",
+            ReplaceParams::new(ReplaceWorkflowTableUploadRequest::new(file_bytes)),
+        )
+        .await?;
+    println!("{:?}", tables);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->tables()->replace(
+    tableId: 'workflow_table_123',
+    file: file_get_contents('carriers.csv'),
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var fileBytes = System.IO.File.ReadAllBytes("carriers.csv");
+var result = await client.Tables.ReplaceAsync("workflow_table_123", new TablesReplaceOptions
+{
+    File = fileBytes,
+});
+Console.WriteLine(result);
 ```
 
 ```java Java
-// Replace the full CSV backing the table.
+import com.retab.RetabClient;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    byte[] fileBytes = Files.readAllBytes(Path.of("carriers.csv"));
+    var result = client.tables().replace("workflow_table_123", fileBytes, null);
+    System.out.println(result);
+  }
+}
 ```
 
 ```bash cURL
@@ -26,3 +150,5 @@ curl -X PUT https://api.retab.com/v1/tables/workflow_table_123 \
   -H "Authorization: Bearer $RETAB_API_KEY" \
   -F "file=@./carriers.csv"
 ```
+
+</RequestExample>

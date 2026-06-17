@@ -248,6 +248,40 @@ def test_code_group_coverage_requires_all_sdk_languages() -> None:
     assert "Java" in issues[0].message
 
 
+def test_flat_workflow_accessors_flagged_in_php_and_ruby() -> None:
+    snippets = [
+        _snippet("php", "$result = $client->workflowRuns()->get('run_abc');\n", title="PHP"),
+        _snippet("ruby", "run = client.workflow_blocks.get(block_id: 'b1')\n", title="Ruby"),
+        _snippet("php", "$result = $client->editTemplates()->list();\n", title="PHP"),
+    ]
+
+    issues = lint_snippets.check_flat_workflow_accessors(snippets)
+
+    assert len(issues) == 3
+    assert all(issue.checker == "accessor" for issue in issues)
+    # Each issue suggests the verified nested chain.
+    messages = " ".join(issue.message for issue in issues)
+    assert "$client->workflows()->runs()" in messages
+    assert "client.workflows.blocks" in messages
+    assert "$client->edits()->templates()" in messages
+
+
+def test_flat_workflow_accessors_pass_nested_forms_and_ignore_other_languages() -> None:
+    snippets = [
+        _snippet("php", "$result = $client->workflows()->runs()->get('run_abc');\n", title="PHP"),
+        _snippet("ruby", "run = client.workflows.blocks.get(block_id: 'b1')\n", title="Ruby"),
+        _snippet("php", "$result = $client->workflows()->tests()->runs()->list();\n", title="PHP"),
+        # Valid top-level accessors must not be flagged.
+        _snippet("ruby", "secret = client.secrets.get_secret(name: 'X')\n", title="Ruby"),
+        # Python uses the same dotted nesting but is type-checked elsewhere; the
+        # check only inspects php/ruby snippets, so a python tab is ignored even
+        # if it superficially matched.
+        _snippet("python", "client.workflow_runs\n", title="Python"),
+    ]
+
+    assert lint_snippets.check_flat_workflow_accessors(snippets) == []
+
+
 def test_javascript_fence_does_not_satisfy_typescript_coverage() -> None:
     group = lint_snippets.CodeGroup(
         source=lint_snippets.DOCS_ROOT / "example.mdx",

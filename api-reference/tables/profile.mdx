@@ -3,29 +3,135 @@ title: "Profile Table"
 openapi: "GET /v1/tables/{table_id}/profile"
 ---
 
-Return column-level row counts, null counts, distinct counts, ranges, and sample values for a CSV-backed table.
+Return column-level row counts, null counts, distinct counts, ranges, and sample
+values for a CSV-backed table.
+
+<RequestExample>
 
 ```python Python
+from retab import Retab
+
+client = Retab()
+
 profile = client.tables.profile(table_id="tbl_123", select=["countrycode"])
+print(profile)
 ```
 
 ```typescript TypeScript
-const profile = await client.tables.profile("tbl_123", {
-  select: ["countrycode"],
-});
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const profile = await client.tables.profile("tbl_123", { select: ["countrycode"] });
+console.log(profile);
 ```
 
 ```go Go
-profile, err := client.Tables.Profile(ctx, "tbl_123", &retab.TablesProfileParams{
-  Select: []string{"countrycode"},
-})
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	profile, err := client.Tables.Profile(ctx, "tbl_123", &retab.TablesProfileParams{
+		Select: []string{"countrycode"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(*profile)
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+profile = client.tables.profile(table_id: 'tbl_123', select: ['countrycode'])
+puts profile
+```
+
+```rust Rust
+use retab::resources::tables::ProfileParams;
+use retab::Retab;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let profile = client
+        .tables()
+        .profile(
+            "tbl_123",
+            ProfileParams {
+                select: Some(vec!["countrycode".to_string()]),
+            },
+        )
+        .await?;
+    println!("{:?}", profile);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$result = $client->tables()->profile(
+    tableId: 'tbl_123',
+    select: ['countrycode'],
+);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var result = await client.Tables.ProfileAsync("tbl_123", new TablesProfileOptions
+{
+    Select = new List<string> { "countrycode" },
+});
+Console.WriteLine(result);
 ```
 
 ```java Java
-// Profile table columns with the Retab Java client.
+import com.retab.RetabClient;
+import java.util.List;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var result = client.tables().profile("tbl_123", List.of("countrycode"));
+    System.out.println(result);
+  }
+}
 ```
 
 ```bash cURL
 curl "https://api.retab.com/v1/tables/tbl_123/profile?select=countrycode" \
   -H "Authorization: Bearer $RETAB_API_KEY"
 ```
+
+</RequestExample>

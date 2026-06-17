@@ -10,13 +10,18 @@ Either `document` or `template_id` must be provided; they are mutually exclusive
 <RequestExample>
 
 ```python Python
-from retab import Retab
+from retab import MIMEData, Retab
 
 client = Retab()
 
+document = MIMEData(
+    filename="form.pdf",
+    url="https://my-bucket.s3.us-east-1.amazonaws.com/documents/form.pdf",
+)
+
 edit = client.edits.create(
     instructions="Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street",
-    document="form.pdf",
+    document=document,
     model="retab-small",
 )
 
@@ -35,7 +40,12 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const edit = await client.edits.create("Name: John Doe, Date of Birth: 1990-01-15", "form.pdf", undefined, "retab-small");
+const document = {
+  filename: "form.pdf",
+  url: "https://my-bucket.s3.us-east-1.amazonaws.com/documents/form.pdf",
+};
+
+const edit = await client.edits.create("Name: John Doe, Date of Birth: 1990-01-15", document, undefined, "retab-small");
 
 console.log(`Edit ID: ${edit.id}`);
 ```
@@ -61,9 +71,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	document, err := retab.InferMIMEData("form.pdf")
-	if err != nil {
-		log.Fatal(err)
+	document := retab.MIMEData{
+		Filename: "form.pdf",
+		URL:      "https://my-bucket.s3.us-east-1.amazonaws.com/documents/form.pdf",
 	}
 
 	edit, err := client.Edits.Create(ctx, &retab.EditsCreateParams{
@@ -84,9 +94,14 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
+document = {
+  filename: 'form.pdf',
+  url: 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/form.pdf',
+}
+
 edit = client.edits.create(
   instructions: 'Name: John Doe, Date of Birth: 1990-01-15, Address: 123 Main Street',
-  document: 'form.pdf',
+  document: document,
   model: 'retab-small',
 )
 
@@ -100,13 +115,15 @@ end
 use retab::models::ClassificationRequestDocumentOneOf;
 use retab::resources::edits::CreateParams;
 use retab::{MimeData, Retab};
-use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    let document: MimeData = PathBuf::from("form.pdf").into();
+    let document = MimeData::new(
+        "form.pdf",
+        "https://my-bucket.s3.us-east-1.amazonaws.com/documents/form.pdf",
+    );
     let mut params = CreateParams::new("Name: John Doe, Date of Birth: 1990-01-15");
     params.body.document = Some(ClassificationRequestDocumentOneOf::MimeData(Box::new(document)));
     params.body.model = Some("retab-small".into());
@@ -136,24 +153,50 @@ print_r($result);
 ```
 
 ```csharp C#
+using System;
+using System.Collections.Generic;
 using Retab;
 using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Edits.CreateAsync(new EditsCreateOptions());
+var document = MimeData.FromUrl(new Uri("https://my-bucket.s3.us-east-1.amazonaws.com/documents/form.pdf"));
+
+var result = await client.Edits.CreateAsync(new EditsCreateOptions
+{
+    Instructions = "Name: John Doe, Date of Birth: 1990-01-15",
+    Document = document,
+    Model = "retab-small",
+});
 Console.WriteLine(result);
 ```
 
 ```java Java
 import com.retab.RetabClient;
+import com.retab.models.MimeData;
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
 
 public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.edits().create("Extract the invoice fields", null, "tmpl_abc123", "retab-1.5", null, null, null);
+    MimeData document =
+        MimeData.fromUrl(URI.create("https://my-bucket.s3.us-east-1.amazonaws.com/documents/form.pdf"));
+
+    var result =
+        client
+            .edits()
+            .create(
+                "Name: John Doe, Date of Birth: 1990-01-15",
+                document,
+                null,
+                "retab-small",
+                null,
+                null,
+                null);
     System.out.println(result);
   }
 }
@@ -169,7 +212,7 @@ curl -X POST \
   "instructions": "Name: John Doe, Date of Birth: 1990-01-15",
   "document": {
     "filename": "form.pdf",
-    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    "url": "https://my-bucket.s3.us-east-1.amazonaws.com/documents/form.pdf"
   },
   "model": "retab-small"
 }'

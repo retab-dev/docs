@@ -8,12 +8,17 @@ Parse a document into normalized text and persist the result as a `Parse` resour
 <RequestExample>
 
 ```python Python
-from retab import Retab
+from retab import MIMEData, Retab
 
 client = Retab()
 
+document = MIMEData(
+    filename="document.pdf",
+    url="https://my-bucket.s3.us-east-1.amazonaws.com/documents/document.pdf",
+)
+
 parse = client.parses.create(
-    document="document.pdf",
+    document=document,
     model="retab-small",
     table_parsing_format="markdown",
     image_resolution_dpi=192,
@@ -31,7 +36,12 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const parse = await client.parses.create("document.pdf", "retab-small", "markdown", 192);
+const document = {
+  filename: "document.pdf",
+  url: "https://my-bucket.s3.us-east-1.amazonaws.com/documents/document.pdf",
+};
+
+const parse = await client.parses.create(document, "retab-small", "markdown", 192);
 
 console.log(`Parse ID: ${parse.id}`);
 console.log(`Filename: ${parse.file.filename}`);
@@ -62,9 +72,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	document, err := retab.InferMIMEData("document.pdf")
-	if err != nil {
-		log.Fatal(err)
+	document := retab.MIMEData{
+		Filename: "document.pdf",
+		URL:      "https://my-bucket.s3.us-east-1.amazonaws.com/documents/document.pdf",
 	}
 
 	parse, err := client.Parses.Create(ctx, &retab.ParsesCreateParams{
@@ -90,8 +100,13 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
+document = {
+  filename: 'document.pdf',
+  url: 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/document.pdf',
+}
+
 parse = client.parses.create(
-  document: 'document.pdf',
+  document: document,
   model: 'retab-small',
   table_parsing_format: 'markdown',
   image_resolution_dpi: 192,
@@ -108,14 +123,17 @@ end
 ```rust Rust
 use retab::enums::ParseRequestTableParsingFormat;
 use retab::resources::parses::CreateParams;
-use retab::Retab;
-use std::path::PathBuf;
+use retab::{MimeData, Retab};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+    let document = MimeData::new(
+        "document.pdf",
+        "https://my-bucket.s3.us-east-1.amazonaws.com/documents/document.pdf",
+    );
 
-    let mut params = CreateParams::new(PathBuf::from("document.pdf"));
+    let mut params = CreateParams::new(document);
     params.body.model = Some("retab-small".into());
     params.body.table_parsing_format = Some(ParseRequestTableParsingFormat::Markdown);
     params.body.image_resolution_dpi = Some(192);
@@ -141,7 +159,10 @@ use Retab\Client;
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
 $result = $client->parses()->create(
-    document: 'invoice.pdf',
+    document: [
+        'filename' => 'document.pdf',
+        'url' => 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/document.pdf',
+    ],
 );
 print_r($result);
 ```
@@ -153,18 +174,43 @@ using RetabClient = Retab.Retab;
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Parses.CreateAsync(new ParsesCreateOptions());
+var document = MimeData.FromUrl(
+    new Uri("https://my-bucket.s3.us-east-1.amazonaws.com/documents/document.pdf"));
+
+var result = await client.Parses.CreateAsync(new ParsesCreateOptions
+{
+    Document = document,
+    Model = "retab-small",
+    TableParsingFormat = ParseRequestTableParsingFormat.Markdown,
+    ImageResolutionDpi = 192,
+});
 Console.WriteLine(result);
 ```
 
 ```java Java
 import com.retab.RetabClient;
+import com.retab.models.MimeData;
+import com.retab.types.ParseRequestTableParsingFormat;
+import java.net.URI;
 
 public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.parses().create(null, "retab-1.5", null, 10L, "Extract the invoice fields", null, null);
+    MimeData document = MimeData.fromUrl(
+        URI.create("https://my-bucket.s3.us-east-1.amazonaws.com/documents/document.pdf"));
+
+    var result =
+        client
+            .parses()
+            .create(
+                document,
+                "retab-small",
+                ParseRequestTableParsingFormat.MARKDOWN,
+                192L,
+                null,
+                null,
+                null);
     System.out.println(result);
   }
 }
@@ -178,7 +224,7 @@ curl -X POST \
   -d '{
   "document": {
     "filename": "document.pdf",
-    "url": "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsO..."
+    "url": "https://my-bucket.s3.us-east-1.amazonaws.com/documents/document.pdf"
   },
   "model": "retab-small",
   "table_parsing_format": "markdown",

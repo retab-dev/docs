@@ -8,12 +8,17 @@ Partition a document into repeated chunks keyed by a value such as `invoice_numb
 <RequestExample>
 
 ```python Python
-from retab import Retab
+from retab import MIMEData, Retab
 
 client = Retab()
 
+document = MIMEData(
+    filename="invoice_batch.pdf",
+    url="https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf",
+)
+
 response = client.partitions.create(
-    document="invoice_batch.pdf",
+    document=document,
     key="invoice_number",
     instructions="Return one chunk per invoice number and keep all pages for the same invoice together.",
     model="retab-small",
@@ -31,7 +36,12 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const response = await client.partitions.create("invoice_batch.pdf", "invoice_number", "Return one chunk per invoice number and keep all pages for the same invoice together.", "retab-small", 3, true, false);
+const document = {
+  filename: "invoice_batch.pdf",
+  url: "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf",
+};
+
+const response = await client.partitions.create(document, "invoice_number", "Return one chunk per invoice number and keep all pages for the same invoice together.", "retab-small", 3, true, false);
 
 for (const chunk of response.output) {
   console.log(chunk.key, chunk.pages);
@@ -59,9 +69,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	document, err := retab.InferMIMEData("invoice_batch.pdf")
-	if err != nil {
-		log.Fatal(err)
+	document := retab.MIMEData{
+		Filename: "invoice_batch.pdf",
+		URL:      "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf",
 	}
 
 	response, err := client.Partitions.Create(ctx, &retab.PartitionsCreateParams{
@@ -88,8 +98,13 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
+document = {
+  filename: 'invoice_batch.pdf',
+  url: 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf',
+}
+
 response = client.partitions.create(
-  document: 'invoice_batch.pdf',
+  document: document,
   key: 'invoice_number',
   instructions: 'Return one chunk per invoice number and keep all pages for the same invoice together.',
   model: 'retab-small',
@@ -105,15 +120,18 @@ end
 
 ```rust Rust
 use retab::resources::partitions::CreateParams;
-use retab::Retab;
-use std::path::PathBuf;
+use retab::{MimeData, Retab};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+    let document = MimeData::new(
+        "invoice_batch.pdf",
+        "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf",
+    );
 
     let mut params = CreateParams::new(
-        PathBuf::from("invoice_batch.pdf"),
+        document,
         "invoice_number",
         "Return one chunk per invoice number and keep all pages for the same invoice together.",
     );
@@ -140,7 +158,10 @@ use Retab\Client;
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
 $result = $client->partitions()->create(
-    document: 'invoice.pdf',
+    document: [
+        'filename' => 'invoice_batch.pdf',
+        'url' => 'https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf',
+    ],
     key: 'value',
     instructions: 'value',
 );
@@ -154,18 +175,42 @@ using RetabClient = Retab.Retab;
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Partitions.CreateAsync(new PartitionsCreateOptions());
+var document = MimeData.FromUrl(new Uri("https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf"));
+
+var result = await client.Partitions.CreateAsync(new PartitionsCreateOptions
+{
+    Document = document,
+    Key = "invoice_number",
+    Instructions = "Return one chunk per invoice number and keep all pages for the same invoice together.",
+    Model = "retab-small",
+    NConsensus = 3,
+    AllowOverlap = true,
+    BustCache = false,
+});
 Console.WriteLine(result);
 ```
 
 ```java Java
 import com.retab.RetabClient;
+import com.retab.models.MimeData;
+import java.net.URI;
 
 public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.partitions().create(null, null, "Extract the invoice fields", "retab-1.5", 10L, null, null, null);
+    MimeData document = MimeData.fromUrl(
+        URI.create("https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf"));
+
+    var result = client.partitions().create(
+        document,
+        "invoice_number",
+        "Return one chunk per invoice number and keep all pages for the same invoice together.",
+        "retab-small",
+        3L,
+        true,
+        false,
+        null);
     System.out.println(result);
   }
 }
@@ -179,7 +224,7 @@ curl -X POST \
   -d '{
   "document": {
     "filename": "invoice_batch.pdf",
-    "url": "data:application/pdf;base64,JVBERi0xLjQK..."
+    "url": "https://my-bucket.s3.us-east-1.amazonaws.com/documents/invoice_batch.pdf"
   },
   "key": "invoice_number",
   "instructions": "Return one chunk per invoice number and keep all pages for the same invoice together.",
