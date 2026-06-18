@@ -66,11 +66,6 @@ For chunking, [chonkie](https://chonkie.ai/) is a good fit for RAG-style pipelin
   Controls how tables are represented in the parsed text.
 </ParamField>
 
-<ParamField body="image_resolution_dpi" type="integer" default="192">
-  DPI used when rasterizing pages for OCR-backed parsing. Accepted values are
-  `96` to `300`.
-</ParamField>
-
 <ParamField body="instructions" type="string">
   Free-form instructions appended to the system prompt to steer the parse.
 </ParamField>
@@ -135,7 +130,6 @@ parse = client.parses.create(
     document="technical-manual.pdf",
     model="retab-small",
     table_parsing_format="markdown",
-    image_resolution_dpi=192,
 )
 
 chunker = SentenceChunker(
@@ -209,12 +203,10 @@ func main() {
 
 	model := "retab-small"
 	tableFormat := retab.ParseRequestTableParsingFormatMarkdown
-	imageResolutionDpi := 192
 	parse, err := client.Parses.Create(ctx, &retab.ParsesCreateParams{
 		Document:           "technical-manual.pdf",
 		Model:              &model,
 		TableParsingFormat: &tableFormat,
-		ImageResolutionDpi: &imageResolutionDpi,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -271,7 +263,6 @@ parse = client.parses.create(
   document: 'technical-manual.pdf',
   model: 'retab-small',
   table_parsing_format: 'markdown',
-  image_resolution_dpi: 192,
 )
 
 all_chunks = []
@@ -340,7 +331,6 @@ $parse = $client->parses()->create(
     document: 'technical-manual.pdf',
     model: 'retab-small',
     tableParsingFormat: TableParsingFormat::Markdown,
-    imageResolutionDpi: 192,
 );
 
 $allChunks = [];
@@ -386,7 +376,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut params = CreateParams::new(PathBuf::from("technical-manual.pdf"));
     params.body.model = Some("retab-small".into());
     params.body.table_parsing_format = Some(ParseRequestTableParsingFormat::Markdown);
-    params.body.image_resolution_dpi = Some(192);
 
     let parse = client.parses().create(params).await?;
 
@@ -441,7 +430,6 @@ var parse = await client.Parses.CreateAsync(
         Document = new FileInfo("technical-manual.pdf"),
         Model = "retab-small",
         TableParsingFormat = ParseRequestTableParsingFormat.Markdown,
-        ImageResolutionDpi = 192,
     }
 );
 
@@ -480,7 +468,7 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.parses().create(null, "retab-1.5", null, 10L, "Extract the invoice fields", null, null);
+    var result = client.parses().create(null, "retab-1.5", null, "Extract the invoice fields", null, null);
     System.out.println(result);
   }
 }
@@ -500,12 +488,6 @@ public final class Example {
 - Use `markdown` for chunking, prompting, and most RAG pipelines.
 - Use `html` when preserving table structure matters more than readability.
 - Use `json` or `yaml` when another parser will consume the table output directly.
-
-### Choosing DPI
-
-- Start with `192` DPI for general-purpose parsing.
-- Drop to `96` DPI when throughput matters more than OCR quality.
-- Increase toward `300` DPI for scans, fine print, or low-quality images.
 
 ### Indexing Advice
 
