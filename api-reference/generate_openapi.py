@@ -689,13 +689,13 @@ PUBLIC_PAGINATED_LIST_ROUTES: tuple[tuple[str, str, str], ...] = (
     ("/v1/workflows/runs", "WorkflowRunList", "WorkflowRun"),
     ("/v1/workflows/blocks/executions", "BlockExecutionList", "BlockExecution"),
     ("/v1/workflows/steps", "WorkflowStepList", "WorkflowStep"),
-    ("/v1/workflows/tests", "WorkflowTestList", "WorkflowTest"),
+    ("/v1/workflows/evals", "WorkflowEvalList", "WorkflowEval"),
     (
-        "/v1/workflows/tests/results",
-        "WorkflowTestResultList",
-        "WorkflowTestResult",
+        "/v1/workflows/evals/results",
+        "WorkflowEvalResultList",
+        "WorkflowEvalResult",
     ),
-    ("/v1/workflows/tests/runs", "WorkflowTestRunList", "WorkflowTestRun"),
+    ("/v1/workflows/evals/runs", "WorkflowEvalRunList", "WorkflowEvalRun"),
 )
 
 

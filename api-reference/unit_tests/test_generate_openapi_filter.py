@@ -272,30 +272,30 @@ def test_workflow_create_request_docs_publish_shape_variants() -> None:
     }
     assert "restart_of" not in schemas["CreateWorkflowRunRequest"]["properties"]
     assert "CreateRestartWorkflowRunRequest" not in schemas
-    test_run_request = schemas["CreateWorkflowTestRunRequest"]
-    assert "oneOf" not in test_run_request
-    assert test_run_request["required"] == ["workflow_id"]
-    assert set(test_run_request["properties"]) == {
+    eval_run_request = schemas["CreateWorkflowEvalRunRequest"]
+    assert "oneOf" not in eval_run_request
+    assert eval_run_request["required"] == ["workflow_id"]
+    assert set(eval_run_request["properties"]) == {
         "workflow_id",
         "scope",
     }
     # ``scope`` is optional, so pydantic wraps the discriminated union
     # in an ``anyOf: [<union>, {type: null}]`` envelope. The inner branch
     # carries the real ``oneOf`` + ``discriminator``.
-    scope_schema = test_run_request["properties"]["scope"]
+    scope_schema = eval_run_request["properties"]["scope"]
     discriminated_branch = next(
         b for b in scope_schema["anyOf"] if "oneOf" in b
     )
     assert discriminated_branch["oneOf"] == [
-        {"$ref": "#/components/schemas/WorkflowTestRunSingleScope"},
-        {"$ref": "#/components/schemas/WorkflowTestRunWorkflowScope"},
-        {"$ref": "#/components/schemas/WorkflowTestRunBlockScope"},
+        {"$ref": "#/components/schemas/WorkflowEvalRunSingleScope"},
+        {"$ref": "#/components/schemas/WorkflowEvalRunWorkflowScope"},
+        {"$ref": "#/components/schemas/WorkflowEvalRunBlockScope"},
     ]
     assert discriminated_branch["discriminator"]["propertyName"] == "type"
     assert {"type": "null"} in scope_schema["anyOf"]
-    assert schemas["WorkflowTestRunSingleScope"]["required"] == ["test_id", "type"]
-    assert schemas["WorkflowTestRunWorkflowScope"]["required"] == ["type"]
-    assert schemas["WorkflowTestRunBlockScope"]["required"] == ["block_id", "type"]
+    assert schemas["WorkflowEvalRunSingleScope"]["required"] == ["eval_id", "type"]
+    assert schemas["WorkflowEvalRunWorkflowScope"]["required"] == ["type"]
+    assert schemas["WorkflowEvalRunBlockScope"]["required"] == ["block_id", "type"]
 
 
 def test_generated_openapi_does_not_expose_split_mime_data_name() -> None:
@@ -693,9 +693,9 @@ def test_generated_list_responses_use_public_schema_names() -> None:
             "BlockExecution",
         ),
         "/v1/workflows/steps": ("WorkflowStepList", "WorkflowStep"),
-        "/v1/workflows/tests": ("WorkflowTestList", "WorkflowTest"),
-        "/v1/workflows/tests/results": ("WorkflowTestResultList", "WorkflowTestResult"),
-        "/v1/workflows/tests/runs": ("WorkflowTestRunList", "WorkflowTestRun"),
+        "/v1/workflows/evals": ("WorkflowEvalList", "WorkflowEval"),
+        "/v1/workflows/evals/results": ("WorkflowEvalResultList", "WorkflowEvalResult"),
+        "/v1/workflows/evals/runs": ("WorkflowEvalRunList", "WorkflowEvalRun"),
     }
 
     for path, (list_schema_name, item_schema_name) in expected_lists.items():
@@ -808,7 +808,7 @@ def test_generated_paginated_list_routes_keep_pagination_query_params() -> None:
             "limit",
             "order",
         },
-        "/v1/workflows/tests": {
+        "/v1/workflows/evals": {
             "workflow_id",
             "target_block_id",
             "before",

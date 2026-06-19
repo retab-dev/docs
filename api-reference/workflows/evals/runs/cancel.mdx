@@ -1,10 +1,10 @@
 ---
-title: "Get Workflow Test Run"
-openapi: "GET /v1/workflows/tests/runs/{run_id}"
+title: "Cancel Workflow Eval Run"
+openapi: "POST /v1/workflows/evals/runs/{run_id}/cancel"
 ---
 
-Fetch a workflow-test run by `run_id`. Use this while polling for
-`lifecycle.status`, then fetch the child results with [List Test Run Results](/api-reference/workflows/tests/results/list).
+Cancel a pending or running workflow-eval run by `run_id`. Cancellation is
+run-specific; you do not pass the workflow id or test id when cancelling.
 
 <RequestExample>
 
@@ -13,10 +13,8 @@ from retab import Retab
 
 client = Retab()
 
-run = client.workflows.tests.runs.get("wftestrun_q1z2")
-
+run = client.workflows.evals.runs.cancel("wfevalrun_q1z2")
 print(run.lifecycle.status)
-print(run.counts)
 ```
 
 ```typescript TypeScript
@@ -24,10 +22,8 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const run = await client.workflows.tests.runs.get("wftestrun_q1z2");
-
+const run = await client.workflows.evals.runs.cancel("wfevalrun_q1z2");
 console.log(run.lifecycle.status);
-console.log(run.counts);
 ```
 
 ```go Go
@@ -51,16 +47,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	run, err := client.Workflows.Tests.Runs.Get(
-		ctx,
-		"wftestrun_q1z2",
-	)
+	run, err := client.Workflows.Evals.Runs.Cancel(ctx, "wfevalrun_q1z2")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println(run.Lifecycle.Status())
-	fmt.Println(run.Counts)
 }
 ```
 
@@ -69,10 +61,8 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-run = client.workflows.tests.runs.get(run_id: 'wftestrun_q1z2')
-
+run = client.workflows.evals.runs.cancel(run_id: 'wfevalrun_q1z2')
 puts run.lifecycle.status
-puts run.counts
 ```
 
 ```rust Rust
@@ -82,9 +72,8 @@ use retab::Retab;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    let run = client.workflows().tests().runs().get("wftestrun_q1z2").await?;
+    let run = client.workflows().evals().runs().cancel("wfevalrun_q1z2").await?;
     println!("{:?}", run.lifecycle);
-    println!("{:?}", run.counts);
     Ok(())
 }
 ```
@@ -97,7 +86,7 @@ use Retab\Client;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
-$result = $client->workflows()->tests()->runs()->get(
+$result = $client->workflows()->evals()->runs()->cancel(
     runId: 'run_abc123',
 );
 print_r($result);
@@ -110,7 +99,7 @@ using RetabClient = Retab.Retab;
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Workflows.Tests.Runs.GetAsync("run_abc123");
+var result = await client.Workflows.Evals.Runs.CancelAsync("run_abc123");
 Console.WriteLine(result);
 ```
 
@@ -121,16 +110,15 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().tests().runs().get("run_abc123");
+    var result = client.workflows().evals().runs().cancel("run_abc123");
     System.out.println(result);
   }
 }
 ```
 
 ```curl cURL
-curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/tests/runs/wftestrun_q1z2' \
-  -H 'accept: application/json' \
+curl -X 'POST' \
+  'https://api.retab.com/v1/workflows/evals/runs/wfevalrun_q1z2/cancel' \
   -H 'Authorization: Bearer <your-api-key>'
 ```
 
@@ -140,37 +128,13 @@ curl -X 'GET' \
 
 ```json 200
 {
-  "id": "wftestrun_q1z2",
-  "workflow": {
-    "workflow_id": "wf_abc123xyz",
-    "version_id": "draft_2026_05_18"
-  },
-  "trigger": { "type": "api" },
-  "lifecycle": { "status": "completed" },
+  "id": "wfevalrun_q1z2",
+  "lifecycle": { "status": "cancelled" },
   "timing": {
     "created_at": "2026-05-18T10:00:00Z",
     "started_at": "2026-05-18T10:00:01Z",
-    "completed_at": "2026-05-18T10:00:29Z",
-    "duration_ms": 28000
-  },
-  "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
-  "target": { "type": "block", "block_id": "block_extract_invoice" },
-  "total_tests": 1,
-  "counts": {
-    "queued": 0,
-    "running": 0,
-    "passed": 1,
-    "failed": 0,
-    "blocked": 0,
-    "error": 0,
-    "cancelled": 0
+    "completed_at": "2026-05-18T10:00:04Z"
   }
-}
-```
-
-```json 404
-{
-  "detail": "Workflow test run not found: wftestrun_q1z2"
 }
 ```
 

@@ -5979,6 +5979,859 @@
         ]
       }
     },
+    "/v1/workflows/evals": {
+      "post": {
+        "description": "Create a workflow eval.\n\nPins an expected outcome for one block in a workflow. Provide the\n`workflow_id`, the `target` block, an `assertion` describing the expected\noutput, and a `source` of eval inputs (explicit handle inputs or a capture\nfrom a prior run/step). Returns the created eval with status 201.",
+        "operationId": "create_workflow_eval",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkflowEvalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEval"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create Workflow Eval",
+        "tags": [
+          "Workflows",
+          "Workflow Evals"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "get": {
+        "description": "List workflow evals.\n\nRequires `workflow_id` and returns its saved evals as a cursor-paginated\nlist, each with its latest-run summaries and drift status. Optionally\nfilter to one block with `target_block_id`. Returns 404 if the workflow\ndoes not exist.",
+        "operationId": "list_workflow_evals",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_block_id",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Block Id"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEvalList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List Workflow Evals",
+        "tags": [
+          "Workflows",
+          "Workflow Evals"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/workflows/evals/results": {
+      "get": {
+        "description": "List workflow eval results for a single run, page by page.\n\nResults are returned in run-time order.",
+        "operationId": "list_workflow_eval_results",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEvalResultList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List Workflow Eval Results",
+        "tags": [
+          "Workflows",
+          "Workflow Eval Results"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/workflows/evals/results/{result_id}": {
+      "get": {
+        "description": "Retrieve a single workflow eval result.\n\nIdentified by `result_id`. Returns the result for one eval within a run,\nincluding its `verdict` (`passed`, `failed`, or `blocked`), lifecycle,\ntiming, and any error. Returns 404 if no result with that ID exists.",
+        "operationId": "get_workflow_eval_result",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "result_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Result Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEvalResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get Workflow Eval Result",
+        "tags": [
+          "Workflows",
+          "Workflow Eval Results"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/workflows/evals/runs": {
+      "get": {
+        "description": "List workflow eval runs.\n\nOptionally filter by `workflow_id`, `eval_id`, `target_block_id`,\n`status`/`exclude_status`, `trigger_type`, and a `from_date`/`to_date`\nwindow. Returns a cursor-paginated list ordered by `sort_by` (default\nnewest first).",
+        "operationId": "list_workflow_eval_runs",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workflow_id",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workflow Id"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "eval_id",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Eval Id"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "target_block_id",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Block Id"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "exclude_status",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exclude Status"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "trigger_type",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trigger Type"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "from_date",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "to_date",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "sort_by",
+            "schema": {
+              "type": "string",
+              "default": "created_at",
+              "title": "Sort By"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEvalRunList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List Workflow Eval Runs",
+        "tags": [
+          "Workflows",
+          "Workflow Eval Runs"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "description": "Create a workflow-scoped eval run.\n\n`workflow_id` is the execution context. Optional `scope` narrows the\nrun to one saved eval or one block; omitted scope runs all workflow evals.",
+        "operationId": "create_workflow_eval_run",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkflowEvalRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEvalRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create Workflow Eval Run",
+        "tags": [
+          "Workflows",
+          "Workflow Eval Runs"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/workflows/evals/runs/{run_id}": {
+      "get": {
+        "description": "Retrieve a single workflow eval run.\n\nIdentified by `run_id`. Returns the run with its lifecycle status, timing,\nand pass/fail counts. Returns 404 if no run with that ID exists.",
+        "operationId": "get_workflow_eval_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEvalRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get Workflow Eval Run",
+        "tags": [
+          "Workflows",
+          "Workflow Eval Runs"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/workflows/evals/runs/{run_id}/cancel": {
+      "post": {
+        "description": "Cancel a workflow eval run.\n\nIdentified by `run_id`. Stops the run and returns it with its updated\ncancelled lifecycle. Returns 404 if the run does not exist or is not in a\ncancellable state.",
+        "operationId": "cancel_workflow_eval_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEvalRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cancel Workflow Eval Run",
+        "tags": [
+          "Workflows",
+          "Workflow Eval Runs"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/workflows/evals/{eval_id}": {
+      "get": {
+        "description": "Retrieve a single workflow eval.\n\nIdentified by `eval_id`. Returns the eval with its target block,\nassertion, input source, and latest-run summaries. Returns 404 if no eval\nwith that ID exists.",
+        "operationId": "get_workflow_eval",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "eval_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Eval Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEval"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get Workflow Eval",
+        "tags": [
+          "Workflows",
+          "Workflow Evals"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "description": "Update a workflow eval.\n\nIdentified by `eval_id`. Send any of `name`, `assertion`, or `source`;\nomitted fields are left unchanged. Returns the updated eval.",
+        "operationId": "update_workflow_eval",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "eval_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Eval Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkflowEvalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEval"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update Workflow Eval",
+        "tags": [
+          "Workflows",
+          "Workflow Evals"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "description": "Delete a workflow eval.\n\nIdentified by `eval_id`. Returns 204 on success and 404 if no eval with\nthat ID exists.",
+        "operationId": "delete_workflow_eval",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "eval_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Eval Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Delete Workflow Eval",
+        "tags": [
+          "Workflows",
+          "Workflow Evals"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/v1/workflows/experiments": {
       "get": {
         "description": "List experiments under one workflow with cursor pagination.\n\nEach experiment is returned with its latest-run snapshot, block info, and\ndrift detection.",
@@ -8471,859 +9324,6 @@
         ]
       }
     },
-    "/v1/workflows/tests": {
-      "post": {
-        "description": "Create a workflow test.\n\nPins an expected outcome for one block in a workflow. Provide the\n`workflow_id`, the `target` block, an `assertion` describing the expected\noutput, and a `source` of test inputs (explicit handle inputs or a capture\nfrom a prior run/step). Returns the created test with status 201.",
-        "operationId": "create_test",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateWorkflowTestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTest"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Create Test",
-        "tags": [
-          "Workflows",
-          "Workflow Block Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
-      "get": {
-        "description": "List workflow tests.\n\nRequires `workflow_id` and returns its saved tests as a cursor-paginated\nlist, each with its latest-run summaries and drift status. Optionally\nfilter to one block with `target_block_id`. Returns 404 if the workflow\ndoes not exist.",
-        "operationId": "list_tests",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "workflow_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "in": "query",
-            "name": "target_block_id",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Target Block Id"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "before",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Before"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "after",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "After"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "maximum": 100,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "order",
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "desc",
-              "title": "Order"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "List Tests",
-        "tags": [
-          "Workflows",
-          "Workflow Block Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/workflows/tests/results": {
-      "get": {
-        "description": "List workflow test results for a single run, page by page.\n\nResults are returned in run-time order.",
-        "operationId": "list_test_execution_results",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "run_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "in": "query",
-            "name": "before",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Before"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "after",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "After"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "maximum": 100,
-              "minimum": 1,
-              "default": 20,
-              "title": "Limit"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "order",
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "desc",
-              "title": "Order"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestResultList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "List Test Execution Results",
-        "tags": [
-          "Workflows",
-          "Workflow Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/workflows/tests/results/{result_id}": {
-      "get": {
-        "description": "Retrieve a single workflow test result.\n\nIdentified by `result_id`. Returns the result for one test within a run,\nincluding its `verdict` (`passed`, `failed`, or `blocked`), lifecycle,\ntiming, and any error. Returns 404 if no result with that ID exists.",
-        "operationId": "get_test_execution_result",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "result_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Result Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestResult"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Get Test Execution Result",
-        "tags": [
-          "Workflows",
-          "Workflow Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/workflows/tests/runs": {
-      "get": {
-        "description": "List workflow test runs.\n\nOptionally filter by `workflow_id`, `test_id`, `target_block_id`,\n`status`/`exclude_status`, `trigger_type`, and a `from_date`/`to_date`\nwindow. Returns a cursor-paginated list ordered by `sort_by` (default\nnewest first).",
-        "operationId": "list_test_execution_runs",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "workflow_id",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Workflow Id"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "test_id",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Test Id"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "target_block_id",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Target Block Id"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Status"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "exclude_status",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Exclude Status"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "trigger_type",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Trigger Type"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "from_date",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "From Date"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "to_date",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "To Date"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "sort_by",
-            "schema": {
-              "type": "string",
-              "default": "created_at",
-              "title": "Sort By"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "before",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Before"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "after",
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "After"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "maximum": 100,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "order",
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "desc",
-              "title": "Order"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestRunList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "List Test Execution Runs",
-        "tags": [
-          "Workflows",
-          "Workflow Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
-      "post": {
-        "description": "Create a workflow-scoped test run.\n\n`workflow_id` is the execution context. Optional `scope` narrows the\nrun to one saved test or one block; omitted scope runs all workflow tests.",
-        "operationId": "create_test_run",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateWorkflowTestRunRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestRun"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Create Test Run",
-        "tags": [
-          "Workflows",
-          "Workflow Block Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/workflows/tests/runs/{run_id}": {
-      "get": {
-        "description": "Retrieve a single workflow test run.\n\nIdentified by `run_id`. Returns the run with its lifecycle status, timing,\nand pass/fail counts. Returns 404 if no run with that ID exists.",
-        "operationId": "get_test_execution_run",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "run_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestRun"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Get Test Execution Run",
-        "tags": [
-          "Workflows",
-          "Workflow Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/workflows/tests/runs/{run_id}/cancel": {
-      "post": {
-        "description": "Cancel a workflow test run.\n\nIdentified by `run_id`. Stops the run and returns it with its updated\ncancelled lifecycle. Returns 404 if the run does not exist or is not in a\ncancellable state.",
-        "operationId": "cancel_test_execution_run",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "run_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTestRun"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Cancel Test Execution Run",
-        "tags": [
-          "Workflows",
-          "Workflow Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/workflows/tests/{test_id}": {
-      "get": {
-        "description": "Retrieve a single workflow test.\n\nIdentified by `test_id`. Returns the test with its target block,\nassertion, input source, and latest-run summaries. Returns 404 if no test\nwith that ID exists.",
-        "operationId": "get_test",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "test_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Test Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTest"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Get Test",
-        "tags": [
-          "Workflows",
-          "Workflow Block Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
-      "patch": {
-        "description": "Update a workflow test.\n\nIdentified by `test_id`. Send any of `name`, `assertion`, or `source`;\nomitted fields are left unchanged. Returns the updated test.",
-        "operationId": "update_test",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "test_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Test Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateWorkflowTestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowTest"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Update Test",
-        "tags": [
-          "Workflows",
-          "Workflow Block Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
-      "delete": {
-        "description": "Delete a workflow test.\n\nIdentified by `test_id`. Returns 204 on success and 404 if no test with\nthat ID exists.",
-        "operationId": "delete_test",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "test_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Test Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Delete Test",
-        "tags": [
-          "Workflows",
-          "Workflow Block Tests"
-        ],
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/v1/workflows/versions": {
       "get": {
         "operationId": "list_workflow_versions",
@@ -10871,7 +10871,7 @@
           "target"
         ],
         "title": "AssertionSpec",
-        "description": "Block-test assertion against one declared output handle.\n\n`target` is the only supported shape: an output handle id and an\noptional relative path inside that handle's payload."
+        "description": "Block-eval assertion against one declared output handle.\n\n`target` is the only supported shape: an output handle id and an\noptional relative path inside that handle's payload."
       },
       "AwaitingReviewRun": {
         "properties": {
@@ -10988,6 +10988,91 @@
           "upper"
         ],
         "title": "BetweenCondition"
+      },
+      "BlockEvalBatchExecutionCounts": {
+        "properties": {
+          "lifecycle_counts": {
+            "$ref": "#/components/schemas/BlockEvalLifecycleCounts",
+            "default": {
+              "pending": 0,
+              "queued": 0,
+              "running": 0,
+              "completed": 0,
+              "error": 0,
+              "cancelled": 0
+            }
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/BlockEvalOutcomeCounts",
+            "default": {
+              "passed": 0,
+              "failed": 0,
+              "blocked": 0
+            }
+          }
+        },
+        "type": "object",
+        "title": "BlockEvalBatchExecutionCounts",
+        "description": "Aggregate counts for a batch of block-eval runs.\n\nEach individual run contributes to exactly one `lifecycle_counts`\nbucket, and additionally to one `outcome` bucket when\n`lifecycle_counts.completed` is incremented."
+      },
+      "BlockEvalLifecycleCounts": {
+        "properties": {
+          "pending": {
+            "type": "integer",
+            "title": "Pending",
+            "default": 0
+          },
+          "queued": {
+            "type": "integer",
+            "title": "Queued",
+            "default": 0
+          },
+          "running": {
+            "type": "integer",
+            "title": "Running",
+            "default": 0
+          },
+          "completed": {
+            "type": "integer",
+            "title": "Completed",
+            "default": 0
+          },
+          "error": {
+            "type": "integer",
+            "title": "Error",
+            "default": 0
+          },
+          "cancelled": {
+            "type": "integer",
+            "title": "Cancelled",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "BlockEvalLifecycleCounts",
+        "description": "Per-lifecycle counts for a batch of block-eval runs."
+      },
+      "BlockEvalOutcomeCounts": {
+        "properties": {
+          "passed": {
+            "type": "integer",
+            "title": "Passed",
+            "default": 0
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "default": 0
+          },
+          "blocked": {
+            "type": "integer",
+            "title": "Blocked",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "BlockEvalOutcomeCounts",
+        "description": "Per-outcome counts. Only completed runs contribute to these buckets."
       },
       "BlockExecFileHandleInput": {
         "properties": {
@@ -11328,91 +11413,6 @@
         ],
         "title": "BlockExecutionList"
       },
-      "BlockTestBatchExecutionCounts": {
-        "properties": {
-          "lifecycle_counts": {
-            "$ref": "#/components/schemas/BlockTestLifecycleCounts",
-            "default": {
-              "pending": 0,
-              "queued": 0,
-              "running": 0,
-              "completed": 0,
-              "error": 0,
-              "cancelled": 0
-            }
-          },
-          "outcome": {
-            "$ref": "#/components/schemas/BlockTestOutcomeCounts",
-            "default": {
-              "passed": 0,
-              "failed": 0,
-              "blocked": 0
-            }
-          }
-        },
-        "type": "object",
-        "title": "BlockTestBatchExecutionCounts",
-        "description": "Aggregate counts for a batch of block-test runs.\n\nEach individual run contributes to exactly one `lifecycle_counts`\nbucket, and additionally to one `outcome` bucket when\n`lifecycle_counts.completed` is incremented."
-      },
-      "BlockTestLifecycleCounts": {
-        "properties": {
-          "pending": {
-            "type": "integer",
-            "title": "Pending",
-            "default": 0
-          },
-          "queued": {
-            "type": "integer",
-            "title": "Queued",
-            "default": 0
-          },
-          "running": {
-            "type": "integer",
-            "title": "Running",
-            "default": 0
-          },
-          "completed": {
-            "type": "integer",
-            "title": "Completed",
-            "default": 0
-          },
-          "error": {
-            "type": "integer",
-            "title": "Error",
-            "default": 0
-          },
-          "cancelled": {
-            "type": "integer",
-            "title": "Cancelled",
-            "default": 0
-          }
-        },
-        "type": "object",
-        "title": "BlockTestLifecycleCounts",
-        "description": "Per-lifecycle counts for a batch of block-test runs."
-      },
-      "BlockTestOutcomeCounts": {
-        "properties": {
-          "passed": {
-            "type": "integer",
-            "title": "Passed",
-            "default": 0
-          },
-          "failed": {
-            "type": "integer",
-            "title": "Failed",
-            "default": 0
-          },
-          "blocked": {
-            "type": "integer",
-            "title": "Blocked",
-            "default": 0
-          }
-        },
-        "type": "object",
-        "title": "BlockTestOutcomeCounts",
-        "description": "Per-outcome counts. Only completed runs contribute to these buckets."
-      },
       "CancelWorkflowExperimentRunResponse": {
         "properties": {
           "id": {
@@ -11574,6 +11574,31 @@
         "title": "CancelledTerminal",
         "description": "The run was cancelled before reaching a natural terminal state."
       },
+      "CancelledWorkflowEvalRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Status",
+            "default": "cancelled"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Human-readable reason, when known"
+          }
+        },
+        "type": "object",
+        "title": "CancelledWorkflowEvalRun",
+        "description": "The eval run was cancelled before reaching a natural terminal state."
+      },
       "CancelledWorkflowExperimentResult": {
         "properties": {
           "status": {
@@ -11623,31 +11648,6 @@
         "type": "object",
         "title": "CancelledWorkflowExperimentRun",
         "description": "The experiment run was cancelled before reaching a natural terminal state."
-      },
-      "CancelledWorkflowTestRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "cancelled",
-            "title": "Status",
-            "default": "cancelled"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason",
-            "description": "Human-readable reason, when known"
-          }
-        },
-        "type": "object",
-        "title": "CancelledWorkflowTestRun",
-        "description": "The test run was cancelled before reaching a natural terminal state."
       },
       "Category": {
         "properties": {
@@ -12036,6 +12036,19 @@
         "title": "CompletedTerminal",
         "description": "The run finished successfully."
       },
+      "CompletedWorkflowEvalRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "completed",
+            "title": "Status",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CompletedWorkflowEvalRun",
+        "description": "The eval run finished. Per-eval verdicts live on each result row."
+      },
       "CompletedWorkflowExperimentResult": {
         "properties": {
           "status": {
@@ -12061,19 +12074,6 @@
         "type": "object",
         "title": "CompletedWorkflowExperimentRun",
         "description": "The experiment run finished successfully."
-      },
-      "CompletedWorkflowTestRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "completed",
-            "title": "Status",
-            "default": "completed"
-          }
-        },
-        "type": "object",
-        "title": "CompletedWorkflowTestRun",
-        "description": "The test run finished. Per-test verdicts live on each result row."
       },
       "ConditionEvaluationDetails": {
         "properties": {
@@ -12915,10 +12915,6 @@
               }
             ],
             "title": "Chunking Keys"
-          },
-          "image_resolution_dpi": {
-            "type": "integer",
-            "title": "Image Resolution Dpi"
           }
         },
         "type": "object",
@@ -13078,10 +13074,6 @@
             "title": "Background",
             "description": "If true, run asynchronously: returns immediately with status 'queued' and an empty output. Poll GET /v1/<primitive>/{id} until status is terminal. Mutually exclusive with stream.",
             "default": false
-          },
-          "image_resolution_dpi": {
-            "type": "integer",
-            "title": "Image Resolution Dpi"
           }
         },
         "type": "object",
@@ -13446,6 +13438,104 @@
         "title": "CreateWorkflowEdgeRequest",
         "description": "Create a new edge connecting two blocks in a workflow."
       },
+      "CreateWorkflowEvalRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "target": {
+            "$ref": "#/components/schemas/WorkflowEvalBlockTarget"
+          },
+          "source": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ManualWorkflowEvalSource"
+              },
+              {
+                "$ref": "#/components/schemas/RunStepWorkflowEvalSource"
+              }
+            ],
+            "title": "Source",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "manual": "#/components/schemas/ManualWorkflowEvalSource",
+                "run_step": "#/components/schemas/RunStepWorkflowEvalSource"
+              }
+            }
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "assertion": {
+            "$ref": "#/components/schemas/AssertionSpec"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "assertion",
+          "source",
+          "target",
+          "workflow_id"
+        ],
+        "title": "CreateWorkflowEvalRequest",
+        "description": "Body to create a workflow eval: the target block, an input `source`, and an `assertion` to evaluate its output."
+      },
+      "CreateWorkflowEvalRunRequest": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/WorkflowEvalRunSingleScope"
+                  },
+                  {
+                    "$ref": "#/components/schemas/WorkflowEvalRunWorkflowScope"
+                  },
+                  {
+                    "$ref": "#/components/schemas/WorkflowEvalRunBlockScope"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "block": "#/components/schemas/WorkflowEvalRunBlockScope",
+                    "single": "#/components/schemas/WorkflowEvalRunSingleScope",
+                    "workflow": "#/components/schemas/WorkflowEvalRunWorkflowScope"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope",
+            "description": "Optional execution scope. Omit (or pass null) to run every saved eval in the workflow."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflow_id"
+        ],
+        "title": "CreateWorkflowEvalRunRequest",
+        "description": "Create a workflow eval run. Provide a `workflow_id`, and optionally narrow execution with `scope` to a single eval or one block. Omit `scope` to run every saved workflow eval."
+      },
       "CreateWorkflowRequest": {
         "properties": {
           "name": {
@@ -13557,104 +13647,6 @@
           "name"
         ],
         "title": "CreateWorkflowTableUploadRequest"
-      },
-      "CreateWorkflowTestRequest": {
-        "properties": {
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "target": {
-            "$ref": "#/components/schemas/WorkflowTestBlockTarget"
-          },
-          "source": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ManualWorkflowTestSource"
-              },
-              {
-                "$ref": "#/components/schemas/RunStepWorkflowTestSource"
-              }
-            ],
-            "title": "Source",
-            "discriminator": {
-              "propertyName": "type",
-              "mapping": {
-                "manual": "#/components/schemas/ManualWorkflowTestSource",
-                "run_step": "#/components/schemas/RunStepWorkflowTestSource"
-              }
-            }
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "assertion": {
-            "$ref": "#/components/schemas/AssertionSpec"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "assertion",
-          "source",
-          "target",
-          "workflow_id"
-        ],
-        "title": "CreateWorkflowTestRequest",
-        "description": "Body to create a workflow test: the target block, an input `source`, and an `assertion` to evaluate its output."
-      },
-      "CreateWorkflowTestRunRequest": {
-        "properties": {
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "scope": {
-            "anyOf": [
-              {
-                "oneOf": [
-                  {
-                    "$ref": "#/components/schemas/WorkflowTestRunSingleScope"
-                  },
-                  {
-                    "$ref": "#/components/schemas/WorkflowTestRunWorkflowScope"
-                  },
-                  {
-                    "$ref": "#/components/schemas/WorkflowTestRunBlockScope"
-                  }
-                ],
-                "discriminator": {
-                  "propertyName": "type",
-                  "mapping": {
-                    "block": "#/components/schemas/WorkflowTestRunBlockScope",
-                    "single": "#/components/schemas/WorkflowTestRunSingleScope",
-                    "workflow": "#/components/schemas/WorkflowTestRunWorkflowScope"
-                  }
-                }
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scope",
-            "description": "Optional execution scope. Omit (or pass null) to run every saved test in the workflow."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "workflow_id"
-        ],
-        "title": "CreateWorkflowTestRunRequest",
-        "description": "Create a workflow test run. Provide a `workflow_id`, and optionally narrow execution with `scope` to a single test or one block. Omit `scope` to run every saved workflow test."
       },
       "Decision": {
         "properties": {
@@ -14868,6 +14860,36 @@
         "title": "ErrorTerminal",
         "description": "The run failed. All loose error fields are bundled here."
       },
+      "ErrorWorkflowEvalRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "error",
+            "title": "Status",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message",
+            "default": "(no message)"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured error context including stack trace"
+          }
+        },
+        "type": "object",
+        "title": "ErrorWorkflowEvalRun",
+        "description": "The eval run failed. The error message lives on this variant.\n\nCarries the same structured `details` envelope as workflow runs so\nconsumers can branch on `error_code` / `stage` rather than parsing\na free-text message."
+      },
       "ErrorWorkflowExperimentResult": {
         "properties": {
           "status": {
@@ -14928,35 +14950,179 @@
         "title": "ErrorWorkflowExperimentRun",
         "description": "The experiment run failed.\n\nCarries a human-readable `message` and a structured `details` envelope\nconsumers can branch on instead of parsing free text."
       },
-      "ErrorWorkflowTestRun": {
+      "EvalFileHandleInput": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/EvalPublicFileRef"
+          },
+          "type": {
+            "type": "string",
+            "const": "file",
+            "title": "Type",
+            "default": "file"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "EvalFileHandleInput"
+      },
+      "EvalJsonHandleInput": {
+        "properties": {
+          "data": {
+            "title": "Data",
+            "default": null
+          },
+          "type": {
+            "type": "string",
+            "const": "json",
+            "title": "Type",
+            "default": "json"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EvalJsonHandleInput"
+      },
+      "EvalPublicFileRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "ID of the file"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename of the file"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the file"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "id",
+          "mime_type"
+        ],
+        "title": "EvalPublicFileRef",
+        "description": "Public/shared file reference used across SDK and customer-facing APIs."
+      },
+      "EvalRunBlockTarget": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "block",
+            "title": "Type",
+            "default": "block"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "block_id"
+        ],
+        "title": "EvalRunBlockTarget",
+        "description": "Public workflow-eval target.\n\nThe storage layer remains block-scoped today, but the API shape names the\ntested entity explicitly so workflow-level targets can be added later."
+      },
+      "EvalRunFreshness": {
         "properties": {
           "status": {
             "type": "string",
-            "const": "error",
+            "enum": [
+              "fresh",
+              "stale",
+              "unknown"
+            ],
             "title": "Status",
-            "default": "error"
+            "default": "unknown"
           },
-          "message": {
-            "type": "string",
-            "title": "Message",
-            "description": "Human-readable error message",
-            "default": "(no message)"
+          "reasons": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "validity_changed",
+                "inputs_changed",
+                "engine_changed",
+                "metrics_engine_changed",
+                "no_baseline"
+              ]
+            },
+            "type": "array",
+            "title": "Reasons",
+            "default": []
           },
-          "details": {
+          "validity_fingerprint": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ErrorDetails"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Structured error context including stack trace"
+            "title": "Validity Fingerprint"
+          },
+          "input_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Fingerprint"
+          },
+          "baseline_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Run Id"
           }
         },
         "type": "object",
-        "title": "ErrorWorkflowTestRun",
-        "description": "The test run failed. The error message lives on this variant.\n\nCarries the same structured `details` envelope as workflow runs so\nconsumers can branch on `error_code` / `stage` rather than parsing\na free-text message."
+        "required": [
+          "baseline_run_id",
+          "input_fingerprint",
+          "validity_fingerprint"
+        ],
+        "title": "EvalRunFreshness"
+      },
+      "EvalRunTrigger": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "api",
+              "schedule",
+              "webhook",
+              "email",
+              "custom",
+              "restart"
+            ],
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "EvalRunTrigger"
       },
       "ExistsCondition": {
         "properties": {
@@ -15969,11 +16135,6 @@
             "description": "Number of consensus votes used",
             "default": 1
           },
-          "image_resolution_dpi": {
-            "type": "integer",
-            "title": "Image Resolution Dpi",
-            "description": "Legacy stored DPI value, retained only for compatibility."
-          },
           "instructions": {
             "anyOf": [
               {
@@ -16208,11 +16369,6 @@
             "title": "N Consensus",
             "description": "Number of consensus votes used",
             "default": 1
-          },
-          "image_resolution_dpi": {
-            "type": "integer",
-            "title": "Image Resolution Dpi",
-            "description": "Legacy stored DPI value, retained only for compatibility."
           },
           "instructions": {
             "anyOf": [
@@ -16533,7 +16689,7 @@
             "default": "file"
           },
           "document": {
-            "$ref": "#/components/schemas/FileRef"
+            "$ref": "#/components/schemas/ResultFileRef"
           }
         },
         "additionalProperties": false,
@@ -16775,10 +16931,6 @@
             "title": "Background",
             "description": "If true, run asynchronously: returns immediately with status 'queued'. Poll GET /v1/schemas/generate/{schema_generation_id} until status is terminal.",
             "default": false
-          },
-          "image_resolution_dpi": {
-            "type": "integer",
-            "title": "Image Resolution Dpi"
           }
         },
         "type": "object",
@@ -16844,7 +16996,7 @@
         "type": "object",
         "title": "JsonSchemaValidCondition"
       },
-      "LatestBlockTestRunSummary": {
+      "LatestBlockEvalRunSummary": {
         "properties": {
           "run_record_id": {
             "type": "string",
@@ -16972,8 +17124,8 @@
           "started_at",
           "status"
         ],
-        "title": "LatestBlockTestRunSummary",
-        "description": "Summary of the most recent block-test run.\n\nExecution status and verdict outcome are exposed as separate fields.\nThe summary is written on terminal-state transitions, so in practice\n`status` is one of `completed | error | cancelled` and `outcome` is\npopulated when `status == \"completed\"`."
+        "title": "LatestBlockEvalRunSummary",
+        "description": "Summary of the most recent block-eval run.\n\nExecution status and verdict outcome are exposed as separate fields.\nThe summary is written on terminal-state transitions, so in practice\n`status` is one of `completed | error | cancelled` and `outcome` is\npopulated when `status == \"completed\"`."
       },
       "LengthCompareCondition": {
         "properties": {
@@ -17130,7 +17282,7 @@
         "title": "MIMEData",
         "description": "A file represented by its `filename` and a base64 data `url`."
       },
-      "ManualWorkflowTestSource": {
+      "ManualWorkflowEvalSource": {
         "properties": {
           "type": {
             "type": "string",
@@ -17142,17 +17294,17 @@
             "additionalProperties": {
               "oneOf": [
                 {
-                  "$ref": "#/components/schemas/JsonHandleInput"
+                  "$ref": "#/components/schemas/EvalJsonHandleInput"
                 },
                 {
-                  "$ref": "#/components/schemas/FileHandleInput"
+                  "$ref": "#/components/schemas/EvalFileHandleInput"
                 }
               ],
               "discriminator": {
                 "propertyName": "type",
                 "mapping": {
-                  "file": "#/components/schemas/FileHandleInput",
-                  "json": "#/components/schemas/JsonHandleInput"
+                  "file": "#/components/schemas/EvalFileHandleInput",
+                  "json": "#/components/schemas/EvalJsonHandleInput"
                 }
               }
             },
@@ -17162,7 +17314,7 @@
           }
         },
         "type": "object",
-        "title": "ManualWorkflowTestSource"
+        "title": "ManualWorkflowEvalSource"
       },
       "MatchesRegexCondition": {
         "properties": {
@@ -17362,7 +17514,7 @@
           "output_handle_id"
         ],
         "title": "OutputTarget",
-        "description": "Structured block-test assertion target."
+        "description": "Structured block-eval assertion target."
       },
       "Parse": {
         "properties": {
@@ -17390,11 +17542,6 @@
             ],
             "title": "Table Parsing Format",
             "description": "Format used to render tables extracted from the document"
-          },
-          "image_resolution_dpi": {
-            "type": "integer",
-            "title": "Image Resolution Dpi",
-            "description": "Legacy stored DPI value, retained only for compatibility."
           },
           "instructions": {
             "anyOf": [
@@ -17465,7 +17612,6 @@
         "required": [
           "file",
           "id",
-          "image_resolution_dpi",
           "model",
           "output",
           "table_parsing_format"
@@ -17544,11 +17690,6 @@
             "title": "Table Parsing Format",
             "description": "Format used to render tables extracted from the document"
           },
-          "image_resolution_dpi": {
-            "type": "integer",
-            "title": "Image Resolution Dpi",
-            "description": "Legacy stored DPI value, retained only for compatibility."
-          },
           "instructions": {
             "anyOf": [
               {
@@ -17620,7 +17761,6 @@
           "created_at",
           "file",
           "id",
-          "image_resolution_dpi",
           "model",
           "output",
           "table_parsing_format"
@@ -18014,6 +18154,19 @@
         "title": "PendingStepLifecycle",
         "description": "The step has been created but execution has not started."
       },
+      "PendingWorkflowEvalRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "pending",
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "type": "object",
+        "title": "PendingWorkflowEvalRun",
+        "description": "The eval run has been created but execution has not started."
+      },
       "PendingWorkflowExperimentResult": {
         "properties": {
           "status": {
@@ -18039,19 +18192,6 @@
         "type": "object",
         "title": "PendingWorkflowExperimentRun",
         "description": "The experiment run has been created but execution has not started."
-      },
-      "PendingWorkflowTestRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "pending",
-            "title": "Status",
-            "default": "pending"
-          }
-        },
-        "type": "object",
-        "title": "PendingWorkflowTestRun",
-        "description": "The test run has been created but execution has not started."
       },
       "PrimitiveError": {
         "properties": {
@@ -18313,6 +18453,19 @@
         "title": "QueuedStepLifecycle",
         "description": "The step is queued for execution."
       },
+      "QueuedWorkflowEvalRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "title": "QueuedWorkflowEvalRun",
+        "description": "The eval run is enqueued and waiting for a worker."
+      },
       "QueuedWorkflowExperimentResult": {
         "properties": {
           "status": {
@@ -18338,19 +18491,6 @@
         "type": "object",
         "title": "QueuedWorkflowExperimentRun",
         "description": "The experiment run is enqueued and waiting for a worker."
-      },
-      "QueuedWorkflowTestRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "queued",
-            "title": "Status",
-            "default": "queued"
-          }
-        },
-        "type": "object",
-        "title": "QueuedWorkflowTestRun",
-        "description": "The test run is enqueued and waiting for a worker."
       },
       "RejectReviewRequest": {
         "properties": {
@@ -18400,6 +18540,33 @@
           "file"
         ],
         "title": "ReplaceWorkflowTableUploadRequest"
+      },
+      "ResultFileRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "ID of the file"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename of the file"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the file"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "id",
+          "mime_type"
+        ],
+        "title": "ResultFileRef",
+        "description": "Public/shared file reference used across SDK and customer-facing APIs."
       },
       "RetabUsage": {
         "properties": {
@@ -18990,7 +19157,7 @@
         "title": "RunInputs",
         "description": "Input payloads supplied at run creation time."
       },
-      "RunStepWorkflowTestSource": {
+      "RunStepWorkflowEvalSource": {
         "properties": {
           "type": {
             "type": "string",
@@ -19018,7 +19185,7 @@
         "required": [
           "run_id"
         ],
-        "title": "RunStepWorkflowTestSource"
+        "title": "RunStepWorkflowEvalSource"
       },
       "RunTiming": {
         "properties": {
@@ -19098,6 +19265,19 @@
         "title": "RunningStepLifecycle",
         "description": "The step is currently executing."
       },
+      "RunningWorkflowEvalRun": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "running",
+            "title": "Status",
+            "default": "running"
+          }
+        },
+        "type": "object",
+        "title": "RunningWorkflowEvalRun",
+        "description": "The eval run is executing assertions."
+      },
       "RunningWorkflowExperimentResult": {
         "properties": {
           "status": {
@@ -19123,19 +19303,6 @@
         "type": "object",
         "title": "RunningWorkflowExperimentRun",
         "description": "The experiment run is executing."
-      },
-      "RunningWorkflowTestRun": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "running",
-            "title": "Status",
-            "default": "running"
-          }
-        },
-        "type": "object",
-        "title": "RunningWorkflowTestRun",
-        "description": "The test run is executing assertions."
       },
       "SchemaGeneration": {
         "properties": {
@@ -20077,6 +20244,60 @@
         "title": "UpdateWorkflowBlockRequest",
         "description": "Update a block. Only the fields you provide are changed.\n\n`config_mode` controls how `config` is applied:\n\n* `\"merge\"` (default): the given `config` is merged into the existing\n  one — nested objects are combined, and a `null` value deletes a key.\n* `\"replace\"`: the given `config` replaces the existing one entirely."
       },
+      "UpdateWorkflowEvalRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "assertion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssertionSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ManualWorkflowEvalSource"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RunStepWorkflowEvalSource"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "manual": "#/components/schemas/ManualWorkflowEvalSource",
+                    "run_step": "#/components/schemas/RunStepWorkflowEvalSource"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "UpdateWorkflowEvalRequest",
+        "description": "Body for updating a workflow eval. Only the supplied fields (`name`, `assertion`, `source`) are changed."
+      },
       "UpdateWorkflowRequest": {
         "properties": {
           "name": {
@@ -20138,60 +20359,6 @@
         },
         "type": "object",
         "title": "UpdateWorkflowTableRequest"
-      },
-      "UpdateWorkflowTestRequest": {
-        "properties": {
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "assertion": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AssertionSpec"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "source": {
-            "anyOf": [
-              {
-                "oneOf": [
-                  {
-                    "$ref": "#/components/schemas/ManualWorkflowTestSource"
-                  },
-                  {
-                    "$ref": "#/components/schemas/RunStepWorkflowTestSource"
-                  }
-                ],
-                "discriminator": {
-                  "propertyName": "type",
-                  "mapping": {
-                    "manual": "#/components/schemas/ManualWorkflowTestSource",
-                    "run_step": "#/components/schemas/RunStepWorkflowTestSource"
-                  }
-                }
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "UpdateWorkflowTestRequest",
-        "description": "Body for updating a workflow test. Only the supplied fields (`name`, `assertion`, `source`) are changed."
       },
       "UploadFileRequest": {
         "properties": {
@@ -21363,6 +21530,734 @@
           "list_metadata"
         ],
         "title": "WorkflowEdgeVersionList"
+      },
+      "WorkflowEval": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "target": {
+            "$ref": "#/components/schemas/WorkflowEvalBlockTarget"
+          },
+          "source": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ManualWorkflowEvalSource"
+              },
+              {
+                "$ref": "#/components/schemas/RunStepWorkflowEvalSource"
+              }
+            ],
+            "title": "Source",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "manual": "#/components/schemas/ManualWorkflowEvalSource",
+                "run_step": "#/components/schemas/RunStepWorkflowEvalSource"
+              }
+            }
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "assertion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssertionSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assertion_schema_dep": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssertionSchemaDep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assertion_drift_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "valid",
+                  "drifted",
+                  "broken"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assertion Drift Status"
+          },
+          "schema_drift": {
+            "type": "string",
+            "enum": [
+              "none",
+              "partial",
+              "drifted",
+              "unknown"
+            ],
+            "title": "Schema Drift",
+            "default": "unknown"
+          },
+          "schema_drift_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Drift Detail"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/ArtifactFreshness"
+          },
+          "drift": {
+            "$ref": "#/components/schemas/ArtifactDrift"
+          },
+          "validation_status": {
+            "type": "string",
+            "title": "Validation Status",
+            "default": "valid"
+          },
+          "validation_issues": {
+            "items": {},
+            "type": "array",
+            "title": "Validation Issues",
+            "default": []
+          },
+          "latest_run_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestBlockEvalRunSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_passing_run_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestBlockEvalRunSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_failing_run_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestBlockEvalRunSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the workflow eval was created"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "When the workflow eval was last updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "target",
+          "workflow_id"
+        ],
+        "title": "WorkflowEval",
+        "description": "A saved workflow eval: a target block, an input `source`, and the `assertion` evaluated against its output."
+      },
+      "WorkflowEvalBlockTarget": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "block",
+            "title": "Type",
+            "default": "block"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "block_id"
+        ],
+        "title": "WorkflowEvalBlockTarget",
+        "description": "Public workflow-eval target.\n\nThe storage layer remains block-scoped today, but the API shape names the\ntested entity explicitly so workflow-level targets can be added later."
+      },
+      "WorkflowEvalList": {
+        "description": "A page of `WorkflowEval` resources. `data` holds the items and `list_metadata` carries the `before`/`after` cursors; pass `after` to fetch the next page.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowEval"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "WorkflowEvalList"
+      },
+      "WorkflowEvalResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_eval_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Eval Run Id"
+          },
+          "eval_id": {
+            "type": "string",
+            "title": "Eval Id"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/PendingWorkflowEvalRun"
+                  },
+                  {
+                    "$ref": "#/components/schemas/QueuedWorkflowEvalRun"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RunningWorkflowEvalRun"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CompletedWorkflowEvalRun"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ErrorWorkflowEvalRun"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CancelledWorkflowEvalRun"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "status",
+                  "mapping": {
+                    "cancelled": "#/components/schemas/CancelledWorkflowEvalRun",
+                    "completed": "#/components/schemas/CompletedWorkflowEvalRun",
+                    "error": "#/components/schemas/ErrorWorkflowEvalRun",
+                    "pending": "#/components/schemas/PendingWorkflowEvalRun",
+                    "queued": "#/components/schemas/QueuedWorkflowEvalRun",
+                    "running": "#/components/schemas/RunningWorkflowEvalRun"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lifecycle"
+          },
+          "timing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowEvalRunTiming"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "passed",
+                  "failed",
+                  "blocked"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict",
+            "description": "Verdict label populated only when the underlying eval reaches a terminal lifecycle state and the verdict could be determined. Execution-error details flow through `lifecycle`, not through this enum."
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "block_type": {
+            "type": "string",
+            "title": "Block Type"
+          },
+          "execution_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Fingerprint"
+          },
+          "handle_inputs_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Inputs Fingerprint"
+          },
+          "workflow_draft_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Draft Fingerprint"
+          },
+          "block_config_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Config Fingerprint"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "handle_inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/JsonHandleInput"
+                },
+                {
+                  "$ref": "#/components/schemas/FileHandleInput"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "file": "#/components/schemas/FileHandleInput",
+                  "json": "#/components/schemas/JsonHandleInput"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Handle Inputs",
+            "default": {}
+          },
+          "handle_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/JsonHandleInput"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FileHandleInput"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "file": "#/components/schemas/FileHandleInput",
+                      "json": "#/components/schemas/JsonHandleInput"
+                    }
+                  }
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle Outputs"
+          },
+          "routing_decisions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Decisions"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          },
+          "assertion_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssertionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verdict_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VerdictSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "block_id",
+          "block_type",
+          "eval_id",
+          "id",
+          "workflow_id"
+        ],
+        "title": "WorkflowEvalResult",
+        "description": "The outcome of one eval within an eval run: its `lifecycle`, `timing`, and `verdict`."
+      },
+      "WorkflowEvalResultList": {
+        "description": "A page of `WorkflowEvalResult` resources. `data` holds the items and `list_metadata` carries the `before`/`after` cursors; pass `after` to fetch the next page.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowEvalResult"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "WorkflowEvalResultList"
+      },
+      "WorkflowEvalRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "workflow_version_id": {
+            "type": "string",
+            "title": "Workflow Version Id"
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/EvalRunTrigger"
+          },
+          "lifecycle": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PendingWorkflowEvalRun"
+              },
+              {
+                "$ref": "#/components/schemas/QueuedWorkflowEvalRun"
+              },
+              {
+                "$ref": "#/components/schemas/RunningWorkflowEvalRun"
+              },
+              {
+                "$ref": "#/components/schemas/CompletedWorkflowEvalRun"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorWorkflowEvalRun"
+              },
+              {
+                "$ref": "#/components/schemas/CancelledWorkflowEvalRun"
+              }
+            ],
+            "title": "Lifecycle",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "cancelled": "#/components/schemas/CancelledWorkflowEvalRun",
+                "completed": "#/components/schemas/CompletedWorkflowEvalRun",
+                "error": "#/components/schemas/ErrorWorkflowEvalRun",
+                "pending": "#/components/schemas/PendingWorkflowEvalRun",
+                "queued": "#/components/schemas/QueuedWorkflowEvalRun",
+                "running": "#/components/schemas/RunningWorkflowEvalRun"
+              }
+            }
+          },
+          "timing": {
+            "$ref": "#/components/schemas/WorkflowEvalRunTiming"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvalRunBlockTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eval_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eval Id"
+          },
+          "total_evals": {
+            "type": "integer",
+            "title": "Total Evals"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/BlockEvalBatchExecutionCounts",
+            "default": {
+              "lifecycle_counts": {
+                "cancelled": 0,
+                "completed": 0,
+                "error": 0,
+                "pending": 0,
+                "queued": 0,
+                "running": 0
+              },
+              "outcome": {
+                "blocked": 0,
+                "failed": 0,
+                "passed": 0
+              }
+            }
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/EvalRunFreshness"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "lifecycle",
+          "timing",
+          "total_evals",
+          "trigger",
+          "workflow_id",
+          "workflow_version_id"
+        ],
+        "title": "WorkflowEvalRun",
+        "description": "A batch execution of a workflow's evals, with overall `lifecycle`, `timing`, and pass/fail `counts`."
+      },
+      "WorkflowEvalRunBlockScope": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "block",
+            "title": "Type"
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "block_id",
+          "type"
+        ],
+        "title": "WorkflowEvalRunBlockScope",
+        "description": "Run every workflow eval for one block in the workflow."
+      },
+      "WorkflowEvalRunList": {
+        "description": "A page of `WorkflowEvalRun` resources. `data` holds the items and `list_metadata` carries the `before`/`after` cursors; pass `after` to fetch the next page.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowEvalRun"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "list_metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "list_metadata"
+        ],
+        "title": "WorkflowEvalRunList"
+      },
+      "WorkflowEvalRunSingleScope": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "single",
+            "title": "Type"
+          },
+          "eval_id": {
+            "type": "string",
+            "title": "Eval Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "eval_id",
+          "type"
+        ],
+        "title": "WorkflowEvalRunSingleScope",
+        "description": "Run one saved workflow eval in the workflow."
+      },
+      "WorkflowEvalRunTiming": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the workflow-eval run was created."
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          }
+        },
+        "type": "object",
+        "title": "WorkflowEvalRunTiming"
+      },
+      "WorkflowEvalRunWorkflowScope": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "workflow",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "WorkflowEvalRunWorkflowScope",
+        "description": "Run every saved eval in the workflow."
       },
       "WorkflowExperiment": {
         "properties": {
@@ -23719,734 +24614,6 @@
           "warning"
         ],
         "title": "WorkflowTableValidationSeverity"
-      },
-      "WorkflowTest": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "target": {
-            "$ref": "#/components/schemas/WorkflowTestBlockTarget"
-          },
-          "source": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ManualWorkflowTestSource"
-              },
-              {
-                "$ref": "#/components/schemas/RunStepWorkflowTestSource"
-              }
-            ],
-            "title": "Source",
-            "discriminator": {
-              "propertyName": "type",
-              "mapping": {
-                "manual": "#/components/schemas/ManualWorkflowTestSource",
-                "run_step": "#/components/schemas/RunStepWorkflowTestSource"
-              }
-            }
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "assertion": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AssertionSpec"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "assertion_schema_dep": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AssertionSchemaDep"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "assertion_drift_status": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "valid",
-                  "drifted",
-                  "broken"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Assertion Drift Status"
-          },
-          "schema_drift": {
-            "type": "string",
-            "enum": [
-              "none",
-              "partial",
-              "drifted",
-              "unknown"
-            ],
-            "title": "Schema Drift",
-            "default": "unknown"
-          },
-          "schema_drift_detail": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Schema Drift Detail"
-          },
-          "freshness": {
-            "$ref": "#/components/schemas/ArtifactFreshness"
-          },
-          "drift": {
-            "$ref": "#/components/schemas/ArtifactDrift"
-          },
-          "validation_status": {
-            "type": "string",
-            "title": "Validation Status",
-            "default": "valid"
-          },
-          "validation_issues": {
-            "items": {},
-            "type": "array",
-            "title": "Validation Issues",
-            "default": []
-          },
-          "latest_run_summary": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/LatestBlockTestRunSummary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "latest_passing_run_summary": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/LatestBlockTestRunSummary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "latest_failing_run_summary": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/LatestBlockTestRunSummary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At",
-            "description": "When the workflow test was created"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At",
-            "description": "When the workflow test was last updated"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "source",
-          "target",
-          "workflow_id"
-        ],
-        "title": "WorkflowTest",
-        "description": "A saved workflow test: a target block, an input `source`, and the `assertion` evaluated against its output."
-      },
-      "WorkflowTestBlockTarget": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "block",
-            "title": "Type",
-            "default": "block"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "block_id"
-        ],
-        "title": "WorkflowTestBlockTarget",
-        "description": "Public workflow-test target.\n\nThe storage layer remains block-scoped today, but the API shape names the\ntested entity explicitly so workflow-level targets can be added later."
-      },
-      "WorkflowTestList": {
-        "description": "A page of `WorkflowTest` resources. `data` holds the items and `list_metadata` carries the `before`/`after` cursors; pass `after` to fetch the next page.",
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowTest"
-            },
-            "type": "array",
-            "title": "Data"
-          },
-          "list_metadata": {
-            "$ref": "#/components/schemas/ListMetadata"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data",
-          "list_metadata"
-        ],
-        "title": "WorkflowTestList"
-      },
-      "WorkflowTestResult": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "workflow_test_run_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workflow Test Run Id"
-          },
-          "test_id": {
-            "type": "string",
-            "title": "Test Id"
-          },
-          "lifecycle": {
-            "anyOf": [
-              {
-                "oneOf": [
-                  {
-                    "$ref": "#/components/schemas/PendingWorkflowTestRun"
-                  },
-                  {
-                    "$ref": "#/components/schemas/QueuedWorkflowTestRun"
-                  },
-                  {
-                    "$ref": "#/components/schemas/RunningWorkflowTestRun"
-                  },
-                  {
-                    "$ref": "#/components/schemas/CompletedWorkflowTestRun"
-                  },
-                  {
-                    "$ref": "#/components/schemas/ErrorWorkflowTestRun"
-                  },
-                  {
-                    "$ref": "#/components/schemas/CancelledWorkflowTestRun"
-                  }
-                ],
-                "discriminator": {
-                  "propertyName": "status",
-                  "mapping": {
-                    "cancelled": "#/components/schemas/CancelledWorkflowTestRun",
-                    "completed": "#/components/schemas/CompletedWorkflowTestRun",
-                    "error": "#/components/schemas/ErrorWorkflowTestRun",
-                    "pending": "#/components/schemas/PendingWorkflowTestRun",
-                    "queued": "#/components/schemas/QueuedWorkflowTestRun",
-                    "running": "#/components/schemas/RunningWorkflowTestRun"
-                  }
-                }
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lifecycle"
-          },
-          "timing": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WorkflowTestRunTiming"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "verdict": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "passed",
-                  "failed",
-                  "blocked"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verdict",
-            "description": "Verdict label populated only when the underlying test reaches a terminal lifecycle state and the verdict could be determined. Execution-error details flow through `lifecycle`, not through this enum."
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          },
-          "block_type": {
-            "type": "string",
-            "title": "Block Type"
-          },
-          "execution_fingerprint": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Execution Fingerprint"
-          },
-          "handle_inputs_fingerprint": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Handle Inputs Fingerprint"
-          },
-          "workflow_draft_fingerprint": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workflow Draft Fingerprint"
-          },
-          "block_config_fingerprint": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Block Config Fingerprint"
-          },
-          "artifact": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/StepArtifactRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "handle_inputs": {
-            "additionalProperties": {
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/JsonHandleInput"
-                },
-                {
-                  "$ref": "#/components/schemas/FileHandleInput"
-                }
-              ],
-              "discriminator": {
-                "propertyName": "type",
-                "mapping": {
-                  "file": "#/components/schemas/FileHandleInput",
-                  "json": "#/components/schemas/JsonHandleInput"
-                }
-              }
-            },
-            "type": "object",
-            "title": "Handle Inputs",
-            "default": {}
-          },
-          "handle_outputs": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/JsonHandleInput"
-                    },
-                    {
-                      "$ref": "#/components/schemas/FileHandleInput"
-                    }
-                  ],
-                  "discriminator": {
-                    "propertyName": "type",
-                    "mapping": {
-                      "file": "#/components/schemas/FileHandleInput",
-                      "json": "#/components/schemas/JsonHandleInput"
-                    }
-                  }
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Handle Outputs"
-          },
-          "routing_decisions": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Routing Decisions"
-          },
-          "warnings": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Warnings",
-            "default": []
-          },
-          "assertion_result": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AssertionResult"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "verdict_summary": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/VerdictSummary"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "block_id",
-          "block_type",
-          "id",
-          "test_id",
-          "workflow_id"
-        ],
-        "title": "WorkflowTestResult",
-        "description": "The outcome of one test within a test run: its `lifecycle`, `timing`, and `verdict`."
-      },
-      "WorkflowTestResultList": {
-        "description": "A page of `WorkflowTestResult` resources. `data` holds the items and `list_metadata` carries the `before`/`after` cursors; pass `after` to fetch the next page.",
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowTestResult"
-            },
-            "type": "array",
-            "title": "Data"
-          },
-          "list_metadata": {
-            "$ref": "#/components/schemas/ListMetadata"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data",
-          "list_metadata"
-        ],
-        "title": "WorkflowTestResultList"
-      },
-      "WorkflowTestRun": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "workflow_id": {
-            "type": "string",
-            "title": "Workflow Id"
-          },
-          "workflow_version_id": {
-            "type": "string",
-            "title": "Workflow Version Id"
-          },
-          "trigger": {
-            "$ref": "#/components/schemas/TriggerInfo"
-          },
-          "lifecycle": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/PendingWorkflowTestRun"
-              },
-              {
-                "$ref": "#/components/schemas/QueuedWorkflowTestRun"
-              },
-              {
-                "$ref": "#/components/schemas/RunningWorkflowTestRun"
-              },
-              {
-                "$ref": "#/components/schemas/CompletedWorkflowTestRun"
-              },
-              {
-                "$ref": "#/components/schemas/ErrorWorkflowTestRun"
-              },
-              {
-                "$ref": "#/components/schemas/CancelledWorkflowTestRun"
-              }
-            ],
-            "title": "Lifecycle",
-            "discriminator": {
-              "propertyName": "status",
-              "mapping": {
-                "cancelled": "#/components/schemas/CancelledWorkflowTestRun",
-                "completed": "#/components/schemas/CompletedWorkflowTestRun",
-                "error": "#/components/schemas/ErrorWorkflowTestRun",
-                "pending": "#/components/schemas/PendingWorkflowTestRun",
-                "queued": "#/components/schemas/QueuedWorkflowTestRun",
-                "running": "#/components/schemas/RunningWorkflowTestRun"
-              }
-            }
-          },
-          "timing": {
-            "$ref": "#/components/schemas/WorkflowTestRunTiming"
-          },
-          "target": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WorkflowTestBlockTarget"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "test_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Test Id"
-          },
-          "total_tests": {
-            "type": "integer",
-            "title": "Total Tests"
-          },
-          "counts": {
-            "$ref": "#/components/schemas/BlockTestBatchExecutionCounts",
-            "default": {
-              "lifecycle_counts": {
-                "cancelled": 0,
-                "completed": 0,
-                "error": 0,
-                "pending": 0,
-                "queued": 0,
-                "running": 0
-              },
-              "outcome": {
-                "blocked": 0,
-                "failed": 0,
-                "passed": 0
-              }
-            }
-          },
-          "freshness": {
-            "$ref": "#/components/schemas/ArtifactFreshness"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "lifecycle",
-          "timing",
-          "total_tests",
-          "trigger",
-          "workflow_id",
-          "workflow_version_id"
-        ],
-        "title": "WorkflowTestRun",
-        "description": "A batch execution of a workflow's tests, with overall `lifecycle`, `timing`, and pass/fail `counts`."
-      },
-      "WorkflowTestRunBlockScope": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "block",
-            "title": "Type"
-          },
-          "block_id": {
-            "type": "string",
-            "title": "Block Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "block_id",
-          "type"
-        ],
-        "title": "WorkflowTestRunBlockScope",
-        "description": "Run every workflow test for one block in the workflow."
-      },
-      "WorkflowTestRunList": {
-        "description": "A page of `WorkflowTestRun` resources. `data` holds the items and `list_metadata` carries the `before`/`after` cursors; pass `after` to fetch the next page.",
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowTestRun"
-            },
-            "type": "array",
-            "title": "Data"
-          },
-          "list_metadata": {
-            "$ref": "#/components/schemas/ListMetadata"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data",
-          "list_metadata"
-        ],
-        "title": "WorkflowTestRunList"
-      },
-      "WorkflowTestRunSingleScope": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "single",
-            "title": "Type"
-          },
-          "test_id": {
-            "type": "string",
-            "title": "Test Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "test_id",
-          "type"
-        ],
-        "title": "WorkflowTestRunSingleScope",
-        "description": "Run one saved workflow test in the workflow."
-      },
-      "WorkflowTestRunTiming": {
-        "properties": {
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At",
-            "description": "When the workflow-test run was created."
-          },
-          "started_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Started At"
-          },
-          "completed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Completed At"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          }
-        },
-        "type": "object",
-        "title": "WorkflowTestRunTiming"
-      },
-      "WorkflowTestRunWorkflowScope": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "workflow",
-            "title": "Type"
-          }
-        },
-        "type": "object",
-        "required": [
-          "type"
-        ],
-        "title": "WorkflowTestRunWorkflowScope",
-        "description": "Run every saved test in the workflow."
       },
       "WorkflowVersionFieldDiff": {
         "properties": {

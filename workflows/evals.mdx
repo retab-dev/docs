@@ -16,7 +16,7 @@ Use tests when you want to answer questions like:
 - Does this Split block still assign pages to the right subdocuments?
 - Does this Classifier block still route a file to the expected category?
 
-Tests are block-scoped, not full-workflow test suites. Running a test replays
+Tests are block-scoped, not full-workflow eval suites. Running an eval replays
 the selected block with saved inputs instead of replaying the entire workflow.
 This makes tests fast to iterate on while you adjust schemas, prompts, function
 code, categories, or split definitions.
@@ -34,20 +34,20 @@ Tests are supported for:
 
 Other block types, such as input blocks, notes, API calls, formulas,
 conditionals, review gate state, and loops are not currently testable
-through workflow tests.
+through workflow evals.
 
 ## What a Test Stores
 
-A workflow test definition stores three things:
+A workflow eval definition stores three things:
 
-1. **The block to test** - the block id and block type.
+1. **The block to eval** - the block id and block type.
 2. **The block inputs** - JSON and file handle inputs captured from a workflow
    run or entered explicitly.
 3. **One assertion** - the expected condition for one declared output handle.
 
 When inputs come from a previous workflow run, Retab copies the block's
-`handle_inputs` from that run into the test. If the inputs include files, Retab
-materializes durable file references for the test so future runs do not depend
+`handle_inputs` from that run into the eval. If the inputs include files, Retab
+materializes durable file references for the eval so future runs do not depend
 on the original browser session.
 
 You can also provide explicit inputs manually. JSON handles store raw JSON data,
@@ -83,10 +83,10 @@ For example:
 
 ## Running Tests
 
-You can run one test from its detail page, run tests for a block, or run all
-tests in a workflow from the Tests page.
+You can run one eval from its detail page, run evals for a block, or run all
+evals in a workflow from the Evals page.
 
-When a test runs, Retab:
+When a eval runs, Retab:
 
 1. Loads the current workflow draft and the current block configuration.
 2. Rebuilds the saved handle inputs into normal workflow runtime inputs.
@@ -96,18 +96,18 @@ When a test runs, Retab:
 5. Resolves the assertion target from the block outputs.
 6. Evaluates the assertion and records a run result.
 
-Test runs are asynchronous. The dashboard streams live progress and stores a
-parent run plus one result per saved test. API clients inspect the parent run by
-`run_id`, then read results under `/v1/workflows/tests/results?run_id={run_id}`.
+Eval runs are asynchronous. The dashboard streams live progress and stores a
+parent run plus one result per saved eval. API clients inspect the parent run by
+`run_id`, then read results under `/v1/workflows/evals/results?run_id={run_id}`.
 
 ## Results
 
-A parent test run uses the shared run lifecycle:
+A parent eval run uses the shared run lifecycle:
 
 | Status        | Meaning                                                         |
 | ------------- | --------------------------------------------------------------- |
 | **pending**   | The run has been scheduled but has not started yet.             |
-| **running**   | One or more test results are still executing.                   |
+| **running**   | One or more eval results are still executing.                   |
 | **completed** | The run finished; inspect result verdicts for pass/fail detail. |
 | **error**     | The parent run failed before all results could be recorded.     |
 | **cancelled** | The run was cancelled.                                          |
@@ -124,37 +124,37 @@ Each child result has its own verdict:
 Each result includes the saved inputs used for that execution, the block output,
 handle outputs, assertion result, warnings, duration, and execution
 fingerprints. Retab also tracks the latest passing and failing summaries on the
-test definition.
+eval definition.
 
 If a block replay fails before an assertion can run, the assertion is marked as
 blocked and the run is recorded as an error.
 
 ## Staleness and Schema Drift
 
-Tests are tied to the block inputs and output schema that existed when the test
+Tests are tied to the block inputs and output schema that existed when the eval
 was created or last updated. If the workflow draft changes, Retab compares the
 saved fingerprints and schema dependencies against the current block.
 
-In the dashboard, the staleness badge tells you whether a test is:
+In the dashboard, the staleness badge tells you whether an eval is:
 
 | Badge          | Meaning                                                                                                |
 | -------------- | ------------------------------------------------------------------------------------------------------ |
 | **not run**    | The test has not produced a run record yet.                                                            |
 | **up to date** | The latest run still matches the current block schema.                                                 |
-| **stale**      | The block schema or relevant assertion dependency changed. Run the test again or update the assertion. |
-| **unknown**    | Retab could not determine staleness for this test.                                                     |
+| **stale**      | The block schema or relevant assertion dependency changed. Run the eval again or update the assertion. |
+| **unknown**    | Retab could not determine staleness for this eval.                                                     |
 
 Staleness does not automatically mean the workflow is broken. It means the saved
-test definition should be rechecked against the current draft before you rely on
+eval definition should be rechecked against the current draft before you rely on
 its latest result.
 
 ## Recommended Workflow
 
 1. Run the workflow on a representative document.
-2. Open the Tests page and create a workflow test from that completed run.
+2. Open the Evals page and create a workflow eval from that completed run.
 3. Pick the block output field or handle you want to protect.
 4. Define one assertion for the expected behavior.
-5. Run the test after changing schemas, prompts, code, categories, or split
+5. Run the eval after changing schemas, prompts, code, categories, or split
    definitions.
 6. Use stale tests as a review queue before publishing workflow changes.
 

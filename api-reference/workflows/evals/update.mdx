@@ -1,12 +1,12 @@
 ---
-title: "Update Workflow Test"
-openapi: "PATCH /v1/workflows/tests/{test_id}"
+title: "Update Workflow Eval"
+openapi: "PATCH /v1/workflows/evals/{eval_id}"
 ---
 
-Patch the name, assertion, and/or source of a workflow test. Every field is
+Patch the name, assertion, and/or source of a workflow eval. Every field is
 optional in the request body — fields you omit are left untouched. Setting
-`assertion: null` is rejected explicitly (use [Delete Workflow Test](./delete) if
-you want to remove the test entirely).
+`assertion: null` is rejected explicitly (use [Delete Workflow Eval](./delete) if
+you want to remove the eval entirely).
 
 Updating `source` rebinds where the inputs come from:
 
@@ -14,7 +14,7 @@ Updating `source` rebinds where the inputs come from:
 - `{ type: "run_step", run_id: ..., step_id: ... }` — re-capture inputs from
   a different workflow run / step.
 
-The response is the full updated `WorkflowTest`.
+The response is the full updated `WorkflowEval`.
 
 <RequestExample>
 
@@ -24,14 +24,14 @@ from retab import Retab
 client = Retab()
 
 # Rename only.
-test = client.workflows.tests.update(
-    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+test = client.workflows.evals.update(
+    eval_id="wfnodeeval_hsLEQiM61ez9Piv147MWk",
     name="Q1 invoice — vendor name check",
 )
 
 # Replace the assertion.
-test = client.workflows.tests.update(
-    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+test = client.workflows.evals.update(
+    eval_id="wfnodeeval_hsLEQiM61ez9Piv147MWk",
     assertion={
         "target": {"output_handle_id": "output-json-0", "path": "vendor.name"},
         "condition": {"kind": "matches_regex", "expected": r"^Acme.*"},
@@ -39,8 +39,8 @@ test = client.workflows.tests.update(
 )
 
 # Re-capture inputs from a different run.
-test = client.workflows.tests.update(
-    test_id="wfnodetest_hsLEQiM61ez9Piv147MWk",
+test = client.workflows.evals.update(
+    eval_id="wfnodeeval_hsLEQiM61ez9Piv147MWk",
     source={
         "type": "run_step",
         "run_id": "wfrun_new789",
@@ -54,9 +54,9 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const renamed = await client.workflows.tests.update("wfnodetest_hsLEQiM61ez9Piv147MWk", "Q1 invoice — vendor name check");
+const renamed = await client.workflows.evals.update("wfnodeeval_hsLEQiM61ez9Piv147MWk", "Q1 invoice — vendor name check");
 
-const reAsserted = await client.workflows.tests.update("wfnodetest_hsLEQiM61ez9Piv147MWk", undefined, {
+const reAsserted = await client.workflows.evals.update("wfnodeeval_hsLEQiM61ez9Piv147MWk", undefined, {
     target: { outputHandleId: "output-json-0", path: "vendor.name" },
     condition: { kind: "matches_regex", pattern: "^Acme.*" },
   });
@@ -82,17 +82,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	testID := "wfnodetest_hsLEQiM61ez9Piv147MWk"
+	evalID := "wfnodeeval_hsLEQiM61ez9Piv147MWk"
 
 	// Rename only.
-	if _, err := client.Workflows.Tests.Update(ctx, testID, &retab.WorkflowTestsUpdateParams{
+	if _, err := client.Workflows.Evals.Update(ctx, evalID, &retab.WorkflowEvalsUpdateParams{
 		Name: ptr("Q1 invoice — vendor name check"),
 	}); err != nil {
 		log.Fatal(err)
 	}
 
 	// Replace the assertion.
-	if _, err := client.Workflows.Tests.Update(ctx, testID, &retab.WorkflowTestsUpdateParams{
+	if _, err := client.Workflows.Evals.Update(ctx, evalID, &retab.WorkflowEvalsUpdateParams{
 		Assertion: &retab.AssertionSpec{
 			Target:    retab.OutputTarget{OutputHandleID: "output-json-0", Path: ptr("vendor.name")},
 			Condition: retab.ConditionFromExistCondition(retab.ExistCondition{Kind: ptr("exists")}),
@@ -102,8 +102,8 @@ func main() {
 	}
 
 	// Re-capture inputs from a different run.
-	if _, err := client.Workflows.Tests.Update(ctx, testID, &retab.WorkflowTestsUpdateParams{
-		Source: ptr(retab.WorkflowTestSourceFromManualWorkflowTestSource(retab.ManualWorkflowTestSource{
+	if _, err := client.Workflows.Evals.Update(ctx, evalID, &retab.WorkflowEvalsUpdateParams{
+		Source: ptr(retab.WorkflowEvalSourceFromManualWorkflowEvalSource(retab.ManualWorkflowEvalSource{
 			Type: ptr("manual"),
 		})),
 	}); err != nil {
@@ -118,14 +118,14 @@ require 'retab'
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 # Rename only.
-test = client.workflows.tests.update(
-  test_id: 'wfnodetest_hsLEQiM61ez9Piv147MWk',
+test = client.workflows.evals.update(
+  eval_id: 'wfnodeeval_hsLEQiM61ez9Piv147MWk',
   name: 'Q1 invoice — vendor name check',
 )
 
 # Replace the assertion.
-test = client.workflows.tests.update(
-  test_id: 'wfnodetest_hsLEQiM61ez9Piv147MWk',
+test = client.workflows.evals.update(
+  eval_id: 'wfnodeeval_hsLEQiM61ez9Piv147MWk',
   assertion: {
     target: { output_handle_id: 'output-json-0', path: 'vendor.name' },
     condition: { kind: 'matches_regex', expected: '^Acme.*' },
@@ -133,8 +133,8 @@ test = client.workflows.tests.update(
 )
 
 # Re-capture inputs from a different run.
-test = client.workflows.tests.update(
-  test_id: 'wfnodetest_hsLEQiM61ez9Piv147MWk',
+test = client.workflows.evals.update(
+  eval_id: 'wfnodeeval_hsLEQiM61ez9Piv147MWk',
   source: {
     type: 'run_step',
     run_id: 'wfrun_new789',
@@ -144,35 +144,35 @@ test = client.workflows.tests.update(
 ```
 
 ```rust Rust
-use retab::models::{RunStepWorkflowTestSource, UpdateWorkflowTestRequest};
-use retab::resources::workflow_tests::UpdateParams;
+use retab::models::{RunStepWorkflowEvalSource, UpdateWorkflowEvalRequest};
+use retab::resources::workflow_evals::UpdateParams;
 use retab::Retab;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
-    let test_id = "wfnodetest_hsLEQiM61ez9Piv147MWk";
+    let eval_id = "wfnodeeval_hsLEQiM61ez9Piv147MWk";
 
     // Rename only.
-    let renamed_body = UpdateWorkflowTestRequest {
+    let renamed_body = UpdateWorkflowEvalRequest {
         name: Some("Q1 invoice — vendor name check".into()),
         ..Default::default()
     };
     let _renamed = client
-        .workflows().tests()
-        .update(test_id, UpdateParams::new(renamed_body))
+        .workflows().evals()
+        .update(eval_id, UpdateParams::new(renamed_body))
         .await?;
 
     // Re-capture inputs from a different run.
-    let mut source = RunStepWorkflowTestSource::new("wfrun_new789");
+    let mut source = RunStepWorkflowEvalSource::new("wfrun_new789");
     source.step_id = Some("block_extract_invoice".into());
-    let resource_body = UpdateWorkflowTestRequest {
+    let resource_body = UpdateWorkflowEvalRequest {
         source: Some(source.into()),
         ..Default::default()
     };
     let _rebound = client
-        .workflows().tests()
-        .update(test_id, UpdateParams::new(resource_body))
+        .workflows().evals()
+        .update(eval_id, UpdateParams::new(resource_body))
         .await?;
     Ok(())
 }
@@ -186,8 +186,8 @@ use Retab\Client;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
-$result = $client->workflows()->tests()->update(
-    testId: 'test_abc123',
+$result = $client->workflows()->evals()->update(
+    evalId: 'eval_abc123',
 );
 print_r($result);
 ```
@@ -199,7 +199,7 @@ using RetabClient = Retab.Retab;
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Workflows.Tests.UpdateAsync("test_abc123", new WorkflowTestsUpdateOptions());
+var result = await client.Workflows.Evals.UpdateAsync("eval_abc123", new WorkflowEvalsUpdateOptions());
 Console.WriteLine(result);
 ```
 
@@ -210,7 +210,7 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().tests().update("test_abc123", "Invoice Processing", null, null);
+    var result = client.workflows().evals().update("eval_abc123", "Invoice Processing", null, null);
     System.out.println(result);
   }
 }
@@ -219,14 +219,14 @@ public final class Example {
 ```curl cURL
 # Rename only
 curl -X 'PATCH' \
-  'https://api.retab.com/v1/workflows/tests/wfnodetest_hsLEQiM61ez9Piv147MWk' \
+  'https://api.retab.com/v1/workflows/evals/wfnodeeval_hsLEQiM61ez9Piv147MWk' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <your-api-key>' \
   -d '{ "name": "Q1 invoice — vendor name check" }'
 
 # Replace the assertion
 curl -X 'PATCH' \
-  'https://api.retab.com/v1/workflows/tests/wfnodetest_hsLEQiM61ez9Piv147MWk' \
+  'https://api.retab.com/v1/workflows/evals/wfnodeeval_hsLEQiM61ez9Piv147MWk' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <your-api-key>' \
   -d '{
@@ -243,7 +243,7 @@ curl -X 'PATCH' \
 
 ```json 200
 {
-  "id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  "id": "wfnodeeval_hsLEQiM61ez9Piv147MWk",
   "workflow_id": "wf_abc123xyz",
   "target": { "type": "block", "block_id": "block_extract_invoice" },
   "source": { "type": "manual", "handle_inputs": { "...": "..." } },
@@ -265,7 +265,7 @@ curl -X 'PATCH' \
 
 ```json 404
 {
-  "detail": "Workflow test not found: wfnodetest_hsLEQiM61ez9Piv147MWk"
+  "detail": "Workflow eval not found: wfnodeeval_hsLEQiM61ez9Piv147MWk"
 }
 ```
 
