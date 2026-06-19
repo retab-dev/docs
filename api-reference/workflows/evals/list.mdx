@@ -7,8 +7,8 @@ List all workflow evals for a workflow. Optionally filter by `target_block_id` t
 get only the evals that target a specific block.
 
 Each entry in `data` is a full `WorkflowEval` (target, source, assertion,
-schema-drift state, latest run summaries). Use this to populate a Evals page or
-to check whether a workflow has any tests before offering to run them.
+schema-drift state, latest run summaries). Use this to populate an Evals page
+or to check whether a workflow has any evals before offering to run them.
 
 The response uses the canonical Retab list envelope:
 `{ "data": [...], "list_metadata": { "before": null, "after": null } }`.
@@ -21,19 +21,19 @@ from retab import Retab
 client = Retab()
 
 # All evals for a workflow.
-tests = client.workflows.evals.list(
+evals = client.workflows.evals.list(
     workflow_id="wf_abc123xyz",
     limit=50,
 )
 
-# Only tests for one specific block.
+# Only evals for one specific block.
 evals_for_block = client.workflows.evals.list(
     workflow_id="wf_abc123xyz",
     target_block_id="block_extract_invoice",
     limit=20,
 )
 
-print(f"Workflow has {len(tests.data)} tests")
+print(f"Workflow has {len(evals.data)} evals")
 ```
 
 ```typescript TypeScript
@@ -41,7 +41,7 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const tests = await client.workflows.evals.list({
+const evals = await client.workflows.evals.list({
   workflowId: "wf_abc123xyz",
   limit: 50,
 });
@@ -52,7 +52,7 @@ const evalsForBlock = await client.workflows.evals.list({
   limit: 20,
 });
 
-console.log(`Workflow has ${tests.data.length} tests`);
+console.log(`Workflow has ${evals.data.length} evals`);
 ```
 
 ```go Go
@@ -77,7 +77,7 @@ func main() {
 	}
 
 	// All evals for a workflow.
-	tests, err := client.Workflows.Evals.List(ctx, &retab.WorkflowEvalsListParams{
+	evals, err := client.Workflows.Evals.List(ctx, &retab.WorkflowEvalsListParams{
 		WorkflowID: "wf_abc123xyz",
 		PaginationParams: retab.PaginationParams{
 			Limit: ptr(50),
@@ -87,7 +87,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Only tests for one specific block.
+	// Only evals for one specific block.
 	evalsForBlock, err := client.Workflows.Evals.List(ctx, &retab.WorkflowEvalsListParams{
 		WorkflowID:    "wf_abc123xyz",
 		TargetBlockID: ptr("block_extract_invoice"),
@@ -99,7 +99,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Workflow has %d tests\n", len(tests.Data))
+	fmt.Printf("Workflow has %d evals\n", len(evals.Data))
 	_ = evalsForBlock
 }
 ```
@@ -110,19 +110,19 @@ require 'retab'
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 # All evals for a workflow.
-tests = client.workflows.evals.list(
+evals = client.workflows.evals.list(
   workflow_id: 'wf_abc123xyz',
   limit: 50,
 )
 
-# Only tests for one specific block.
+# Only evals for one specific block.
 evals_for_block = client.workflows.evals.list(
   workflow_id: 'wf_abc123xyz',
   target_block_id: 'block_extract_invoice',
   limit: 20,
 )
 
-puts "Workflow has #{tests.data.length} tests"
+puts "Workflow has #{evals.data.length} evals"
 ```
 
 ```rust Rust
@@ -134,7 +134,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     // All evals for a workflow.
-    let tests = client
+    let evals = client
         .workflows()
         .evals()
         .list(ListParams {
@@ -143,7 +143,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .await?;
 
-    // Only tests for one specific block.
+    // Only evals for one specific block.
     let _evals_for_block = client
         .workflows()
         .evals()
@@ -154,7 +154,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .await?;
 
-    println!("Workflow has {} tests", tests.data.len());
+    println!("Workflow has {} evals", evals.data.len());
     Ok(())
 }
 ```
@@ -191,7 +191,7 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().evals().list("wf_abc123", null, null, null, 10L, null);
+    var result = client.workflowEvals().list("wf_abc123", null, null, null, 10L, null);
     System.out.println(result);
   }
 }
@@ -246,7 +246,8 @@ curl -X 'GET' \
       "validation_issues": [],
       "latest_run_summary": {
         "run_record_id": "wfnodeevalrun_abc123",
-        "status": "passed",
+        "status": "completed",
+        "outcome": "passed",
         "started_at": "2026-05-01T13:55:00Z",
         "completed_at": "2026-05-01T13:55:18Z",
         "duration_ms": 18221,

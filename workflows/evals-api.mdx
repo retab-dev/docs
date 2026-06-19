@@ -1,183 +1,238 @@
 ---
-title: Workflow Evals
-description: Reusable per-block checks with discriminated target/source shapes, async eval runs, and per-eval result records
+title: Workflow Evals API
+description: API contract for workflow eval definitions, async eval runs, and per-eval result rows
 ---
 
-Workflow evals let you freeze the inputs to a single workflow block and assert
-something about its output the next time it runs. They are designed to catch
-regressions when you change a schema, prompt, function code, classifier
-categories, or split definition without having to replay the whole workflow.
+Workflow evals let you freeze inputs for one workflow block and assert something
+about that block's output on a later run. This page documents the API shapes for
+eval definitions, assertions, parent eval runs, and result rows. For the
+conceptual workflow and dashboard flow, see [Evals](/workflows/evals).
 
-This page covers the API contract — `target`, `source`, `assertion`, the
-run-record shape, and the seven values of the run-record status enum. For
-the conceptual mental model and the dashboard workflow, see
-[Workflow Evals](/workflows/evals).
+## Eval Definition
 
-## What's in an eval
-
-A `WorkflowEval` is a Pydantic model with three meaningful sections:
+A `WorkflowEval` is a saved assertion plus the inputs needed to replay one
+block.
 
 ```json
 {
   "id": "wfnodeeval_...",
   "workflow_id": "wf_...",
-
   "target": { "type": "block", "block_id": "block_extract_invoice" },
-
-  "source": { "type": "manual", "handle_inputs": { "...": "..." } },
-
+  "source": {
+    "type": "manual",
+    "handle_inputs": {
+      "input-json-0": { "type": "json", "data": { "invoice_id": "INV-001" } }
+    }
+  },
+  "name": "invoice total",
   "assertion": {
     "id": "assert_xyz",
     "target": { "output_handle_id": "output-json-0", "path": "total" },
-    "condition": { "kind": "equals", "expected": 1234.56 }
+    "condition": { "kind": "equals", "expected": 1234.56 },
+    "label": null
   },
-
   "schema_drift": "none",
-  "validation_status": "valid",
+  "assertion_drift_status": "valid",
+  "freshness": { "status": "fresh", "reasons": [] },
   "latest_run_summary": null,
   "latest_passing_run_summary": null,
   "latest_failing_run_summary": null
 }
 ```
 
-### `target` — what the eval runs against
+### `target`
 
-A discriminated union by `type`:
+`target` is a discriminated union by `type`.
 
-| `type`  | Fields     | Meaning                                              |
-| ------- | ---------- | ---------------------------------------------------- |
-| `block` | `block_id` | Run the eval against a single block in the workflow. |
+| `type`  | Fields     | Meaning                                   |
+| ------- | ---------- | ----------------------------------------- |
+| `block` | `block_id` | Replay one block in the current workflow. |
 
-`block` is the only variant today. The shape is a discriminated union so
-workflow-level targets (e.g. `{ type: "workflow" }` running every block end-to-end)
-can be added later without renaming the field at every callsite.
+The API shape is a union so workflow-level targets can be added later without
+renaming the field.
 
-### `source` — where the inputs come from
+### `source`
 
-Also a discriminated union by `type`:
+`source` is also a discriminated union by `type`.
 
-| `type`     | Fields                                        | Meaning                                                                                                                                                                       |
-| ---------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `manual`   | `handle_inputs: { [handle_id]: HandleInput }` | Hand-written inputs. Use for synthetic eval cases.                                                                                                                            |
-| `run_step` | `run_id: str`, `step_id?: str`                | Replay the inputs the block actually received during a previous workflow run. `step_id` is required for blocks executed inside a `for_each` (each iteration is its own step). |
+| `type`     | Fields                       | Meaning                                                                                         |
+| ---------- | ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| `manual`   | `handle_inputs`              | Explicit handle inputs supplied by the caller.                                                   |
+| `run_step` | `run_id`, optional `step_id` | Capture the inputs a block received during a previous workflow run. Use `step_id` for loop rows. |
 
-When you create an eval from `run_step`, Retab snapshots the inputs at create
-time — subsequent edits to the source workflow run don't affect the eval.
-File handles in the snapshot are materialized as durable Retab file refs so
-the eval still runs months later even if the original upload session is gone.
-
-### `assertion` — required, one per eval
+Manual `handle_inputs` values are typed:
 
 ```json
 {
-  "target": { "output_handle_id": "output-json-0", "path": "total" },
-  "condition": { "kind": "equals", "expected": 1234.56 },
-  "label": null
+  "input-json-0": { "type": "json", "data": { "amount": 1234.56 } },
+  "input-document-0": {
+    "type": "file",
+    "document": {
+      "id": "file_invoice_q1",
+      "filename": "invoice.pdf",
+      "mime_type": "application/pdf"
+    }
+  }
 }
 ```
 
-Workflow evals intentionally normalize to **one assertion per eval**. Multiple
-small evals beat one broad assertion: when an assertion fails, the failure
-points at exactly which output behavior changed.
+When an eval is created from a `run_step`, Retab snapshots the inputs at create
+time. File handles are materialized as durable Retab file references so later
+eval runs do not depend on the original upload session.
 
-`assertion.target` always names a declared output handle (`output_handle_id`)
-and an optional dotted path inside that handle's payload. See the operator
-catalog below.
+### `assertion`
 
-#### Available `condition.kind` values
-
-| Kind                                  | Use                                         | Notes                                                                                                                 |
-| ------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `exists` / `not_exists`               | Path is/isn't present                       | Treats missing keys, out-of-bounds indices, and traversals through `null` as "not there" — does NOT block.            |
-| `equals`                              | Strict deep equality                        | Does NOT conflate `True == 1` or `False == 0`. Strips `reasoning___*` keys before comparing (LLM extractor sidecars). |
-| `compare`                             | `<`, `<=`, `>`, `>=` for numbers            |                                                                                                                       |
-| `contains`                            | Substring on strings; element on lists      | If `expected` is a dict, use `array_contains` instead.                                                                |
-| `array_contains`                      | Subset matching for list-of-dicts           |                                                                                                                       |
-| `object_contains`                     | Subset matching for dicts                   | Same `reasoning___*` strip as `equals`.                                                                               |
-| `length_compare`                      | Length operator on strings / lists / dicts  |                                                                                                                       |
-| `matches_regex`                       | `re.fullmatch`                              | Use `.*foo.*` for substring search.                                                                                   |
-| `validates_json_schema`               | Validate a subtree against a JSON Schema    |                                                                                                                       |
-| `all_items_match`                     | Every list item matches the inner condition | Passes vacuously on empty arrays.                                                                                     |
-| `any_item_matches`                    | Some list item matches                      | Fails on empty arrays.                                                                                                |
-| `similarity_gte`                      | Embedding-similarity threshold              | Async; can produce `error` status.                                                                                    |
-| `llm_judged_as` / `llm_not_judged_as` | LLM rubric check                            | Async; can produce `error` status.                                                                                    |
-| `split_iou_gte`                       | IOU threshold for split manifests           |                                                                                                                       |
-
-The full assertion-targeting reference, including which path syntaxes work
-inside each handle type, lives at [Workflow Evals](/workflows/evals).
-
-## Two distinct status enums — don't confuse them
-
-An eval surfaces TWO status fields. Most surprises with the API trace back to
-mixing them up.
-
-### `assertion_result.status` (4 values)
-
-The outcome of evaluating ONE assertion against the block's output.
-
-| Status    | Meaning                                                                                                                                                                                                                                                |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `passed`  | The operator was evaluated and matched.                                                                                                                                                                                                                |
-| `failed`  | The operator was evaluated and did not match. The result includes `actual_value` and a `failure.code` / `failure.message`.                                                                                                                             |
-| `blocked` | The assertion couldn't be evaluated. The block replay failed, the output handle isn't declared, or the path hit a type error / bad selector. The failure includes `details.partial_path` / `details.partial_value` pointing at the deepest valid prefix. |
-| `error`   | An async operator (`similarity_gte`, `llm_judged_as`) couldn't run for environmental reasons (e.g. embedding service unreachable).                                                                                                                     |
-
-### Run-record status (7 values)
-
-The status of a workflow-eval run — aggregates the assertion result with execution-side
-state. This is what appears on `WorkflowEvalResult.status`,
-`latest_run_summary.status`, and per-eval result rows returned from
-`/v1/workflows/evals/results?run_id={run_id}`.
-
-| Status      | Meaning                                                                                                                                                                                                           |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `queued`    | The run has been scheduled but the worker hasn't picked it up yet.                                                                                                                                                |
-| `running`   | The worker is mid-execution.                                                                                                                                                                                      |
-| `passed`    | Execution finished and the assertion passed.                                                                                                                                                                      |
-| `failed`    | Execution finished and the assertion failed.                                                                                                                                                                      |
-| `blocked`   | Execution finished but the assertion was blocked (see above). Counted distinctly from `failed` because the user typically needs to fix the eval definition or the block's outputs, not the assertion expectation. |
-| `error`     | Execution itself failed (block raised, replay timed out, etc.) before any assertion could be evaluated.                                                                                                           |
-| `cancelled` | The user or a downstream system cancelled the run.                                                                                                                                                                |
-
-After [Create Workflow Eval Run](/api-reference/workflows/evals/runs/create),
-poll the returned workflow-eval run `id`. Expect transient `pending` /
-`running` parent-run lifecycle states before terminal counts and per-eval
-results are available.
-
-Workflow-eval execution uses the returned run `id` for polling, cancellation,
-and result inspection.
-
-## Run records
-
-A `WorkflowEvalResult` is the immutable snapshot of one execution. The
-fields most consumers care about:
+Workflow evals use one assertion per eval. An assertion targets one output
+handle and an optional path inside that handle's payload.
 
 ```json
 {
-  "id": "wfresult_...",
-  "eval_id": "wfnodeeval_...",
-  "status": "passed",
+  "target": { "output_handle_id": "output-json-0", "path": "vendor.name" },
+  "condition": { "kind": "contains", "expected": "Acme" },
+  "label": "vendor includes Acme"
+}
+```
 
-  "started_at": "2026-04-08T14:27:35Z",
-  "completed_at": "2026-04-08T14:27:52Z",
-  "duration_ms": 17228,
+The current `condition.kind` values are:
 
-  "outputs": {
-    "output-json-0": { "total": 1234.56, "vendor": { "name": "Acme Inc" } },
-    "output-file-0": { "type": "file", "file_id": "file_normalized_q1" }
+| Kind                                  | Required fields                                           |
+| ------------------------------------- | --------------------------------------------------------- |
+| `exists`, `not_exists`                | none                                                      |
+| `equals`, `not_equals`                | `expected`                                                |
+| `contains`, `not_contains`            | `expected`                                                |
+| `number_compare`                     | `op`, `expected`                                          |
+| `between`                             | `lower`, `upper`, optional `inclusive`                    |
+| `starts_with`, `ends_with`            | `expected`                                                |
+| `matches_regex`                       | `pattern`                                                 |
+| `object_contains`                     | `expected` object                                         |
+| `array_contains`                      | `expected` object                                         |
+| `length_compare`                      | `op`, `expected`                                          |
+| `json_schema_valid`                   | `schema`                                                  |
+| `all_items_match`, `any_item_matches` | nested `condition`                                        |
+| `similarity_gte`                      | `reference`, `threshold`, optional `method`               |
+| `llm_judged_as`, `llm_not_judged_as`  | `rubric`, optional `expected_label`                       |
+| `split_iou_gte`                       | `expected`, optional `threshold`                          |
+
+`number_compare` and `length_compare` support `op` values `gt`, `gte`, `lt`,
+`lte`, `eq`, and `neq`.
+
+## Runs
+
+Create a parent eval run with:
+
+```http
+POST /v1/workflows/evals/runs
+```
+
+The request body requires `workflow_id`. `scope` is optional:
+
+```json
+{
+  "workflow_id": "wf_abc123xyz",
+  "scope": { "type": "single", "eval_id": "wfnodeeval_hsLEQiM61ez9Piv147MWk" }
+}
+```
+
+Scope variants:
+
+| `scope.type` | Fields     | Meaning                              |
+| ------------ | ---------- | ------------------------------------ |
+| omitted/null | none       | Run every saved eval in the workflow. |
+| `workflow`   | none       | Run every saved eval in the workflow. |
+| `block`      | `block_id` | Run every eval for one block.         |
+| `single`     | `eval_id`  | Run one saved eval.                   |
+
+A `WorkflowEvalRun` is the parent resource for one batch:
+
+```json
+{
+  "id": "wfevalrun_q1z2",
+  "workflow_id": "wf_abc123xyz",
+  "workflow_version_id": "draft_2026_05_18",
+  "trigger": { "type": "api" },
+  "lifecycle": { "status": "pending" },
+  "timing": {
+    "created_at": "2026-05-18T10:00:00Z",
+    "started_at": null,
+    "completed_at": null,
+    "duration_ms": null
   },
+  "target": { "type": "block", "block_id": "block_extract_invoice" },
+  "eval_id": "wfnodeeval_hsLEQiM61ez9Piv147MWk",
+  "total_evals": 1,
+  "counts": {
+    "lifecycle_counts": {
+      "pending": 1,
+      "queued": 0,
+      "running": 0,
+      "completed": 0,
+      "error": 0,
+      "cancelled": 0
+    },
+    "outcome": {
+      "passed": 0,
+      "failed": 0,
+      "blocked": 0
+    }
+  }
+}
+```
 
+Run lifecycle values are `pending`, `queued`, `running`, `completed`, `error`,
+and `cancelled`.
+
+## Results
+
+After a parent run finishes, list child rows with:
+
+```http
+GET /v1/workflows/evals/results?run_id={run_id}
+```
+
+Each `WorkflowEvalResult` is the immutable record for one eval execution:
+
+```json
+{
+  "id": "wfresult_a",
+  "workflow_eval_run_id": "wfevalrun_q1z2",
+  "eval_id": "wfnodeeval_a",
+  "workflow_id": "wf_abc123xyz",
+  "block_id": "block_extract_invoice",
+  "block_type": "extract",
+  "lifecycle": { "status": "completed" },
+  "timing": {
+    "created_at": "2026-05-18T10:00:00Z",
+    "started_at": "2026-05-18T10:00:02Z",
+    "completed_at": "2026-05-18T10:00:20Z",
+    "duration_ms": 18221
+  },
+  "handle_inputs": {
+    "input-document-0": {
+      "type": "file",
+      "document": {
+        "id": "file_invoice_q1",
+        "filename": "invoice.pdf",
+        "mime_type": "application/pdf"
+      }
+    }
+  },
+  "handle_outputs": {
+    "output-json-0": {
+      "type": "json",
+      "data": { "total": 1234.56, "vendor": { "name": "Acme Inc" } }
+    }
+  },
   "assertion_result": {
     "assertion_id": "assert_xyz",
     "condition_kind": "equals",
-    "status": "passed",
+    "outcome": "passed",
     "actual_value": 1234.56,
     "expected_value": 1234.56,
     "failure": null
   },
-
+  "verdict": "passed",
   "verdict_summary": {
-    "result": true,
+    "passed": true,
     "assertions_passed": 1,
     "assertions_failed": 0,
     "blocked_assertions": 0,
@@ -186,92 +241,66 @@ fields most consumers care about:
 }
 ```
 
-### `outputs` (renamed from `handle_outputs`)
+Result lifecycle values match parent run lifecycle values. `verdict` and
+`assertion_result.outcome` are assertion outcomes: `passed`, `failed`, or
+`blocked`. Execution errors are represented in `lifecycle.status = "error"` and
+the lifecycle error details, not as a fourth verdict value.
 
-Run records before the May 2026 API rewrite stored `output: Any` (the raw block
-return blob) and `handle_outputs: { [handle_id]: any }` (per-handle outputs).
-The new shape collapses these into a single field:
+## Freshness and Drift
 
-```ts
-outputs: { [handle_id]: any } | null
+Read responses recompute drift against the current workflow draft.
+
+| Field                   | Values                                  | Meaning                                      |
+| ----------------------- | --------------------------------------- | -------------------------------------------- |
+| `schema_drift`          | `none`, `partial`, `drifted`, `unknown` | Whether the assertion target still resolves. |
+| `assertion_drift_status` | `valid`, `drifted`, `broken`           | Whether the saved assertion is still usable. |
+| `freshness.status`      | `fresh`, `stale`, `unknown`             | Whether the latest run matches the baseline. |
+| `drift.status`          | `none`, `drifted`, `broken`, `unknown`  | Artifact-level drift summary.                |
+
+Latest-run summaries expose lifecycle and outcome separately:
+
+```json
+{
+  "run_record_id": "wfresult_a",
+  "status": "completed",
+  "outcome": "passed",
+  "started_at": "2026-05-18T10:00:02Z",
+  "completed_at": "2026-05-18T10:00:20Z",
+  "assertions_passed": 1,
+  "assertions_failed": 0,
+  "blocked_assertions": 0
+}
 ```
 
-A backfill migration copies legacy `handle_outputs` → `outputs` on first server
-startup, so reads through this field always work. The legacy `output` and
-`handle_outputs` fields are intentionally kept on legacy docs for forensic
-debugging — drop them via a later cleanup migration once nothing reads them.
+## Endpoint Map
 
-### Fingerprints
+| Method   | Path                                          | Purpose                                                          |
+| -------- | --------------------------------------------- | ---------------------------------------------------------------- |
+| `POST`   | `/v1/workflows/evals`                         | [Create](/api-reference/workflows/evals/create)                  |
+| `GET`    | `/v1/workflows/evals?workflow_id={workflow_id}` | [List](/api-reference/workflows/evals/list)                    |
+| `GET`    | `/v1/workflows/evals/{eval_id}`               | [Get](/api-reference/workflows/evals/get)                        |
+| `PATCH`  | `/v1/workflows/evals/{eval_id}`               | [Update](/api-reference/workflows/evals/update)                  |
+| `DELETE` | `/v1/workflows/evals/{eval_id}`               | [Delete](/api-reference/workflows/evals/delete)                  |
+| `POST`   | `/v1/workflows/evals/runs`                    | [Create Run](/api-reference/workflows/evals/runs/create)         |
+| `GET`    | `/v1/workflows/evals/runs`                    | [List Runs](/api-reference/workflows/evals/runs/list)            |
+| `GET`    | `/v1/workflows/evals/runs/{run_id}`           | [Get Run](/api-reference/workflows/evals/runs/get)               |
+| `POST`   | `/v1/workflows/evals/runs/{run_id}/cancel`    | [Cancel Run](/api-reference/workflows/evals/runs/cancel)         |
+| `GET`    | `/v1/workflows/evals/results?run_id={run_id}` | [List Results](/api-reference/workflows/evals/results/list)      |
+| `GET`    | `/v1/workflows/evals/results/{result_id}`     | [Get Result](/api-reference/workflows/evals/results/get)         |
 
-Three deterministic hashes pinned per run record:
+## MCP Tools
 
-| Fingerprint                  | Computed from                      | Used for                                                                                                               |
-| ---------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `handle_inputs_fingerprint`  | The captured handle inputs         | Detecting "we already ran this exact input" — drives the cache hit at runner start.                                    |
-| `workflow_draft_fingerprint` | The full workflow draft DAG        | Telling you whether the run was against the current draft or a stale one.                                              |
-| `block_config_fingerprint`   | The single block's resolved config | Same as above, scoped to just the evaled block — gives finer-grained staleness signals.                                |
-| `execution_fingerprint`      | A combined hash                    | Cache key for "this exact (inputs, draft, block) combination" — re-runs that match all three return the cached record. |
+The eval API is also exposed through MCP tools:
 
-## Schema drift and staleness
+- `workflows_evals_create`
+- `workflows_evals_list`
+- `workflows_evals_get`
+- `workflows_evals_update`
+- `workflows_evals_delete`
+- `workflows_evals_runs_create`
+- `workflows_evals_runs_get`
+- `workflows_evals_results_list`
+- `workflows_evals_results_get`
 
-When the workflow draft changes (schema edited, block config tweaked), evals
-captured against the old draft get a `schema_drift` status other than `none`:
-
-| `schema_drift` | Meaning                                                                                            |
-| -------------- | -------------------------------------------------------------------------------------------------- |
-| `none`         | The captured assertion target still resolves to the same subtree shape in the current draft.       |
-| `partial`      | Some assertion paths still resolve, others don't. The eval will likely produce a `blocked` result. |
-| `drifted`      | The output handle or its schema is no longer compatible. Re-capture before running.                |
-| `unknown`      | Drift couldn't be determined (e.g. block missing, fingerprint absent on a legacy doc).             |
-
-Drift status is **recomputed at read time** — it's not persisted on the storage
-doc. So the value you see in a `GET` response always reflects the current
-draft, not the draft at create time.
-
-## Async execution
-
-Workflow-eval execution is asynchronous. The flow:
-
-1. `POST /v1/workflows/evals/runs` with `workflow_id` in the request body
-   returns a run object immediately.
-2. Poll `GET /v1/workflows/evals/runs/{run_id}` until `lifecycle.status` is
-   `completed`, `error`, or `cancelled`, then fetch results from
-   `GET /v1/workflows/evals/results?run_id={run_id}`.
-3. Workflow-eval run results shape:
-   - `counts` — one bucket per run-record status (7 fields)
-   - `data[]` — one result per eval, keyed by `eval_id` within the parent run.
-
-For dashboard integrations, poll the parent run status and refresh eval-run
-records when the parent run reaches a terminal state.
-
-## Endpoints
-
-| Method   | Path                                                                 | Purpose                                                          |
-| -------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `POST`   | `/v1/workflows/evals`                                                 | [Create](/api-reference/workflows/evals/create)                  |
-| `GET`    | `/v1/workflows/evals?workflow_id={workflow_id}`                       | [List](/api-reference/workflows/evals/list)                      |
-| `GET`    | `/v1/workflows/evals/{eval_id}`                                       | [Get](/api-reference/workflows/evals/get)                        |
-| `PATCH`  | `/v1/workflows/evals/{eval_id}`                                       | [Update](/api-reference/workflows/evals/update)                  |
-| `DELETE` | `/v1/workflows/evals/{eval_id}`                                       | [Delete](/api-reference/workflows/evals/delete)                  |
-| `POST`   | `/v1/workflows/evals/runs`                                            | [Create Run](/api-reference/workflows/evals/runs/create)         |
-| `GET`    | `/v1/workflows/evals/runs`                                           | [List Runs](/api-reference/workflows/evals/runs/list)            |
-| `GET`    | `/v1/workflows/evals/runs/{run_id}`                                  | [Get Run](/api-reference/workflows/evals/runs/get)               |
-| `POST`   | `/v1/workflows/evals/runs/{run_id}/cancel`                           | [Cancel Run](/api-reference/workflows/evals/runs/cancel)         |
-| `GET`    | `/v1/workflows/evals/results?run_id={run_id}`                         | [List Results](/api-reference/workflows/evals/results/list) |
-| `GET`    | `/v1/workflows/evals/results/{result_id}`                             | [Get Result](/api-reference/workflows/evals/results/get)         |
-
-## MCP
-
-Every endpoint above is also exposed as an MCP tool (`workflows_evals_create`,
-`workflows_evals_list`, `workflows_evals_get`, `workflows_evals_update`,
-`workflows_evals_delete`, `workflows_evals_runs_create`,
-`workflows_evals_runs_get`, `workflows_evals_results_list`,
-`workflows_evals_results_get`). The tool
-input schemas match the request bodies documented above. The MCP layer
-additionally rejects
-the pre-rewrite top-level `block_id` / `run_id` / `step_id` / `handle_inputs`
-fields with a per-field migration hint pointing at the new shape (e.g.
-`block_id → use 'target.block_id'`).
-
-See the [MCP server](/workflows/MCP) page for how to register the tools with a
-Claude / OpenAI agent.
+The tool input schemas match the request bodies above. See the
+[MCP](/workflows/MCP) page for setup.
