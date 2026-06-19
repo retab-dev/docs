@@ -27,7 +27,7 @@ from retab import Retab
 client = Retab()
 
 # Manual inputs: hand-write the handle inputs the block should run with.
-test = client.workflows.evals.create(
+workflow_eval = client.workflows.evals.create(
     workflow_id="wf_abc123xyz",
     target={"type": "block", "block_id": "block_extract_invoice"},
     source={
@@ -35,7 +35,11 @@ test = client.workflows.evals.create(
         "handle_inputs": {
             "input-document-0": {
                 "type": "file",
-                "file_id": "file_invoice_q1",
+                "document": {
+                    "id": "file_invoice_q1",
+                    "filename": "invoice.pdf",
+                    "mime_type": "application/pdf",
+                },
             },
         },
     },
@@ -47,7 +51,7 @@ test = client.workflows.evals.create(
 )
 
 # Run-step inputs: replay the inputs the block ACTUALLY received in a run.
-test = client.workflows.evals.create(
+workflow_eval = client.workflows.evals.create(
     workflow_id="wf_abc123xyz",
     target={"type": "block", "block_id": "block_extract_invoice"},
     source={
@@ -61,7 +65,7 @@ test = client.workflows.evals.create(
     },
 )
 
-print(f"Eval created: {test.id}")
+print(f"Eval created: {workflow_eval.id}")
 ```
 
 ```typescript TypeScript
@@ -69,7 +73,7 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const test = await client.workflows.evals.create("wf_abc123xyz", { type: "block", blockId: "block_extract_invoice" }, {
+const workflowEval = await client.workflows.evals.create("wf_abc123xyz", { type: "block", blockId: "block_extract_invoice" }, {
     type: "manual",
     handleInputs: {
       "input-document-0": {
@@ -86,7 +90,7 @@ const test = await client.workflows.evals.create("wf_abc123xyz", { type: "block"
     condition: { kind: "equals", expected: 1234.56 },
   }, "Q1 invoice total");
 
-console.log(`Eval created: ${test.id}`);
+console.log(`Eval created: ${workflowEval.id}`);
 ```
 
 ```go Go
@@ -111,7 +115,7 @@ func main() {
 	}
 
 	// Manual inputs: hand-write the handle inputs the block should run with.
-	test, err := client.Workflows.Evals.Create(ctx, &retab.WorkflowEvalsCreateParams{
+	workflowEval, err := client.Workflows.Evals.Create(ctx, &retab.WorkflowEvalsCreateParams{
 		WorkflowID: "wf_abc123xyz",
 		Target: retab.WorkflowEvalBlockTarget{
 			Type:    ptr("block"),
@@ -149,7 +153,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Eval created: %s\n", test.ID)
+	fmt.Printf("Eval created: %s\n", workflowEval.ID)
 	_ = runStepEval
 }
 ```
@@ -160,13 +164,20 @@ require 'retab'
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 # Manual inputs: hand-write the handle inputs the block should run with.
-test = client.workflows.evals.create(
+workflow_eval = client.workflows.evals.create(
   workflow_id: 'wf_abc123xyz',
   target: { type: 'block', block_id: 'block_extract_invoice' },
   source: {
     type: 'manual',
     handle_inputs: {
-      'input-document-0' => { type: 'file', file_id: 'file_invoice_q1' },
+      'input-document-0' => {
+        type: 'file',
+        document: {
+          id: 'file_invoice_q1',
+          filename: 'invoice.pdf',
+          mime_type: 'application/pdf',
+        },
+      },
     },
   },
   assertion: {
@@ -177,7 +188,7 @@ test = client.workflows.evals.create(
 )
 
 # Run-step inputs: replay the inputs the block ACTUALLY received in a run.
-test = client.workflows.evals.create(
+workflow_eval = client.workflows.evals.create(
   workflow_id: 'wf_abc123xyz',
   target: { type: 'block', block_id: 'block_extract_invoice' },
   source: {
@@ -191,7 +202,7 @@ test = client.workflows.evals.create(
   },
 )
 
-puts "Eval created: #{test.id}"
+puts "Eval created: #{workflow_eval.id}"
 ```
 
 ```rust Rust
@@ -224,12 +235,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         AssertionSpec::new(target, condition.into()),
     );
 
-    let test = client
+    let workflow_eval = client
         .workflows()
         .evals()
         .create(CreateParams::new(body))
         .await?;
-    println!("Eval created: {}", test.id);
+    println!("Eval created: {}", workflow_eval.id);
     Ok(())
 }
 ```
@@ -281,7 +292,7 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().evals().create("wf_abc123", null, null, "Invoice Processing", null);
+    var result = client.workflowEvals().create("wf_abc123", null, null, "Invoice Processing", null);
     System.out.println(result);
   }
 }
@@ -298,7 +309,14 @@ curl -X 'POST' \
     "source": {
       "type": "manual",
       "handle_inputs": {
-        "input-document-0": { "type": "file", "file_id": "file_invoice_q1" }
+        "input-document-0": {
+          "type": "file",
+          "document": {
+            "id": "file_invoice_q1",
+            "filename": "invoice.pdf",
+            "mime_type": "application/pdf"
+          }
+        }
       }
     },
     "assertion": {
@@ -326,7 +344,11 @@ curl -X 'POST' \
     "handle_inputs": {
       "input-document-0": {
         "type": "file",
-        "file_id": "file_invoice_q1"
+        "document": {
+          "id": "file_invoice_q1",
+          "filename": "invoice.pdf",
+          "mime_type": "application/pdf"
+        }
       }
     }
   },

@@ -1,29 +1,29 @@
 ---
-title: Tests
+title: Evals
 description: Validate workflow block outputs with reusable input snapshots and assertions
 ---
 
-## What are Tests?
+## What are Workflow Evals?
 
-Tests are reusable checks for individual workflow blocks. They let you freeze a
-real or hand-written set of block inputs, run that block again against the
-current workflow draft, and verify the output with an assertion.
+Workflow evals are saved, block-level regression checks. Each eval freezes the
+inputs for one workflow block, replays that block against the current workflow
+draft, and evaluates one assertion against the block output.
 
-Use tests when you want to answer questions like:
+Use evals when you want to answer questions like:
 
 - Does this Extract block still return the expected invoice total?
 - Does this Function block still compute the validation flag correctly?
 - Does this Split block still assign pages to the right subdocuments?
 - Does this Classifier block still route a file to the expected category?
 
-Tests are block-scoped, not full-workflow eval suites. Running an eval replays
-the selected block with saved inputs instead of replaying the entire workflow.
-This makes tests fast to iterate on while you adjust schemas, prompts, function
-code, categories, or split definitions.
+Evals are intentionally block-scoped. Running an eval executes the selected
+block with saved inputs instead of replaying the entire workflow, which keeps
+the feedback loop short while you adjust schemas, prompts, function code,
+categories, or split definitions.
 
-## Testable Blocks
+## Supported Blocks
 
-Tests are supported for:
+Workflow evals are currently supported for:
 
 | Block          | What you usually assert                                     |
 | -------------- | ----------------------------------------------------------- |
@@ -32,33 +32,56 @@ Tests are supported for:
 | **Split**      | Split manifest quality or produced subdocument file handles |
 | **Classifier** | Produced category file handles                              |
 
-Other block types, such as input blocks, notes, API calls, formulas,
-conditionals, review gate state, and loops are not currently testable
-through workflow evals.
+Other block types, such as input blocks, notes, API calls, conditionals, review
+gates, and loops, do not currently produce workflow eval runs directly.
 
-## What a Test Stores
+## Eval Shape
 
-A workflow eval definition stores three things:
+A workflow eval stores:
 
-1. **The block to eval** - the block id and block type.
-2. **The block inputs** - JSON and file handle inputs captured from a workflow
-   run or entered explicitly.
-3. **One assertion** - the expected condition for one declared output handle.
+1. **Target** - the block to run, currently `{ "type": "block", "block_id": "..." }`.
+2. **Source** - the handle inputs to replay.
+3. **Assertion** - one expected condition for one declared output handle.
 
-When inputs come from a previous workflow run, Retab copies the block's
-`handle_inputs` from that run into the eval. If the inputs include files, Retab
-materializes durable file references for the eval so future runs do not depend
-on the original browser session.
+```json
+{
+  "target": { "type": "block", "block_id": "block_extract_invoice" },
+  "source": {
+    "type": "manual",
+    "handle_inputs": {
+      "input-document-0": {
+        "type": "file",
+        "document": {
+          "id": "file_invoice_q1",
+          "filename": "invoice.pdf",
+          "mime_type": "application/pdf"
+        }
+      }
+    }
+  },
+  "assertion": {
+    "target": { "output_handle_id": "output-json-0", "path": "total" },
+    "condition": { "kind": "equals", "expected": 1234.56 }
+  }
+}
+```
 
-You can also provide explicit inputs manually. JSON handles store raw JSON data,
-and file handles store a document reference.
+`source.type` can be:
+
+| Source     | Fields                                        | Use it when                                                    |
+| ---------- | --------------------------------------------- | -------------------------------------------------------------- |
+| `manual`   | `handle_inputs`                               | You want to provide explicit JSON or file inputs.              |
+| `run_step` | `run_id`, optional `step_id`                  | You want to capture the inputs a block received in a real run. |
+
+For blocks executed inside a loop, provide `step_id` so Retab knows which
+iteration's inputs to capture. File inputs are materialized as durable Retab
+file references so the eval does not depend on the original browser upload
+session.
 
 ## Assertions
 
-An assertion targets a declared output handle and, optionally, a path inside
-that handle's JSON payload.
-
-Common targets include:
+An assertion targets a declared output handle and, optionally, a dotted path
+inside that handle's JSON payload.
 
 | Block          | Output target examples                                  |
 | -------------- | ------------------------------------------------------- |
@@ -67,96 +90,141 @@ Common targets include:
 | **Split**      | `output-json-splits` or a subdocument file handle       |
 | **Classifier** | A category file handle                                  |
 
-Available assertion operators depend on the target value type. The product
-supports basic existence checks, equality checks, string and number comparisons,
-object and array containment, JSON Schema validation, nested array checks,
-similarity thresholds, LLM-judged rubric checks, and Split IOU checks for split
-manifests.
+The current condition kinds are:
 
-For example:
+| Kind                                  | Use for                                                    |
+| ------------------------------------- | ---------------------------------------------------------- |
+| `exists`, `not_exists`                | Presence checks.                                           |
+| `equals`, `not_equals`                | Strict value equality or inequality.                       |
+| `contains`, `not_contains`            | Substring or list membership checks.                       |
+| `number_compare`, `between`           | Numeric comparisons.                                       |
+| `starts_with`, `ends_with`, `matches_regex` | String pattern checks.                              |
+| `object_contains`, `array_contains`   | Subset checks for objects and arrays of objects.           |
+| `length_compare`                      | Length checks for strings, arrays, or objects.             |
+| `json_schema_valid`                   | JSON Schema validation for a target subtree.               |
+| `all_items_match`, `any_item_matches` | Nested assertions over array items.                        |
+| `similarity_gte`                      | Similarity thresholds.                                     |
+| `llm_judged_as`, `llm_not_judged_as`  | Rubric-based LLM judging.                                  |
+| `split_iou_gte`                       | Intersection-over-Union for split page assignments.        |
 
-- `output-json-0.total` is equal to `1234.56`
-- `output-json-0.is_valid` is true
-- `output-json-0.vendor.name` contains `"Acme"`
-- `output-json-splits` has Split IOU greater than or equal to `0.95`
-- `output-json-0.summary` matches an LLM rubric
+`number_compare` and `length_compare` use `op` values `gt`, `gte`, `lt`, `lte`,
+`eq`, or `neq`.
 
-## Running Tests
+## Running Evals
 
-You can run one eval from its detail page, run evals for a block, or run all
-evals in a workflow from the Evals page.
+You can run one eval, every eval for one block, or every eval in a workflow. In
+the API, create a parent eval run with:
 
-When a eval runs, Retab:
+```http
+POST /v1/workflows/evals/runs
+```
 
-1. Loads the current workflow draft and the current block configuration.
-2. Rebuilds the saved handle inputs into normal workflow runtime inputs.
+The request body always includes `workflow_id`. `scope` is optional:
+
+| Scope                    | Meaning                                      |
+| ------------------------ | -------------------------------------------- |
+| omitted or `null`        | Run every saved eval in the workflow.        |
+| `{ "type": "workflow" }` | Run every saved eval in the workflow.        |
+| `{ "type": "block" }`    | Run every saved eval for one block.          |
+| `{ "type": "single" }`   | Run one saved eval by `eval_id`.             |
+
+When an eval run starts, Retab:
+
+1. Loads the current workflow draft and current block configuration.
+2. Rebuilds the saved handle inputs into normal runtime inputs.
 3. Executes only the selected block.
-4. Collects the raw output, declared handle outputs, routing decision, warnings,
-   and duration.
-5. Resolves the assertion target from the block outputs.
-6. Evaluates the assertion and records a run result.
+4. Stores the block artifact, handle outputs, routing decisions, warnings, and
+   timing.
+5. Resolves the assertion target from the handle outputs.
+6. Records the assertion outcome and the result verdict.
 
-Eval runs are asynchronous. The dashboard streams live progress and stores a
-parent run plus one result per saved eval. API clients inspect the parent run by
-`run_id`, then read results under `/v1/workflows/evals/results?run_id={run_id}`.
+Eval runs are asynchronous. Poll
+`GET /v1/workflows/evals/runs/{run_id}` until the parent run reaches a terminal
+lifecycle, then read child rows from
+`GET /v1/workflows/evals/results?run_id={run_id}`.
 
 ## Results
 
-A parent eval run uses the shared run lifecycle:
+A parent `WorkflowEvalRun` has a lifecycle:
 
-| Status        | Meaning                                                         |
-| ------------- | --------------------------------------------------------------- |
-| **pending**   | The run has been scheduled but has not started yet.             |
-| **running**   | One or more eval results are still executing.                   |
-| **completed** | The run finished; inspect result verdicts for pass/fail detail. |
-| **error**     | The parent run failed before all results could be recorded.     |
-| **cancelled** | The run was cancelled.                                          |
+| Lifecycle   | Meaning                                             |
+| ----------- | --------------------------------------------------- |
+| `pending`   | The run was created but execution has not started.  |
+| `queued`    | The run is waiting for a worker.                    |
+| `running`   | One or more eval results are executing.             |
+| `completed` | The run finished; inspect outcome counts or rows.   |
+| `error`     | The run failed before normal completion.            |
+| `cancelled` | The run was cancelled.                              |
 
-Each child result has its own verdict:
+Parent `counts` separates lifecycle from assertion outcomes:
 
-| Status      | Meaning                                                           |
-| ----------- | ----------------------------------------------------------------- |
-| **passed**  | The block ran successfully and the assertion passed.              |
-| **failed**  | The block ran successfully, but the assertion did not pass.       |
-| **blocked** | The assertion could not be evaluated against the selected target. |
-| **error**   | The block replay failed or another execution error occurred.      |
+```json
+{
+  "lifecycle_counts": {
+    "pending": 0,
+    "queued": 0,
+    "running": 0,
+    "completed": 1,
+    "error": 0,
+    "cancelled": 0
+  },
+  "outcome": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0
+  }
+}
+```
 
-Each result includes the saved inputs used for that execution, the block output,
-handle outputs, assertion result, warnings, duration, and execution
-fingerprints. Retab also tracks the latest passing and failing summaries on the
-eval definition.
+Each `WorkflowEvalResult` row has its own lifecycle and, once completed, a
+`verdict` of `passed`, `failed`, or `blocked`. The nested
+`assertion_result.outcome` uses the same three outcome values and includes
+`actual_value`, `expected_value`, optional score/threshold fields, and failure
+details when the assertion cannot pass.
 
-If a block replay fails before an assertion can run, the assertion is marked as
-blocked and the run is recorded as an error.
+Result rows also include the saved `handle_inputs`, produced `handle_outputs`,
+workflow/block fingerprints, the execution artifact, routing decisions,
+warnings, and timing.
 
-## Staleness and Schema Drift
+## Freshness and Drift
 
-Tests are tied to the block inputs and output schema that existed when the eval
-was created or last updated. If the workflow draft changes, Retab compares the
-saved fingerprints and schema dependencies against the current block.
+Workflow evals are tied to the block inputs and output schema that existed when
+the eval was created or last updated. When the workflow draft changes, Retab
+reports several freshness signals:
 
-In the dashboard, the staleness badge tells you whether an eval is:
+| Field                   | Values                                  | Meaning                                      |
+| ----------------------- | --------------------------------------- | -------------------------------------------- |
+| `schema_drift`          | `none`, `partial`, `drifted`, `unknown` | Whether the assertion target still resolves. |
+| `assertion_drift_status` | `valid`, `drifted`, `broken`           | Whether the saved assertion is still usable. |
+| `freshness.status`      | `fresh`, `stale`, `unknown`             | Whether the latest run matches the baseline. |
+| `drift.status`          | `none`, `drifted`, `broken`, `unknown`  | Artifact-level drift summary.                |
 
-| Badge          | Meaning                                                                                                |
-| -------------- | ------------------------------------------------------------------------------------------------------ |
-| **not run**    | The test has not produced a run record yet.                                                            |
-| **up to date** | The latest run still matches the current block schema.                                                 |
-| **stale**      | The block schema or relevant assertion dependency changed. Run the eval again or update the assertion. |
-| **unknown**    | Retab could not determine staleness for this eval.                                                     |
+The eval also stores `latest_run_summary`, `latest_passing_run_summary`, and
+`latest_failing_run_summary`. Each summary separates run lifecycle (`status`)
+from assertion outcome (`outcome`).
 
-Staleness does not automatically mean the workflow is broken. It means the saved
-eval definition should be rechecked against the current draft before you rely on
-its latest result.
+Staleness does not automatically mean the workflow is broken. It means the eval
+should be rerun or recaptured before you rely on its latest result.
 
 ## Recommended Workflow
 
-1. Run the workflow on a representative document.
-2. Open the Evals page and create a workflow eval from that completed run.
+1. Run the workflow on representative documents.
+2. Open the Evals page and create an eval from a completed run, or create one
+   with explicit manual inputs.
 3. Pick the block output field or handle you want to protect.
 4. Define one assertion for the expected behavior.
 5. Run the eval after changing schemas, prompts, code, categories, or split
    definitions.
-6. Use stale tests as a review queue before publishing workflow changes.
+6. Use stale evals as a review queue before publishing workflow changes.
 
-Tests work best when each test protects one behavior. Prefer multiple small
-tests over one broad assertion so failures point directly to the changed output.
+Evals work best when each one protects one behavior. Prefer multiple focused
+evals over one broad assertion so failures point directly to the changed output.
+
+## API Reference
+
+| Action       | Endpoint                                                                 |
+| ------------ | ------------------------------------------------------------------------ |
+| Create/list  | [`/v1/workflows/evals`](/api-reference/workflows/evals/create)           |
+| Get/update/delete | [`/v1/workflows/evals/{eval_id}`](/api-reference/workflows/evals/get) |
+| Run evals    | [`/v1/workflows/evals/runs`](/api-reference/workflows/evals/runs/create) |
+| Read results | [`/v1/workflows/evals/results`](/api-reference/workflows/evals/results/list) |
