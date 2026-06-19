@@ -557,20 +557,20 @@ public final class Example {
 
 </CodeGroup>
 
-## Workflow Test and Experiment Runs
+## Workflow Eval and Experiment Runs
 
-Workflow runs, workflow-test runs, and experiment runs all use the same
+Workflow runs, workflow-eval runs, and experiment runs all use the same
 run-id-first pattern in the SDKs: create a run from the parent resource, poll the
 run by its `id`, then inspect child records under that run.
 
 <CodeGroup>
 ```python Python
-test_run = client.workflows.tests.runs.create(
+eval_run = client.workflows.evals.runs.create(
     workflow_id="wf_abc123",
-    test_id="test_abc",
+    eval_id="eval_abc",
 )
-test_run = client.workflows.tests.runs.get(test_run.id)
-test_results = client.workflows.tests.runs.results.list(test_run.id)
+eval_run = client.workflows.evals.runs.get(eval_run.id)
+eval_results = client.workflows.evals.runs.results.list(eval_run.id)
 
 experiment_run = client.workflows.experiments.runs.create(
 workflow_id="wf_abc123",
@@ -586,12 +586,12 @@ view="summary",
 ````
 
 ```typescript TypeScript
-const testRun = await client.workflows.tests.runs.create({
+const evalRun = await client.workflows.evals.runs.create({
   workflowId: "wf_abc123",
-  testId: "test_abc",
+  evalId: "eval_abc",
 });
-const currentTestRun = await client.workflows.tests.runs.get(testRun.id);
-const testResults = await client.workflows.tests.runs.results.list(testRun.id);
+const currentEvalRun = await client.workflows.evals.runs.get(evalRun.id);
+const evalResults = await client.workflows.evals.runs.results.list(evalRun.id);
 
 const experimentRun = await client.workflows.experiments.runs.create("exp_abc", "wf_abc123");
 const currentExperimentRun = await client.workflows.experiments.runs.get(experimentRun.id);
@@ -607,12 +607,12 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-test_run = client.workflows.tests.runs.create(
+eval_run = client.workflows.evals.runs.create(
   workflow_id: 'wf_abc123',
-  test_id: 'test_abc',
+  eval_id: 'eval_abc',
 )
-test_run = client.workflows.tests.runs.get(run_id: test_run.id)
-test_results = client.workflows.tests.runs.results.list(run_id: test_run.id)
+eval_run = client.workflows.evals.runs.get(run_id: eval_run.id)
+eval_results = client.workflows.evals.runs.results.list(run_id: eval_run.id)
 
 experiment_run = client.workflows.experiments.runs.create(
   workflow_id: 'wf_abc123',
@@ -630,12 +630,12 @@ metrics = client.workflows.experiments.runs.metrics.get(
 <?php
 use Retab\Resource\ExperimentRunMetricsView;
 
-$testRun = $client->workflows()->tests()->runs()->create(
+$evalRun = $client->workflows()->evals()->runs()->create(
     workflowId: 'wf_abc123',
-    testId: 'test_abc',
+    evalId: 'eval_abc',
 );
-$testRun = $client->workflows()->tests()->runs()->get($testRun->id);
-$testResults = $client->workflows()->tests()->results()->list(runId: $testRun->id);
+$evalRun = $client->workflows()->evals()->runs()->get($evalRun->id);
+$evalResults = $client->workflows()->evals()->results()->list(runId: $evalRun->id);
 
 $experimentRun = $client->workflows()->experiments()->runs()->create(
     experimentId: 'exp_abc',
@@ -655,16 +655,16 @@ using RetabClient = Retab.Retab;
 
 var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY"));
 
-var testRun = await client.Workflows.Tests.Runs.CreateAsync(
-    new WorkflowTestRunsCreateOptions
+var evalRun = await client.Workflows.Evals.Runs.CreateAsync(
+    new WorkflowEvalRunsCreateOptions
     {
         WorkflowId = "wf_abc123",
-        Scope = new WorkflowTestRunSingleScope { TestId = "test_abc" },
+        Scope = new WorkflowEvalRunSingleScope { EvalId = "eval_abc" },
     }
 );
-testRun = await client.Workflows.Tests.Runs.GetAsync(testRun.Id);
-var testResults = await client.Workflows.Tests.Results.ListAsync(
-    new WorkflowTestRunResultsListOptions { RunId = testRun.Id }
+evalRun = await client.Workflows.Evals.Runs.GetAsync(evalRun.Id);
+var evalResults = await client.Workflows.Evals.Results.ListAsync(
+    new WorkflowEvalRunResultsListOptions { RunId = evalRun.Id }
 );
 
 var experimentRun = await client.Workflows.Experiments.Runs.CreateAsync(
@@ -700,19 +700,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	testID := "test_abc"
-	scope := retab.WorkflowTestRunScope{
-		Type:   retab.WorkflowTestRunScopeTypeSingle,
-		TestID: &testID,
+	evalID := "eval_abc"
+	scope := retab.WorkflowEvalRunScope{
+		Type:   retab.WorkflowEvalRunScopeTypeSingle,
+		EvalID: &evalID,
 	}
-	testRun, err := client.Workflows.Tests.Runs.Create(context.Background(), &retab.WorkflowTestRunsCreateParams{
+	evalRun, err := client.Workflows.Evals.Runs.Create(context.Background(), &retab.WorkflowEvalRunsCreateParams{
 		WorkflowID: "wf_abc123",
 		Scope:      &scope,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	testResults, err := client.Workflows.Tests.Results.List(context.Background(), &retab.WorkflowTestRunResultsListParams{RunID: testRun.ID})
+	evalResults, err := client.Workflows.Evals.Results.List(context.Background(), &retab.WorkflowEvalRunResultsListParams{RunID: evalRun.ID})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -730,31 +730,31 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(testResults, metrics)
+	fmt.Println(evalResults, metrics)
 }
 ```
 
 ```rust Rust
 use retab::{
-    models::{CreateExperimentRunRequest, CreateWorkflowTestRunRequest},
-    resources::{experiment_run_metrics, experiment_runs, workflow_test_run_results, workflow_test_runs},
+    models::{CreateExperimentRunRequest, CreateWorkflowEvalRunRequest},
+    resources::{experiment_run_metrics, experiment_runs, workflow_eval_run_results, workflow_eval_runs},
     Retab,
 };
 
 let client = Retab::new(std::env::var("RETAB_API_KEY")?);
-let test_run = client
+let eval_run = client
     .workflows()
-    .tests()
+    .evals()
     .runs()
-    .create(workflow_test_runs::CreateParams::new(
-        CreateWorkflowTestRunRequest::new("wf_abc"),
+    .create(workflow_eval_runs::CreateParams::new(
+        CreateWorkflowEvalRunRequest::new("wf_abc"),
     ))
     .await?;
-let test_results = client
+let eval_results = client
     .workflows()
-    .tests()
+    .evals()
     .results()
-    .list(workflow_test_run_results::ListParams::new(&test_run.id))
+    .list(workflow_eval_run_results::ListParams::new(&eval_run.id))
     .await?;
 let experiment_run = client
     .workflows()
@@ -769,7 +769,7 @@ let metrics = client
     .get(experiment_run_metrics::GetParams::new(&experiment_run.id))
     .await?;
 
-println!("{test_results:#?} {metrics:#?}");
+println!("{eval_results:#?} {metrics:#?}");
 ```
 
 ```java Java
@@ -779,7 +779,7 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().tests().runs().create("wf_abc123", null);
+    var result = client.workflows().evals().runs().create("wf_abc123", null);
     System.out.println(result);
   }
 }

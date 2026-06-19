@@ -1,9 +1,9 @@
 ---
-title: "Create Workflow Test"
-openapi: "POST /v1/workflows/tests"
+title: "Create Workflow Eval"
+openapi: "POST /v1/workflows/evals"
 ---
 
-Create a new workflow test against a single block in the workflow. A workflow test
+Create a new workflow eval against a single block in the workflow. A workflow eval
 freezes a set of inputs (either captured from a previous run or provided
 manually) and asserts something about the block's output the next time it runs.
 
@@ -11,12 +11,12 @@ The create route is flat: send `workflow_id` in the request body.
 
 The request body has three parts:
 
-- **`target`** — the block the test runs against.
+- **`target`** — the block the eval runs against.
 - **`source`** — where the inputs come from. `manual` carries an explicit
   `handle_inputs` map; `run_step` references a previous workflow run plus the
   optional step inside it whose inputs to capture.
-- **`assertion`** — required. One assertion per test against one declared
-  output handle (see [Workflow Tests](/workflows/tests-api) for the assertion
+- **`assertion`** — required. One assertion per eval against one declared
+  output handle (see [Workflow Evals](/workflows/evals-api) for the assertion
   shape and the available operators).
 
 <RequestExample>
@@ -27,7 +27,7 @@ from retab import Retab
 client = Retab()
 
 # Manual inputs: hand-write the handle inputs the block should run with.
-test = client.workflows.tests.create(
+test = client.workflows.evals.create(
     workflow_id="wf_abc123xyz",
     target={"type": "block", "block_id": "block_extract_invoice"},
     source={
@@ -47,7 +47,7 @@ test = client.workflows.tests.create(
 )
 
 # Run-step inputs: replay the inputs the block ACTUALLY received in a run.
-test = client.workflows.tests.create(
+test = client.workflows.evals.create(
     workflow_id="wf_abc123xyz",
     target={"type": "block", "block_id": "block_extract_invoice"},
     source={
@@ -61,7 +61,7 @@ test = client.workflows.tests.create(
     },
 )
 
-print(f"Test created: {test.id}")
+print(f"Eval created: {test.id}")
 ```
 
 ```typescript TypeScript
@@ -69,7 +69,7 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const test = await client.workflows.tests.create("wf_abc123xyz", { type: "block", blockId: "block_extract_invoice" }, {
+const test = await client.workflows.evals.create("wf_abc123xyz", { type: "block", blockId: "block_extract_invoice" }, {
     type: "manual",
     handleInputs: {
       "input-document-0": {
@@ -86,7 +86,7 @@ const test = await client.workflows.tests.create("wf_abc123xyz", { type: "block"
     condition: { kind: "equals", expected: 1234.56 },
   }, "Q1 invoice total");
 
-console.log(`Test created: ${test.id}`);
+console.log(`Eval created: ${test.id}`);
 ```
 
 ```go Go
@@ -111,13 +111,13 @@ func main() {
 	}
 
 	// Manual inputs: hand-write the handle inputs the block should run with.
-	test, err := client.Workflows.Tests.Create(ctx, &retab.WorkflowTestsCreateParams{
+	test, err := client.Workflows.Evals.Create(ctx, &retab.WorkflowEvalsCreateParams{
 		WorkflowID: "wf_abc123xyz",
-		Target: retab.WorkflowTestBlockTarget{
+		Target: retab.WorkflowEvalBlockTarget{
 			Type:    ptr("block"),
 			BlockID: "block_extract_invoice",
 		},
-		Source: retab.WorkflowTestSourceFromManualWorkflowTestSource(retab.ManualWorkflowTestSource{
+		Source: retab.WorkflowEvalSourceFromManualWorkflowEvalSource(retab.ManualWorkflowEvalSource{
 			Type: ptr("manual"),
 		}),
 		Assertion: retab.AssertionSpec{
@@ -131,13 +131,13 @@ func main() {
 	}
 
 	// Run-step inputs: replay the inputs the block actually received in a run.
-	runStepTest, err := client.Workflows.Tests.Create(ctx, &retab.WorkflowTestsCreateParams{
+	runStepEval, err := client.Workflows.Evals.Create(ctx, &retab.WorkflowEvalsCreateParams{
 		WorkflowID: "wf_abc123xyz",
-		Target: retab.WorkflowTestBlockTarget{
+		Target: retab.WorkflowEvalBlockTarget{
 			Type:    ptr("block"),
 			BlockID: "block_extract_invoice",
 		},
-		Source: retab.WorkflowTestSourceFromManualWorkflowTestSource(retab.ManualWorkflowTestSource{
+		Source: retab.WorkflowEvalSourceFromManualWorkflowEvalSource(retab.ManualWorkflowEvalSource{
 			Type: ptr("manual"),
 		}),
 		Assertion: retab.AssertionSpec{
@@ -149,8 +149,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Test created: %s\n", test.ID)
-	_ = runStepTest
+	fmt.Printf("Eval created: %s\n", test.ID)
+	_ = runStepEval
 }
 ```
 
@@ -160,7 +160,7 @@ require 'retab'
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
 # Manual inputs: hand-write the handle inputs the block should run with.
-test = client.workflows.tests.create(
+test = client.workflows.evals.create(
   workflow_id: 'wf_abc123xyz',
   target: { type: 'block', block_id: 'block_extract_invoice' },
   source: {
@@ -177,7 +177,7 @@ test = client.workflows.tests.create(
 )
 
 # Run-step inputs: replay the inputs the block ACTUALLY received in a run.
-test = client.workflows.tests.create(
+test = client.workflows.evals.create(
   workflow_id: 'wf_abc123xyz',
   target: { type: 'block', block_id: 'block_extract_invoice' },
   source: {
@@ -191,22 +191,22 @@ test = client.workflows.tests.create(
   },
 )
 
-puts "Test created: #{test.id}"
+puts "Eval created: #{test.id}"
 ```
 
 ```rust Rust
 use retab::models::{
-    AssertionSpec, ContainCondition, CreateWorkflowTestRequest, OutputTarget,
-    RunStepWorkflowTestSource, WorkflowTestBlockTarget,
+    AssertionSpec, ContainCondition, CreateWorkflowEvalRequest, OutputTarget,
+    RunStepWorkflowEvalSource, WorkflowEvalBlockTarget,
 };
-use retab::resources::workflow_tests::CreateParams;
+use retab::resources::workflow_evals::CreateParams;
 use retab::Retab;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
-    let mut source = RunStepWorkflowTestSource::new("wfrun_def456");
+    let mut source = RunStepWorkflowEvalSource::new("wfrun_def456");
     source.step_id = Some("block_extract_invoice".into());
 
     let mut target = OutputTarget::new("output-json-0");
@@ -217,19 +217,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         expected: serde_json::json!("Acme"),
     };
 
-    let body = CreateWorkflowTestRequest::new(
+    let body = CreateWorkflowEvalRequest::new(
         "wf_abc123xyz",
-        WorkflowTestBlockTarget::new("block_extract_invoice"),
+        WorkflowEvalBlockTarget::new("block_extract_invoice"),
         source.into(),
         AssertionSpec::new(target, condition.into()),
     );
 
     let test = client
         .workflows()
-        .tests()
+        .evals()
         .create(CreateParams::new(body))
         .await?;
-    println!("Test created: {}", test.id);
+    println!("Eval created: {}", test.id);
     Ok(())
 }
 ```
@@ -242,16 +242,16 @@ use Retab\Client;
 use Retab\Resource\AssertionSpec;
 use Retab\Resource\ExistCondition;
 use Retab\Resource\JsonHandleInput;
-use Retab\Resource\ManualWorkflowTestSource;
+use Retab\Resource\ManualWorkflowEvalSource;
 use Retab\Resource\OutputTarget;
-use Retab\Resource\WorkflowTestBlockTarget;
+use Retab\Resource\WorkflowEvalBlockTarget;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
-$result = $client->workflows()->tests()->create(
+$result = $client->workflows()->evals()->create(
     workflowId: 'wf_abc123',
-    target: new WorkflowTestBlockTarget(blockId: 'block_extract_invoice'),
-    source: new ManualWorkflowTestSource(handleInputs: [
+    target: new WorkflowEvalBlockTarget(blockId: 'block_extract_invoice'),
+    source: new ManualWorkflowEvalSource(handleInputs: [
         'input-json-0' => new JsonHandleInput(data: ['invoice_number' => 'INV-001']),
     ]),
     assertion: new AssertionSpec(
@@ -270,7 +270,7 @@ using RetabClient = Retab.Retab;
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Workflows.Tests.CreateAsync(new WorkflowTestsCreateOptions());
+var result = await client.Workflows.Evals.CreateAsync(new WorkflowEvalsCreateOptions());
 Console.WriteLine(result);
 ```
 
@@ -281,7 +281,7 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().tests().create("wf_abc123", null, null, "Invoice Processing", null);
+    var result = client.workflows().evals().create("wf_abc123", null, null, "Invoice Processing", null);
     System.out.println(result);
   }
 }
@@ -289,7 +289,7 @@ public final class Example {
 
 ```curl cURL
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/tests' \
+  'https://api.retab.com/v1/workflows/evals' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <your-api-key>' \
   -d '{
@@ -315,7 +315,7 @@ curl -X 'POST' \
 
 ```json 201
 {
-  "id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  "id": "wfnodeeval_hsLEQiM61ez9Piv147MWk",
   "workflow_id": "wf_abc123xyz",
   "target": {
     "type": "block",
@@ -357,13 +357,13 @@ curl -X 'POST' \
 
 ```json 400
 {
-  "detail": "assertion is required for workflow tests."
+  "detail": "assertion is required for workflow evals."
 }
 ```
 
 ```json 404
 {
-  "detail": "Workflow test not found: <block_id>"
+  "detail": "Workflow eval not found: <block_id>"
 }
 ```
 

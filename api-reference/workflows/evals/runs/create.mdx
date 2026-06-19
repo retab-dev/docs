@@ -1,24 +1,24 @@
 ---
-title: "Create Workflow Test Run"
-openapi: "POST /v1/workflows/tests/runs"
+title: "Create Workflow Eval Run"
+openapi: "POST /v1/workflows/evals/runs"
 ---
 
-Create a workflow-test run against the current workflow draft. A run can execute
-one saved test, every test for one block, or every test in the workflow.
+Create a workflow-eval run against the current workflow draft. A run can execute
+one saved eval, every eval for one block, or every eval in the workflow.
 
 The canonical route is flat: send `workflow_id` in the request body and
 optionally narrow execution with `scope`. If `scope` is omitted, every saved
-test in the workflow runs.
+eval in the workflow runs.
 
 The response is a run resource. Use its `id` with the run-id-first endpoints:
-[Get Workflow Test Run](/api-reference/workflows/tests/runs/get), [List Test
-Run Results](/api-reference/workflows/tests/results/list).
+[Get Workflow Eval Run](/api-reference/workflows/evals/runs/get), [List Eval
+Run Results](/api-reference/workflows/evals/results/list).
 
 The request body has a workflow context and an optional scope:
 
-- **omitted `scope`** - run every saved test in the workflow.
-- **`scope.type = "single"`** - run one saved test by `test_id`.
-- **`scope.type = "block"`** - run every saved test for one block by `block_id`.
+- **omitted `scope`** - run every saved eval in the workflow.
+- **`scope.type = "single"`** - run one saved eval by `eval_id`.
+- **`scope.type = "block"`** - run every saved eval for one block by `block_id`.
 
 <RequestExample>
 
@@ -27,11 +27,11 @@ from retab import Retab
 
 client = Retab()
 
-run = client.workflows.tests.runs.create(
+run = client.workflows.evals.runs.create(
     workflow_id="wf_abc123xyz",
     scope={
         "type": "single",
-        "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
+        "eval_id": "wfnodeeval_hsLEQiM61ez9Piv147MWk",
     },
 )
 
@@ -43,9 +43,9 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const run = await client.workflows.tests.runs.create("wf_abc123xyz", {
+const run = await client.workflows.evals.runs.create("wf_abc123xyz", {
   type: "single",
-  testId: "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  evalId: "wfnodeeval_hsLEQiM61ez9Piv147MWk",
 });
 
 console.log(run.id, run.lifecycle.status);
@@ -72,11 +72,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	run, err := client.Workflows.Tests.Runs.Create(ctx, &retab.WorkflowTestRunsCreateParams{
+	run, err := client.Workflows.Evals.Runs.Create(ctx, &retab.WorkflowEvalRunsCreateParams{
 		WorkflowID: "wf_abc123xyz",
-		Scope: &retab.WorkflowTestRunScope{
-			Type:   retab.WorkflowTestRunScopeTypeSingle,
-			TestID: ptr("wfnodetest_hsLEQiM61ez9Piv147MWk"),
+		Scope: &retab.WorkflowEvalRunScope{
+			Type:   retab.WorkflowEvalRunScopeTypeSingle,
+			EvalID: ptr("wfnodeeval_hsLEQiM61ez9Piv147MWk"),
 		},
 	})
 	if err != nil {
@@ -92,11 +92,11 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-run = client.workflows.tests.runs.create(
+run = client.workflows.evals.runs.create(
   workflow_id: 'wf_abc123xyz',
   scope: {
     type: 'single',
-    test_id: 'wfnodetest_hsLEQiM61ez9Piv147MWk',
+    eval_id: 'wfnodeeval_hsLEQiM61ez9Piv147MWk',
   },
 )
 
@@ -104,8 +104,8 @@ puts "#{run.id} #{run.lifecycle.status}"
 ```
 
 ```rust Rust
-use retab::models::{CreateWorkflowTestRunRequest, WorkflowTestRunSingleScope};
-use retab::resources::workflow_test_runs::CreateParams;
+use retab::models::{CreateWorkflowEvalRunRequest, WorkflowEvalRunSingleScope};
+use retab::resources::workflow_eval_runs::CreateParams;
 use retab::Retab;
 
 #[tokio::main]
@@ -113,12 +113,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
 
     let run = client
-        .workflows().tests().runs()
-        .create(CreateParams::new(CreateWorkflowTestRunRequest {
+        .workflows().evals().runs()
+        .create(CreateParams::new(CreateWorkflowEvalRunRequest {
             workflow_id: "wf_abc123xyz".into(),
-            scope: Some(WorkflowTestRunSingleScope {
+            scope: Some(WorkflowEvalRunSingleScope {
                 type_: "single".into(),
-                test_id: "wfnodetest_hsLEQiM61ez9Piv147MWk".into(),
+                eval_id: "wfnodeeval_hsLEQiM61ez9Piv147MWk".into(),
             }.into()),
         }))
         .await?;
@@ -135,7 +135,7 @@ use Retab\Client;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
-$result = $client->workflows()->tests()->runs()->create();
+$result = $client->workflows()->evals()->runs()->create();
 print_r($result);
 ```
 
@@ -146,13 +146,13 @@ using RetabClient = Retab.Retab;
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Workflows.Tests.Runs.CreateAsync(
-    new WorkflowTestRunsCreateOptions
+var result = await client.Workflows.Evals.Runs.CreateAsync(
+    new WorkflowEvalRunsCreateOptions
     {
         WorkflowId = "wf_abc123xyz",
-        Scope = new WorkflowTestRunSingleScope
+        Scope = new WorkflowEvalRunSingleScope
         {
-            TestId = "wfnodetest_hsLEQiM61ez9Piv147MWk",
+            EvalId = "wfnodeeval_hsLEQiM61ez9Piv147MWk",
         },
     }
 );
@@ -166,29 +166,29 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().tests().runs().create("wf_abc123", null);
+    var result = client.workflows().evals().runs().create("wf_abc123", null);
     System.out.println(result);
   }
 }
 ```
 
 ```curl cURL
-# Single test
+# Single eval
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/tests/runs' \
+  'https://api.retab.com/v1/workflows/evals/runs' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <your-api-key>' \
   -d '{
     "workflow_id": "wf_abc123xyz",
     "scope": {
       "type": "single",
-      "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk"
+      "eval_id": "wfnodeeval_hsLEQiM61ez9Piv147MWk"
     }
   }'
 
-# All tests for one block
+# All evals for one block
 curl -X 'POST' \
-  'https://api.retab.com/v1/workflows/tests/runs' \
+  'https://api.retab.com/v1/workflows/evals/runs' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <your-api-key>' \
   -d '{
@@ -203,7 +203,7 @@ curl -X 'POST' \
 
 ```json 200
 {
-  "id": "wftestrun_q1z2",
+  "id": "wfevalrun_q1z2",
   "workflow": {
     "workflow_id": "wf_abc123xyz",
     "version_id": "draft_2026_05_18"
@@ -215,9 +215,9 @@ curl -X 'POST' \
     "started_at": null,
     "completed_at": null
   },
-  "test_id": "wfnodetest_hsLEQiM61ez9Piv147MWk",
+  "eval_id": "wfnodeeval_hsLEQiM61ez9Piv147MWk",
   "target": { "type": "block", "block_id": "block_extract_invoice" },
-  "total_tests": 1,
+  "total_evals": 1,
   "counts": {
     "queued": 1,
     "running": 0,

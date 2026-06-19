@@ -752,7 +752,7 @@ import requests
 api_key = os.environ["RETAB_API_KEY"]
 automation_id = "auto_abc"
 
-# If you just want to send a test request to your webhook
+# If you just want to send an test request to your webhook
 
 webhook_log = requests.post(
 f"https://api.retab.com/v1/processors/automations/tests/webhook/{automation_id}",
@@ -815,7 +815,7 @@ func post(url string, body any) ([]byte, error) {
 }
 
 func main() {
-	// Send a test request to your webhook
+	// Send an test request to your webhook
 	if out, err := post(
 		"https://api.retab.com/v1/processors/automations/tests/webhook/auto_abc",
 		map[string]any{},
@@ -853,7 +853,7 @@ require 'base64'
 api_key = ENV['RETAB_API_KEY']
 automation_id = 'auto_abc'
 
-# If you just want to send a test request to your webhook
+# If you just want to send an test request to your webhook
 uri = URI("https://api.retab.com/v1/processors/automations/tests/webhook/#{automation_id}")
 http = Net::HTTP.new(uri.host, uri.port)
 http.use_ssl = true

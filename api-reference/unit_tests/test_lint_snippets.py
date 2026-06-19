@@ -270,7 +270,7 @@ def test_flat_workflow_accessors_pass_nested_forms_and_ignore_other_languages() 
     snippets = [
         _snippet("php", "$result = $client->workflows()->runs()->get('run_abc');\n", title="PHP"),
         _snippet("ruby", "run = client.workflows.blocks.get(block_id: 'b1')\n", title="Ruby"),
-        _snippet("php", "$result = $client->workflows()->tests()->runs()->list();\n", title="PHP"),
+        _snippet("php", "$result = $client->workflows()->evals()->runs()->list();\n", title="PHP"),
         # Valid top-level accessors must not be flagged.
         _snippet("ruby", "secret = client.secrets.get_secret(name: 'X')\n", title="Ruby"),
         # Python uses the same dotted nesting but is type-checked elsewhere; the
