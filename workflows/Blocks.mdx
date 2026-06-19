@@ -672,12 +672,14 @@ Each condition can have multiple sub-conditions combined with AND/OR:
 
 **Configuration:**
 
-| Setting           | Description                                    | Default  |
-| ----------------- | ---------------------------------------------- | -------- |
-| **URL**           | The API endpoint URL                           | Required |
-| **Method**        | HTTP method (GET, POST, PUT, PATCH, DELETE)    | `POST`   |
-| **Headers**       | Custom HTTP headers (e.g., authentication)     | `{}`     |
-| **Body Template** | JSON template with placeholders for input data | `{}`     |
+| Setting            | Description                                                        | Default  |
+| ------------------ | ------------------------------------------------------------------ | -------- |
+| **URL**            | The API endpoint URL                                               | Required |
+| **Method**         | HTTP method (GET, POST, PUT, PATCH, DELETE)                        | `POST`   |
+| **Headers**        | Custom HTTP headers (e.g., authentication)                         | `{}`     |
+| **Request Schema** | JSON schema used to select request-body fields from the input JSON  | Optional |
+| **Field Mappings** | Optional target-field to source-path mapping before schema filtering | `{}`     |
+| **Output Schema**  | JSON schema describing the response for downstream workflow blocks  | Optional |
 
 **Example Configuration:**
 
@@ -689,9 +691,22 @@ Each condition can have multiple sub-conditions combined with AND/OR:
     "Authorization": "Bearer ${API_KEY}",
     "Content-Type": "application/json"
   },
-  "body_template": {
-    "invoice_number": "{{data.invoice_number}}",
-    "amount": "{{data.total_amount}}"
+  "field_mappings": {
+    "invoice_number": "data.invoice_number",
+    "amount": "data.total_amount"
+  },
+  "request_schema": {
+    "type": "object",
+    "properties": {
+      "invoice_number": {"type": "string"},
+      "amount": {"type": "number"}
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "valid": {"type": "boolean"}
+    }
   }
 }
 ```
@@ -703,13 +718,10 @@ Each condition can have multiple sub-conditions combined with AND/OR:
 - Trigger actions in third-party services based on extraction results
 - Look up additional information using extracted identifiers
 
-**Placeholders:**
-
-Use `{{path.to.field}}` syntax to reference values from the input JSON:
-
-- `{{data.invoice_number}}` → Inserts the invoice_number field
-- `{{data.vendor.name}}` → Inserts nested fields
-- `{{data.line_items[0].amount}}` → Inserts array elements
+For POST, PUT, and PATCH requests, the block sends the full input JSON as the
+request body by default. Add `field_mappings` to rename or derive top-level
+request fields from dot paths in the input JSON, then use `request_schema` to
+keep only the fields the external API expects.
 
 <Note>
   API Call blocks execute synchronously. For long-running operations, prefer
