@@ -2240,6 +2240,8 @@ def _build_dotnet_sdk_for_snippets(
         "/nodeReuse:false",
         f"-p:BaseIntermediateOutputPath={obj_dir}/",
         f"-p:OutputPath={bin_dir}/",
+        "-p:GenerateAssemblyInfo=false",
+        "-p:GenerateTargetFrameworkAttribute=false",
     ]
     for _ in range(3):
         sdk_build = subprocess.run(
