@@ -1770,23 +1770,8 @@ def normalise_rust_snippet(code: str) -> str:
     )
 
 
-def _rust_workspace_cache_key(snippet_files: list[tuple[Snippet, Path]]) -> str:
-    digest = hashlib.sha256()
-    digest.update(_rust_sdk_fingerprint(RUST_SDK_FOR_SNIPPETS).encode("utf-8"))
-    digest.update(b"\0")
-    digest.update(
-        hash_snippets(
-            snippet_files,
-            lambda snippet, _: normalise_rust_snippet(snippet.code),
-        ).encode("utf-8")
-    )
-    return digest.hexdigest()[:24]
-
-
-def _rust_workspace_for_snippets(snippet_files: list[tuple[Snippet, Path]]) -> Path:
-    if RUST_SNIPPET_TARGET_DIR is not None:
-        return SNIPPET_DIR / "_rustworkspace"
-    return RUST_SNIPPET_WORKSPACE_CACHE_DIR / _rust_workspace_cache_key(snippet_files)
+def _rust_workspace_for_snippets() -> Path:
+    return RUST_SNIPPET_WORKSPACE_CACHE_DIR / "workspace"
 
 
 def _rust_sdk_fingerprint(rust_sdk: Path) -> str:
@@ -1814,7 +1799,7 @@ def _rust_sdk_for_snippets() -> Path:
 
 
 def _prepare_rust_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
-    ws = _rust_workspace_for_snippets(snippet_files)
+    ws = _rust_workspace_for_snippets()
     rust_sdk = _rust_sdk_for_snippets()
     snippets_dir = ws / "src" / "snippets"
     snippets_dir.mkdir(parents=True, exist_ok=True)
@@ -1843,14 +1828,19 @@ def _prepare_rust_workspace(snippet_files: list[tuple[Snippet, Path]]) -> Path:
         "fn main() {}",
         "",
     ]
+    expected_snippet_names: set[str] = set()
     for index, (snippet, src) in enumerate(snippet_files):
         module_name = f"snippet_{index:04d}"
         module_lines.append(f'#[path = "snippets/{src.name}"]')
         module_lines.append(f"mod {module_name};")
+        expected_snippet_names.add(src.name)
         _write_text_if_changed(
             snippets_dir / src.name,
             normalise_rust_snippet(snippet.code),
         )
+    for stale_path in snippets_dir.glob("*.rs"):
+        if stale_path.name not in expected_snippet_names:
+            stale_path.unlink()
     _write_text_if_changed(ws / "src" / "main.rs", "\n".join(module_lines) + "\n")
     return ws
 
@@ -1868,7 +1858,7 @@ def _process_exists(pid: int) -> bool:
 def lint_rust_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue]:
     if not snippet_files or CARGO is None:
         return []
-    ws = _rust_workspace_for_snippets(snippet_files)
+    ws = _rust_workspace_for_snippets()
     with cache_lock(ws, "Rust snippet workspace", timeout_seconds=600):
         ws = _prepare_rust_workspace(snippet_files)
         command = [CARGO, "check", "--message-format", "short"]
