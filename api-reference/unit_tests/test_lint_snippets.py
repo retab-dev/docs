@@ -951,7 +951,7 @@ def test_rust_workspace_checks_snippets_as_one_binary(tmp_path: Path) -> None:
 
     main_rs = (workspace / "src" / "main.rs").read_text(encoding="utf-8")
 
-    assert workspace.parent == cache_dir
+    assert workspace == cache_dir / "workspace"
     assert "#![allow(dead_code, unused_assignments, unused_variables)]" in main_rs
     assert 'path = "snippets/snippet-0.rs"' in main_rs
     assert 'path = "snippets/snippet-1.rs"' in main_rs
@@ -960,13 +960,28 @@ def test_rust_workspace_checks_snippets_as_one_binary(tmp_path: Path) -> None:
     assert (workspace / "src" / "snippets" / "snippet-1.rs").exists()
 
 
-def test_rust_workspace_cache_key_changes_with_snippet_content(tmp_path: Path) -> None:
-    first = [(_snippet("rust", "let value = 1;\n"), tmp_path / "snippet.rs")]
-    second = [(_snippet("rust", "let value = 2;\n"), tmp_path / "snippet.rs")]
+def test_rust_workspace_rewrites_single_workspace_and_removes_stale_snippets(tmp_path: Path) -> None:
+    first = [
+        (_snippet("rust", "let value = 1;\n"), tmp_path / "snippet-a.rs"),
+        (_snippet("rust", "let other = 2;\n"), tmp_path / "snippet-b.rs"),
+    ]
+    second = [(_snippet("rust", "let value = 3;\n"), tmp_path / "snippet-a.rs")]
+    cache_dir = tmp_path / "cache"
     rust_sdk = _fake_rust_sdk(tmp_path)
 
-    with patch.object(lint_snippets, "RUST_SDK_FOR_SNIPPETS", rust_sdk):
-        assert lint_snippets._rust_workspace_cache_key(first) != lint_snippets._rust_workspace_cache_key(second)
+    with (
+        patch.object(lint_snippets, "RUST_SDK_FOR_SNIPPETS", rust_sdk),
+        patch.object(lint_snippets, "RUST_SNIPPET_TARGET_DIR", None),
+        patch.object(lint_snippets, "RUST_SNIPPET_WORKSPACE_CACHE_DIR", cache_dir),
+        patch.object(lint_snippets, "RUST_SNIPPET_SDK_CACHE_DIR", tmp_path / "sdk-cache"),
+    ):
+        first_workspace = lint_snippets._prepare_rust_workspace(first)
+        second_workspace = lint_snippets._prepare_rust_workspace(second)
+
+    assert first_workspace == second_workspace == cache_dir / "workspace"
+    snippets_dir = second_workspace / "src" / "snippets"
+    assert "let value = 3;" in (snippets_dir / "snippet-a.rs").read_text(encoding="utf-8")
+    assert not (snippets_dir / "snippet-b.rs").exists()
 
 
 def test_rust_workspace_uses_content_addressed_sdk_cache(tmp_path: Path) -> None:
@@ -1033,6 +1048,7 @@ def test_rust_batch_uses_stable_target_dir(tmp_path: Path) -> None:
         patch.object(lint_snippets, "SNIPPET_DIR", tmp_path / "snippets"),
         patch.object(lint_snippets, "RUST_SDK_FOR_SNIPPETS", _fake_rust_sdk(tmp_path)),
         patch.object(lint_snippets, "RUST_SNIPPET_SDK_CACHE_DIR", tmp_path / "sdk-cache"),
+        patch.object(lint_snippets, "RUST_SNIPPET_WORKSPACE_CACHE_DIR", tmp_path / "workspace-cache"),
         patch.object(lint_snippets, "CARGO", "cargo"),
         patch.object(lint_snippets, "RUST_SNIPPET_TARGET_DIR", tmp_path / "target"),
         patch.object(lint_snippets.subprocess, "run", side_effect=fake_run),
@@ -1051,7 +1067,7 @@ def test_rust_batch_uses_stable_target_dir(tmp_path: Path) -> None:
     ]
 
 
-def test_rust_batch_uses_content_cached_workspace_by_default(tmp_path: Path) -> None:
+def test_rust_batch_uses_shared_workspace_by_default(tmp_path: Path) -> None:
     snippets = [
         (
             _snippet("rust", "use retab::Retab;\n\nlet _client = Retab::new(\"test\");\n"),
@@ -1083,7 +1099,7 @@ def test_rust_batch_uses_content_cached_workspace_by_default(tmp_path: Path) -> 
 
     assert cargo_calls
     assert cargo_calls[0][0] == ["cargo", "check", "--message-format", "short"]
-    assert cargo_calls[0][1].parent == tmp_path / "cache"
+    assert cargo_calls[0][1] == tmp_path / "cache" / "workspace"
     assert (cargo_calls[0][1] / "src" / "snippets" / "snippet.rs").exists()
 
 
