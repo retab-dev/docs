@@ -52,14 +52,8 @@ genrule(
         "public_api_routes.yaml",
     ],
     outs = ["openapi.generated.json"],
-    cmd = "$(location //factory/bazel:generate_openapi) $@",
-    # generate_openapi runs the host `go` toolchain (`go run ./cmd/publicspec`),
-    # which writes to GOCACHE under the repo-local cache dir. The Bazel sandbox
-    # makes the source tree read-only, so the cache write fails ("operation not
-    # permitted"). Pin to the host toolchain (no-sandbox) while staying remotely
-    # cacheable — the same tag set used by the host-Go check targets.
-    tags = CACHEABLE_HOST_TAGS,
-    tools = ["//factory/bazel:generate_openapi"],
+    cmd = "$(location //services/main-api-go/cmd/publicspec:publicspec) $(location public_api_routes.yaml) $@",
+    tools = ["//services/main-api-go/cmd/publicspec:publicspec"],
 )
 
 sh_test(
@@ -71,7 +65,7 @@ sh_test(
         ":openapi_json",
         "openapi.json",
     ],
-    tags = LOCAL_TAGS + ["generated-check"],
+    tags = CACHEABLE_HOST_TAGS + ["generated-check"],
 )
 
 retab_generated_artifact_lifecycle(

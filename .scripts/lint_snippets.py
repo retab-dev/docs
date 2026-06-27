@@ -55,24 +55,25 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CACHE_REPO_ROOT = Path(os.environ.get("RETAB_REPO_ROOT", REPO_ROOT)).resolve()
-DOCS_ROOT = REPO_ROOT / "open-source" / "docs"
-PY_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "python"
+DOCS_ROOT = REPO_ROOT / "public" / "docs"
+SDK_ROOT = REPO_ROOT / "public" / "sdk"
+PY_SDK = SDK_ROOT / "clients" / "python"
 PY_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_PYTHON_SDK_ROOT", PY_SDK)).resolve()
-NODE_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "node"
+NODE_SDK = SDK_ROOT / "clients" / "node"
 NODE_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_NODE_SDK_ROOT", NODE_SDK))
-GO_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "go"
+GO_SDK = SDK_ROOT / "clients" / "go"
 GO_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_GO_SDK_ROOT", GO_SDK))
-RUST_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "rust"
+RUST_SDK = SDK_ROOT / "clients" / "rust"
 RUST_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_RUST_SDK_ROOT", RUST_SDK))
-JAVA_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "java"
+JAVA_SDK = SDK_ROOT / "clients" / "java"
 JAVA_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_JAVA_SDK_ROOT", JAVA_SDK))
-DOTNET_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "dotnet"
+DOTNET_SDK = SDK_ROOT / "clients" / "dotnet"
 DOTNET_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_DOTNET_SDK_ROOT", DOTNET_SDK))
-PHP_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "php"
+PHP_SDK = SDK_ROOT / "clients" / "php"
 PHP_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_PHP_SDK_ROOT", PHP_SDK))
-RUBY_SDK = REPO_ROOT / "open-source" / "sdk" / "clients" / "ruby"
+RUBY_SDK = SDK_ROOT / "clients" / "ruby"
 RUBY_SDK_FOR_SNIPPETS = Path(os.environ.get("RETAB_RUBY_SDK_ROOT", RUBY_SDK))
-PY_VENV = REPO_ROOT / "backend" / "main_server" / ".venv"
+PY_VENV = REPO_ROOT / ".venv"
 
 RUFF = PY_VENV / "bin" / "ruff"
 PYTHON = PY_VENV / "bin" / "python"
