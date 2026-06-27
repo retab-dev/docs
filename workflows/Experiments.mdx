@@ -669,9 +669,12 @@ into `by_target` on low-scoring fields, then into `votes` to see voter
 disagreement on a specific cell. These are experiment-run metric views under
 `/v1/workflows/experiments/metrics?run_id={run_id}`.
 
-Metric responses use `kind` as the shared discriminator across successful views
-and data-state payloads. Successful payloads also echo `view` for compatibility;
-stale or missing metrics return `kind: "stale_metrics"` or `kind: "no_metrics"`.
+Metric responses use `kind` as the shared discriminator across successful views.
+Successful payloads also echo `view` for compatibility. Because this endpoint is
+scoped to a concrete `run_id`, it returns the historical metrics for that run
+even if the experiment definition has since changed. Check the experiment's
+`freshness` / `run_plan_mode` fields from `experiments.get` or
+`experiments.list` to decide whether to create a newer run.
 
 <CodeGroup>
 ```python Python
@@ -914,9 +917,11 @@ public final class Example {
 
 </CodeGroup>
 
-If a run is stale relative to the current block config or document set,
-`runs.metrics.get(...)` returns a `kind: "stale_metrics"` data-state envelope — call
-`runs.create(...)` to recompute and then inspect the new run's metrics.
+If an experiment is stale relative to the current block config, consensus count,
+or document set, `experiments.get(...)` and `experiments.list(...)` return
+`freshness.status: "stale"` and `run_plan_mode: "run"`. Call
+`runs.create(...)` to recompute and then inspect the new run's metrics. Existing
+run metrics remain readable as historical evidence.
 
 ### Update / delete
 

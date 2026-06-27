@@ -1,7 +1,7 @@
 """Verify that the API Reference tab nesting in docs.json reflects file-path nesting.
 
 Every api-reference page lives at a specific filesystem path under
-``open-source/docs/api-reference/`` whose directory chain mirrors the URL
+``public/docs/api-reference/`` whose directory chain mirrors the URL
 hierarchy of the documented endpoint. For example:
 
   - file:  ``api-reference/workflows/reviews/versions/get.mdx``
