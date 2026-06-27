@@ -9,7 +9,7 @@ model names, design-doc references, or RST/Sphinx syntax that Markdown does not
 render.
 
 When this fails, fix the prose at the source in ``backend/main_server`` and
-regenerate ``openapi.json`` (see ``.notes/openapi-description-rules.md``). Do
+regenerate ``openapi.json`` (see ``docs/architecture/notes/openapi-description-rules.md``). Do
 not edit ``openapi.json`` directly, and do not weaken the banned list to silence
 a failure — the failure means a description needs cleaning, not that the rule is
 wrong.
@@ -154,6 +154,6 @@ def test_public_openapi_descriptions_have_no_internal_leaks() -> None:
     assert not violations, (
         "Public OpenAPI description/summary prose leaks internal details. Fix the "
         "source docstrings/Field descriptions in backend/main_server and regenerate "
-        "openapi.json (see .notes/openapi-description-rules.md):\n\n"
+        "openapi.json (see docs/architecture/notes/openapi-description-rules.md):\n\n"
         + "\n".join(sorted(violations))
     )

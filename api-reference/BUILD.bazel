@@ -1,10 +1,10 @@
-load("//tools/bazel:artifact_lifecycle.bzl", "retab_generated_artifact_lifecycle")
-load("//tools/bazel:defs.bzl", "CACHEABLE_HOST_TAGS", "LOCAL_TAGS", "PYTHON_VENV_TAGS")
+load("//factory/bazel:artifact_lifecycle.bzl", "retab_generated_artifact_lifecycle")
+load("//factory/bazel:defs.bzl", "CACHEABLE_HOST_TAGS", "LOCAL_TAGS", "PYTHON_VENV_TAGS")
 
 package(default_visibility = ["//visibility:public"])
 
 # The public openapi.json is generated from the Go main_server app by
-# //backend/main_server_go/cmd/publicspec, applying the public route whitelist in
+# //services/main-api-go/cmd/publicspec, applying the public route whitelist in
 # public_api_routes.yaml.
 filegroup(
     name = "openapi_inputs",
@@ -13,14 +13,14 @@ filegroup(
         "*.py",
     ]) + [
         "public_api_routes.yaml",
-        "//backend/main_server_go:sources",
-        "//backend/main_server_go/internal/api/routes/v1/files/blueprints:sources",
-        "//open-source/docs:docs_json",
+        "//services/main-api-go:sources",
+        "//services/main-api-go/internal/api/routes/v1/files/blueprints:sources",
+        "//public/docs:docs_json",
     ],
 )
 
 # Markdown/MDX content of the api-reference sub-package. The docs-root glob in
-# //open-source/docs:docs_content_sources cannot descend into this sub-package
+# //public/docs:docs_content_sources cannot descend into this sub-package
 # (Bazel globs stop at package boundaries), so this filegroup re-exports the
 # content for the snippet manifest/lint to track as real inputs. Without it,
 # edits to api-reference snippets never invalidate the cached snippet manifest.
@@ -52,19 +52,19 @@ genrule(
         "public_api_routes.yaml",
     ],
     outs = ["openapi.generated.json"],
-    cmd = "$(location //tools/bazel:generate_openapi) $@",
+    cmd = "$(location //factory/bazel:generate_openapi) $@",
     # generate_openapi runs the host `go` toolchain (`go run ./cmd/publicspec`),
     # which writes to GOCACHE under the repo-local cache dir. The Bazel sandbox
     # makes the source tree read-only, so the cache write fails ("operation not
     # permitted"). Pin to the host toolchain (no-sandbox) while staying remotely
     # cacheable — the same tag set used by the host-Go check targets.
     tags = CACHEABLE_HOST_TAGS,
-    tools = ["//tools/bazel:generate_openapi"],
+    tools = ["//factory/bazel:generate_openapi"],
 )
 
 sh_test(
     name = "openapi_check",
-    srcs = ["//tools/bazel:check_openapi.sh"],
+    srcs = ["//factory/bazel:check_openapi.sh"],
     args = ["$(location :openapi_json)"],
     data = [
         ":openapi_inputs",
@@ -76,12 +76,12 @@ sh_test(
 
 retab_generated_artifact_lifecycle(
     name = "openapi",
-    update_script = "//tools/bazel:update_openapi.sh",
+    update_script = "//factory/bazel:update_openapi.sh",
     update_data = [":openapi_inputs"],
     downstream = [
-        "//api-quality:unit_tests",
-        "//open-source/docs:docs_sdk_snippets",
-        "//open-source/sdk:generated_sdks",
+        "//factory/api-quality:unit_tests",
+        "//public/docs:docs_sdk_snippets",
+        "//public/sdk:generated_sdks",
     ],
     tags = LOCAL_TAGS,
 )
@@ -89,19 +89,19 @@ retab_generated_artifact_lifecycle(
 # Pins the public OpenAPI filter/overlay behavior used by generate_openapi.py.
 sh_test(
     name = "generator_unit_tests",
-    srcs = ["//tools/bazel:run_pytest.sh"],
-    args = ["open-source/docs/api-reference/unit_tests/test_generate_openapi_filter.py"],
+    srcs = ["//factory/bazel:run_pytest.sh"],
+    args = ["public/docs/api-reference/unit_tests/test_generate_openapi_filter.py"],
     data = [":unit_test_sources"],
     tags = PYTHON_VENV_TAGS,
 )
 
 sh_test(
     name = "snippet_unit_tests",
-    srcs = ["//tools/bazel:run_pytest.sh"],
-    args = ["open-source/docs/api-reference/unit_tests/test_lint_snippets.py"],
+    srcs = ["//factory/bazel:run_pytest.sh"],
+    args = ["public/docs/api-reference/unit_tests/test_lint_snippets.py"],
     data = [
         ":unit_test_sources",
-        "//open-source/docs:docs_sources",
+        "//public/docs:docs_sources",
     ],
     tags = PYTHON_VENV_TAGS,
 )

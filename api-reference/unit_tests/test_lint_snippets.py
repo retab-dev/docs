@@ -215,7 +215,7 @@ def test_snippet_manifest_round_trip_and_filter(tmp_path: Path) -> None:
     filtered_docs, filtered_snippets, filtered_groups = (
         lint_snippets.filter_snippet_manifest(
             (docs, loaded_snippets, loaded_groups),
-            "open-source/docs/example.mdx",
+            "public/docs/example.mdx",
         )
     )
 

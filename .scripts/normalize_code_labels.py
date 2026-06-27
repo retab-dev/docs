@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Normalize fenced code-block tab labels in ``open-source/docs/**/*.{md,mdx}``.
+"""Normalize fenced code-block tab labels in ``public/docs/**/*.{md,mdx}``.
 
 Docs render fenced blocks as language tabs using the syntax
 ``` ```<lang> <Label> ```. The canonical label casing across the site is the
@@ -123,7 +123,7 @@ def main() -> int:
         "--root",
         type=Path,
         default=DOCS_ROOT,
-        help="Docs root to scan (default: open-source/docs/).",
+        help="Docs root to scan (default: public/docs/).",
     )
     parser.add_argument(
         "--filter",

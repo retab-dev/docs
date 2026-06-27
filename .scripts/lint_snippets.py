@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Extract fenced code blocks from ``open-source/docs/**/*.{md,mdx}`` and lint
+"""Extract fenced code blocks from ``public/docs/**/*.{md,mdx}`` and lint
 them against the local Retab SDKs.
 
 The script keeps drift between the docs and the generated SDKs honest. For each
 fenced block tagged with a language we know how to check we:
 
-  1. Write the block to a temporary file under ``open-source/docs/.snippets/``.
+  1. Write the block to a temporary file under ``public/docs/.snippets/``.
   2. Run a language-appropriate checker:
        * Python   -> ``py_compile`` (syntax) + ``ruff check`` (undefined names)
                       + ``pyright`` if available (full type-check against the
@@ -564,7 +564,7 @@ def _matches_source_filter(source: Path, filter_value: str) -> bool:
     return (
         filter_value in str(source)
         or filter_value in rel
-        or filter_value in f"open-source/docs/{rel}"
+        or filter_value in f"public/docs/{rel}"
     )
 
 
