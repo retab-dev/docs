@@ -3371,6 +3371,53 @@
         ]
       }
     },
+    "/v1/splits/reconstruct": {
+      "post": {
+        "description": "Reconstruct each named subdocument of a stored spreadsheet into an enriched, partition-ready table: one flat complete header, the key carried on every row, section banners promoted to a column, and wide size-matrices melted. Returns the enriched tables (header + rows + clean CSV) for hand-off to extraction.",
+        "operationId": "reconstruct_split",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconstructRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconstructResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Reconstruct Split",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "tags": [
+          "Splits"
+        ]
+      }
+    },
     "/v1/splits/{split_id}": {
       "get": {
         "description": "Retrieve a split.\n\nFetches a single split by its `split_id` within the authenticated environment and\nreturns the full `Split` including its `output` page assignments. Responds with `404`\nif no split with that id exists.",
@@ -18522,6 +18569,188 @@
         "title": "QueuedWorkflowExperimentRun",
         "description": "The experiment run is enqueued and waiting for a worker."
       },
+      "ReconstructDocumentRef": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "id"
+        ],
+        "title": "ReconstructDocumentRef"
+      },
+      "ReconstructEnrichedRow": {
+        "properties": {
+          "cells": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cells"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cells"
+        ],
+        "title": "ReconstructEnrichedRow"
+      },
+      "ReconstructEnrichedTable": {
+        "properties": {
+          "csv": {
+            "type": "string",
+            "title": "Csv"
+          },
+          "header": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Header"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ReconstructEnrichedRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "csv",
+          "header",
+          "label",
+          "rows"
+        ],
+        "title": "ReconstructEnrichedTable"
+      },
+      "ReconstructEnrichmentOptions": {
+        "properties": {
+          "fill_key_spans": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fill Key Spans"
+          },
+          "flatten_header": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flatten Header"
+          },
+          "promote_sections": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promote Sections"
+          }
+        },
+        "type": "object",
+        "title": "ReconstructEnrichmentOptions"
+      },
+      "ReconstructRequest": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/ReconstructDocumentRef"
+          },
+          "subdocuments": {
+            "items": {
+              "$ref": "#/components/schemas/ReconstructSubdocument"
+            },
+            "type": "array",
+            "title": "Subdocuments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document",
+          "subdocuments"
+        ],
+        "title": "ReconstructRequest"
+      },
+      "ReconstructResponse": {
+        "properties": {
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/ReconstructEnrichedTable"
+            },
+            "type": "array",
+            "title": "Tables"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tables"
+        ],
+        "title": "ReconstructResponse"
+      },
+      "ReconstructSubdocument": {
+        "properties": {
+          "enrichment": {
+            "$ref": "#/components/schemas/ReconstructEnrichmentOptions"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "partition_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partition Key"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/SheetRegion"
+            },
+            "type": "array",
+            "title": "Regions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "regions"
+        ],
+        "title": "ReconstructSubdocument"
+      },
       "RejectReviewRequest": {
         "properties": {
           "version_id": {
@@ -19530,6 +19759,64 @@
         ],
         "title": "SetSecretRequest"
       },
+      "SheetRegion": {
+        "properties": {
+          "col_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Col End"
+          },
+          "col_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Col Start"
+          },
+          "header_rows": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Header Rows",
+            "default": []
+          },
+          "row_end": {
+            "type": "integer",
+            "title": "Row End"
+          },
+          "row_start": {
+            "type": "integer",
+            "title": "Row Start"
+          },
+          "sheet_index": {
+            "type": "integer",
+            "title": "Sheet Index"
+          },
+          "sheet_name": {
+            "type": "string",
+            "title": "Sheet Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row_end",
+          "row_start",
+          "sheet_index",
+          "sheet_name"
+        ],
+        "title": "SheetRegion"
+      },
       "SimilarityGteCondition": {
         "properties": {
           "kind": {
@@ -19813,6 +20100,14 @@
             "type": "array",
             "title": "Pages",
             "description": "The pages of the subdocument (1-indexed)"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/SheetRegion"
+            },
+            "type": "array",
+            "title": "Regions",
+            "default": []
           }
         },
         "type": "object",
