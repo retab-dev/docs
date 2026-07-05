@@ -48,7 +48,7 @@ const result = await client.splits.create_reconstruct(
   {
     id: "doc_01G34H8J2K",
     filename: "orders_workbook.xlsx",
-    mime_type:
+    mimeType:
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   },
   [
@@ -56,14 +56,14 @@ const result = await client.splits.create_reconstruct(
       name: "orders",
       regions: [
         {
-          sheet_name: "Orders",
-          sheet_index: 0,
-          row_start: 2,
-          row_end: 148,
-          header_rows: [1],
+          sheetName: "Orders",
+          sheetIndex: 0,
+          rowStart: 2,
+          rowEnd: 148,
+          headerRows: [1],
         },
       ],
-      partition_key: "order_number",
+      partitionKey: "order_number",
     },
   ],
 );
@@ -192,29 +192,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let result = client
         .splits()
-        .create_reconstruct(retab::resources::splits::CreateReconstructParams {
-            document: retab::resources::splits::ReconstructDocumentRef {
-                id: "doc_01G34H8J2K".into(),
-                filename: "orders_workbook.xlsx".into(),
-                mime_type: Some(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".into(),
-                ),
-            },
-            subdocuments: vec![retab::resources::splits::ReconstructSubdocument {
-                name: "orders".into(),
-                regions: vec![retab::resources::splits::SheetRegion {
-                    sheet_name: "Orders".into(),
-                    sheet_index: 0,
-                    row_start: 2,
-                    row_end: 148,
-                    col_start: None,
-                    col_end: None,
-                    header_rows: Some(vec![1]),
-                }],
-                partition_key: Some("order_number".into()),
-                enrichment: None,
-            }],
-        })
+        .create_reconstruct(retab::resources::splits::CreateReconstructParams::new(
+            retab::models::ReconstructRequest::new(
+                {
+                    let mut document = retab::models::ReconstructDocumentRef::new(
+                        "orders_workbook.xlsx",
+                        "doc_01G34H8J2K",
+                    );
+                    document.mime_type = Some(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".into(),
+                    );
+                    document
+                },
+                {
+                    let mut region = retab::models::SheetRegion::new(148, 2, 0, "Orders");
+                    region.header_rows = Some(vec![1]);
+
+                    let mut subdocument =
+                        retab::models::ReconstructSubdocument::new("orders", vec![region]);
+                    subdocument.partition_key = Some("order_number".into());
+                    vec![subdocument]
+                },
+            ),
+        ))
         .await?;
 
     for table in result.tables {
@@ -263,25 +263,38 @@ foreach ($result->tables as $table) {
 ```csharp C#
 using System.Collections.Generic;
 using Retab;
-using Retab.Models;
 using RetabClient = Retab.Retab;
 
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var document = new ReconstructDocumentRef(
-    filename: "orders_workbook.xlsx",
-    id: "doc_01G34H8J2K",
-    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-var region = new SheetRegion(
-    colEnd: null, colStart: null, headerRows: new List<long> { 1 },
-    rowEnd: 148, rowStart: 2, sheetIndex: 0, sheetName: "Orders");
-var subdocument = new ReconstructSubdocument(
-    enrichment: null, name: "orders", partitionKey: "order_number",
-    regions: new List<SheetRegion> { region });
+var document = new ReconstructDocumentRef
+{
+    Filename = "orders_workbook.xlsx",
+    Id = "doc_01G34H8J2K",
+    MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
+var region = new SheetRegion
+{
+    HeaderRows = new List<long> { 1 },
+    RowEnd = 148,
+    RowStart = 2,
+    SheetIndex = 0,
+    SheetName = "Orders",
+};
+var subdocument = new ReconstructSubdocument
+{
+    Name = "orders",
+    PartitionKey = "order_number",
+    Regions = new List<SheetRegion> { region },
+};
 
 var result = await client.Splits.CreateReconstructAsync(
-    new ReconstructRequest(document, new List<ReconstructSubdocument> { subdocument }));
+    new SplitsCreateReconstructOptions
+    {
+        Document = document,
+        Subdocuments = new List<ReconstructSubdocument> { subdocument },
+    });
 foreach (var table in result.Tables)
 {
     Console.WriteLine(table.Label);
