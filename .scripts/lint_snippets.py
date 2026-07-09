@@ -2033,7 +2033,12 @@ def lint_ruby(snippet: Snippet, file_path: Path) -> list[LintIssue]:
         snippet,
         "ruby sdk",
         RUBY_SDK_FOR_SNIPPETS,
-        ("retab.gemspec", "lib/retab.rb"),
+        # Syntax-only (`ruby -c`) lint: gate on the SDK entrypoint, not the
+        # release-maintained retab.gemspec. The gemspec is excluded from the
+        # hermetic drift check and is legitimately absent from a plain working
+        # tree (it exists only in the Bazel snippet SDK root), so requiring it
+        # here false-fails the non-hermetic gate without adding coverage.
+        ("lib/retab.rb",),
     )
     if sdk_issue is not None:
         return [sdk_issue]
@@ -2058,7 +2063,9 @@ def lint_ruby_batch(snippet_files: list[tuple[Snippet, Path]]) -> list[LintIssue
         snippet_files[0][0],
         "ruby sdk",
         RUBY_SDK_FOR_SNIPPETS,
-        ("retab.gemspec", "lib/retab.rb"),
+        # See lint_ruby: syntax-only lint gates on the SDK entrypoint, not the
+        # release-maintained retab.gemspec (absent from a plain working tree).
+        ("lib/retab.rb",),
     )
     if sdk_issue is not None:
         return [sdk_issue]

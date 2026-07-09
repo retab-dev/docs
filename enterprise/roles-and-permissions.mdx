@@ -1,0 +1,169 @@
+---
+title: Roles and permissions
+description: Organization RBAC roles, project and workflow FGA roles, and the permission vocabulary
+---
+
+Retab has two role systems that stack:
+
+1. **Organization RBAC** — coarse, organization-wide roles for account
+   authority (billing, members, keys, secrets, environments).
+2. **Fine-Grained Authorization (FGA)** — per-project and per-workflow roles
+   for product access (view, run, edit, review, publish a workflow).
+
+An organization `Member` role is the baseline; the ability to touch a
+specific workflow comes from an FGA role on the project that owns it.
+
+## Organization roles (RBAC)
+
+Three organization-wide roles, with inheritance — each row includes
+everything below it.
+
+| Role           | Inherits | Governs                                                                                                   |
+| -------------- | -------- | --------------------------------------------------------------------------------------------------------- |
+| **SuperAdmin** | Admin    | Billing, usage limits, assigning SuperAdmin, and creating / updating / deleting **environments**.         |
+| **Admin**      | Member   | Invitations and role assignment, **API key** and access-token lifecycle, **secrets**, creating projects.  |
+| **Member**     | —        | Baseline: read environments, upload and read files, run primitives (parse / extract / edit / split / classify), generate schemas. |
+
+<Note>
+  **Member is intentionally thin.** Its description says it plainly: *product
+  access comes from environment membership and project/workflow FGA, not broad
+  organization RBAC.* Being a Member lets you use the account; it does not, by
+  itself, grant you any particular workflow.
+</Note>
+
+Organization roles are assigned from the dashboard and are global — they are
+**not** per-environment.
+
+## Fine-grained roles (FGA)
+
+FGA roles are granted on a **project** (or, internally, a workflow) and carry
+a bundle of permissions. There are four roles at each level, from most to
+least privileged.
+
+### Project roles
+
+Grant these on a project; they apply to the project and, by inheritance, to
+every workflow it owns.
+
+| Project role         | Project permissions      | Workflow permissions (on all workflows in the project)                      |
+| -------------------- | ------------------------ | --------------------------------------------------------------------------- |
+| **Project Owner**    | view, edit, delete, manage | create, view, edit, run, review, publish, delete, manage                  |
+| **Project Editor**   | view, edit               | create, view, edit, run, review, publish                                    |
+| **Project Operator** | view                     | view, run, review                                                           |
+| **Project Viewer**   | view                     | view                                                                        |
+
+The person who creates a project (or the environment's Default Project)
+becomes its **Project Owner**.
+
+### Workflow roles
+
+The same four shapes exist at the workflow level — **Workflow Owner /
+Editor / Operator / Viewer** — carrying the matching subset of `workflow:*`
+permissions. In practice you grant at the project level; see
+[inheritance](#project-to-workflow-inheritance) below.
+
+## The permission vocabulary
+
+Every FGA role is just a set of these permissions. This is what the
+`capabilities` array on API responses is drawn from.
+
+| Permission         | Allows                                          | Grantable to a scoped token |
+| ------------------ | ----------------------------------------------- | --------------------------- |
+| `project:view`     | See the project and its workflows                | ✅                          |
+| `project:edit`     | Change project name / settings                   | ✅                          |
+| `project:delete`   | Archive the project                              | ❌                          |
+| `project:manage`   | Manage project members and grants                | ❌                          |
+| `workflow:create`  | Create a workflow in the project                 | ✅                          |
+| `workflow:view`    | Open a workflow and read its runs                | ✅                          |
+| `workflow:edit`    | Change blocks, edges, schema                      | ✅                          |
+| `workflow:run`     | Execute the workflow                             | ✅                          |
+| `workflow:review`  | Act on human-in-the-loop review steps            | ✅                          |
+| `workflow:publish` | Publish a new version                            | ✅                          |
+| `workflow:delete`  | Delete / archive the workflow                    | ❌                          |
+| `workflow:manage`  | Manage the workflow's own members and grants     | ❌                          |
+
+`delete` and `manage` are deliberately **not** grantable to scoped access
+tokens — a token can operate a workflow but cannot hand out access or tear
+resources down.
+
+## Capabilities on responses
+
+Rather than resolving roles on the client, read the `capabilities` array Retab
+computes for the current caller:
+
+```json
+{
+  "id": "wf_…",
+  "project_id": "proj_…",
+  "capabilities": ["workflow:view", "workflow:run", "workflow:review"],
+  "authz_status": "ready"
+}
+```
+
+A Project Operator, for example, sees `["workflow:view", "workflow:run",
+"workflow:review"]` — enough to run and review, not to edit or publish. Drive
+UI affordances off this array instead of hard-coding role names.
+
+## Project-to-workflow inheritance
+
+A workflow's authorization resource is created **with its project as the
+parent**. Access flows down that parent link: a role on the project applies to
+every workflow inside it. This is why FGA is granted at the project level.
+
+<Warning>
+  **Assigning a person a role on a single workflow is not a first-class
+  surface today.** The system can model direct workflow-level roles (Workflow
+  Owner / Editor / …), and workflow responses carry `capabilities` and
+  `authz_status` — but there is no dashboard flow to grant one member a role on
+  one workflow. When a workflow is created, no separate owner is assigned to
+  it; it simply inherits from its project. To control who can touch a workflow,
+  grant a role on the project that owns it, or move the workflow to a project
+  with the right membership.
+
+  The exception is [access tokens](/enterprise/access-tokens): a token's
+  grants *can* target a single workflow (view / edit / run / review / publish),
+  which is how workflow-scoped access is exposed today.
+</Warning>
+
+## Scoped access tokens
+
+A **scoped access token** (`acctk_…`) acts as the user who created it, but only
+through the project and workflow grants placed on it. Unlike an API key (which
+has full access within its environment), a token can be limited to, say,
+`workflow:run` on a single project — or on a single workflow — which makes it
+the right credential for AI agents and narrow automation.
+
+- A token grant is rejected unless you already hold that permission on the
+  target — you cannot escalate through a token.
+- Only the **grantable** permissions above can be placed on a token; the
+  non-grantable ones (`*:delete`, `*:manage`) never can.
+
+See [Access tokens](/enterprise/access-tokens) for how to create, use, and
+revoke them.
+
+## How a request is authorized
+
+1. The request is authenticated to an **identity** — a dashboard user, or an
+   environment-bound API key.
+2. A dashboard user resolves to an **organization membership**, which is the
+   subject FGA checks against. An API key has no membership and is treated as
+   full-access within its environment.
+3. For a member, the requested action (e.g. `workflow:run` on `wf_…`) is
+   checked against the roles granted on the workflow's **project**.
+4. The resolved permissions are returned to you as the `capabilities` array.
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Projects" icon="folder" href="/enterprise/projects">
+    The container these roles are granted on.
+  </Card>
+
+  <Card title="Access tokens" icon="key" href="/enterprise/access-tokens">
+    Delegate a subset of these permissions to an agent or job.
+  </Card>
+
+  <Card title="Access control" icon="sitemap" href="/enterprise/access-control">
+    The organization → environment → project → workflow model.
+  </Card>
+</CardGroup>

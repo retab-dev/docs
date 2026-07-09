@@ -1,0 +1,70 @@
+---
+title: Access tokens
+description: Scoped user credentials for agents and automation
+---
+
+Access tokens are scoped credentials for agents and automation. They act as
+the user who created them, but only through the project and workflow grants
+you choose.
+
+Use them when an agent should run or edit a narrow set of resources. Use an
+API key when a backend service needs broad environment access.
+
+| Prefix     | Scope             | Best for                      |
+| ---------- | ----------------- | ----------------------------- |
+| `acctk_`   | User + grants     | AI agents, narrow automation  |
+| `rt_test_` | Test environment  | CI, staging, local dev        |
+| `rt_live_` | Production env    | Production backend services   |
+
+## Create a token
+
+Go to **Developer settings** in the dashboard, then open **User access
+tokens**.
+
+1. Click **Create token**.
+2. Name the token after the agent or job that will use it.
+3. Add one or more grants:
+   - **Project** grants can allow project access and workflow creation.
+   - **Workflow** grants can allow view, edit, run, review, or publish on one
+     workflow.
+4. Copy the token immediately. It is shown only once.
+
+Retab rejects a token grant if you do not already have that permission on the
+target project or workflow.
+
+## Use a token
+
+Log the CLI in with the access token:
+
+```bash
+export RETAB_ACCESS_TOKEN=acctk_...
+retab auth login --access-token="$RETAB_ACCESS_TOKEN"
+```
+
+The CLI stores access tokens separately from API keys and sends them as bearer
+credentials.
+
+For direct HTTP calls:
+
+```bash
+curl https://api.retab.com/v1/workflows \
+  -H "Authorization: Bearer $RETAB_ACCESS_TOKEN"
+```
+
+## Verify and revoke
+
+Check the active credential:
+
+```bash
+retab auth status
+```
+
+The dashboard lists each token's name, grants, prefix, expiry, last use, and
+status. Revoke a token from the same table when the agent no longer needs it.
+
+## Rules of thumb
+
+- Prefer access tokens for AI agents and local automation.
+- Grant the smallest project or workflow permission set that works.
+- Do not grant publish unless the agent is allowed to change live behavior.
+- Store the token like a password. If it leaks, revoke it and mint a new one.

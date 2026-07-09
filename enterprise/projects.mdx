@@ -1,0 +1,109 @@
+---
+title: Projects
+description: The container that groups workflows and carries their access grants
+---
+
+A **project** is a named group of workflows inside one environment. It is the
+unit that access is granted on: you give a person a role *on a project*, and
+that role applies to every workflow the project owns. If your organization is
+small, you may only ever use the automatically-created Default Project. If you
+have several teams or customers, projects let you keep their workflows — and
+who can touch them — separate.
+
+## What a project is
+
+| Field         | Meaning                                                        |
+| ------------- | ------------------------------------------------------------- |
+| `id`          | Stable identifier, prefixed `proj_`.                          |
+| `name`        | Human-readable name.                                          |
+| `slug`        | URL-safe name (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).                 |
+| `description` | Optional free text.                                           |
+| `icon`, `color` | Dashboard presentation.                                     |
+| `visibility`  | `private`. Projects are private to their grant holders.       |
+
+A project lives in exactly one environment. The same name can exist as two
+separate projects — one in `test`, one in `production` — and they never share
+data or grants. See [Environments](/enterprise/environments).
+
+## Every workflow belongs to a project
+
+Workflows carry a `project_id`, and the public workflow API uses it directly:
+
+<CodeGroup>
+```bash Create in a project
+curl -X POST https://api.retab.com/v1/workflows \
+  -H "Authorization: Bearer $RETAB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Invoice extraction", "project_id": "proj_…" }'
+```
+
+```bash List one project's workflows
+curl "https://api.retab.com/v1/workflows?project_id=proj_…" \
+  -H "Authorization: Bearer $RETAB_API_KEY"
+```
+</CodeGroup>
+
+The `project_id` on a workflow is how access is resolved: grant a person a
+role on `proj_…` and they get that access on every workflow whose
+`project_id` is `proj_…`.
+
+## The shared Default Project
+
+Every environment is created with one **Default Project** (slug
+`default-project`). It is the home for workflows that are not deliberately
+filed under a project of their own — this is the "shared" project.
+
+- Workflows created without an explicit project land in the Default Project
+  for that environment.
+- To list the organization's shared workflows, filter
+  `GET /v1/workflows?project_id=…` with the Default Project's id.
+- The person who first sets up the environment is granted **Project Owner**
+  on the Default Project.
+
+<Note>
+  Workflows that predate projects may have a `null` `project_id`. These are
+  legacy rows from before every workflow was filed under a project; new
+  workflows always belong to one.
+</Note>
+
+## Managing projects
+
+<Info>
+  Projects are created, renamed, and archived from the **dashboard**. The
+  project management endpoints are dashboard-session only and are not part of
+  the public API. The public API *references* projects (via `project_id` on
+  workflows) but does not create them.
+</Info>
+
+- **Create** — from the dashboard. The creator is granted **Project Owner**.
+- **Rename / recolor** — edit name, description, icon, or color.
+- **Archive** — a soft delete; the project is marked archived rather than
+  hard-deleted, so history is preserved.
+
+### Authorization provisioning
+
+When a project is created, its authorization resource is provisioned in the
+background. Project and workflow responses expose this as **`authz_status`**:
+
+| `authz_status` | Meaning                                                    |
+| -------------- | ---------------------------------------------------------- |
+| `provisioning` | The authorization resource is being set up.                |
+| `ready`        | Fully provisioned; access checks are live. (Normal state.) |
+| `failed`       | Provisioning failed and will be retried.                   |
+| `deleting` / `deleted` | The project is being torn down.                    |
+
+Under normal operation a project is `ready` within moments of creation. While
+`provisioning`, the creator still sees their own grants optimistically, so
+there is no lockout window.
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Roles and permissions" icon="shield-halved" href="/enterprise/roles-and-permissions">
+    The roles you can grant on a project, and what each one allows.
+  </Card>
+
+  <Card title="Access control" icon="sitemap" href="/enterprise/access-control">
+    How projects fit under organizations and environments.
+  </Card>
+</CardGroup>
