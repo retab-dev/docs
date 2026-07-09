@@ -1,0 +1,115 @@
+---
+title: Environments
+description: Test and production namespaces, keys, tokens, and CLI targeting
+---
+
+Retab has two customer environments inside each organization:
+
+| Environment  | Use for                                      |
+| ------------ | -------------------------------------------- |
+| `test`       | Local dev, CI, staging, integration tests    |
+| `production` | Customer-facing production systems           |
+
+Workflows, files, runs, webhooks, signing secrets, integration credentials,
+and usage records live in exactly one environment. A test credential cannot
+read or mutate production resources; cross-environment lookups return `404`.
+
+## Credentials
+
+The credential selects the environment. Not a header, not a base URL, not a
+CLI flag.
+
+| Prefix     | Scope             | Use for                         |
+| ---------- | ----------------- | ------------------------------- |
+| `rt_test_` | Test environment  | Dev, CI, staging                |
+| `rt_live_` | Production env    | Production services             |
+| `acctk_`   | User + grants     | Agents and narrow automation    |
+
+```bash
+# Dev and CI
+export RETAB_API_KEY=rt_test_...
+
+# Production services
+export RETAB_API_KEY=rt_live_...
+
+# Scoped agent token
+retab auth login --access-token="$RETAB_ACCESS_TOKEN"
+```
+
+Use [API keys](/enterprise/api-keys) for broad environment access. Use
+[access tokens](/enterprise/access-tokens) when an agent should only touch
+specific projects or workflows.
+
+## Base URL
+
+`RETAB_API_BASE_URL` selects the Retab deployment: hosted API, local dev
+server, private region. It does not select `test` or `production`.
+
+```bash
+# Wrong: changes host only.
+export RETAB_API_BASE_URL=https://api.retab.com
+
+# Right: changes environment.
+export RETAB_API_KEY=rt_live_...
+```
+
+## CLI Targeting
+
+Local CLI profiles are just names for stored credentials:
+
+```bash
+retab env add test --api-key rt_test_...
+retab env add production --api-key rt_live_...
+retab env add staging --api-key rt_test_...
+
+retab env switch test
+retab workflows list --env staging
+retab workflows list --live
+retab auth status
+```
+
+`retab env switch` changes only your local default profile. It never changes
+server state and it never changes what a credential can access.
+
+Credential resolution is strict:
+
+| Priority | Source                            |
+| -------- | --------------------------------- |
+| 1        | `--api-key` flag                  |
+| 2        | `RETAB_API_KEY`                   |
+| 3        | `--env <slug>` profile            |
+| 4        | `--live` production profile       |
+| 5        | Default profile from `env switch` |
+| 6        | Stored OAuth or access token      |
+
+If an explicit key and an environment flag disagree, the CLI fails instead of
+guessing. Run `retab auth status` to see the resolved environment before a
+dangerous command.
+
+## Production Safety
+
+High-risk production writes, such as publishing, deleting, rotating secrets,
+or retrying jobs, require confirmation. In CI or any non-interactive shell,
+pass `--confirm` explicitly.
+
+```bash
+RETAB_API_KEY=rt_live_... retab workflows publish wf_... --confirm
+```
+
+Do not rely on `retab env switch production` in CI. Pass the production key
+in the command environment so the target is visible in the script.
+
+## What Is Isolated
+
+| Resource                              | Isolated per environment |
+| ------------------------------------- | ------------------------ |
+| API keys                              | Yes                      |
+| Workflows, blocks, edges, versions    | Yes                      |
+| Runs, steps, artifacts, jobs          | Yes                      |
+| Webhooks and signing secrets          | Yes                      |
+| Workflow secrets / integration creds  | Yes                      |
+| Usage records and analytics           | Yes                      |
+| Organization membership and billing   | No                       |
+
+See [webhooks and secrets](/enterprise/webhooks-and-secrets) for the
+environment-scoped webhook and secret model.
