@@ -107,8 +107,46 @@ The current condition kinds are:
 | `llm_judged_as`, `llm_not_judged_as`  | Rubric-based LLM judging.                                  |
 | `split_iou_gte`                       | Intersection-over-Union for split page assignments.        |
 
-`number_compare` and `length_compare` use `op` values `gt`, `gte`, `lt`, `lte`,
-`eq`, or `neq`.
+### Condition payloads
+
+Each condition is a `{ "kind": ..., ... }` object. The fields alongside `kind`
+depend on the kind — most value checks use `expected`, but the comparison,
+pattern, metric, and nested kinds use their own fields:
+
+| Kind                                    | Fields alongside `kind`                                             |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `exists`, `not_exists`                  | *(none)*                                                           |
+| `equals`, `not_equals`                  | `expected` (any JSON value)                                        |
+| `contains`, `not_contains`              | `expected` (substring, or an element of a list)                   |
+| `object_contains`                       | `expected` (non-empty object subset)                              |
+| `array_contains`                        | `expected` (non-empty object subset matched against array items)  |
+| `number_compare`                        | `op` (`gt`/`gte`/`lt`/`lte`/`eq`/`neq`) + `expected` (number)     |
+| `length_compare`                        | `op` (same values) + `expected` (integer)                         |
+| `between`                               | `lower`, `upper` (numbers) + `inclusive` (bool)                   |
+| `starts_with`, `ends_with`              | `expected` (string)                                               |
+| `matches_regex`                         | `pattern` (string)                                                |
+| `json_schema_valid`                     | `schema` (a JSON Schema object)                                   |
+| `all_items_match`, `any_item_matches`   | `condition` (a nested `{ "kind": ..., ... }` condition)           |
+| `similarity_gte`                        | `reference` (value) + `threshold` (0.0–1.0) + `method` (default `levenshtein`) |
+| `split_iou_gte`                         | `expected` (`{ "splits": [...] }`) + `threshold` (0.0–1.0)        |
+| `llm_judged_as`, `llm_not_judged_as`    | `rubric` (string) + optional `expected_label` (string)           |
+
+Examples:
+
+```json
+{ "kind": "number_compare", "op": "gt", "expected": 3 }
+{ "kind": "contains", "expected": "STAGING" }
+{ "kind": "starts_with", "expected": "INV-" }
+{ "kind": "between", "lower": 100, "upper": 500, "inclusive": true }
+{ "kind": "matches_regex", "pattern": "^INV-[0-9]{6}$" }
+{ "kind": "similarity_gte", "reference": "ACME Corp", "threshold": 0.9 }
+```
+
+<Note>
+In the CLI, the inline `--path`/`--equals` flags build an `equals` assertion
+only. To use any other condition kind, pass the full assertion JSON with
+`--assertion-file` (or `--assertion-file -` to read from stdin).
+</Note>
 
 ## Running Evals
 
