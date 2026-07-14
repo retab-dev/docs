@@ -1,0 +1,166 @@
+---
+title: "List Usage Primitives"
+openapi: "GET /v1/usage/primitives"
+---
+
+<RequestExample>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# List per-operation usage rows
+primitives = client.usage.list_primitives(
+    limit=20,
+    order="desc",
+)
+
+# Filter by operation, project, and date range
+primitives = client.usage.list_primitives(
+    operation="extraction",
+    project_id="proj_123",
+    from_date="2024-01-01",
+    to_date="2024-12-31",
+    limit=50,
+)
+
+for primitive in primitives.data:
+    print(primitive.primitive_execution_id, primitive.operation, primitive.credits)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+// List per-operation usage rows
+const primitives = await client.usage.list_primitives({
+  limit: 20,
+  order: "desc",
+});
+
+// Filter by operation, project, and date range
+const filtered = await client.usage.list_primitives({
+  operation: "extraction",
+  projectId: "proj_123",
+  fromDate: "2024-01-01",
+  toDate: "2024-12-31",
+  limit: 50,
+});
+
+console.log(primitives.data, filtered.data);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func ptr[T any](v T) *T { return &v }
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// List per-operation usage rows
+	primitives, err := client.Usage.ListPrimitives(ctx, &retab.UsageListPrimitivesParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(20), Order: ptr("desc")},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(primitives)
+
+	// Filter by operation, project, and date range
+	filtered, err := client.Usage.ListPrimitives(ctx, &retab.UsageListPrimitivesParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(50)},
+		Operation:        ptr("extraction"),
+		ProjectID:        ptr("proj_123"),
+		FromDate:         ptr("2024-01-01"),
+		ToDate:           ptr("2024-12-31"),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(filtered)
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var primitives = client.usage().listPrimitives();
+    System.out.println(primitives);
+  }
+}
+```
+
+```curl cURL
+curl -X 'GET' \
+  'https://api.retab.com/v1/usage/primitives?limit=20&order=desc' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer <your-api-key>'
+
+# Filter by operation, project, and date range
+curl -X 'GET' \
+  'https://api.retab.com/v1/usage/primitives?operation=extraction&project_id=proj_123&from_date=2024-01-01&to_date=2024-12-31&limit=50' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "primitive_execution_id": "pex_01G34H8J2K",
+      "operation": "extraction",
+      "workflow_id": "wf_123",
+      "run_id": "run_01G34H8J2K",
+      "project_id": "proj_123",
+      "block_id": "blk_01G34H8J2K",
+      "status": "completed",
+      "resource_kind": "extraction",
+      "model": "retab-large",
+      "created_at": "2024-03-15T10:30:00Z",
+      "completed_at": "2024-03-15T10:30:12Z",
+      "duration_ms": 12000,
+      "page_count": 8,
+      "credits": 12.5,
+      "documents": [
+        {
+          "file_id": "file_6dd6eb00688ad8d1",
+          "filename": "invoice.pdf"
+        }
+      ],
+      "metadata": {
+        "tenant": "acme"
+      }
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": "pex_01G34H8J2K"
+  }
+}
+```
+
+</ResponseExample>

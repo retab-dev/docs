@@ -1,0 +1,150 @@
+---
+title: "List Usage Blocks"
+openapi: "GET /v1/usage/blocks"
+---
+
+<RequestExample>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# List per-block usage rows
+blocks = client.usage.list_blocks(
+    limit=20,
+    order="desc",
+)
+
+# Filter by workflow and block type
+blocks = client.usage.list_blocks(
+    workflow_id="wf_123",
+    block_type="extract",
+    limit=50,
+)
+
+for block in blocks.data:
+    print(block.block_id, block.credits, block.execution_count)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+// List per-block usage rows
+const blocks = await client.usage.list_blocks({
+  limit: 20,
+  order: "desc",
+});
+
+// Filter by workflow and block type
+const filtered = await client.usage.list_blocks({
+  workflowId: "wf_123",
+  blockType: "extract",
+  limit: 50,
+});
+
+console.log(blocks.data, filtered.data);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func ptr[T any](v T) *T { return &v }
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// List per-block usage rows
+	blocks, err := client.Usage.ListBlocks(ctx, &retab.UsageListBlocksParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(20), Order: ptr("desc")},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(blocks)
+
+	// Filter by workflow and block type
+	filtered, err := client.Usage.ListBlocks(ctx, &retab.UsageListBlocksParams{
+		PaginationParams: retab.PaginationParams{Limit: ptr(50)},
+		WorkflowID:       ptr("wf_123"),
+		BlockType:        ptr("extract"),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(filtered)
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    var blocks = client.usage().listBlocks();
+    System.out.println(blocks);
+  }
+}
+```
+
+```curl cURL
+curl -X 'GET' \
+  'https://api.retab.com/v1/usage/blocks?limit=20&order=desc' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer <your-api-key>'
+
+# Filter by workflow and block type
+curl -X 'GET' \
+  'https://api.retab.com/v1/usage/blocks?workflow_id=wf_123&block_type=extract&limit=50' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer <your-api-key>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "data": [
+    {
+      "block_id": "blk_01G34H8J2K",
+      "workflow_id": "wf_123",
+      "block_type": "extract",
+      "run_count": 42,
+      "execution_count": 201,
+      "page_count": 640,
+      "credits": 512.0,
+      "status_counts": {
+        "completed": 190,
+        "failed": 11
+      },
+      "first_activity_at": "2024-03-01T08:00:00Z",
+      "last_activity_at": "2024-03-15T10:30:12Z"
+    }
+  ],
+  "list_metadata": {
+    "before": null,
+    "after": "blk_01G34H8J2K"
+  }
+}
+```
+
+</ResponseExample>
