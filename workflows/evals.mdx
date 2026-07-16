@@ -129,7 +129,7 @@ pattern, metric, and nested kinds use their own fields:
 | `all_items_match`, `any_item_matches`   | `condition` (a nested `{ "kind": ..., ... }` condition)           |
 | `similarity_gte`                        | `reference` (value) + `threshold` (0.0–1.0) + `method` (default `levenshtein`) |
 | `split_iou_gte`                         | `expected` (`{ "splits": [...] }`) + `threshold` (0.0–1.0)        |
-| `llm_judged_as`, `llm_not_judged_as`    | `rubric` (string) + optional `expected_label` (string)           |
+| `llm_judged_as`, `llm_not_judged_as`    | `rubric` (string) + optional `expected_label` (string, default `"yes"`) |
 
 Examples:
 
@@ -140,7 +140,38 @@ Examples:
 { "kind": "between", "lower": 100, "upper": 500, "inclusive": true }
 { "kind": "matches_regex", "pattern": "^INV-[0-9]{6}$" }
 { "kind": "similarity_gte", "reference": "ACME Corp", "threshold": 0.9 }
+{ "kind": "llm_judged_as", "rubric": "The summary mentions the invoice total." }
 ```
+
+### Choosing the LLM judge label
+
+The judge applies your `rubric` to the value and returns a single label, which
+the assertion compares against `expected_label` (case-insensitive).
+
+Leave `expected_label` out for a yes/no rubric — it defaults to `"yes"`, and the
+judge is instructed to answer `"yes"` or `"no"`. Only set it when your rubric
+asks for a label from some other vocabulary, and set it to a label that rubric
+can actually return:
+
+```json
+{ "kind": "llm_judged_as", "rubric": "Is this text an all-uppercase greeting?" }
+{
+  "kind": "llm_judged_as",
+  "rubric": "Classify this document as invoice, receipt, or statement.",
+  "expected_label": "invoice"
+}
+```
+
+<Warning>
+An `expected_label` the rubric never produces makes the assertion useless, and
+the two kinds fail in opposite directions. A yes/no rubric with
+`"expected_label": "pass"` can only ever return `"yes"` or `"no"`, so
+`llm_judged_as` always fails — noisy, but you notice it. `llm_not_judged_as`
+always **passes**, because the label never matches and the kind inverts the
+match. That is a green eval that can never catch a regression. If an
+`llm_not_judged_as` assertion has never failed, check that its
+`expected_label` is a label the rubric can return.
+</Warning>
 
 <Note>
 In the CLI, the inline `--path`/`--equals` flags build an `equals` assertion
