@@ -8415,7 +8415,7 @@
     },
     "/v1/workflows/experiments/runs/{run_id}/cancel": {
       "post": {
-        "description": "Cancel an experiment run.\n\nIdentified by `run_id`. Cancels the run and any of its pending or\nin-flight results, returning the run's new `cancelled` lifecycle. Returns\n404 if the run does not exist or is not in a cancellable (pending, queued,\nor running) state.",
+        "description": "Cancel an experiment run.\n\nIdentified by `run_id`. Cancels the run and any of its pending or\nin-flight results, returning the run's new `cancelled` lifecycle.\nCancelling an already-cancelled run is idempotent and succeeds. Returns\n404 if the run does not exist, or if it has already reached a terminal\n`completed` or `error` status — only a pending, queued, or running run\ncan be cancelled.",
         "operationId": "cancel_experiment_run",
         "parameters": [
           {
@@ -16681,6 +16681,14 @@
             "title": "Documents",
             "default": []
           },
+          "scored_document_count": {
+            "type": "integer",
+            "title": "Scored Document Count"
+          },
+          "total_document_count": {
+            "type": "integer",
+            "title": "Total Document Count"
+          },
           "aggregate": {
             "anyOf": [
               {
@@ -16714,7 +16722,7 @@
           "run_id"
         ],
         "title": "ExperimentSummaryMetricsResponse",
-        "description": "Run-level summary plus block-specific diagnostics.\n\n`prior_run_id` + `prior_score` populate when the request opts into\nprior-comparison and a completed prior run exists."
+        "description": "Run-level summary plus block-specific diagnostics.\n\n`prior_run_id` + `prior_score` populate when the request opts into\nprior-comparison and a completed prior run exists.\n\n`score` and `documents` cover only the documents that produced a result.\nCompare `scored_document_count` against `total_document_count` to see\nwhether any of the run's documents failed and were left out."
       },
       "ExperimentTargetConfusionMetric": {
         "properties": {
