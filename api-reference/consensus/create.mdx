@@ -1,0 +1,301 @@
+---
+title: "Create Consensus"
+openapi: "POST /v1/consensus"
+---
+
+Reconcile several objects that describe the same thing — typically the outputs of repeated extractions over one document — into a single `consensus` object, with a `likelihoods` map giving the agreement score for every leaf path. Low-likelihood paths are the ones worth routing to review.
+
+Inputs are always aligned before the vote, so items in a list are matched across inputs by content rather than by position: a reordered or partially omitted array still reconciles correctly. Supply `json_schema` whenever you have one — it makes numeric fields reconcile by declared type (`integer` votes on the exact value, `number` clusters and averages) instead of inferring the kind from whichever values happen to be present.
+
+<RequestExample>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+
+# Three extraction runs over the same invoice
+inputs = [
+    {"vendor": "Acme Corp", "total": 100.0},
+    {"vendor": "Acme Corp", "total": 100.0},
+    {"vendor": "Acme Corporation", "total": 102.0},
+]
+
+schema = {
+    "type": "object",
+    "properties": {
+        "vendor": {"type": "string"},
+        "total": {"type": "number"},
+    },
+}
+
+result = client.consensus.create(inputs=inputs, json_schema=schema)
+
+print(result.consensus)
+for field in result.fields:
+    print(f"{field.path}: {field.value} ({field.likelihood:.2f})")
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const inputs = [
+  { vendor: "Acme Corp", total: 100.0 },
+  { vendor: "Acme Corp", total: 100.0 },
+  { vendor: "Acme Corporation", total: 102.0 },
+];
+
+const schema = {
+  type: "object",
+  properties: {
+    vendor: { type: "string" },
+    total: { type: "number" },
+  },
+};
+
+const result = await client.consensus.create(inputs, undefined, schema);
+
+console.log(result.consensus);
+result.fields.forEach((field) => {
+  console.log(`${field.path}: ${field.value} (${field.likelihood})`);
+});
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	inputs := []map[string]interface{}{
+		{"vendor": "Acme Corp", "total": 100.0},
+		{"vendor": "Acme Corp", "total": 100.0},
+		{"vendor": "Acme Corporation", "total": 102.0},
+	}
+	schema := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"vendor": map[string]interface{}{"type": "string"},
+			"total":  map[string]interface{}{"type": "number"},
+		},
+	}
+
+	result, err := client.Consensus.Create(ctx, &retab.ConsensusCreateParams{
+		Inputs:     inputs,
+		JSONSchema: &schema,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Consensus: %v\n", result.Consensus)
+	for _, field := range result.Fields {
+		fmt.Printf("%s: %v (%.2f)\n", field.Path, field.Value, field.Likelihood)
+	}
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+inputs = [
+  { 'vendor' => 'Acme Corp', 'total' => 100.0 },
+  { 'vendor' => 'Acme Corp', 'total' => 100.0 },
+  { 'vendor' => 'Acme Corporation', 'total' => 102.0 },
+]
+
+schema = {
+  'type' => 'object',
+  'properties' => {
+    'vendor' => { 'type' => 'string' },
+    'total' => { 'type' => 'number' },
+  },
+}
+
+result = client.consensus.create(inputs: inputs, json_schema: schema)
+
+puts result.consensus
+result.fields.each do |field|
+  puts "#{field.path}: #{field.value} (#{field.likelihood})"
+end
+```
+
+```rust Rust
+use retab::models::CreateConsensusRequest;
+use retab::resources::consensus::CreateParams;
+use retab::Retab;
+use std::collections::HashMap;
+
+fn object(value: serde_json::Value) -> HashMap<String, serde_json::Value> {
+    value
+        .as_object()
+        .expect("object")
+        .iter()
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect()
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let body = CreateConsensusRequest {
+        inputs: Some(vec![
+            object(serde_json::json!({"vendor": "Acme Corp", "total": 100.0})),
+            object(serde_json::json!({"vendor": "Acme Corporation", "total": 102.0})),
+        ]),
+        json_schema: Some(object(serde_json::json!({
+            "type": "object",
+            "properties": {"vendor": {"type": "string"}, "total": {"type": "number"}}
+        }))),
+        ..Default::default()
+    };
+
+    let result = client.consensus().create(CreateParams::new(body)).await?;
+
+    println!("{:?}", result.consensus);
+    Ok(())
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$inputs = [
+    ['vendor' => 'Acme Corp', 'total' => 100.0],
+    ['vendor' => 'Acme Corp', 'total' => 100.0],
+    ['vendor' => 'Acme Corporation', 'total' => 102.0],
+];
+
+$schema = [
+    'type' => 'object',
+    'properties' => [
+        'vendor' => ['type' => 'string'],
+        'total' => ['type' => 'number'],
+    ],
+];
+
+$result = $client->consensus()->create($inputs, null, $schema);
+print_r($result);
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
+var client = new RetabClient(apiKey);
+
+var result = await client.Consensus.CreateAsync(new ConsensusCreateOptions
+{
+    Inputs = new List<Dictionary<string, object>>
+    {
+        new() { ["vendor"] = "Acme Corp", ["total"] = 100.0 },
+        new() { ["vendor"] = "Acme Corporation", ["total"] = 102.0 },
+    },
+    JsonSchema = new Dictionary<string, object>
+    {
+        ["type"] = "object",
+    },
+});
+Console.WriteLine(result);
+```
+
+```java Java
+import com.retab.RetabClient;
+import java.util.List;
+import java.util.Map;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    List<Map<String, Object>> inputs =
+        List.of(
+            Map.of("vendor", "Acme Corp", "total", 100.0),
+            Map.of("vendor", "Acme Corporation", "total", 102.0));
+
+    var result = client.consensus().create(null, inputs, Map.of("type", "object"));
+    System.out.println(result);
+  }
+}
+```
+
+```curl cURL
+curl -X POST \
+  'https://api.retab.com/v1/consensus' \
+  -H "Authorization: Bearer $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "inputs": [
+    {"vendor": "Acme Corp", "total": 100.0},
+    {"vendor": "Acme Corp", "total": 100.0},
+    {"vendor": "Acme Corporation", "total": 102.0}
+  ],
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "vendor": {"type": "string"},
+      "total": {"type": "number"}
+    }
+  }
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "consensus": {
+    "vendor": "Acme Corp",
+    "total": 100.67
+  },
+  "likelihoods": {
+    "vendor": 0.6667,
+    "total": 1.0
+  },
+  "fields": [
+    {
+      "path": "total",
+      "value": 100.67,
+      "likelihood": 1.0,
+      "supporting_input_count": 0,
+      "total_input_count": 3
+    },
+    {
+      "path": "vendor",
+      "value": "Acme Corp",
+      "likelihood": 0.6667,
+      "supporting_input_count": 2,
+      "total_input_count": 3
+    }
+  ],
+  "alignment": null
+}
+```
+
+</ResponseExample>

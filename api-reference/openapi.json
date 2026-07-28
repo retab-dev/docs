@@ -365,6 +365,53 @@
         ]
       }
     },
+    "/v1/consensus": {
+      "post": {
+        "description": "Reconcile several objects into one.\n\nTakes a list of `inputs` that describe the same thing — typically the outputs of\nrepeated extractions — and returns a single `consensus` object plus a `likelihoods`\nmap giving the agreement score for every leaf path.\n\nInputs are always aligned before the vote, so items in a list are matched across\ninputs by content rather than by position; a reordered or partially-omitted array\nstill reconciles correctly. Supply `json_schema` when you have one: it makes numeric\nfields reconcile by declared type — `integer` votes on the exact value, `number`\nclusters and averages — instead of inferring the kind from the values present. Set\n`include_alignment` to also receive the canonical path mapping.",
+        "operationId": "create_consensus",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConsensusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create Consensus",
+        "tags": [
+          "consensus"
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/v1/edits": {
       "post": {
         "description": "Create an edit.\n\nFills the form fields of a document according to `instructions` and renders\nthe values into a PDF. Provide exactly one of `document` (a PDF, DOCX, XLSX,\nor PPTX) or `template_id` (an existing edit template) — supplying both or\nneither responds with `400`. Returns the created edit with the filled form\ndata and rendered document; responds with `201`.",
@@ -13411,6 +13458,41 @@
         "title": "CreateClassificationRequest",
         "description": "Public create-classification request body."
       },
+      "CreateConsensusRequest": {
+        "properties": {
+          "include_alignment": {
+            "type": "boolean",
+            "title": "Include Alignment"
+          },
+          "inputs": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputs"
+          },
+          "json_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Json Schema",
+            "default": {}
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "inputs"
+        ],
+        "title": "CreateConsensusRequest"
+      },
       "CreateEditRequest": {
         "properties": {
           "instructions": {
@@ -19349,6 +19431,158 @@
         "type": "object",
         "title": "QueuedWorkflowExperimentRun",
         "description": "The experiment run is enqueued and waiting for a worker."
+      },
+      "ReconciliationAlignment": {
+        "properties": {
+          "aligned_inputs": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aligned Inputs"
+          },
+          "path_alignments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReconciliationPathAlignment"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path Alignments"
+          },
+          "reference_index": {
+            "type": "integer",
+            "title": "Reference Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "aligned_inputs",
+          "path_alignments",
+          "reference_index"
+        ],
+        "title": "ReconciliationAlignment"
+      },
+      "ReconciliationField": {
+        "properties": {
+          "likelihood": {
+            "type": "number",
+            "title": "Likelihood"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "supporting_input_count": {
+            "type": "integer",
+            "title": "Supporting Input Count"
+          },
+          "total_input_count": {
+            "type": "integer",
+            "title": "Total Input Count"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "likelihood",
+          "path",
+          "supporting_input_count",
+          "total_input_count",
+          "value"
+        ],
+        "title": "ReconciliationField"
+      },
+      "ReconciliationPathAlignment": {
+        "properties": {
+          "canonical_path": {
+            "type": "string",
+            "title": "Canonical Path"
+          },
+          "source_paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Paths"
+          }
+        },
+        "type": "object",
+        "required": [
+          "canonical_path",
+          "source_paths"
+        ],
+        "title": "ReconciliationPathAlignment"
+      },
+      "ReconciliationResult": {
+        "properties": {
+          "alignment": {
+            "$ref": "#/components/schemas/ReconciliationAlignment"
+          },
+          "consensus": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Consensus"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReconciliationField"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "likelihoods": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Likelihoods"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alignment",
+          "consensus",
+          "fields",
+          "likelihoods"
+        ],
+        "title": "ReconciliationResult"
       },
       "ReconstructDocumentRef": {
         "properties": {
