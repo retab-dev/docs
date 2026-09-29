@@ -5,7 +5,13 @@ openapi: "GET /v1/workflows/steps"
 
 Retrieve persisted workflow step documents. Pass `run_id` when you want the complete set of steps for one run, or combine filters such as `block_id`, `step_id`, `block_type`, and `status` to inspect a narrower set.
 
-Returns the canonical `{ "data": [...], "list_metadata": { "before": null, "after": null } }` pagination envelope shared with all Retab list endpoints. Cursor pagination is not yet implemented for this endpoint — `list_metadata` is always `{ before: null, after: null }`. When `run_id` is omitted, the response is organization-scoped and bounded by `limit` with a default of 200 rows.
+Returns the canonical `{ "data": [...], "list_metadata": { "before": null, "after": null } }` pagination envelope shared with all Retab list endpoints. Steps are sorted by `started_at` with `step_id` as the tiebreaker; pass the `after` cursor from `list_metadata` for the next page (or `before` for the previous one). `limit` defaults to 20 and accepts up to 1000. When `run_id` is omitted, the response is organization-scoped.
+
+Pass `include_download_urls=true` to get the documents a run produced: every
+`file` payload in `handle_outputs` — each PDF a Split block emitted, an Edit
+block's filled document — then also carries a signed `download_url` (valid 30
+minutes) and its `expires_at`. See
+[Download the documents a run produced](/workflows/Workflows#download-the-documents-a-run-produced).
 
 Steps include an `artifact` ref when the block produced a persisted record.
 Use [List Artifacts](/api-reference/workflows/artifacts/list) with `step_id` to
@@ -18,7 +24,7 @@ from retab import Retab
 
 client = Retab()
 
-steps = client.workflows.steps.list("run_abc123xyz")
+steps = client.workflows.steps.list(run_id="run_abc123xyz", include_download_urls=True)
 
 for step in steps.data:
     print(step.block_id, step.lifecycle.status, step.artifact)
@@ -29,7 +35,10 @@ import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
-const steps = await client.workflows.steps.list({ runId: "run_abc123xyz" });
+const steps = await client.workflows.steps.list({
+  runId: "run_abc123xyz",
+  includeDownloadUrls: true,
+});
 
 for (const step of steps.data) {
   console.log(step.blockId, step.lifecycle.status, step.artifact);
@@ -58,7 +67,8 @@ func main() {
 	}
 
 	steps, err := client.Workflows.Steps.List(ctx, &retab.WorkflowStepsListParams{
-		RunID: ptr("run_abc123xyz"),
+		RunID:               ptr("run_abc123xyz"),
+		IncludeDownloadURLs: ptr(true),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -75,7 +85,7 @@ require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
 
-steps = client.workflows.steps.list(run_id: 'run_abc123xyz')
+steps = client.workflows.steps.list(run_id: 'run_abc123xyz', include_download_urls: true)
 
 steps.data.each do |step|
   puts "#{step.block_id} #{step.lifecycle.status} #{step.artifact}"
@@ -94,6 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .workflows().steps()
         .list(ListParams {
             run_id: Some("run_abc123xyz".into()),
+            include_download_urls: Some(true),
             ..Default::default()
         })
         .await?;
@@ -113,7 +124,10 @@ use Retab\Client;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
 
-$result = $client->workflows()->steps()->list();
+$result = $client->workflows()->steps()->list(
+    runId: 'run_abc123xyz',
+    includeDownloadUrls: true,
+);
 print_r($result);
 ```
 
@@ -124,7 +138,11 @@ using RetabClient = Retab.Retab;
 var apiKey = Environment.GetEnvironmentVariable("RETAB_API_KEY")!;
 var client = new RetabClient(apiKey);
 
-var result = await client.Workflows.Steps.ListAsync(new WorkflowStepsListOptions());
+var result = await client.Workflows.Steps.ListAsync(new WorkflowStepsListOptions
+{
+    RunId = "run_abc123xyz",
+    IncludeDownloadUrls = true,
+});
 Console.WriteLine(result);
 ```
 
@@ -135,7 +153,7 @@ public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
 
-    var result = client.workflows().steps().list("run_abc123", null, "block_abc123", "step_abc123", null, null, null, null, 10L);
+    var result = client.workflows().steps().list("run_abc123", null, "block_abc123", "step_abc123", null, null, null, null, 10L, true);
     System.out.println(result);
   }
 }
@@ -143,7 +161,7 @@ public final class Example {
 
 ```curl cURL
 curl -X 'GET' \
-  'https://api.retab.com/v1/workflows/steps?run_id=run_abc123xyz' \
+  'https://api.retab.com/v1/workflows/steps?run_id=run_abc123xyz&include_download_urls=true' \
   -H 'Authorization: Bearer <your-api-key>'
 ```
 
@@ -202,7 +220,9 @@ curl -X 'GET' \
             "id": "file_456",
             "filename": "invoice_page_1.pdf",
             "mime_type": "application/pdf"
-          }
+          },
+          "download_url": "https://storage.googleapis.com/retab-documents/org_abc/file/file_456.pdf?X-Goog-Expires=1800&X-Goog-Signature=...",
+          "expires_at": "2026-03-12T09:30:04Z"
         }
       },
       "handle_inputs": {
