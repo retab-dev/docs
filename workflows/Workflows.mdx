@@ -1740,6 +1740,236 @@ or `awaiting_review`.
 The workflow run is the source of truth for execution state and outputs. This is
 enough for many scripts, internal tools, and backend services.
 
+#### Download the documents a run produced
+
+Blocks that produce documents expose them as `file` payloads in the step's
+`handle_outputs`: a Split block emits one PDF per subdocument (for example
+`output-file-invoice`), an Edit block emits the filled document, and a
+Classifier routes the document under its category. Read the steps with
+`include_download_urls` and every file payload also carries a signed
+`download_url` (valid 30 minutes) and its `expires_at`. Once a link has
+expired, pass the payload's `document.id` to
+[Download Link](/api-reference/files/download-link) for a fresh one.
+
+The list examples below read one page of split steps. For larger runs, use
+the `after` cursor from `list_metadata` to request subsequent pages; see
+[List Steps](/api-reference/workflows/steps/list).
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+steps = client.workflows.steps.list(
+    run_id="run_abc123xyz",
+    block_type=["split"],
+    include_download_urls=True,
+)
+
+for step in steps.data:
+    for handle_id, payload in (step.handle_outputs or {}).items():
+        if payload.type == "file" and payload.download_url:
+            print(step.block_label, handle_id, payload.document.filename, payload.download_url)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const steps = await client.workflows.steps.list({
+  runId: "run_abc123xyz",
+  blockType: ["split"],
+  includeDownloadUrls: true,
+});
+
+for (const step of steps.data) {
+  for (const [handleId, payload] of Object.entries(step.handleOutputs ?? {})) {
+    if (payload.type === "file" && payload.downloadUrl) {
+      console.log(step.blockLabel, handleId, payload.document?.filename, payload.downloadUrl);
+    }
+  }
+}
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func ptr[T any](v T) *T { return &v }
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	steps, err := client.Workflows.Steps.List(ctx, &retab.WorkflowStepsListParams{
+		RunID:               ptr("run_abc123xyz"),
+		BlockType:           []string{"split"},
+		IncludeDownloadURLs: ptr(true),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, step := range steps.Data {
+		for handleID, payload := range step.HandleOutputs {
+			if payload != nil && payload.DownloadURL != nil {
+				fmt.Println(step.BlockLabel, handleID, *payload.DownloadURL)
+			}
+		}
+	}
+}
+```
+
+```rust Rust
+use retab::{enums::PublicHandlePayloadType, resources::workflow_steps, Retab};
+
+let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+let steps = client.workflows().steps().list(workflow_steps::ListParams {
+    run_id: Some("run_abc123xyz".to_string()),
+    block_type: Some(vec!["split".to_string()]),
+    include_download_urls: Some(true),
+    ..Default::default()
+}).await?;
+
+for step in steps.data {
+    for (handle_id, payload) in step.handle_outputs.unwrap_or_default() {
+        if payload.type_ == PublicHandlePayloadType::File {
+            if let Some(url) = payload.download_url {
+                println!("{} {} {}", step.block_label, handle_id, url);
+            }
+        }
+    }
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using Retab;
+using RetabClient = Retab.Retab;
+
+var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY")!);
+var steps = await client.Workflows.Steps.ListAsync(new WorkflowStepsListOptions
+{
+    RunId = "run_abc123xyz",
+    BlockType = new List<string> { "split" },
+    IncludeDownloadUrls = true,
+});
+
+foreach (var step in steps.Data)
+{
+    foreach (var entry in step.HandleOutputs ?? new Dictionary<string, PublicHandlePayload>())
+    {
+        if (entry.Value.Type == PublicHandlePayloadType.File && entry.Value.DownloadUrl is string url)
+        {
+            Console.WriteLine($"{step.BlockLabel} {entry.Key} {url}");
+        }
+    }
+}
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\PublicHandlePayload;
+use Retab\Resource\PublicHandlePayloadType;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+$steps = $client->workflows()->steps()->list(
+    runId: 'run_abc123xyz',
+    blockType: ['split'],
+    includeDownloadUrls: true,
+);
+
+foreach ($steps->data as $step) {
+    foreach ($step->handleOutputs ?? [] as $handleId => $data) {
+        $payload = PublicHandlePayload::fromArray($data);
+        if ($payload->type === PublicHandlePayloadType::File && $payload->downloadUrl !== null) {
+            echo $step->blockLabel . ' ' . $handleId . ' ' . $payload->downloadUrl . PHP_EOL;
+        }
+    }
+}
+```
+
+```ruby Ruby
+require "retab"
+
+client = Retab::Client.new(api_key: ENV.fetch("RETAB_API_KEY"))
+steps = client.workflows.steps.list(
+  run_id: "run_abc123xyz",
+  block_type: ["split"],
+  include_download_urls: true
+)
+
+steps.data.each do |step|
+  (step.handle_outputs || {}).each do |handle_id, data|
+    payload = Retab::PublicHandlePayload.new(data)
+    if payload.type == "file" && payload.download_url
+      puts "#{step.block_label} #{handle_id} #{payload.download_url}"
+    end
+  end
+end
+```
+
+```java Java
+import com.retab.RetabClient;
+import com.retab.types.PublicHandlePayloadType;
+import java.util.List;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+    var steps = client.workflows().steps().list(
+        "run_abc123xyz", null, null, null, List.of("split"), null, null, null, null, true);
+
+    for (var step : steps) {
+      if (step.getHandleOutputs() == null) continue;
+      for (var entry : step.getHandleOutputs().entrySet()) {
+        var payload = entry.getValue();
+        if (payload.getType() == PublicHandlePayloadType.FILE && payload.getDownloadUrl() != null) {
+          System.out.println(step.getBlockLabel() + " " + entry.getKey() + " " + payload.getDownloadUrl());
+        }
+      }
+    }
+  }
+}
+```
+
+```sh CLI
+# Files from one page of a run's split steps, as "<handle> <url>" lines
+retab workflows steps list run_abc123xyz --include-download-urls \
+  | jq -r '.data[] | select(.block_type == "split") | .handle_outputs | to_entries[]
+      | select(.value.type == "file") | "\(.key) \(.value.download_url)"'
+
+# One step, saving each document next to you
+retab workflows steps get run_abc123xyz_block_split1 --include-download-urls \
+  | jq -r '.handle_outputs | to_entries[] | select(.value.type == "file")
+      | "\(.key) \(.value.download_url)"' \
+  | while read -r handle url; do curl -sSo "${handle#output-file-}.pdf" "$url"; done
+```
+
+```curl cURL
+curl -X 'GET' \
+  'https://api.retab.com/v1/workflows/steps?run_id=run_abc123xyz&block_type=split&include_download_urls=true' \
+  -H 'Authorization: Bearer <your-api-key>'
+```
+</CodeGroup>
+
 ## Workflow Execution Order
 
 Workflows execute in **topological order** based on the block connections:
