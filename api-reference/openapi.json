@@ -1603,6 +1603,54 @@
               "type": "string",
               "title": "Extraction Id"
             }
+          },
+          {
+            "description": "Opt into progressive sources for this mode. Omit to retain the legacy synchronous response.",
+            "in": "query",
+            "name": "mode",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "located",
+                    "cited"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opt into progressive sources for this mode. Omit to retain the legacy synchronous response.",
+              "title": "Mode"
+            },
+            "required": false
+          },
+          {
+            "description": "Expected job identity returned by POST. A changed extraction returns 409.",
+            "in": "query",
+            "name": "job_id",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Expected job identity returned by POST. A changed extraction returns 409.",
+              "title": "Job Id"
+            },
+            "required": false
+          },
+          {
+            "in": "header",
+            "name": "If-None-Match",
+            "schema": {
+              "type": "string",
+              "title": "If-None-Match"
+            }
           }
         ],
         "responses": {
@@ -1612,6 +1660,33 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExtractionSources"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }
@@ -1628,6 +1703,179 @@
           }
         },
         "summary": "Get Extraction Sources",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "tags": [
+          "Extractions"
+        ]
+      },
+      "post": {
+        "description": "Create or join a durable sources computation. Located finds printed answers; cited also seeks supporting inputs. Background requests return immediately; synchronous requests wait up to 20 seconds before returning 202 with a version-pinned Location. Repeated requests reuse work and never bill twice. Processing completion does not guarantee evidence for every field. A cited request during a located-only computation returns 409; retry after that computation finishes.",
+        "operationId": "create_extraction_sources",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "extraction_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Extraction Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSourcesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Requested computation is terminal; inspect job.status and evidence.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionSources"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionSources"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create Extraction Sources",
         "security": [
           {
             "HTTPBearer": []
@@ -4184,6 +4432,7 @@
     },
     "/v1/usage/blocks": {
       "get": {
+        "description": "One row per workflow block with its credits, pages, runs and executions. An extract block's `execution_count` and `status_counts` include the cited sources pass of each extraction it made in an organization that uses cited sources (billed once per extraction; see Pricing), and its `credits` include their cost; its `page_count` counts each document once.",
         "operationId": "list_usage_blocks",
         "parameters": [
           {
@@ -4573,7 +4822,7 @@
             "required": false
           },
           {
-            "description": "Filter by operation: extraction, classify, split, parse, edit, partition, schema_generation, or consensus. The stored-kind aliases extract and classification are also accepted. An unknown value is rejected with 422.",
+            "description": "Filter by operation: extraction, classify, split, parse, edit, partition, schema_generation, consensus, or cited_sources. The stored-kind aliases extract, classification and cite are also accepted. An unknown value is rejected with 422.",
             "in": "query",
             "name": "operation",
             "schema": {
@@ -4585,7 +4834,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by operation: extraction, classify, split, parse, edit, partition, schema_generation, or consensus. The stored-kind aliases extract and classification are also accepted. An unknown value is rejected with 422.",
+              "description": "Filter by operation: extraction, classify, split, parse, edit, partition, schema_generation, consensus, or cited_sources. The stored-kind aliases extract, classification and cite are also accepted. An unknown value is rejected with 422.",
               "title": "Operation"
             },
             "required": false
@@ -13856,6 +14105,10 @@
             "title": "Deep Extraction",
             "description": "Optimizes for accuracy over latency in documents with very large arrays.",
             "default": false
+          },
+          "sources": {
+            "$ref": "#/components/schemas/SourcesOptions",
+            "description": "Automatic sources policy. Omit to inherit the organization default; located prevents automatic paid citations."
           }
         },
         "type": "object",
@@ -14149,6 +14402,37 @@
           "value"
         ],
         "title": "CreateSecretRequest"
+      },
+      "CreateSourcesRequest": {
+        "properties": {
+          "background": {
+            "type": "boolean",
+            "title": "Background",
+            "description": "Return immediately when true. Otherwise wait up to 20 seconds, then return 202 with Location while the same durable job continues.",
+            "default": false
+          },
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "Optional expected sources job identity. Returns 409 if the extraction changed."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "located",
+              "cited"
+            ],
+            "title": "Mode",
+            "default": "located"
+          },
+          "retry": {
+            "type": "boolean",
+            "title": "Retry",
+            "description": "Retry a terminal failed or incomplete computation. Concurrent requests join the current attempt; billing remains once per extraction."
+          }
+        },
+        "type": "object",
+        "title": "CreateSourcesRequest"
       },
       "CreateSplitRequest": {
         "properties": {
@@ -14564,6 +14848,10 @@
             ],
             "title": "Metadata",
             "description": "User-defined metadata to associate with this workflow run."
+          },
+          "sources": {
+            "$ref": "#/components/schemas/SourcesOptions",
+            "description": "Automatic source policy for extractions created by this run. Located prevents automatic paid citations."
           }
         },
         "type": "object",
@@ -16091,6 +16379,141 @@
         ],
         "title": "EvalRunTrigger"
       },
+      "EvidenceAnchor": {
+        "properties": {
+          "char_end": {
+            "type": "integer",
+            "title": "Char End"
+          },
+          "char_start": {
+            "type": "integer",
+            "title": "Char Start"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Column"
+          },
+          "coordinate": {
+            "type": "string",
+            "title": "Coordinate"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "pdf_bbox",
+              "image_bbox",
+              "text_span",
+              "spreadsheet_cell",
+              "csv_cell",
+              "docx_text_span",
+              "docx_table_cell"
+            ],
+            "title": "Kind"
+          },
+          "left": {
+            "type": "number",
+            "title": "Left"
+          },
+          "line_end": {
+            "type": "integer",
+            "title": "Line End"
+          },
+          "line_start": {
+            "type": "integer",
+            "title": "Line Start"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "paragraph": {
+            "type": "integer",
+            "title": "Paragraph"
+          },
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "sheet_index": {
+            "type": "integer",
+            "title": "Sheet Index"
+          },
+          "sheet_name": {
+            "type": "string",
+            "title": "Sheet Name"
+          },
+          "table": {
+            "type": "integer",
+            "title": "Table"
+          },
+          "top": {
+            "type": "number",
+            "title": "Top"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "EvidenceAnchor"
+      },
+      "EvidenceSource": {
+        "properties": {
+          "anchor": {
+            "$ref": "#/components/schemas/EvidenceAnchor"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "file_id": {
+            "type": "string",
+            "title": "File Id"
+          },
+          "qualification": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "partial",
+              "legacy"
+            ],
+            "title": "Qualification"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "answer",
+              "input",
+              "comparison"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "anchor",
+          "content",
+          "file_id",
+          "qualification",
+          "role"
+        ],
+        "title": "EvidenceSource"
+      },
       "ExistsCondition": {
         "properties": {
           "kind": {
@@ -17304,6 +17727,17 @@
             "type": "object",
             "title": "Sources",
             "description": "Same shape as extraction but leaves are {value, source} objects. Non-null source entries include file_id."
+          },
+          "evidence": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SourcesFieldEvidence"
+            },
+            "type": "object",
+            "title": "Evidence",
+            "default": {}
+          },
+          "job": {
+            "$ref": "#/components/schemas/SourcesJob"
           }
         },
         "type": "object",
@@ -20935,6 +21369,153 @@
         ],
         "title": "SkippedStepLifecycle",
         "description": "The step was skipped."
+      },
+      "SourcesFieldEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "supporting",
+              "unavailable"
+            ],
+            "title": "Kind"
+          },
+          "sources": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EvidenceSource"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sources",
+            "description": "Printed answer locations and supporting inputs. Supporting evidence does not establish that an inferred answer is correct."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "matched",
+              "partial",
+              "missing",
+              "ambiguous",
+              "unsupported",
+              "error"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "sources",
+          "status"
+        ],
+        "title": "SourcesFieldEvidence"
+      },
+      "SourcesJob": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/SourcesJobError"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "is_partial": {
+            "type": "boolean",
+            "title": "Is Partial",
+            "description": "Processing stopped before all requested work finished. A missing match alone is not a processing failure."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "located",
+              "cited"
+            ],
+            "title": "Mode"
+          },
+          "object": {
+            "type": "string",
+            "const": "extraction.sources.job",
+            "title": "Object"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "is_partial",
+          "mode",
+          "object",
+          "revision",
+          "status",
+          "updated_at"
+        ],
+        "title": "SourcesJob"
+      },
+      "SourcesJobError": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "is_retryable": {
+            "type": "boolean",
+            "title": "Is Retryable"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "is_retryable",
+          "message"
+        ],
+        "title": "SourcesJobError"
+      },
+      "SourcesOptions": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "located",
+              "cited"
+            ],
+            "title": "Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "title": "SourcesOptions"
       },
       "Split": {
         "properties": {

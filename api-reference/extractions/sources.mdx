@@ -3,6 +3,34 @@ title: "Get Sources"
 openapi: "GET /v1/extractions/{extraction_id}/sources"
 ---
 
+Call without query parameters to keep the original synchronous response.
+
+For durable computation, first [create sources](/api-reference/extractions/create-sources),
+then poll this endpoint with `mode=located` or `mode=cited`. Follow the returned
+`Location`, including `job_id`, to pin polling to the extraction output and schema.
+A changed extraction returns `409` instead of silently switching results. Polling
+never starts a new computation or upgrades a located request to paid citations.
+A mode that has not been requested returns `404`.
+
+The progressive response adds `job` and `evidence`. Job status describes processing:
+`pending`, `running`, `completed`, or `error`. **Completed does not mean every
+field has a match.** Inspect each field's evidence status. Available locations remain
+usable while the job runs. Located results complete independently of citation work.
+
+`evidence` is keyed by dotted extraction paths, including array indexes (`items.0.price`).
+Each field has a `kind` (`direct`, `supporting`, or `unavailable`), a `status`, and a list
+of sources. A source has `content`, `file_id`, a format-specific `anchor`, a role
+(`answer`, `input`, or `comparison`), and a qualification (`direct`, `partial`, or `legacy`).
+Supporting evidence identifies inputs; it does not verify an inferred answer.
+Missing, ambiguous, unsupported, and errored matches are distinct field outcomes.
+
+`job.is_partial` and `job.error` describe incomplete processing. A missing match alone
+is not an error. The original `sources` tree remains available for existing highlight
+renderers; `evidence` can carry multiple locations per field.
+
+Progressive reads return an `ETag`. Send it in `If-None-Match` to receive `304` when the
+snapshot has not changed. Use the same mode and `job_id` when polling.
+
 <RequestExample>
 
 ```python Python

@@ -1,0 +1,161 @@
+---
+title: "Create Sources"
+openapi: "POST /v1/extractions/{extraction_id}/sources"
+---
+
+Start or join a durable sources job for a completed extraction. The job belongs to
+the extraction's output, schema, and file version. Repeated requests reuse current
+work. Disconnecting from the request does not cancel the job.
+
+<RequestExample>
+
+```python Python
+from retab import Retab
+
+client = Retab()
+result = client.extractions.create_extraction_source(
+    "extr_123", mode="located", background=True
+)
+print(result.job)
+```
+
+```typescript TypeScript
+import { Retab } from "@retab/node";
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+const result = await client.extractions.create_extraction_source(
+  "extr_123", true, undefined, "located"
+);
+console.log(result.job);
+```
+
+```go Go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+    client, err := retab.NewClient("")
+    if err != nil { log.Fatal(err) }
+    background := true
+    mode := retab.CreateSourcesRequestModeLocated
+    result, err := client.Extractions.CreateSource(context.Background(), "extr_123",
+        &retab.ExtractionsCreateSourceParams{Background: &background, Mode: &mode})
+    if err != nil { log.Fatal(err) }
+    fmt.Println(result.Job)
+}
+```
+
+```java Java
+import com.retab.RetabClient;
+import com.retab.models.CreateSourcesRequest;
+import com.retab.types.CreateSourcesRequestMode;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+    var result = client.extractions().createSource("extr_123",
+        new CreateSourcesRequest(true, null, CreateSourcesRequestMode.LOCATED, false));
+    System.out.println(result.getJob());
+  }
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+result = client.extractions.create_extraction_source(
+  extraction_id: 'extr_123', mode: 'located', background: true
+)
+puts result
+```
+
+```rust Rust
+use retab::{Retab, enums::CreateSourcesRequestMode, models::CreateSourcesRequest};
+use retab::resources::extractions::CreateExtractionSourceParams;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+    let result = client.extractions().create_extraction_source("extr_123",
+        CreateExtractionSourceParams::new(CreateSourcesRequest {
+            mode: Some(CreateSourcesRequestMode::Located),
+            background: Some(true),
+            ..Default::default()
+        })).await?;
+    println!("{:?}", result.job);
+    Ok(())
+}
+```
+
+```csharp C#
+using Retab;
+using RetabClient = Retab.Retab;
+
+var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY")!);
+var result = await client.Extractions.CreateSourceAsync("extr_123",
+    new ExtractionsCreateSourceOptions {
+        Mode = CreateSourcesRequestMode.Located, Background = true
+    });
+Console.WriteLine(result.Job);
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+use Retab\Resource\SourceJobMode;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+$result = $client->extractions()->createExtractionSource(
+    extractionId: 'extr_123', background: true, mode: SourceJobMode::Located,
+);
+print_r($result);
+```
+
+```curl cURL
+curl -X POST 'https://api.retab.com/v1/extractions/extr_123/sources' \
+  -H "Authorization: Bearer $RETAB_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"mode":"located","background":true}'
+```
+
+</RequestExample>
+
+- `located` finds printed answers without paid citation calls. It supports the
+  existing PDF, image, CSV, spreadsheet, Word, and text source formats.
+- `cited` also searches for supporting inputs for inferred answers. It supports PDF
+  and images, is subject to citation availability and plan limits, and uses existing
+  citation billing. Retries do not bill the extraction a second time.
+
+With `background: true`, an unfinished job returns `202` immediately. Otherwise the
+request waits up to 20 seconds; unfinished work then returns `202` and continues on
+the server. Terminal snapshots return `200`. Follow `Location` to poll, respecting
+`Retry-After`. Both responses contain the extraction, available sources, field
+evidence, and the job lifecycle described by [Get Sources](/api-reference/extractions/sources).
+
+An explicit `job_id` guards a create or retry against an extraction edit. A mismatch
+returns `409`. Located and cited have distinct identities. A located request can use
+the first snapshot of a cited job; a cited request while a located-only job is running
+returns `409`. Retry that cited request after the located job finishes.
+
+Set `retry: true` to retry terminal failed or incomplete work. Concurrent requests
+join the active attempt. Processing limits may prevent further citation work; inspect
+`job.error.is_retryable`. Available evidence is retained on failure.
+
+To prevent automatic citations when creating an extraction or workflow run, include
+`"sources": {"mode": "located"}` in the creation request. Omit it to inherit the
+organization policy. `"sources": {"mode": "cited"}` requests automatic citations,
+subject to deployment policy. A later explicit sources request can still request
+cited evidence after a located extraction.
+
+Processing completion does not guarantee that all fields have matches. An unavailable
+source is not evidence that an extracted value is correct or incorrect.
