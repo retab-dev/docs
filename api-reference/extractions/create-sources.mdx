@@ -7,13 +7,18 @@ Start or join a durable sources job for a completed extraction. The job belongs 
 the extraction's output, schema, and file version. Repeated requests reuse current
 work. Disconnecting from the request does not cancel the job.
 
+Sources are a nested SDK resource: use `client.extractions.sources.create(...)`
+to start work and `client.extractions.sources.get(...)` to read it. These replace
+the previous flat `create_extraction_source(...)` and `sources(...)` SDK methods;
+the HTTP paths and request/response fields are unchanged.
+
 <RequestExample>
 
 ```python Python
 from retab import Retab
 
 client = Retab()
-result = client.extractions.create_extraction_source(
+result = client.extractions.sources.create(
     "extr_123", mode="located", background=True
 )
 print(result.job)
@@ -23,7 +28,7 @@ print(result.job)
 import { Retab } from "@retab/node";
 
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
-const result = await client.extractions.create_extraction_source(
+const result = await client.extractions.sources.create(
   "extr_123", true, undefined, "located"
 );
 console.log(result.job);
@@ -45,8 +50,8 @@ func main() {
     if err != nil { log.Fatal(err) }
     background := true
     mode := retab.CreateSourcesRequestModeLocated
-    result, err := client.Extractions.CreateSource(context.Background(), "extr_123",
-        &retab.ExtractionsCreateSourceParams{Background: &background, Mode: &mode})
+    result, err := client.Extractions.Sources.Create(context.Background(), "extr_123",
+        &retab.ExtractionSourcesCreateParams{Background: &background, Mode: &mode})
     if err != nil { log.Fatal(err) }
     fmt.Println(result.Job)
 }
@@ -60,7 +65,7 @@ import com.retab.types.CreateSourcesRequestMode;
 public final class Example {
   public static void main(String[] args) throws Exception {
     RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
-    var result = client.extractions().createSource("extr_123",
+    var result = client.extractions().sources().create("extr_123",
         new CreateSourcesRequest(true, null, CreateSourcesRequestMode.LOCATED, false));
     System.out.println(result.getJob());
   }
@@ -71,7 +76,7 @@ public final class Example {
 require 'retab'
 
 client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
-result = client.extractions.create_extraction_source(
+result = client.extractions.sources.create(
   extraction_id: 'extr_123', mode: 'located', background: true
 )
 puts result
@@ -79,13 +84,13 @@ puts result
 
 ```rust Rust
 use retab::{Retab, enums::CreateSourcesRequestMode, models::CreateSourcesRequest};
-use retab::resources::extractions::CreateExtractionSourceParams;
+use retab::resources::extraction_sources::CreateParams;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Retab::new(std::env::var("RETAB_API_KEY")?);
-    let result = client.extractions().create_extraction_source("extr_123",
-        CreateExtractionSourceParams::new(CreateSourcesRequest {
+    let result = client.extractions().sources().create("extr_123",
+        CreateParams::new(CreateSourcesRequest {
             mode: Some(CreateSourcesRequestMode::Located),
             background: Some(true),
             ..Default::default()
@@ -100,8 +105,8 @@ using Retab;
 using RetabClient = Retab.Retab;
 
 var client = new RetabClient(Environment.GetEnvironmentVariable("RETAB_API_KEY")!);
-var result = await client.Extractions.CreateSourceAsync("extr_123",
-    new ExtractionsCreateSourceOptions {
+var result = await client.Extractions.Sources.CreateAsync("extr_123",
+    new ExtractionSourcesCreateOptions {
         Mode = CreateSourcesRequestMode.Located, Background = true
     });
 Console.WriteLine(result.Job);
@@ -115,7 +120,7 @@ use Retab\Client;
 use Retab\Resource\SourceJobMode;
 
 $client = new Client(apiKey: getenv('RETAB_API_KEY'));
-$result = $client->extractions()->createExtractionSource(
+$result = $client->extractions()->sources()->create(
     extractionId: 'extr_123', background: true, mode: SourceJobMode::Located,
 );
 print_r($result);
