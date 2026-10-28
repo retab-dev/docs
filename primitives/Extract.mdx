@@ -83,6 +83,25 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
   Free-form instructions appended to the system prompt to steer the extraction.
 </ParamField>
 
+<ParamField body="deep_extraction" type="boolean" default="false">
+  Optimizes for accuracy over latency in documents with very large arrays. A
+  spreadsheet (xlsx or CSV) is instead extracted in fixed 50-row windows, which
+  runs synchronously only: no `background`, no streaming.
+</ParamField>
+
+<ParamField body="agentic_extraction" type="boolean" default="false">
+  Agentic extraction for long PDFs with large repeated arrays: an agent reads the
+  document, writes and runs extraction code in a sandbox, and submits an output
+  checked against your schema. Implies `deep_extraction`. Requires `model`
+  `retab-large`, a PDF document, `n_consensus` 1, no streaming, and no
+  `instructions` or `additional_messages`. Runs take minutes, so `background=true`
+  is recommended. Billed the same credits as `retab-large` deep extraction. Runs
+  the standard deep extraction instead where agentic extraction is not
+  available, for documents under 15 pages, scanned pages, schemas without a
+  top-level list of objects, or when it cannot finish. See
+  [Long documents: deep and agentic extraction](#long-documents-deep-and-agentic-extraction).
+</ParamField>
+
   </Expandable>
 </ParamField>
 
@@ -1146,6 +1165,488 @@ Common anchor types:
 - `text_span`: line and character offsets in plain text
 
 If a field cannot be sourced, Retab still returns the value and sets `source` to `null`.
+
+## Long documents: deep and agentic extraction
+
+A default extraction reads the document in one pass. On long documents with very
+large arrays (statements, ledgers, invoices with hundreds of line items) one pass
+can miss rows. Two request fields trade latency for completeness:
+
+| Field | Use it when | Works with |
+| --- | --- | --- |
+| _(neither)_ | Most documents. Fastest. | Every document type and model |
+| `deep_extraction: true` | A document has very large arrays and a single pass misses rows. | Every document type. A spreadsheet (xlsx or CSV) is extracted in fixed 50-row windows, synchronously only. |
+| `agentic_extraction: true` | A long PDF has large repeated arrays and you need every row. An agent reads the document, writes and runs extraction code in a sandbox, and submits an output checked against your schema. | PDFs, with `model` `retab-large` and `n_consensus` 1 |
+
+`agentic_extraction` implies `deep_extraction`: you do not need to set both.
+
+**What to expect from `agentic_extraction`:**
+
+- **Time.** Runs take minutes. Send `background=true` and poll (example below).
+- **Credits.** The same credits as `retab-large` deep extraction (see
+  [Pricing](/core-concepts/Pricing)), whether the agent finishes or the request
+  falls back.
+- **Fallback.** When agentic extraction does not apply, the request runs the
+  standard deep extraction instead, with the same response shape: documents
+  under 15 pages, scanned pages, schemas without a top-level list of objects,
+  when agentic extraction is unavailable, or when it cannot finish.
+- **Schema.** Put the repeated rows in a top-level array of objects, for example
+  `transactions: [{date, description, amount}]`.
+
+**Validation errors.** These checks run in this order. The first one that fails
+returns HTTP `422` with a body `{"detail": "<message>"}`, before any work starts
+and before anything is billed:
+
+| Request | `detail` |
+| --- | --- |
+| Agentic extraction is not enabled for your organization | `agentic_extraction is not enabled for this organization` |
+| `model` is not `retab-large` (an omitted `model` is `retab-small`) | `agentic_extraction requires model "retab-large"` |
+| `n_consensus` is above 1 | `agentic_extraction requires n_consensus 1` |
+| `stream=true`, or the `/v1/extractions/stream` route | `agentic_extraction does not support streaming; send stream=false (background=true is recommended for long documents)` |
+| Non-blank `instructions`, or any `additional_messages` | `agentic_extraction does not support instructions or additional_messages yet` |
+| The document is not a PDF (an image, a spreadsheet, a text file) | `agentic_extraction supports PDF documents only` |
+
+The last check also runs before a `background=true` request is queued, so you get
+the `422` instead of a `202`.
+
+<CodeGroup>
+```python Python
+from retab import Retab
+
+client = Retab()
+
+extraction = client.extractions.create(
+    document="statements/bank_statement.pdf",
+    model="retab-large",
+    json_schema={
+        "type": "object",
+        "properties": {
+            "transactions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "date": {"type": "string", "description": "Transaction date in ISO 8601 format."},
+                        "description": {"type": "string"},
+                        "amount": {"type": "number"},
+                    },
+                    "required": ["date", "description", "amount"],
+                },
+            },
+        },
+        "required": ["transactions"],
+    },
+    n_consensus=1,  # agentic extraction requires n_consensus 1
+    agentic_extraction=True,  # implies deep_extraction
+)
+
+print(extraction.output)
+print(extraction.id)
+```
+
+```typescript TypeScript
+import { Retab } from '@retab/node';
+
+const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
+
+const extraction = await client.extractions.create(
+  'statements/bank_statement.pdf',
+  {
+    type: 'object',
+    properties: {
+      transactions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            date: { type: 'string', description: 'Transaction date in ISO 8601 format.' },
+            description: { type: 'string' },
+            amount: { type: 'number' },
+          },
+          required: ['date', 'description', 'amount'],
+        },
+      },
+    },
+    required: ['transactions'],
+  },
+  'retab-large',
+  undefined, // instructions: not supported with agentic extraction
+  1, // n_consensus: must be 1
+  undefined, // metadata
+  undefined, // additional_messages: not supported with agentic extraction
+  undefined, // bust_cache
+  false, // stream: not supported with agentic extraction
+  undefined, // background
+  undefined, // deep_extraction: implied by agentic_extraction
+  undefined, // sources
+  true // agentic_extraction
+);
+
+console.log(extraction.output);
+console.log(extraction.id);
+```
+
+```go Go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	retab "github.com/retab-dev/retab/clients/go"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := retab.NewClient("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	model := "retab-large"
+	nConsensus := 1
+	agentic := true
+	extraction, err := client.Extractions.Create(ctx, &retab.ExtractionsCreateParams{
+		Document: "statements/bank_statement.pdf",
+		Model:    &model,
+		JSONSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"transactions": map[string]any{
+					"type": "array",
+					"items": map[string]any{
+						"type": "object",
+						"properties": map[string]any{
+							"date":        map[string]any{"type": "string", "description": "Transaction date in ISO 8601 format."},
+							"description": map[string]any{"type": "string"},
+							"amount":      map[string]any{"type": "number"},
+						},
+						"required": []string{"date", "description", "amount"},
+					},
+				},
+			},
+			"required": []string{"transactions"},
+		},
+		NConsensus:        &nConsensus, // agentic extraction requires n_consensus 1
+		AgenticExtraction: &agentic,    // implies deep_extraction
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(extraction.Output)
+	fmt.Println(extraction.ID)
+}
+```
+
+```ruby Ruby
+require 'retab'
+
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+
+extraction = client.extractions.create(
+  document: 'statements/bank_statement.pdf',
+  model: 'retab-large',
+  json_schema: {
+    'type' => 'object',
+    'properties' => {
+      'transactions' => {
+        'type' => 'array',
+        'items' => {
+          'type' => 'object',
+          'properties' => {
+            'date' => { 'type' => 'string', 'description' => 'Transaction date in ISO 8601 format.' },
+            'description' => { 'type' => 'string' },
+            'amount' => { 'type' => 'number' },
+          },
+          'required' => ['date', 'description', 'amount'],
+        },
+      },
+    },
+    'required' => ['transactions'],
+  },
+  n_consensus: 1, # agentic extraction requires n_consensus 1
+  agentic_extraction: true, # implies deep_extraction
+)
+
+puts extraction.output
+puts extraction.id
+```
+
+```php PHP
+<?php
+require 'vendor/autoload.php';
+
+use Retab\Client;
+
+$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+
+$extraction = $client->extractions()->create(
+    document: 'statements/bank_statement.pdf',
+    jsonSchema: [
+        'type' => 'object',
+        'properties' => [
+            'transactions' => [
+                'type' => 'array',
+                'items' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'date' => ['type' => 'string', 'description' => 'Transaction date in ISO 8601 format.'],
+                        'description' => ['type' => 'string'],
+                        'amount' => ['type' => 'number'],
+                    ],
+                    'required' => ['date', 'description', 'amount'],
+                ],
+            ],
+        ],
+        'required' => ['transactions'],
+    ],
+    model: 'retab-large',
+    nConsensus: 1, // agentic extraction requires n_consensus 1
+    agenticExtraction: true, // implies deep_extraction
+);
+
+print_r($extraction->output);
+echo $extraction->id . PHP_EOL;
+```
+
+```rust Rust
+use retab::resources::extractions::CreateParams;
+use retab::Retab;
+use std::collections::HashMap;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+
+    let json_schema: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
+        "type": "object",
+        "properties": {
+            "transactions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "date": {"type": "string", "description": "Transaction date in ISO 8601 format."},
+                        "description": {"type": "string"},
+                        "amount": {"type": "number"}
+                    },
+                    "required": ["date", "description", "amount"]
+                }
+            }
+        },
+        "required": ["transactions"]
+    }))?;
+
+    let mut params = CreateParams::new("statements/bank_statement.pdf", json_schema);
+    params.body.model = Some("retab-large".into());
+    params.body.n_consensus = Some(1); // agentic extraction requires n_consensus 1
+    params.body.agentic_extraction = Some(true); // implies deep_extraction
+
+    let extraction = client.extractions().create(params).await?;
+
+    println!("{:?}", extraction.output);
+    println!("{}", extraction.id);
+    Ok(())
+}
+```
+
+```csharp C#
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Retab;
+using RetabClient = Retab.Retab;
+
+var client = new RetabClient("YOUR_API_KEY");
+
+var schema = new Dictionary<string, object>
+{
+    ["type"] = "object",
+    ["properties"] = new Dictionary<string, object>
+    {
+        ["transactions"] = new Dictionary<string, object>
+        {
+            ["type"] = "array",
+            ["items"] = new Dictionary<string, object>
+            {
+                ["type"] = "object",
+                ["properties"] = new Dictionary<string, object>
+                {
+                    ["date"] = new Dictionary<string, object>
+                    {
+                        ["type"] = "string",
+                        ["description"] = "Transaction date in ISO 8601 format.",
+                    },
+                    ["description"] = new Dictionary<string, object> { ["type"] = "string" },
+                    ["amount"] = new Dictionary<string, object> { ["type"] = "number" },
+                },
+                ["required"] = new List<string> { "date", "description", "amount" },
+            },
+        },
+    },
+    ["required"] = new List<string> { "transactions" },
+};
+
+var extraction = await client.Extractions.CreateAsync(
+    new ExtractionsCreateOptions
+    {
+        Document = new FileInfo("statements/bank_statement.pdf"),
+        Model = "retab-large",
+        JsonSchema = schema,
+        NConsensus = 1, // agentic extraction requires n_consensus 1
+        AgenticExtraction = true, // implies deep_extraction
+    }
+);
+
+foreach (var kv in extraction.Output)
+{
+    Console.WriteLine($"{kv.Key}: {kv.Value}");
+}
+Console.WriteLine(extraction.Id);
+```
+
+```java Java
+import com.retab.RetabClient;
+import com.retab.models.MimeData;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+
+public final class Example {
+  public static void main(String[] args) throws Exception {
+    RetabClient client = new RetabClient(System.getenv("RETAB_API_KEY"));
+
+    MimeData document = MimeData.fromPath(Path.of("statements/bank_statement.pdf"));
+
+    Map<String, Object> transaction =
+        Map.of(
+            "type", "object",
+            "properties",
+                Map.of(
+                    "date", Map.of("type", "string"),
+                    "description", Map.of("type", "string"),
+                    "amount", Map.of("type", "number")),
+            "required", List.of("date", "description", "amount"));
+    Map<String, Object> jsonSchema =
+        Map.of(
+            "type", "object",
+            "properties", Map.of("transactions", Map.of("type", "array", "items", transaction)),
+            "required", List.of("transactions"));
+
+    var result =
+        client
+            .extractions()
+            .create(
+                document,
+                jsonSchema,
+                "retab-large",
+                null, // instructions: not supported with agentic extraction
+                1L, // n_consensus: must be 1
+                null, // metadata
+                null, // additional_messages: not supported with agentic extraction
+                null, // bust_cache
+                false, // stream: not supported with agentic extraction
+                null, // background
+                null, // deep_extraction: implied by agentic_extraction
+                null, // sources
+                true); // agentic_extraction
+    System.out.println(result);
+  }
+}
+```
+
+```curl cURL
+curl -X POST https://api.retab.com/v1/extractions \
+  -H "Authorization: Bearer $RETAB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document": {
+      "filename": "bank_statement.pdf",
+      "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMSAwIG9iago8PAovVHlwZS…"
+    },
+    "model": "retab-large",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "transactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {"type": "string", "description": "Transaction date in ISO 8601 format."},
+              "description": {"type": "string"},
+              "amount": {"type": "number"}
+            },
+            "required": ["date", "description", "amount"]
+          }
+        }
+      },
+      "required": ["transactions"]
+    },
+    "n_consensus": 1,
+    "agentic_extraction": true
+  }'
+```
+
+</CodeGroup>
+
+### Run it in the background and poll
+
+A long PDF can take several minutes. Start the request with `background=true`:
+the API answers `202` right away with the extraction `id` and a `queued` status.
+Then poll the cheap status-only view (`include_output=false`) until the status is
+`completed`, `failed` or `cancelled`, and fetch the output once. See
+[Background mode](/core-concepts/Background_Mode) for the full lifecycle.
+
+```bash cURL
+# 1. Start the extraction in the background and keep its id.
+EXTRACTION_ID=$(curl -s -X POST https://api.retab.com/v1/extractions \
+  -H "Authorization: Bearer $RETAB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document": {
+      "filename": "bank_statement.pdf",
+      "url": "data:application/pdf;base64,JVBERi0xLjQKJfbk/N8KMSAwIG9iago8PAovVHlwZS…"
+    },
+    "model": "retab-large",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "transactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {"type": "string"},
+              "description": {"type": "string"},
+              "amount": {"type": "number"}
+            }
+          }
+        }
+      }
+    },
+    "agentic_extraction": true,
+    "background": true
+  }' | jq -r '.id')
+
+# 2. Poll the status-only view until the run is terminal.
+while true; do
+  STATUS=$(curl -s "https://api.retab.com/v1/extractions/$EXTRACTION_ID?include_output=false" \
+    -H "Authorization: Bearer $RETAB_API_KEY" | jq -r '.status')
+  echo "status: $STATUS"
+  case "$STATUS" in
+    completed|failed|cancelled) break ;;
+  esac
+  sleep 15
+done
+
+# 3. Fetch the extraction with its output.
+curl -s "https://api.retab.com/v1/extractions/$EXTRACTION_ID" \
+  -H "Authorization: Bearer $RETAB_API_KEY"
+```
 
 ## Managing Saved Extractions
 
