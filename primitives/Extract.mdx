@@ -86,9 +86,12 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
 <ParamField body="deep_extraction" type="boolean" default="false">
   Optimizes for accuracy over latency in documents with very large arrays. A
   spreadsheet (xlsx or CSV) is instead extracted in fixed 50-row windows, which
-  runs synchronously only: no `background`, no streaming. With
-  `agentic_extraction`, a spreadsheet or CSV is not split into windows: it runs
-  as one request and supports `background=true`.
+  runs synchronously only: no `background`, no streaming. A large one can take
+  up to about 40 minutes, longer than the Python SDK's default 30-minute
+  timeout: raise your client's timeout, for example `Retab(timeout=3600)`. With
+  `agentic_extraction`, a spreadsheet or CSV also runs synchronously only: the
+  agent reads it where agentic extraction is available; otherwise, or when the
+  agent does not finish, it runs in the same 50-row windows.
 </ParamField>
 
 <ParamField body="agentic_extraction" type="boolean" default="false">
@@ -98,7 +101,8 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
   accepts; images and scanned pages are read with OCR. Implies
   `deep_extraction`. Requires `model` `retab-large`, `n_consensus` 1, no
   streaming, and no `instructions` or `additional_messages`. Runs take minutes,
-  so `background=true` is recommended. Billed the same credits as `retab-large`
+  so `background=true` is recommended, except for a spreadsheet or CSV, which
+  runs synchronously only. Billed the same credits as `retab-large`
   deep extraction; where agentic extraction is available, HTML, MHTML, audio and
   emails without paged attachments are counted like text files, one page per
   3,000 characters. Runs the standard deep extraction instead where agentic
@@ -1182,13 +1186,15 @@ can miss rows. Two request fields trade latency for completeness:
 | --- | --- | --- |
 | _(neither)_ | Most documents. Fastest. | Every document type and model |
 | `deep_extraction: true` | A document has very large arrays and a single pass misses rows. | Every document type. A spreadsheet (xlsx or CSV) is extracted in fixed 50-row windows, synchronously only. |
-| `agentic_extraction: true` | A long document has large repeated arrays and you need every row. An agent reads the document, writes and runs extraction code in a sandbox, and submits an output checked against your schema. | Every document type, with `model` `retab-large` and `n_consensus` 1. Images and scanned pages are read with OCR. A spreadsheet or CSV runs as one request, with or without `background=true`. |
+| `agentic_extraction: true` | A long document has large repeated arrays and you need every row. An agent reads the document, writes and runs extraction code in a sandbox, and submits an output checked against your schema. | Every document type, with `model` `retab-large` and `n_consensus` 1. Images and scanned pages are read with OCR. A spreadsheet or CSV runs synchronously only: the agent reads it where agentic extraction is available; otherwise, or when the agent does not finish, it runs in the same 50-row windows as `deep_extraction`. |
 
 `agentic_extraction` implies `deep_extraction`: you do not need to set both.
 
 **What to expect from `agentic_extraction`:**
 
 - **Time.** Runs take minutes. Send `background=true` and poll (example below).
+  A spreadsheet or CSV runs synchronously only: send it without `background`,
+  with a client timeout above 40 minutes (see `deep_extraction`).
 - **Pages.** A page is a PDF or Word page, a PowerPoint slide, an image frame,
   a page of an email's attachments, 500 non-empty cells of a spreadsheet or
   CSV, or 3,000 characters of a text file. Where agentic extraction is
@@ -1208,8 +1214,8 @@ can miss rows. Two request fields trade latency for completeness:
   - schemas without a top-level list of objects;
   - when agentic extraction is unavailable, or when it cannot finish.
 
-  A spreadsheet or CSV that falls back runs the deep extraction used for other
-  documents, not the 50-row windows.
+  A spreadsheet or CSV that falls back runs in the same 50-row windows as
+  `deep_extraction`, and is billed as those windows are.
 - **Schema.** Put the repeated rows in a top-level array of objects, for example
   `transactions: [{date, description, amount}]`.
 
@@ -1222,8 +1228,9 @@ and before anything is billed:
 | Agentic extraction is not enabled for your organization | `agentic_extraction is not enabled for this organization` |
 | `model` is not `retab-large` (an omitted `model` is `retab-small`) | `agentic_extraction requires model "retab-large"` |
 | `n_consensus` is above 1 | `agentic_extraction requires n_consensus 1` |
-| `stream=true`, or the `/v1/extractions/stream` route | `agentic_extraction does not support streaming; send stream=false (background=true is recommended for long documents)` |
+| `stream=true`, or the `/v1/extractions/stream` route | `agentic_extraction does not support streaming; send stream=false (background=true is recommended for long documents, except spreadsheets and CSV)` |
 | Non-blank `instructions`, or any `additional_messages` | `agentic_extraction does not support instructions or additional_messages yet` |
+| `background=true` with a spreadsheet or CSV document, the same rule as `deep_extraction` | Starts with `deep spreadsheet extraction does not support background=true` |
 
 A document type that extraction does not accept fails the same way with or
 without `agentic_extraction`.
@@ -1618,7 +1625,8 @@ A long document can take several minutes. Start the request with `background=tru
 the API answers `202` right away with the extraction `id` and a `queued` status.
 Then poll the cheap status-only view (`include_output=false`) until the status is
 `completed`, `failed` or `cancelled`, and fetch the output once. See
-[Background mode](/core-concepts/Background_Mode) for the full lifecycle.
+[Background mode](/core-concepts/Background_Mode) for the full lifecycle. A
+spreadsheet or CSV cannot run in the background: send it synchronously.
 
 ```bash cURL
 # 1. Start the extraction in the background and keep its id.
