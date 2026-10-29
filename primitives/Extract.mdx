@@ -86,20 +86,26 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
 <ParamField body="deep_extraction" type="boolean" default="false">
   Optimizes for accuracy over latency in documents with very large arrays. A
   spreadsheet (xlsx or CSV) is instead extracted in fixed 50-row windows, which
-  runs synchronously only: no `background`, no streaming.
+  runs synchronously only: no `background`, no streaming. With
+  `agentic_extraction`, a spreadsheet or CSV is not split into windows: it runs
+  as one request and supports `background=true`.
 </ParamField>
 
 <ParamField body="agentic_extraction" type="boolean" default="false">
-  Agentic extraction for long PDFs with large repeated arrays: an agent reads the
-  document, writes and runs extraction code in a sandbox, and submits an output
-  checked against your schema. Implies `deep_extraction`. Requires `model`
-  `retab-large`, a PDF document, `n_consensus` 1, no streaming, and no
-  `instructions` or `additional_messages`. Runs take minutes, so `background=true`
-  is recommended. Billed the same credits as `retab-large` deep extraction. Runs
-  the standard deep extraction instead where agentic extraction is not
-  available, for documents under 15 pages, scanned pages, schemas without a
-  top-level list of objects, or when it cannot finish. See
-  [Long documents: deep and agentic extraction](#long-documents-deep-and-agentic-extraction).
+  Agentic extraction for long documents with large repeated arrays: an agent
+  reads the document, writes and runs extraction code in a sandbox, and submits
+  an output checked against your schema. Accepts every document type extraction
+  accepts; images and scanned pages are read with OCR. Implies
+  `deep_extraction`. Requires `model` `retab-large`, `n_consensus` 1, no
+  streaming, and no `instructions` or `additional_messages`. Runs take minutes,
+  so `background=true` is recommended. Billed the same credits as `retab-large`
+  deep extraction; where agentic extraction is available, HTML, MHTML, audio and
+  emails without paged attachments are counted like text files, one page per
+  3,000 characters. Runs the standard deep extraction instead where agentic
+  extraction is not available, for documents under 15 pages, for schemas
+  without a top-level list of objects, or when it cannot finish. See
+  [Long documents: deep and agentic extraction](#long-documents-deep-and-agentic-extraction)
+  for how each document type counts its pages.
 </ParamField>
 
   </Expandable>
@@ -1176,20 +1182,34 @@ can miss rows. Two request fields trade latency for completeness:
 | --- | --- | --- |
 | _(neither)_ | Most documents. Fastest. | Every document type and model |
 | `deep_extraction: true` | A document has very large arrays and a single pass misses rows. | Every document type. A spreadsheet (xlsx or CSV) is extracted in fixed 50-row windows, synchronously only. |
-| `agentic_extraction: true` | A long PDF has large repeated arrays and you need every row. An agent reads the document, writes and runs extraction code in a sandbox, and submits an output checked against your schema. | PDFs, with `model` `retab-large` and `n_consensus` 1 |
+| `agentic_extraction: true` | A long document has large repeated arrays and you need every row. An agent reads the document, writes and runs extraction code in a sandbox, and submits an output checked against your schema. | Every document type, with `model` `retab-large` and `n_consensus` 1. Images and scanned pages are read with OCR. A spreadsheet or CSV runs as one request, with or without `background=true`. |
 
 `agentic_extraction` implies `deep_extraction`: you do not need to set both.
 
 **What to expect from `agentic_extraction`:**
 
 - **Time.** Runs take minutes. Send `background=true` and poll (example below).
-- **Credits.** The same credits as `retab-large` deep extraction (see
+- **Pages.** A page is a PDF or Word page, a PowerPoint slide, an image frame,
+  a page of an email's attachments, 500 non-empty cells of a spreadsheet or
+  CSV, or 3,000 characters of a text file. Where agentic extraction is
+  available and the schema has a top-level list of objects, HTML, MHTML, audio
+  (its transcript) and emails without paged attachments are counted like text
+  files too, one page per 3,000 characters; otherwise, as in a standard
+  extraction, each of them counts as one page.
+- **Credits.** The same credits per page as `retab-large` deep extraction (see
   [Pricing](/core-concepts/Pricing)), whether the agent finishes or the request
   falls back.
+- **Images and scans.** Pages with no text layer (images, scanned PDFs, scanned
+  pages in Word, PowerPoint or email attachments) are read with OCR.
 - **Fallback.** When agentic extraction does not apply, the request runs the
-  standard deep extraction instead, with the same response shape: documents
-  under 15 pages, scanned pages, schemas without a top-level list of objects,
-  when agentic extraction is unavailable, or when it cannot finish.
+  standard deep extraction instead, with the same response shape:
+  - documents under 15 pages, counted as above (a single image is one page, so
+    it always falls back);
+  - schemas without a top-level list of objects;
+  - when agentic extraction is unavailable, or when it cannot finish.
+
+  A spreadsheet or CSV that falls back runs the deep extraction used for other
+  documents, not the 50-row windows.
 - **Schema.** Put the repeated rows in a top-level array of objects, for example
   `transactions: [{date, description, amount}]`.
 
@@ -1204,10 +1224,9 @@ and before anything is billed:
 | `n_consensus` is above 1 | `agentic_extraction requires n_consensus 1` |
 | `stream=true`, or the `/v1/extractions/stream` route | `agentic_extraction does not support streaming; send stream=false (background=true is recommended for long documents)` |
 | Non-blank `instructions`, or any `additional_messages` | `agentic_extraction does not support instructions or additional_messages yet` |
-| The document is not a PDF (an image, a spreadsheet, a text file) | `agentic_extraction supports PDF documents only` |
 
-The last check also runs before a `background=true` request is queued, so you get
-the `422` instead of a `202`.
+A document type that extraction does not accept fails the same way with or
+without `agentic_extraction`.
 
 <CodeGroup>
 ```python Python
@@ -1595,7 +1614,7 @@ curl -X POST https://api.retab.com/v1/extractions \
 
 ### Run it in the background and poll
 
-A long PDF can take several minutes. Start the request with `background=true`:
+A long document can take several minutes. Start the request with `background=true`:
 the API answers `202` right away with the extraction `id` and a `queued` status.
 Then poll the cheap status-only view (`include_output=false`) until the status is
 `completed`, `failed` or `cancelled`, and fetch the output once. See
