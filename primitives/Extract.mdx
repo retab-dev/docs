@@ -1214,6 +1214,10 @@ can miss rows. Two request fields trade latency for completeness:
   - schemas without a top-level list of objects;
   - spreadsheets with pictures (photos, scans or barcodes) pasted into their
     cells;
+  - very long scans: currently more than 400 pages without a text layer
+    (scans or images);
+  - a PDF over 48 MiB, including a Word or PowerPoint file once converted
+    to PDF;
   - when agentic extraction is unavailable, or when it cannot finish.
 
   A spreadsheet or CSV that falls back runs in the same 50-row windows as
@@ -1236,6 +1240,21 @@ and before anything is billed:
 
 A document type that extraction does not accept fails the same way with or
 without `agentic_extraction`.
+
+**Failures after the start.** Where agentic extraction is available, a
+synchronous request whose agent started and then failed (it ran out of time,
+or the agent service answered an error or a rate limit) returns HTTP `422`,
+with the reason in `detail`. Nothing is billed, and the Python SDK does not
+retry it. Send a new request to try again: each request is a new extraction.
+When the agent service could not take the request at all, the standard deep
+extraction runs instead, and its errors keep their usual status.
+
+**Client timeouts.** Use `background=true` where you can, except for
+spreadsheets and CSV. A synchronous request needs a client timeout of several
+minutes. Some SDKs default to less and cut the request before it can finish:
+PHP, Ruby and Rust wait 60 seconds, .NET 100 seconds. The PHP SDK also retries
+every error, `422` included: for `agentic_extraction`, create its client with
+a higher `timeout` and `maxRetries: 0`.
 
 <CodeGroup>
 ```python Python
@@ -1409,7 +1428,9 @@ require 'vendor/autoload.php';
 
 use Retab\Client;
 
-$client = new Client(apiKey: getenv('RETAB_API_KEY'));
+// A synchronous agentic extraction takes minutes: no 60 s default timeout,
+// and no automatic retry (each retry is a new extraction).
+$client = new Client(apiKey: getenv('RETAB_API_KEY'), timeout: 2400, maxRetries: 0);
 
 $extraction = $client->extractions()->create(
     document: 'statements/bank_statement.pdf',
