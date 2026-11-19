@@ -86,12 +86,16 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
 <ParamField body="deep_extraction" type="boolean" default="false">
   Optimizes for accuracy over latency in documents with very large arrays. A
   spreadsheet (xlsx or CSV) is instead extracted in fixed 50-row windows, which
-  runs synchronously only: no `background`, no streaming. A large one can take
-  up to about 40 minutes, longer than the Python SDK's default 30-minute
-  timeout: raise your client's timeout, for example `Retab(timeout=3600)`. With
+  runs synchronously only: no `background`, no streaming, and `n_consensus` 1.
+  A request runs at most 40 windows (about 2,000 rows, fewer when the file has
+  several sheets or tables); a larger file returns HTTP `422`: split it, or use
+  a workflow extract block. A large one can take up to about 40 minutes,
+  longer than the Python SDK's default 30-minute timeout: raise your client's
+  timeout, for example `Retab(timeout=3600)`. With
   `agentic_extraction`, a spreadsheet or CSV also runs synchronously only: the
   agent reads it where agentic extraction is available; otherwise, or when the
-  agent does not finish, it runs in the same 50-row windows.
+  agent does not finish, it runs in the same 50-row windows, in the time the
+  agent left.
 </ParamField>
 
 <ParamField body="agentic_extraction" type="boolean" default="false">
@@ -103,11 +107,18 @@ Unlike the `parse` method that focuses on raw text extraction, `extract` provide
   streaming, and no `instructions` or `additional_messages`. Runs take minutes,
   so `background=true` is recommended, except for a spreadsheet or CSV, which
   runs synchronously only. Billed the same credits as `retab-large`
-  deep extraction; where agentic extraction is available, HTML, MHTML, audio and
-  emails without paged attachments are counted like text files, one page per
-  3,000 characters. Runs the standard deep extraction instead where agentic
-  extraction is not available, for documents under 15 pages, for schemas
-  without a top-level list of objects, or when it cannot finish. See
+  deep extraction. Runs the standard deep extraction instead where agentic
+  extraction is not available (including when your organization already has
+  too many agentic extractions running at once in the same region), for
+  documents under 15 pages, for schemas without a top-level list of objects,
+  or when it cannot finish. Once the agent takes the request, HTML, MHTML,
+  audio and emails without paged attachments are counted and billed like text
+  files, one page per 3,000 characters, even if the request then falls back.
+  A request the agent does not take (for example where agentic extraction is
+  not available, or when the schema has no top-level list of objects), and a
+  background run that times out and is run again, are counted and billed like
+  any standard deep extraction, which counts each of those documents as one
+  page. See
   [Long documents: deep and agentic extraction](#long-documents-deep-and-agentic-extraction)
   for how each document type counts its pages.
 </ParamField>
@@ -1197,11 +1208,14 @@ can miss rows. Two request fields trade latency for completeness:
   with a client timeout above 40 minutes (see `deep_extraction`).
 - **Pages.** A page is a PDF or Word page, a PowerPoint slide, an image frame,
   a page of an email's attachments, 500 non-empty cells of a spreadsheet or
-  CSV, or 3,000 characters of a text file. Where agentic extraction is
-  available and the schema has a top-level list of objects, HTML, MHTML, audio
-  (its transcript) and emails without paged attachments are counted like text
-  files too, one page per 3,000 characters; otherwise, as in a standard
-  extraction, each of them counts as one page.
+  CSV, or 3,000 characters of a text file. Once the agent takes the request,
+  HTML, MHTML, audio (its transcript) and emails without paged attachments are
+  counted and billed like text files, one page per 3,000 characters, even if
+  the request then falls back. A request the agent does not take counts each
+  of them as one page, as in a standard extraction (see Fallback below). When
+  the agent takes the request, a CSV that opens with title lines is counted
+  from the row where its table starts; a standard extraction counts such a
+  file as one page.
 - **Credits.** The same credits per page as `retab-large` deep extraction (see
   [Pricing](/core-concepts/Pricing)), whether the agent finishes or the request
   falls back.
@@ -1218,22 +1232,46 @@ can miss rows. Two request fields trade latency for completeness:
     (scans or images);
   - a PDF over 48 MiB, including a Word or PowerPoint file once converted
     to PDF;
-  - when agentic extraction is unavailable, or when it cannot finish.
+  - a document read as text (a spreadsheet, CSV, text file, HTML, MHTML,
+    audio transcript or email without paged attachments) with more than
+    3 MiB of text;
+  - when agentic extraction is not available, including when your
+    organization already has too many agentic extractions running at once in
+    the same region. No agent runs, and a document other than a spreadsheet
+    or CSV is counted and billed exactly as a standard deep extraction: HTML,
+    MHTML, audio and emails without paged attachments count one page each;
+  - when the agent cannot finish.
 
   A spreadsheet or CSV that falls back runs in the same 50-row windows as
-  `deep_extraction`, and is billed as those windows are.
+  `deep_extraction`, and is billed as those windows are, at least one page
+  per window, so it can cost more than the agent's answer. The windows get
+  the time the agent left: each minute the agent took removes one of the 40
+  windows. A sheet that no longer fits returns HTTP `422` and nothing is
+  billed; send it with `deep_extraction` alone, which has all 40 windows.
+  When agentic extraction is not available, no agent runs and the windows
+  keep all 40. After the agent was tried and handed the sheet back (it could
+  not take the request, including when your organization already has too
+  many agentic extractions running at once, or it did not finish), every
+  window is billed, even when it is served from cache (with
+  `deep_extraction` alone a window served from cache is not billed). Where
+  agentic extraction is not offered for your request, no agent is tried and
+  the windows are billed as with `deep_extraction` alone.
 - **Schema.** Put the repeated rows in a top-level array of objects, for example
   `transactions: [{date, description, amount}]`.
 
-**Validation errors.** These checks run in this order. The first one that fails
-returns HTTP `422` with a body `{"detail": "<message>"}`, before any work starts
-and before anything is billed:
+**Validation errors.** The checks every extraction runs come first, with their
+own messages: for example an empty `json_schema` or an `n_consensus` above 16
+returns HTTP `422`, and `stream=true` with `background=true` returns HTTP `400`
+`stream and background cannot both be true`. Then these checks run in this
+order. The first one that fails returns HTTP `422` with a body
+`{"detail": "<message>"}`, before any work starts and before anything is
+billed:
 
 | Request | `detail` |
 | --- | --- |
 | Agentic extraction is not enabled for your organization | `agentic_extraction is not enabled for this organization` |
 | `model` is not `retab-large` (an omitted `model` is `retab-small`) | `agentic_extraction requires model "retab-large"` |
-| `n_consensus` is above 1 | `agentic_extraction requires n_consensus 1` |
+| `n_consensus` from 2 to 16 | `agentic_extraction requires n_consensus 1` |
 | `stream=true`, or the `/v1/extractions/stream` route | `agentic_extraction does not support streaming; send stream=false (background=true is recommended for long documents, except spreadsheets and CSV)` |
 | Non-blank `instructions`, or any `additional_messages` | `agentic_extraction does not support instructions or additional_messages yet` |
 | `background=true` with a spreadsheet or CSV document, the same rule as `deep_extraction` | Starts with `deep spreadsheet extraction does not support background=true` |
@@ -1241,26 +1279,62 @@ and before anything is billed:
 A document type that extraction does not accept fails the same way with or
 without `agentic_extraction`.
 
-**Failures after the start.** Where agentic extraction is available, a
-synchronous request whose agent started and then failed (it ran out of time,
-or the agent service answered an error or a rate limit) returns HTTP `422`,
-with the reason in `detail`. Nothing is billed, and the Python SDK does not
-retry it. Send a new request to try again: each request is a new extraction.
-When the agent service could not take the request at all, the standard deep
-extraction runs instead, and its errors keep their usual status.
+**Failures after the start.** Once the agent has taken a synchronous request,
+a request that runs out of time, loses its connection, or gets a server error
+(`5xx`) or a rate limit (`429`) returns HTTP `422` instead, with the reason in
+`detail`. When no answer came back at all, `detail` is
+`agentic extraction failed before it returned a result; it was not billed`.
+This holds whether the agent ran or the request fell back to the standard deep
+extraction. Nothing is billed. The SDKs that retry on their own retry only a
+`429` or a `5xx` (see SDK retries below), so no SDK sends this request
+again: a retry would start a new agent run. To try again, send a new request:
+each request is a new extraction. Other errors keep their usual status.
+
+When the agent could not take the request at all, including when your
+organization already has too many agentic extractions running at once in the
+same region, a document other than a spreadsheet or CSV runs the standard deep
+extraction instead, and its errors keep their usual status: no agent ran, so
+an SDK may retry a `429` or a `5xx` from it. A spreadsheet or CSV runs in its
+50-row windows instead, and a server error or a rate limit from them returns
+HTTP `422`, as above. A request that reaches a server while it is shutting
+down, before the agent started, returns HTTP `503` with
+`this API instance is shutting down; the agentic extraction did not start and was not billed, retry the request`:
+nothing ran, so an SDK may retry it.
+
+With `background=true`, a run that times out (a `504` included) is run again
+as the standard deep extraction, and is counted and billed as one. Other
+server errors, rate limits, lost connections and unexpected errors are
+retried. A run ends with status `failed` when a retry cannot help (a `4xx`
+such as `400` or `422`), or when the retries run out.
 
 **Client timeouts.** Use `background=true` where you can, except for
-spreadsheets and CSV. A synchronous request needs a client timeout of several
-minutes. Some SDKs default to less and cut the request before it can finish:
-PHP, Ruby and Rust wait 60 seconds, .NET 100 seconds. The PHP SDK also retries
-every error, `422` included: for `agentic_extraction`, create its client with
-a higher `timeout` and `maxRetries: 0`.
+spreadsheets and CSV. A synchronous request can take up to about 30 minutes,
+or about 40 minutes for a spreadsheet or CSV: set your client timeout above
+that, for example one hour, as the examples below do except TypeScript. The
+SDK defaults are too short and cut the request before it can finish: Python
+and Go wait 30 minutes, PHP, Ruby and Rust 60 seconds, .NET 100 seconds. The
+Node SDK sends requests with Node's built-in `fetch`, which gives up after 5
+minutes without response headers (`headersTimeout`). In Node, pass the client
+a `fetch` that waits longer, with `Agent` from the `undici` package:
+`fetch: (input, init) => fetch(input, { ...init, dispatcher: new Agent({ headersTimeout: 3_600_000, bodyTimeout: 3_600_000 }) } as RequestInit)`.
+The Java SDK sets no timeout and waits until the answer comes.
+
+**SDK retries.** The Python SDK, and PHP SDK releases whose client has a
+`Retab\HttpClient::retryDelayMicroseconds` method, retry a `429` or a `5xx`
+answer, up to 3 times by default, each after a random wait of up to 1, 2 and
+then 4 seconds; they never retry a `422`. The other SDKs do not retry.
+A synchronous agentic request whose agent started answers those failures as
+`422` (see Failures after the start), so these SDKs never run the agent again
+on their own. PHP SDK releases without `Retab\HttpClient::retryDelayMicroseconds`
+retry every error, `422` included, at once without waiting, and each retry is a
+new extraction: with such a release, create the client with `maxRetries: 0`, as
+the PHP example below does.
 
 <CodeGroup>
 ```python Python
 from retab import Retab
 
-client = Retab()
+client = Retab(timeout=3600)  # a synchronous agentic extraction takes minutes
 
 extraction = client.extractions.create(
     document="statements/bank_statement.pdf",
@@ -1294,6 +1368,9 @@ print(extraction.id)
 ```typescript TypeScript
 import { Retab } from '@retab/node';
 
+// Node's fetch gives up after 5 minutes without response headers: for a
+// synchronous agentic extraction, pass a longer-waiting fetch (see Client
+// timeouts above) or use background=true.
 const client = new Retab({ apiKey: process.env.RETAB_API_KEY });
 
 const extraction = await client.extractions.create(
@@ -1340,6 +1417,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"time"
 
 	retab "github.com/retab-dev/retab/clients/go"
 )
@@ -1347,7 +1426,8 @@ import (
 func main() {
 	ctx := context.Background()
 
-	client, err := retab.NewClient("")
+	// A synchronous agentic extraction takes minutes: wait longer than 30 minutes.
+	client, err := retab.NewClient("", retab.WithHTTPClient(&http.Client{Timeout: time.Hour}))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -1391,7 +1471,8 @@ func main() {
 ```ruby Ruby
 require 'retab'
 
-client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'])
+# A synchronous agentic extraction takes minutes: no 60 s default timeout.
+client = Retab::Client.new(api_key: ENV['RETAB_API_KEY'], timeout: 3600)
 
 extraction = client.extractions.create(
   document: 'statements/bank_statement.pdf',
@@ -1428,9 +1509,9 @@ require 'vendor/autoload.php';
 
 use Retab\Client;
 
-// A synchronous agentic extraction takes minutes: no 60 s default timeout,
-// and no automatic retry (each retry is a new extraction).
-$client = new Client(apiKey: getenv('RETAB_API_KEY'), timeout: 2400, maxRetries: 0);
+// A synchronous agentic extraction takes minutes: no 60 s default timeout.
+// maxRetries: 0 because releases without HttpClient::retryDelayMicroseconds retry every error (each retry is a new extraction).
+$client = new Client(apiKey: getenv('RETAB_API_KEY'), timeout: 3600, maxRetries: 0);
 
 $extraction = $client->extractions()->create(
     document: 'statements/bank_statement.pdf',
@@ -1465,10 +1546,15 @@ echo $extraction->id . PHP_EOL;
 use retab::resources::extractions::CreateParams;
 use retab::Retab;
 use std::collections::HashMap;
+use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = Retab::new(std::env::var("RETAB_API_KEY")?);
+    // A synchronous agentic extraction takes minutes: no 60 s default timeout.
+    let client = Retab::builder()
+        .api_key(std::env::var("RETAB_API_KEY")?)
+        .timeout(Duration::from_secs(3600))
+        .build();
 
     let json_schema: HashMap<String, serde_json::Value> = serde_json::from_value(serde_json::json!({
         "type": "object",
@@ -1506,10 +1592,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using Retab;
 using RetabClient = Retab.Retab;
 
-var client = new RetabClient("YOUR_API_KEY");
+// A synchronous agentic extraction takes minutes: no 100 s default timeout.
+var client = new RetabClient(new RetabOptions
+{
+    ApiKey = "YOUR_API_KEY",
+    HttpClient = new HttpClient { Timeout = TimeSpan.FromHours(1) },
+});
 
 var schema = new Dictionary<string, object>
 {
